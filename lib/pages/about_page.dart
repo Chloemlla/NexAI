@@ -17,132 +17,178 @@ class AboutPage extends StatelessWidget {
   Widget _buildM3About(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final mq = MediaQuery.of(context);
+    final isWide = mq.size.width > 600;
+    final hPad = isWide ? mq.size.width * 0.1 : 16.0;
 
-    return Scaffold(
-      backgroundColor: cs.surface,
-      body: CustomScrollView(
-        slivers: [
-          // Large collapsing hero AppBar
-          SliverAppBar(
-            automaticallyImplyLeading: false,
-            pinned: true,
-            expandedHeight: 220,
-            backgroundColor: cs.surface,
-            surfaceTintColor: cs.surfaceTint,
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      cs.primaryContainer.withAlpha(120),
-                      cs.tertiaryContainer.withAlpha(60),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: SafeArea(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 16),
-                      Hero(
-                        tag: 'nexai_logo',
-                        child: Container(
-                          width: 80, height: 80,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [cs.primary, cs.tertiary],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(color: cs.primary.withAlpha(70), blurRadius: 24, offset: const Offset(0, 8)),
-                            ],
-                          ),
-                          child: Center(child: Icon(Icons.smart_toy_rounded, size: 40, color: cs.onPrimary)),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text('NexAI', style: tt.headlineSmall?.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5)),
-                      const SizedBox(height: 6),
-                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        _VersionBadge(cs: cs, tt: tt, label: 'v1.0.0'),
-                        const SizedBox(width: 8),
-                        _VersionBadge(cs: cs, tt: tt, label: 'MIT', color: cs.tertiaryContainer, textColor: cs.onTertiaryContainer),
-                      ]),
-                    ],
-                  ),
+    return CustomScrollView(
+      slivers: [
+        // ── Collapsing hero AppBar ──
+        SliverAppBar(
+          automaticallyImplyLeading: false,
+          pinned: true,
+          expandedHeight: 230,
+          backgroundColor: cs.surface,
+          surfaceTintColor: cs.surfaceTint,
+          flexibleSpace: FlexibleSpaceBar(
+            collapseMode: CollapseMode.parallax,
+            titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
+            title: Text(
+              'About',
+              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            background: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    cs.primaryContainer.withAlpha(130),
+                    cs.tertiaryContainer.withAlpha(60),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-              title: Text('About', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
+              child: SafeArea(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 20),
+                    Container(
+                      width: 76,
+                      height: 76,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [cs.primary, cs.tertiary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [
+                          BoxShadow(
+                            color: cs.primary.withAlpha(70),
+                            blurRadius: 20,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(Icons.smart_toy_rounded, size: 38, color: cs.onPrimary),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'NexAI',
+                      style: tt.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _Badge(label: 'v1.0.0', bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
+                        const SizedBox(width: 8),
+                        _Badge(label: 'MIT', bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
+                        const SizedBox(width: 8),
+                        _Badge(label: 'Flutter', bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
+        ),
 
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 40),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
 
-                // ── Quick action buttons ──
-                Row(children: [
-                  Expanded(
-                    child: _ActionCard(
-                      cs: cs, tt: tt,
-                      icon: Icons.code_rounded,
-                      label: 'GitHub',
-                      sublabel: 'View source',
-                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI'),
-                    ),
+              // ── Quick action row ──
+              Row(children: [
+                Expanded(
+                  child: _ActionCard(
+                    cs: cs,
+                    icon: Icons.code_rounded,
+                    label: 'GitHub',
+                    sublabel: 'View source',
+                    color: cs.primaryContainer,
+                    iconColor: cs.onPrimaryContainer,
+                    onTap: () => _openUrl('https://github.com/Chloemlla/NexAI'),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ActionCard(
-                      cs: cs, tt: tt,
-                      icon: Icons.bug_report_rounded,
-                      label: 'Issues',
-                      sublabel: 'Report a bug',
-                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ActionCard(
+                    cs: cs,
+                    icon: Icons.bug_report_rounded,
+                    label: 'Issues',
+                    sublabel: 'Report a bug',
+                    color: cs.errorContainer,
+                    iconColor: cs.onErrorContainer,
+                    onTap: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ActionCard(
-                      cs: cs, tt: tt,
-                      icon: Icons.person_rounded,
-                      label: 'Author',
-                      sublabel: 'Chloemlla',
-                      onTap: () => _openUrl('https://github.com/Chloemlla'),
-                    ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ActionCard(
+                    cs: cs,
+                    icon: Icons.person_rounded,
+                    label: 'Author',
+                    sublabel: 'Chloemlla',
+                    color: cs.tertiaryContainer,
+                    iconColor: cs.onTertiaryContainer,
+                    onTap: () => _openUrl('https://github.com/Chloemlla'),
                   ),
+                ),
+              ]),
+              const SizedBox(height: 24),
+
+              // ── App Info section ──
+              _m3Section(cs, tt, Icons.info_outline_rounded, 'App Info', [
+                _m3InfoRow(cs, 'Version', '1.0.0'),
+                const SizedBox(height: 8),
+                _m3InfoRow(cs, 'License', 'MIT'),
+                const SizedBox(height: 8),
+                _m3InfoRow(cs, 'Framework', 'Flutter'),
+              ]),
+              const SizedBox(height: 12),
+
+              // ── Features section ──
+              _m3Section(cs, tt, Icons.auto_awesome_rounded, 'Features', [
+                _m3Feature(cs, Icons.chat_rounded, 'OpenAI-compatible API with custom base URL'),
+                const SizedBox(height: 8),
+                _m3Feature(cs, Icons.functions_rounded, 'LaTeX math & chemical formula rendering'),
+                const SizedBox(height: 8),
+                _m3Feature(cs, Icons.color_lens_rounded, 'Material You dynamic color (Android)'),
+                const SizedBox(height: 8),
+                _m3Feature(cs, Icons.code_rounded, 'Markdown with syntax-highlighted code'),
+                const SizedBox(height: 8),
+                _m3Feature(cs, Icons.settings_rounded, 'Configurable models, temperature & tokens'),
+              ]),
+              const SizedBox(height: 12),
+
+              // ── Tech Stack section ──
+              _m3Section(cs, tt, Icons.layers_rounded, 'Tech Stack', [
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final label in ['Flutter', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences'])
+                    _m3Chip(cs, label),
                 ]),
-                const SizedBox(height: 20),
+              ]),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
 
-                // ── App info ──
-                _AboutCard(cs: cs, tt: tt, icon: Icons.info_outline_rounded, title: 'App Info', children: [
-                  _InfoRow(cs: cs, tt: tt, label: 'Version', value: '1.0.0'),
-                  _InfoRow(cs: cs, tt: tt, label: 'Developer', value: 'Chloemlla'),
-                  _InfoRow(cs: cs, tt: tt, label: 'License', value: 'MIT'),
-                  _InfoRow(cs: cs, tt: tt, label: 'Framework', value: 'Flutter + Material 3'),
-                  _InfoRow(cs: cs, tt: tt, label: 'Repository', value: 'Chloemlla/NexAI', isLast: true),
-                ]),
-                const SizedBox(height: 14),
-
-                // ── Features ──
-                _AboutCard(cs: cs, tt: tt, icon: Icons.auto_awesome_rounded, title: 'Features', children: [
-                  _FeatureRow(cs: cs, icon: Icons.chat_rounded, text: 'OpenAI-compatible API with custom base URL'),
-                  _FeatureRow(cs: cs, icon: Icons.functions_rounded, text: 'LaTeX math & chemical formula rendering'),
-                  _FeatureRow(cs: cs, icon: Icons.palette_rounded, text: 'Material You dynamic color (Android)'),
-                  _FeatureRow(cs: cs, icon: Icons.code_rounded, text: 'Markdown with syntax-highlighted code'),
-                  _FeatureRow(cs: cs, icon: Icons.desktop_windows_rounded, text: 'Fluent Design with Mica/Acrylic (Desktop)'),
-                  _FeatureRow(cs: cs, icon: Icons.tune_roundcon, String title, List<Widget> children) {
+  Widget _m3Section(ColorScheme cs, TextTheme tt, IconData icon, String title, List<Widget> children) {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -163,6 +209,17 @@ class AboutPage extends StatelessWidget {
           ...children,
         ]),
       ),
+    );
+  }
+
+  Widget _m3Chip(ColorScheme cs, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.primaryContainer.withAlpha(100),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 12, color: cs.onPrimaryContainer)),
     );
   }
 
@@ -346,5 +403,77 @@ class AboutPage extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
+  }
+}
+
+
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color bg;
+  final Color fg;
+
+  const _Badge({required this.label, required this.bg, required this.fg});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final ColorScheme cs;
+  final IconData icon;
+  final String label;
+  final String sublabel;
+  final Color color;
+  final Color iconColor;
+  final VoidCallback onTap;
+
+  const _ActionCard({
+    required this.cs,
+    required this.icon,
+    required this.label,
+    required this.sublabel,
+    required this.color,
+    required this.iconColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+          child: Column(children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withAlpha(150),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(child: Icon(icon, size: 18, color: iconColor)),
+            ),
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text(sublabel, style: TextStyle(fontSize: 10, color: cs.outline), overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+      ),
+    );
   }
 }

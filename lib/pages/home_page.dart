@@ -325,7 +325,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
     );
 
     if (isDesktop) {
-      titleWidget = fluent.DragToMoveArea(child: titleWidget);
+      titleWidget = DragToMoveArea(child: titleWidget);
     }
 
     return fluent.NavigationView(

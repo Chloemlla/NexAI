@@ -262,7 +262,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           child: isSelected
               ? Icon(FluentIcons.check_mark, size: 14, color: _contrastColor(displayColor))
-              : (colorValue == null ? Icon(FluentIcons.sync_icon, size: 12, color: _contrastColor(displayColor)) : null),
+              : (colorValue == null ? Icon(FluentIcons.sync, size: 12, color: _contrastColor(displayColor)) : null),
         ),
       ),
     );

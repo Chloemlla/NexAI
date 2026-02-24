@@ -1,5 +1,6 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show ColorScheme;
 import 'package:provider/provider.dart';
 import 'package:system_theme/system_theme.dart';
 import 'package:dynamic_color/dynamic_color.dart';

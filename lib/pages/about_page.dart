@@ -153,7 +153,7 @@ class AboutPage extends StatelessWidget {
         // Features card
         _buildInfoCard(
           theme,
-          icon: FluentIcons.sparkle,
+          icon: FluentIcons.sunny,
           title: 'Features',
           children: [
             _featureItem(theme, FluentIcons.chat, 'OpenAI-compatible API with custom base URL'),

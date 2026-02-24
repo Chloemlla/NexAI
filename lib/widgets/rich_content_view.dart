@@ -1,5 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:flutter/material.dart' show Material, SelectableText, Colors as MColors;
+import 'package:flutter/material.dart' as material show Material, SelectableText, Colors;
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
@@ -92,7 +92,7 @@ class _MathWidget extends StatelessWidget {
           color: theme.typography.body?.color,
         ),
         onErrorFallback: (err) {
-          return SelectableText(
+          return material.SelectableText(
             tex,
             style: TextStyle(fontSize: 13, fontFamily: 'Consolas', color: theme.accentColor),
           );
@@ -122,8 +122,8 @@ class _MarkdownWidget extends StatelessWidget {
     final theme = FluentTheme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return Material(
-      color: MColors.transparent,
+    return material.Material(
+      color: material.Colors.transparent,
       child: MarkdownBody(
         data: data,
         selectable: true,

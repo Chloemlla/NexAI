@@ -1,5 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:flutter/material.dart' show Material, Colors as MColors;
+import 'package:flutter/material.dart' as material show Material, Colors;
 import 'mermaid_parser.dart';
 import 'flowchart_layout.dart';
 import 'flowchart_painter.dart';
@@ -81,7 +81,7 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
 
     final nodeColor = isDark ? const Color(0xFF2A2A3A) : const Color(0xFFFFFFFF);
     final nodeBorder = theme.accentColor;
-    final textColor = theme.typography.body?.color ?? (isDark ? MColors.white : MColors.black);
+    final textColor = theme.typography.body?.color ?? (isDark ? material.Colors.white : material.Colors.black);
     final edgeColor = isDark ? const Color(0xFF8899AA) : const Color(0xFF667788);
     final labelColor = isDark ? const Color(0xFFAABBCC) : const Color(0xFF556677);
 

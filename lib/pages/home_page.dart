@@ -145,7 +145,7 @@ class WindowButtons extends StatelessWidget {
           onPressed: () => windowManager.minimize(),
         ),
         IconButton(
-          icon: Icon(FluentIcons.chrome_maximize, size: 12, color: theme.inactiveColor),
+          icon: Icon(FluentIcons.chrome_full_screen, size: 12, color: theme.inactiveColor),
           onPressed: () async {
             if (await windowManager.isMaximized()) {
               windowManager.unmaximize();

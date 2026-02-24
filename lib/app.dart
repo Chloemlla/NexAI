@@ -60,8 +60,10 @@ class NexAIApp extends StatelessWidget {
     // Android Material You dynamic color
     if (lightDynamic != null &&
         (defaultTargetPlatform == TargetPlatform.android || kIsWeb)) {
-      final useDark = settings.themeMode == ThemeMode.dark;
-      if (useDark && darkDynamic != null) return darkDynamic.primary;
+      final brightness = settings.themeMode == ThemeMode.dark ||
+          (settings.themeMode == ThemeMode.system &&
+              WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark);
+      if (brightness && darkDynamic != null) return darkDynamic.primary;
       return lightDynamic.primary;
     }
 

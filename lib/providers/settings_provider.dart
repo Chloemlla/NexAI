@@ -41,6 +41,11 @@ class SettingsProvider extends ChangeNotifier {
       _models = modelsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     }
 
+    // Ensure selectedModel exists in the models list
+    if (_models.isNotEmpty && !_models.contains(_selectedModel)) {
+      _selectedModel = _models.first;
+    }
+
     final themeModeStr = prefs.getString('themeMode') ?? 'system';
     _themeMode = ThemeMode.values.firstWhere(
       (e) => e.name == themeModeStr,
@@ -80,8 +85,10 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setModels(String modelsStr) async {
-    _models = modelsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    if (_models.isNotEmpty && !_models.contains(_selectedModel)) {
+    final parsed = modelsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    if (parsed.isEmpty) return; // Don't allow empty models list
+    _models = parsed;
+    if (!_models.contains(_selectedModel)) {
       _selectedModel = _models.first;
     }
     notifyListeners();

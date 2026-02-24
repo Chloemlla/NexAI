@@ -17,7 +17,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WindowListener {
-  int _selectedIndex = 0;
+  // Navigation targets: 'chat', 'settings', 'about'
+  String _currentPage = 'chat';
 
   @override
   void initState() {
@@ -29,6 +30,21 @@ class _HomePageState extends State<HomePage> with WindowListener {
   void dispose() {
     if (isDesktop) windowManager.removeListener(this);
     super.dispose();
+  }
+
+  /// Compute the flat selected index from _currentPage + chat.currentIndex.
+  /// items: [PaneItemHeader(skip), ...N conversations]  → selectable indices 0..N-1
+  /// footerItems: [PaneItemSeparator(skip), Settings, About] → selectable indices N, N+1
+  int _resolveSelectedIndex(int convCount, int chatIndex) {
+    switch (_currentPage) {
+      case 'settings':
+        return convCount; // first footer selectable
+      case 'about':
+        return convCount + 1; // second footer selectable
+      default: // 'chat'
+        if (convCount == 0) return -1; // nothing to select
+        return chatIndex.clamp(0, convCount - 1);
+    }
   }
 
   @override
@@ -46,14 +62,17 @@ class _HomePageState extends State<HomePage> with WindowListener {
         body: const ChatPage(),
         trailing: IconButton(
           icon: Icon(FluentIcons.delete, size: 12, color: theme.inactiveColor),
-          onPressed: () => chat.deleteConversation(idx),
+          onPressed: () {
+            chat.deleteConversation(idx);
+            // Stay on chat page; provider already adjusts currentIndex
+            setState(() {});
+          },
         ),
-        onTap: () {
-          chat.selectConversation(idx);
-          setState(() => _selectedIndex = idx);
-        },
       );
     }).toList();
+
+    final convCount = conversationItems.length;
+    final selected = _resolveSelectedIndex(convCount, chat.currentIndex);
 
     Widget titleWidget = const Align(
       alignment: AlignmentDirectional.centerStart,
@@ -81,7 +100,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
               icon: const Icon(FluentIcons.add, size: 14),
               onPressed: () {
                 chat.newConversation();
-                setState(() => _selectedIndex = 0);
+                setState(() => _currentPage = 'chat');
               },
             ),
             if (isDesktop) ...[
@@ -92,7 +111,19 @@ class _HomePageState extends State<HomePage> with WindowListener {
         ),
       ),
       pane: NavigationPane(
-        selected: _selectedIndex < conversationItems.length ? _selectedIndex : null,
+        selected: selected >= 0 ? selected : null,
+        onChanged: (index) {
+          setState(() {
+            if (index < convCount) {
+              _currentPage = 'chat';
+              chat.selectConversation(index);
+            } else if (index == convCount) {
+              _currentPage = 'settings';
+            } else {
+              _currentPage = 'about';
+            }
+          });
+        },
         displayMode: PaneDisplayMode.compact,
         items: [
           PaneItemHeader(header: const Text('Conversations')),
@@ -104,17 +135,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
             icon: const Icon(FluentIcons.settings),
             title: const Text('Settings'),
             body: const SettingsPage(),
-            onTap: () {
-              setState(() => _selectedIndex = conversationItems.length);
-            },
           ),
           PaneItem(
             icon: const Icon(FluentIcons.info),
             title: const Text('About'),
             body: const AboutPage(),
-            onTap: () {
-              setState(() => _selectedIndex = conversationItems.length + 1);
-            },
           ),
         ],
       ),

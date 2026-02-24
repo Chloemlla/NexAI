@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -37,16 +38,28 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void selectConversation(int index) {
-    if (_currentIndex == index) return; // Skip redundant rebuild
+    if (index < 0 || index >= _conversations.length) return;
+    if (_currentIndex == index) return;
     _currentIndex = index;
     notifyListeners();
   }
 
   void deleteConversation(int index) {
+    if (index < 0 || index >= _conversations.length) return;
+    // Don't allow deleting the active conversation while a request is in-flight
+    if (_isLoading && index == _currentIndex) return;
+
     _conversations.removeAt(index);
-    if (_currentIndex >= _conversations.length) {
-      _currentIndex = _conversations.length - 1;
+    if (_conversations.isEmpty) {
+      _currentIndex = -1;
+    } else if (_currentIndex == index) {
+      // Deleted the selected one: select the nearest
+      _currentIndex = index.clamp(0, _conversations.length - 1);
+    } else if (_currentIndex > index) {
+      // Selected was after the deleted one, shift down
+      _currentIndex--;
     }
+    // else: selected was before deleted, no change needed
     notifyListeners();
   }
 
@@ -59,26 +72,34 @@ class ChatProvider extends ChangeNotifier {
     required int maxTokens,
     required String systemPrompt,
   }) async {
+    // Guard against concurrent sends
+    if (_isLoading) return;
+
     if (currentConversation == null) {
       newConversation();
     }
 
-    final userMessage = Message(role: 'user', content: content, timestamp: DateTime.now());
-    currentConversation!.messages.add(userMessage);
+    // Capture reference so it stays stable across awaits
+    final conversation = currentConversation!;
 
-    if (currentConversation!.messages.where((m) => m.role == 'user').length == 1) {
-      currentConversation!.title = content.length > 30 ? '${content.substring(0, 30)}...' : content;
+    final userMessage = Message(role: 'user', content: content, timestamp: DateTime.now());
+    conversation.messages.add(userMessage);
+
+    if (conversation.messages.where((m) => m.role == 'user').length == 1) {
+      conversation.title = content.length > 30 ? '${content.substring(0, 30)}...' : content;
     }
 
     _isLoading = true;
     notifyListeners();
 
     try {
+      // Build payload excluding error messages from history
       final messagesPayload = <Map<String, String>>[];
       if (systemPrompt.isNotEmpty) {
         messagesPayload.add({'role': 'system', 'content': systemPrompt});
       }
-      for (final msg in currentConversation!.messages) {
+      for (final msg in conversation.messages) {
+        if (msg.isError) continue; // Don't send error messages to the API
         messagesPayload.add({'role': msg.role, 'content': msg.content});
       }
 
@@ -94,7 +115,7 @@ class ChatProvider extends ChangeNotifier {
           'temperature': temperature,
           'max_tokens': maxTokens,
         }),
-      );
+      ).timeout(const Duration(seconds: 120));
 
       if (response.statusCode == 200) {
         // Offload JSON parsing to isolate for large responses
@@ -102,10 +123,17 @@ class ChatProvider extends ChangeNotifier {
             ? await compute(_decodeJson, response.body)
             : jsonDecode(response.body) as Map<String, dynamic>;
 
-        final assistantContent = data['choices'][0]['message']['content'] as String;
-        currentConversation!.messages.add(
-          Message(role: 'assistant', content: assistantContent, timestamp: DateTime.now()),
-        );
+        final choices = data['choices'];
+        if (choices is List && choices.isNotEmpty) {
+          final assistantContent = choices[0]['message']?['content'] as String? ?? '';
+          conversation.messages.add(
+            Message(role: 'assistant', content: assistantContent, timestamp: DateTime.now()),
+          );
+        } else {
+          conversation.messages.add(
+            Message(role: 'assistant', content: '⚠️ Error: Unexpected response format', timestamp: DateTime.now(), isError: true),
+          );
+        }
       } else {
         String errorMsg;
         try {
@@ -114,12 +142,12 @@ class ChatProvider extends ChangeNotifier {
         } catch (_) {
           errorMsg = 'HTTP ${response.statusCode}';
         }
-        currentConversation!.messages.add(
+        conversation.messages.add(
           Message(role: 'assistant', content: '⚠️ Error: $errorMsg', timestamp: DateTime.now(), isError: true),
         );
       }
     } catch (e) {
-      currentConversation!.messages.add(
+      conversation.messages.add(
         Message(role: 'assistant', content: '⚠️ Connection error: $e', timestamp: DateTime.now(), isError: true),
       );
     }

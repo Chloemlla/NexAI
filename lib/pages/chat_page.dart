@@ -44,6 +44,7 @@ class _ChatPageState extends State<ChatPage> {
 
     final settings = context.read<SettingsProvider>();
     if (!settings.isConfigured) {
+      if (!mounted) return;
       await displayInfoBar(context, builder: (ctx, close) {
         return InfoBar(
           title: const Text('API Key not configured'),
@@ -68,6 +69,7 @@ class _ChatPageState extends State<ChatPage> {
       systemPrompt: settings.systemPrompt,
     );
 
+    if (!mounted) return;
     _scrollToBottom();
     _focusNode.requestFocus();
   }

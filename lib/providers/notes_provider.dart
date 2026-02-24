@@ -5,6 +5,8 @@ import '../models/note.dart';
 
 class NotesProvider extends ChangeNotifier {
   List<Note> _notes = [];
+  // Backlink index: targetNoteId -> set of sourceNoteIds
+  Map<String, Set<String>> _backlinks = {};
 
   List<Note> get notes => _notes;
 
@@ -35,6 +37,130 @@ class NotesProvider extends ChangeNotifier {
   List<Note> notesByTag(String tag) =>
       _notes.where((n) => n.tags.contains(tag)).toList();
 
+  // ─── Backlinks ───
+
+  /// Rebuild the backlink index by scanning all notes for wiki-links
+  void _rebuildBacklinks() {
+    _backlinks = {};
+    for (final note in _notes) {
+      for (final link in note.wikiLinks) {
+        final target = _findNoteByTitle(link.target);
+        if (target != null) {
+          _backlinks.putIfAbsent(target.id, () => {}).add(note.id);
+        }
+      }
+    }
+  }
+
+  /// Find a note by title (case-insensitive)
+  Note? _findNoteByTitle(String title) {
+    final lower = title.toLowerCase().trim();
+    return _notes.where((n) => n.title.toLowerCase().trim() == lower).firstOrNull;
+  }
+
+  /// Find a note by title (public)
+  Note? findNoteByTitle(String title) => _findNoteByTitle(title);
+
+  /// Get all notes that link TO the given note (backlinks / incoming)
+  List<Note> getBacklinks(String noteId) {
+    final ids = _backlinks[noteId];
+    if (ids == null || ids.isEmpty) return [];
+    return _notes.where((n) => ids.contains(n.id)).toList();
+  }
+
+  /// Get all notes that the given note links TO (outgoing)
+  List<Note> getOutgoingLinks(String noteId) {
+    final note = _notes.where((n) => n.id == noteId).firstOrNull;
+    if (note == null) return [];
+    final targets = <Note>[];
+    for (final link in note.wikiLinks) {
+      final target = _findNoteByTitle(link.target);
+      if (target != null && target.id != noteId) targets.add(target);
+    }
+    return targets.toSet().toList();
+  }
+
+  /// Find unlinked mentions: notes whose title appears in the given note's
+  /// content but are not linked via [[...]]
+  List<Note> getUnlinkedMentions(String noteId) {
+    final note = _notes.where((n) => n.id == noteId).firstOrNull;
+    if (note == null) return [];
+    final linkedNames = note.linkedNoteNames;
+    final body = note.bodyContent.toLowerCase();
+    final result = <Note>[];
+    for (final other in _notes) {
+      if (other.id == noteId) continue;
+      if (other.title.trim().isEmpty || other.title == 'Untitled Note') continue;
+      final otherTitle = other.title.toLowerCase().trim();
+      if (linkedNames.contains(otherTitle)) continue; // already linked
+      if (body.contains(otherTitle)) {
+        result.add(other);
+      }
+    }
+    return result;
+  }
+
+  /// Create a link from sourceNote to targetNote title at cursor position
+  void addLinkToNote(String sourceNoteId, String targetTitle) {
+    final idx = _notes.indexWhere((n) => n.id == sourceNoteId);
+    if (idx == -1) return;
+    final note = _notes[idx];
+    // Replace first unlinked mention with wiki-link
+    final pattern = RegExp(RegExp.escape(targetTitle), caseSensitive: false);
+    final match = pattern.firstMatch(note.content);
+    if (match != null) {
+      // Check it's not already inside [[ ]]
+      final before = note.content.substring(0, match.start);
+      final after = note.content.substring(match.end);
+      if (!before.endsWith('[[') || !after.startsWith(']]')) {
+        note.content = '${before}[[$targetTitle]]$after';
+        note.updatedAt = DateTime.now();
+        _rebuildBacklinks();
+        notifyListeners();
+        _save();
+      }
+    }
+  }
+
+  // ─── Graph data ───
+
+  /// Get graph data: nodes and edges for all notes
+  GraphData getGraphData({String? tagFilter, bool? starredOnly}) {
+    var filtered = _notes.toList();
+    if (tagFilter != null) {
+      filtered = filtered.where((n) => n.tags.contains(tagFilter)).toList();
+    }
+    if (starredOnly == true) {
+      filtered = filtered.where((n) => n.isStarred).toList();
+    }
+    final filteredIds = filtered.map((n) => n.id).toSet();
+
+    final nodes = <GraphNode>[];
+    final edges = <GraphEdge>[];
+
+    for (final note in filtered) {
+      final backlinkCount = _backlinks[note.id]?.length ?? 0;
+      final outCount = note.wikiLinks.length;
+      nodes.add(GraphNode(
+        id: note.id,
+        title: note.title,
+        linkCount: backlinkCount + outCount,
+        tags: note.tags,
+        isStarred: note.isStarred,
+        updatedAt: note.updatedAt,
+      ));
+
+      for (final link in note.wikiLinks) {
+        final target = _findNoteByTitle(link.target);
+        if (target != null && filteredIds.contains(target.id)) {
+          edges.add(GraphEdge(sourceId: note.id, targetId: target.id));
+        }
+      }
+    }
+
+    return GraphData(nodes: nodes, edges: edges);
+  }
+
   Future<void> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString('notes');
@@ -42,6 +168,7 @@ class NotesProvider extends ChangeNotifier {
       _notes = Note.decodeList(data);
       _notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     }
+    _rebuildBacklinks();
     notifyListeners();
   }
 
@@ -71,13 +198,17 @@ class NotesProvider extends ChangeNotifier {
     if (title != null) _notes[idx].title = title;
     if (content != null) _notes[idx].content = content;
     _notes[idx].updatedAt = DateTime.now();
+    _rebuildBacklinks();
     notifyListeners();
     _save();
   }
 
   void deleteNote(String id) {
     _notes.removeWhere((n) => n.id == id);
+    _rebuildBacklinks();
     notifyListeners();
+    _save();
+  }
     _save();
   }
 
@@ -302,4 +433,39 @@ class SearchMatch {
   final int end;
   final String text;
   SearchMatch({required this.start, required this.end, required this.text});
+}
+
+// ─── Graph data classes ───
+
+class GraphNode {
+  final String id;
+  final String title;
+  final int linkCount;
+  final List<String> tags;
+  final bool isStarred;
+  final DateTime updatedAt;
+  // Layout position (mutable, set by layout algorithm)
+  double x = 0;
+  double y = 0;
+
+  GraphNode({
+    required this.id,
+    required this.title,
+    required this.linkCount,
+    required this.tags,
+    required this.isStarred,
+    required this.updatedAt,
+  });
+}
+
+class GraphEdge {
+  final String sourceId;
+  final String targetId;
+  GraphEdge({required this.sourceId, required this.targetId});
+}
+
+class GraphData {
+  final List<GraphNode> nodes;
+  final List<GraphEdge> edges;
+  GraphData({required this.nodes, required this.edges});
 }

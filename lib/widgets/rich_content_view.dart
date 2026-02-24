@@ -3,9 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart' show isAndroid;
+import '../models/note.dart';
+import '../providers/notes_provider.dart';
+import '../pages/note_detail_page.dart';
 import 'flowchart/flowchart_widget.dart';
 
 // Pre-compiled regex — avoids recompilation per build
@@ -17,10 +21,12 @@ final _mermaidBlockPattern = RegExp(r'```mermaid\s*\n([\s\S]*?)```', multiLine: 
 
 /// Renders message content with Markdown, LaTeX/chemical formulas, and Mermaid flowcharts.
 /// Links are clickable and open in the system browser.
+/// Wiki-links [[note]] are rendered as clickable internal links.
 class RichContentView extends StatefulWidget {
   final String content;
+  final bool enableWikiLinks;
 
-  const RichContentView({super.key, required this.content});
+  const RichContentView({super.key, required this.content, this.enableWikiLinks = false});
 
   @override
   State<RichContentView> createState() => _RichContentViewState();
@@ -66,6 +72,9 @@ class _RichContentViewState extends State<RichContentView> {
               child: _MathWidget(tex: seg.content, display: seg.isDisplay),
             );
           case _SegmentType.markdown:
+            if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
+              return _WikiLinkMarkdown(data: seg.content);
+            }
             return _MarkdownWidget(data: seg.content);
         }
       }).toList(),
@@ -241,6 +250,129 @@ class _MarkdownWidget extends StatelessWidget {
             listBullet: TextStyle(fontSize: 14, color: theme.typography.body?.color),
             tableHead: TextStyle(fontWeight: FontWeight.w600, color: theme.typography.body?.color),
             tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Renders markdown with wiki-links [[note]] as clickable inline chips.
+class _WikiLinkMarkdown extends StatelessWidget {
+  final String data;
+  const _WikiLinkMarkdown({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    // Split text by wiki-link pattern and build mixed inline content
+    final parts = <InlineSpan>[];
+    int lastEnd = 0;
+
+    for (final match in wikiLinkPattern.allMatches(data)) {
+      if (match.start > lastEnd) {
+        parts.add(InlineSpan(text: data.substring(lastEnd, match.start)));
+      }
+      final link = WikiLink.parse(match.group(1)!);
+      parts.add(InlineSpan(wikiLink: link));
+      lastEnd = match.end;
+    }
+    if (lastEnd < data.length) {
+      parts.add(InlineSpan(text: data.substring(lastEnd)));
+    }
+
+    // If no wiki-links found, fall back to regular markdown
+    if (parts.every((p) => p.wikiLink == null)) {
+      return _MarkdownWidget(data: data);
+    }
+
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: parts.map((p) {
+        if (p.wikiLink != null) {
+          return _WikiLinkChip(link: p.wikiLink!);
+        }
+        // Render text parts as markdown
+        return _MarkdownWidget(data: p.text!);
+      }).toList(),
+    );
+  }
+}
+
+class InlineSpan {
+  final String? text;
+  final WikiLink? wikiLink;
+  InlineSpan({this.text, this.wikiLink});
+}
+
+class _WikiLinkChip extends StatelessWidget {
+  final WikiLink link;
+  const _WikiLinkChip({required this.link});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final provider = context.read<NotesProvider>();
+    final targetNote = provider.findNoteByTitle(link.target);
+    final exists = targetNote != null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () {
+          if (exists) {
+            provider.markViewed(targetNote.id);
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: targetNote.id)),
+            );
+          } else {
+            // Create the note and navigate
+            final newNote = provider.createNote(title: link.target);
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: newNote.id)),
+            );
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: exists
+                ? cs.primaryContainer.withAlpha(160)
+                : cs.errorContainer.withAlpha(100),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: exists ? cs.primary.withAlpha(60) : cs.error.withAlpha(60),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                exists ? Icons.link_rounded : Icons.add_link_rounded,
+                size: 12,
+                color: exists ? cs.primary : cs.error,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                link.displayText,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: exists ? cs.primary : cs.error,
+                  fontWeight: FontWeight.w500,
+                  decoration: exists ? null : TextDecoration.underline,
+                  decorationStyle: TextDecorationStyle.dashed,
+                ),
+              ),
+              if (link.heading != null) ...[
+                Text(' › ${link.heading}',
+                    style: TextStyle(fontSize: 11, color: cs.outline)),
+              ],
+              if (link.blockId != null) ...[
+                Text(' › ^${link.blockId}',
+                    style: TextStyle(fontSize: 11, color: cs.outline)),
+              ],
+            ],
           ),
         ),
       ),

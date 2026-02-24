@@ -9,6 +9,7 @@ import '../providers/notes_provider.dart';
 import 'chat_page.dart';
 import 'notes_page.dart';
 import 'note_detail_page.dart';
+import 'graph_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
 
@@ -117,6 +118,15 @@ class _HomePageState extends State<HomePage> with WindowListener {
             const SizedBox(width: 4),
           ],
           if (_androidNavIndex == 1) ...[
+            IconButton(
+              icon: Icon(Icons.hub_rounded, color: cs.onSurfaceVariant),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GraphPage()),
+                );
+              },
+              tooltip: 'Knowledge Graph',
+            ),
             FilledButton.tonalIcon(
               onPressed: () {
                 final note = context.read<NotesProvider>().createNote();

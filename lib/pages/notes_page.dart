@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import 'note_detail_page.dart';
+import 'graph_page.dart';
 
 final _taskItemRegex = RegExp(r'^\s*-\s+\[([ xX])\]\s+', multiLine: true);
 

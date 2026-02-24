@@ -424,6 +424,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             onSelected: _onMenuAction,
             itemBuilder: (_) => [
               PopupMenuItem(value: 'outline', child: _menuRow(Icons.segment_rounded, 'Outline')),
+              PopupMenuItem(value: 'backlinks', child: _menuRow(Icons.link_rounded, 'Backlinks')),
               PopupMenuItem(value: 'frontmatter', child: _menuRow(Icons.data_object_rounded, 'Insert Frontmatter')),
               PopupMenuItem(value: 'tags', child: _menuRow(Icons.tag_rounded, 'Tags')),
               const PopupMenuDivider(),
@@ -477,6 +478,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     switch (action) {
       case 'outline':
         _showOutlineDrawer();
+        break;
+      case 'backlinks':
+        _showBacklinksSheet();
         break;
       case 'frontmatter':
         _insertFrontmatter();
@@ -690,6 +694,162 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     );
   }
 
+  // ─── Backlinks sheet ───
+
+  void _showBacklinksSheet() {
+    final cs = Theme.of(context).colorScheme;
+    final provider = context.read<NotesProvider>();
+    final backlinks = provider.getBacklinks(widget.noteId);
+    final outgoing = provider.getOutgoingLinks(widget.noteId);
+    final unlinked = provider.getUnlinkedMentions(widget.noteId);
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      backgroundColor: cs.surfaceContainerLow,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (ctx, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.link_rounded, size: 20, color: cs.primary),
+                      const SizedBox(width: 10),
+                      Text('Links', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    children: [
+                      // Backlinks section
+                      _linkSectionHeader(cs, Icons.arrow_back_rounded, 'Backlinks', backlinks.length),
+                      if (backlinks.isEmpty)
+                        _emptyLinkHint(cs, 'No notes link to this note')
+                      else
+                        ...backlinks.map((n) => _linkTile(cs, n)),
+                      const SizedBox(height: 12),
+                      // Outgoing links
+                      _linkSectionHeader(cs, Icons.arrow_forward_rounded, 'Outgoing Links', outgoing.length),
+                      if (outgoing.isEmpty)
+                        _emptyLinkHint(cs, 'This note has no wiki-links')
+                      else
+                        ...outgoing.map((n) => _linkTile(cs, n)),
+                      const SizedBox(height: 12),
+                      // Unlinked mentions
+                      _linkSectionHeader(cs, Icons.link_off_rounded, 'Unlinked Mentions', unlinked.length),
+                      if (unlinked.isEmpty)
+                        _emptyLinkHint(cs, 'No unlinked mentions found')
+                      else
+                        ...unlinked.map((n) => _unlinkedTile(cs, n, provider)),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _linkSectionHeader(ColorScheme cs, IconData icon, String label, int count) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 4, left: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: cs.primary),
+          const SizedBox(width: 8),
+          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(8)),
+            child: Text('$count', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.onPrimaryContainer)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _emptyLinkHint(ColorScheme cs, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Text(text, style: TextStyle(fontSize: 12, color: cs.outline)),
+    );
+  }
+
+  Widget _linkTile(ColorScheme cs, Note note) {
+    return ListTile(
+      dense: true,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      leading: Container(
+        width: 28, height: 28,
+        decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(8)),
+        child: Center(child: Icon(Icons.description_outlined, size: 14, color: cs.onPrimaryContainer)),
+      ),
+      title: Text(note.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+      subtitle: Text(
+        note.content.length > 60 ? '${note.content.substring(0, 60)}...' : note.content,
+        maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 11, color: cs.outline),
+      ),
+      onTap: () {
+        Navigator.of(context).pop(); // close sheet
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)),
+        );
+      },
+    );
+  }
+
+  Widget _unlinkedTile(ColorScheme cs, Note note, NotesProvider provider) {
+    return ListTile(
+      dense: true,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      leading: Container(
+        width: 28, height: 28,
+        decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(8)),
+        child: Center(child: Icon(Icons.link_off_rounded, size: 14, color: cs.onTertiaryContainer)),
+      ),
+      title: Text(note.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+      trailing: FilledButton.tonal(
+        onPressed: () {
+          provider.addLinkToNote(widget.noteId, note.title);
+          // Refresh the content controller
+          final updatedNote = provider.notes.where((n) => n.id == widget.noteId).firstOrNull;
+          if (updatedNote != null) {
+            _contentController.text = updatedNote.content;
+          }
+          Navigator.of(context).pop(); // close sheet
+        },
+        style: FilledButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+        ),
+        child: const Text('Link', style: TextStyle(fontSize: 12)),
+      ),
+      onTap: () {
+        Navigator.of(context).pop();
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)),
+        );
+      },
+    );
+  }
+
   // ─── Tags bar ───
 
   Widget _buildTagsBar(ColorScheme cs, List<String> tags) {
@@ -791,6 +951,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           _toolBtn(Icons.calculate_outlined, 'Block math', () => _wrapSelection('\$\$\n', '\n\$\$')),
           _toolDivider(cs),
           _toolBtn(Icons.tag_rounded, 'Tag', () => _insertAtCursor('#')),
+          _toolBtn(Icons.add_link_rounded, 'Wiki Link', () => _insertAtCursor('[[')),
         ],
       ),
     );
@@ -867,7 +1028,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     return SingleChildScrollView(
       controller: _previewScroll,
       padding: const EdgeInsets.all(16),
-      child: RichContentView(content: content),
+      child: RichContentView(content: content, enableWikiLinks: true),
     );
   }
 

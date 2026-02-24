@@ -1,4 +1,5 @@
-import 'package:fluent_ui/fluent_ui.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../main.dart' show isAndroid;
@@ -46,14 +47,19 @@ class _ChatPageState extends State<ChatPage> {
     final settings = context.read<SettingsProvider>();
     if (!settings.isConfigured) {
       if (!mounted) return;
-      await displayInfoBar(context, builder: (ctx, close) {
-        return InfoBar(
-          title: const Text('API Key not configured'),
-          content: const Text('Please go to Settings to configure your API key.'),
-          severity: InfoBarSeverity.warning,
-          action: IconButton(icon: const Icon(FluentIcons.clear), onPressed: close),
+      if (isAndroid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please configure your API key in Settings.')),
         );
-      });
+      } else {
+        fluent.displayInfoBar(context, builder: (ctx, close) {
+          return fluent.InfoBar(
+            title: const Text('Please configure your API key in Settings.'),
+            severity: fluent.InfoBarSeverity.warning,
+            action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close),
+          );
+        });
+      }
       return;
     }
 
@@ -77,31 +83,131 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final chat = context.watch<ChatProvider>();
-    final theme = FluentTheme.of(context);
-    final messages = chat.messages;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final screenWidth = MediaQuery.of(context).size.width;
+    if (isAndroid) return _buildAndroid(context);
+    return _buildDesktop(context);
+  }
 
-    // Responsive horizontal padding based on screen width
-    final horizontalPadding = isAndroid
-        ? (screenWidth < 400 ? 12.0 : 16.0)
-        : 24.0;
+  // ─── Android: Material 3 ───
+  Widget _buildAndroid(BuildContext context) {
+    final chat = context.watch<ChatProvider>();
+    final cs = Theme.of(context).colorScheme;
+    final messages = chat.messages;
 
     if (messages.isNotEmpty) _scrollToBottom();
 
     return Column(
       children: [
-        // Messages area
         Expanded(
           child: messages.isEmpty
               ? const WelcomeView()
               : ListView.builder(
                   controller: _scrollController,
-                  padding: EdgeInsets.symmetric(
-                    horizontal: horizontalPadding,
-                    vertical: 16,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  itemCount: messages.length + (chat.isLoading ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == messages.length && chat.isLoading) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 16,
+                              backgroundColor: cs.primaryContainer,
+                              child: Icon(Icons.smart_toy_outlined, size: 16, color: cs.onPrimaryContainer),
+                            ),
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: cs.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary)),
+                                  const SizedBox(width: 10),
+                                  Text('Thinking...', style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return RepaintBoundary(child: MessageBubble(message: messages[index]));
+                  },
+                ),
+        ),
+        // M3 input bar
+        Container(
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerLow,
+            border: Border(top: BorderSide(color: cs.outlineVariant.withAlpha((0.3 * 255).round()))),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    maxLines: 4,
+                    minLines: 1,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                    style: const TextStyle(fontSize: 15),
+                    decoration: InputDecoration(
+                      hintText: 'Message...',
+                      filled: true,
+                      fillColor: cs.surfaceContainerHighest,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
                   ),
+                ),
+                const SizedBox(width: 8),
+                FloatingActionButton.small(
+                  onPressed: chat.isLoading ? null : _send,
+                  elevation: chat.isLoading ? 0 : 2,
+                  backgroundColor: chat.isLoading ? cs.surfaceContainerHighest : cs.primaryContainer,
+                  child: Icon(
+                    Icons.send_rounded,
+                    size: 20,
+                    color: chat.isLoading ? cs.outline : cs.onPrimaryContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Desktop: Fluent UI ───
+  Widget _buildDesktop(BuildContext context) {
+    final chat = context.watch<ChatProvider>();
+    final theme = fluent.FluentTheme.of(context);
+    final messages = chat.messages;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    if (messages.isNotEmpty) _scrollToBottom();
+
+    return Column(
+      children: [
+        Expanded(
+          child: messages.isEmpty
+              ? const WelcomeView()
+              : ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   addAutomaticKeepAlives: true,
                   itemCount: messages.length + (chat.isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
@@ -111,44 +217,35 @@ class _ChatPageState extends State<ChatPage> {
                         child: Row(
                           children: [
                             SizedBox(width: 48),
-                            ProgressRing(strokeWidth: 2),
+                            fluent.ProgressRing(strokeWidth: 2),
                             SizedBox(width: 12),
                             Text('Thinking...'),
                           ],
                         ),
                       );
                     }
-                    return RepaintBoundary(
-                      child: MessageBubble(message: messages[index]),
-                    );
+                    return RepaintBoundary(child: MessageBubble(message: messages[index]));
                   },
                 ),
         ),
-
-        // Input area — respects edge-to-edge bottom inset
         Container(
           decoration: BoxDecoration(
-            color: theme.micaBackgroundColor.withOpacity(0.8),
+            color: theme.micaBackgroundColor.withAlpha((0.8 * 255).round()),
             border: Border(top: BorderSide(color: theme.resources.dividerStrokeColorDefault)),
           ),
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            isAndroid ? 8 : 12,
-            horizontalPadding,
-            (isAndroid ? 8 : 12) + bottomPadding,
-          ),
+          padding: EdgeInsets.fromLTRB(24, 12, 24, 12 + bottomPadding),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: TextBox(
+                child: fluent.TextBox(
                   controller: _controller,
                   focusNode: _focusNode,
                   placeholder: 'Type your message...',
-                  maxLines: isAndroid ? 4 : 6,
+                  maxLines: 6,
                   minLines: 1,
                   onSubmitted: (_) => _send(),
-                  style: TextStyle(fontSize: isAndroid ? 15 : 14),
+                  style: const TextStyle(fontSize: 14),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: theme.resources.dividerStrokeColorDefault),
@@ -158,14 +255,11 @@ class _ChatPageState extends State<ChatPage> {
               const SizedBox(width: 8),
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
-                child: FilledButton(
+                child: fluent.FilledButton(
                   onPressed: chat.isLoading ? null : _send,
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isAndroid ? 10 : 8,
-                      vertical: isAndroid ? 10 : 6,
-                    ),
-                    child: Icon(FluentIcons.send, size: isAndroid ? 18 : 16),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: Icon(fluent.FluentIcons.send, size: 16),
                   ),
                 ),
               ),

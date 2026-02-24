@@ -1,5 +1,5 @@
-import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -19,7 +19,6 @@ bool get isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Android 16 edge-to-edge: transparent system bars
   if (isAndroid) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(

@@ -68,9 +68,9 @@ class FlowchartPainter extends CustomPainter {
       const Radius.circular(8),
     );
 
-    canvas.drawRRect(rect, Paint()..color = nodeBorderColor.withOpacity(0.08));
+    canvas.drawRRect(rect, Paint()..color = nodeBorderColor.withAlpha((0.08 * 255).round()));
     canvas.drawRRect(rect, Paint()
-      ..color = nodeBorderColor.withOpacity(0.3)
+      ..color = nodeBorderColor.withAlpha((0.3 * 255).round())
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1);
 
@@ -114,14 +114,14 @@ class FlowchartPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: edge.label,
-          style: TextStyle(fontSize: 11, color: labelColor, backgroundColor: nodeColor.withOpacity(0.9)),
+          style: TextStyle(fontSize: 11, color: labelColor, backgroundColor: nodeColor.withAlpha((0.9 * 255).round())),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
       final bgRect = Rect.fromCenter(center: mid, width: tp.width + 8, height: tp.height + 4);
       canvas.drawRRect(
         RRect.fromRectAndRadius(bgRect, const Radius.circular(4)),
-        Paint()..color = nodeColor.withOpacity(0.95),
+        Paint()..color = nodeColor.withAlpha((0.95 * 255).round()),
       );
       tp.paint(canvas, Offset(mid.dx - tp.width / 2, mid.dy - tp.height / 2));
     }

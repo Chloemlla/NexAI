@@ -1,10 +1,11 @@
-import 'package:fluent_ui/fluent_ui.dart';
-import 'package:flutter/material.dart' as material show Material, SelectableText, Colors;
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
+import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../main.dart' show isAndroid;
 import 'flowchart/flowchart_widget.dart';
 
 // Pre-compiled regex — avoids recompilation per build
@@ -76,7 +77,19 @@ class _MathWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
+    Color textColor;
+    Color accentColor;
+
+    if (isAndroid) {
+      final cs = Theme.of(context).colorScheme;
+      textColor = cs.onSurface;
+      accentColor = cs.primary;
+    } else {
+      final theme = fluent.FluentTheme.of(context);
+      textColor = theme.typography.body?.color ?? Colors.white;
+      accentColor = theme.accentColor;
+    }
+
     var processed = tex.trim();
     processed = processed.replaceAllMapped(
       _cePattern,
@@ -91,12 +104,12 @@ class _MathWidget extends StatelessWidget {
         processed,
         textStyle: TextStyle(
           fontSize: display ? 18 : 14,
-          color: theme.typography.body?.color,
+          color: textColor,
         ),
         onErrorFallback: (err) {
-          return material.SelectableText(
+          return SelectableText(
             tex,
-            style: TextStyle(fontSize: 13, fontFamily: 'Consolas', color: theme.accentColor),
+            style: TextStyle(fontSize: 13, fontFamily: 'Consolas', color: accentColor),
           );
         },
       ),
@@ -107,9 +120,11 @@ class _MathWidget extends StatelessWidget {
     var result = formula;
     result = result.replaceAllMapped(_subscriptPattern, (m) => '${m.group(1)}_{${m.group(2)}}');
     result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
-    result = result.replaceAll('->', '\\rightarrow ');
+    // Replace <-> before -> to avoid partial match
     result = result.replaceAll('<->', '\\rightleftharpoons ');
-    result = result.replaceAll('^', '\\uparrow ');
+    result = result.replaceAll('->', '\\rightarrow ');
+    // Only replace standalone ^ (gas evolution symbol), not ^{ from charge notation
+    result = result.replaceAllMapped(RegExp(r'\^(?!\{)'), (m) => '\\uparrow ');
     return '\\text{} $result';
   }
 }
@@ -121,11 +136,16 @@ class _MarkdownWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    if (isAndroid) return _buildM3Markdown(context);
+    return _buildFluentMarkdown(context);
+  }
 
-    return material.Material(
-      color: material.Colors.transparent,
+  Widget _buildM3Markdown(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
       child: MarkdownBody(
         data: data,
         selectable: true,
@@ -133,22 +153,60 @@ class _MarkdownWidget extends StatelessWidget {
         onTapLink: (text, href, title) {
           if (href != null && href.isNotEmpty) {
             final uri = Uri.tryParse(href);
-            if (uri != null) {
-              launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
+            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        styleSheet: MarkdownStyleSheet(
+          p: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
+          a: TextStyle(fontSize: 14, color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary),
+          code: TextStyle(
+            fontSize: 13, fontFamily: 'Consolas',
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+            color: cs.primary,
+          ),
+          codeblockDecoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+          ),
+          codeblockPadding: const EdgeInsets.all(12),
+          blockquoteDecoration: BoxDecoration(
+            border: Border(left: BorderSide(color: cs.primary, width: 3)),
+            color: cs.primary.withAlpha((0.05 * 255).round()),
+          ),
+          blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cs.onSurface),
+          h2: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: cs.onSurface),
+          h3: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface),
+          listBullet: TextStyle(fontSize: 14, color: cs.onSurface),
+          tableHead: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
+          tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFluentMarkdown(BuildContext context) {
+    final theme = fluent.FluentTheme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: MarkdownBody(
+        data: data,
+        selectable: true,
+        extensionSet: md.ExtensionSet.gitHubFlavored,
+        onTapLink: (text, href, title) {
+          if (href != null && href.isNotEmpty) {
+            final uri = Uri.tryParse(href);
+            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
           }
         },
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
-          a: TextStyle(
-            fontSize: 14,
-            color: theme.accentColor,
-            decoration: TextDecoration.underline,
-            decorationColor: theme.accentColor,
-          ),
+          a: TextStyle(fontSize: 14, color: theme.accentColor, decoration: TextDecoration.underline, decorationColor: theme.accentColor),
           code: TextStyle(
-            fontSize: 13,
-            fontFamily: 'Consolas',
+            fontSize: 13, fontFamily: 'Consolas',
             backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
             color: theme.accentColor,
           ),
@@ -160,7 +218,7 @@ class _MarkdownWidget extends StatelessWidget {
           codeblockPadding: const EdgeInsets.all(12),
           blockquoteDecoration: BoxDecoration(
             border: Border(left: BorderSide(color: theme.accentColor, width: 3)),
-            color: theme.accentColor.withOpacity(0.05),
+            color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.05),
           ),
           blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
           h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.typography.body?.color),

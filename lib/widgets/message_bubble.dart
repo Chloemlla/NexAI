@@ -1,4 +1,5 @@
-import 'package:fluent_ui/fluent_ui.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../main.dart' show isAndroid;
@@ -12,15 +13,80 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
+    if (isAndroid) return _buildM3Bubble(context);
+    return _buildFluentBubble(context);
+  }
+
+  // ─── Android: Material 3 bubble ───
+  Widget _buildM3Bubble(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final isUser = message.role == 'user';
-    final isDark = theme.brightness == Brightness.dark;
     final screenWidth = MediaQuery.of(context).size.width;
 
-    final maxBubbleWidth = isAndroid ? screenWidth * 0.85 : 720.0;
-    final avatarSize = isAndroid ? 32.0 : 36.0;
-    final avatarIconSize = isAndroid ? 14.0 : 16.0;
-    final bubblePadding = isAndroid ? 10.0 : 14.0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (!isUser) ...[
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: cs.primaryContainer,
+              child: Icon(Icons.smart_toy_outlined, size: 14, color: cs.onPrimaryContainer),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(maxWidth: screenWidth * 0.82),
+              decoration: BoxDecoration(
+                color: isUser ? cs.primaryContainer : cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isUser ? 20 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 20),
+                ),
+                border: message.isError
+                    ? Border.all(color: cs.error.withAlpha((0.5 * 255).round()))
+                    : null,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isUser)
+                    SelectableText(
+                      message.content,
+                      style: TextStyle(fontSize: 15, color: cs.onPrimaryContainer, height: 1.4),
+                    )
+                  else
+                    RepaintBoundary(child: RichContentView(content: message.content)),
+                  const SizedBox(height: 4),
+                  _M3Footer(message: message, isUser: isUser),
+                ],
+              ),
+            ),
+          ),
+          if (isUser) ...[
+            const SizedBox(width: 6),
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: cs.secondaryContainer,
+              child: Icon(Icons.person_outline, size: 14, color: cs.onSecondaryContainer),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ─── Desktop: Fluent UI bubble ───
+  Widget _buildFluentBubble(BuildContext context) {
+    final theme = fluent.FluentTheme.of(context);
+    final isUser = message.role == 'user';
+    final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -29,69 +95,56 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            _Avatar(
-              size: avatarSize,
-              iconSize: avatarIconSize,
-              gradient: LinearGradient(
-                colors: [theme.accentColor, theme.accentColor.lighter],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [theme.accentColor, theme.accentColor.lighter]),
+                borderRadius: BorderRadius.circular(18),
               ),
-              icon: FluentIcons.robot,
+              child: const Center(child: Icon(fluent.FluentIcons.robot, size: 16, color: fluent.Colors.white)),
             ),
-            SizedBox(width: isAndroid ? 8 : 10),
+            const SizedBox(width: 10),
           ],
           Flexible(
             child: Container(
-              constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+              constraints: const BoxConstraints(maxWidth: 720),
               decoration: BoxDecoration(
                 color: isUser
-                    ? theme.accentColor.withOpacity(isDark ? 0.3 : 0.12)
-                    : (isDark ? const Color(0xFF2D2D2D) : Colors.white),
+                    ? Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, isDark ? 0.3 : 0.12)
+                    : (isDark ? const Color(0xFF2D2D2D) : fluent.Colors.white),
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(12),
-                  topRight: const Radius.circular(12),
+                  topLeft: const Radius.circular(12), topRight: const Radius.circular(12),
                   bottomLeft: Radius.circular(isUser ? 12 : 2),
                   bottomRight: Radius.circular(isUser ? 2 : 12),
                 ),
                 border: message.isError
-                    ? Border.all(color: Colors.red.withOpacity(0.5))
+                    ? Border.all(color: fluent.Colors.red.withAlpha((0.5 * 255).round()))
                     : (isDark ? null : Border.all(color: const Color(0xFFE8E8E8))),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.2 : 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? (0.2 * 255).round() : (0.05 * 255).round()), blurRadius: 8, offset: const Offset(0, 2))],
               ),
-              padding: EdgeInsets.all(bubblePadding),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (isUser)
-                    SelectableText(
-                      message.content,
-                      style: TextStyle(fontSize: 14, color: theme.typography.body?.color),
-                    )
+                    SelectableText(message.content, style: TextStyle(fontSize: 14, color: theme.typography.body?.color))
                   else
-                    RepaintBoundary(
-                      child: RichContentView(content: message.content),
-                    ),
+                    RepaintBoundary(child: RichContentView(content: message.content)),
                   const SizedBox(height: 6),
-                  _MessageFooter(message: message, isUser: isUser),
+                  _FluentFooter(message: message, isUser: isUser),
                 ],
               ),
             ),
           ),
           if (isUser) ...[
-            SizedBox(width: isAndroid ? 8 : 10),
-            _Avatar(
-              size: avatarSize,
-              iconSize: avatarIconSize,
-              color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE8E8E8),
-              icon: FluentIcons.contact,
-              iconColor: theme.typography.body?.color,
+            const SizedBox(width: 10),
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE8E8E8),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Center(child: Icon(fluent.FluentIcons.contact, size: 16, color: theme.typography.body?.color)),
             ),
           ],
         ],
@@ -100,49 +153,48 @@ class MessageBubble extends StatelessWidget {
   }
 }
 
-class _Avatar extends StatelessWidget {
-  final Gradient? gradient;
-  final Color? color;
-  final IconData icon;
-  final Color? iconColor;
-  final double size;
-  final double iconSize;
-
-  const _Avatar({
-    this.gradient,
-    this.color,
-    required this.icon,
-    this.iconColor,
-    this.size = 36,
-    this.iconSize = 16,
-  });
+class _M3Footer extends StatelessWidget {
+  final Message message;
+  final bool isUser;
+  const _M3Footer({required this.message, required this.isUser});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: gradient,
-        color: color,
-        borderRadius: BorderRadius.circular(size / 2),
-      ),
-      child: Center(
-        child: Icon(icon, size: iconSize, color: iconColor ?? Colors.white),
-      ),
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
+          style: TextStyle(fontSize: 10, color: cs.outline),
+        ),
+        if (!isUser) ...[
+          const SizedBox(width: 12),
+          InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: message.content));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)));
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.copy_rounded, size: 14, color: cs.outline),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
 
-class _MessageFooter extends StatelessWidget {
+class _FluentFooter extends StatelessWidget {
   final Message message;
   final bool isUser;
-
-  const _MessageFooter({required this.message, required this.isUser});
+  const _FluentFooter({required this.message, required this.isUser});
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
+    final theme = fluent.FluentTheme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -155,15 +207,15 @@ class _MessageFooter extends StatelessWidget {
           GestureDetector(
             onTap: () {
               Clipboard.setData(ClipboardData(text: message.content));
-              displayInfoBar(context, builder: (ctx, close) {
-                return InfoBar(
+              fluent.displayInfoBar(context, builder: (ctx, close) {
+                return fluent.InfoBar(
                   title: const Text('Copied to clipboard'),
-                  severity: InfoBarSeverity.info,
-                  action: IconButton(icon: const Icon(FluentIcons.clear), onPressed: close),
+                  severity: fluent.InfoBarSeverity.info,
+                  action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close),
                 );
               });
             },
-            child: Icon(FluentIcons.copy, size: 12, color: theme.inactiveColor),
+            child: Icon(fluent.FluentIcons.copy, size: 12, color: theme.inactiveColor),
           ),
         ],
       ],

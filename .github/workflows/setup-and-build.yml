@@ -259,7 +259,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
         with:
           tag_name: ${{ github.ref_name }}
           release_name: NexAI ${{ github.ref_name }}
@@ -270,7 +270,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: NexAI-${{ github.ref_name }}.apk
@@ -280,7 +280,7 @@ jobs:
       - name: Upload AAB
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: NexAI-${{ github.ref_name }}.aab
@@ -290,7 +290,7 @@ jobs:
       - name: Upload Web zip
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: NexAI-Web-${{ github.ref_name }}.zip

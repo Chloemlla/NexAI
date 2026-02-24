@@ -1,4 +1,5 @@
-import 'package:fluent_ui/fluent_ui.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
+import 'package:flutter/material.dart';
 
 import '../main.dart' show isAndroid;
 
@@ -7,75 +8,43 @@ class WelcomeView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final screenWidth = MediaQuery.of(context).size.width;
+    if (isAndroid) return _buildM3Welcome(context);
+    return _buildFluentWelcome(context);
+  }
 
-    final logoSize = isAndroid ? 64.0 : 80.0;
-    final logoIconSize = isAndroid ? 28.0 : 36.0;
-    final titleSize = isAndroid ? 22.0 : 28.0;
-    final cardWidth = isAndroid
-        ? (screenWidth < 400 ? (screenWidth - 56) / 2 : 150.0)
-        : 180.0;
+  // ─── Android: Material 3 ───
+  Widget _buildM3Welcome(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = (screenWidth - 52) / 2;
 
     return Center(
       child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: isAndroid ? 16 : 24,
-          vertical: 24,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: logoSize,
-              height: logoSize,
+              width: 72, height: 72,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.accentColor.withOpacity(0.8),
-                    theme.accentColor.lighter,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(isAndroid ? 20 : 24),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.accentColor.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(22),
               ),
-              child: Center(
-                child: Icon(FluentIcons.robot, size: logoIconSize, color: Colors.white),
-              ),
+              child: Center(child: Icon(Icons.smart_toy_rounded, size: 36, color: cs.onPrimaryContainer)),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Welcome to NexAI',
-              style: TextStyle(
-                fontSize: titleSize,
-                fontWeight: FontWeight.bold,
-                color: theme.typography.body?.color,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your intelligent AI assistant',
-              style: TextStyle(fontSize: 14, color: theme.inactiveColor),
-            ),
-            const SizedBox(height: 40),
+            Text('Welcome to NexAI', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text('Your intelligent AI assistant', style: TextStyle(color: cs.onSurfaceVariant)),
+            const SizedBox(height: 36),
             Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: 10, runSpacing: 10,
               alignment: WrapAlignment.center,
               children: [
-                _buildHintCard(theme, isDark, FluentIcons.chat, 'Chat', 'Ask anything you want', cardWidth),
-                _buildHintCard(theme, isDark, FluentIcons.variable2, 'Math', 'Render LaTeX formulas', cardWidth),
-                _buildHintCard(theme, isDark, FluentIcons.test_beaker, 'Chemistry', 'Chemical equations', cardWidth),
-                _buildHintCard(theme, isDark, FluentIcons.code, 'Code', 'Syntax highlighted code', cardWidth),
+                _m3Card(cs, Icons.chat_rounded, 'Chat', 'Ask anything', cardWidth),
+                _m3Card(cs, Icons.functions_rounded, 'Math', 'LaTeX formulas', cardWidth),
+                _m3Card(cs, Icons.science_rounded, 'Chemistry', 'Equations', cardWidth),
+                _m3Card(cs, Icons.code_rounded, 'Code', 'Syntax highlight', cardWidth),
               ],
             ),
           ],
@@ -84,22 +53,86 @@ class WelcomeView extends StatelessWidget {
     );
   }
 
-  Widget _buildHintCard(FluentThemeData theme, bool isDark, IconData icon, String title, String subtitle, double width) {
+  Widget _m3Card(ColorScheme cs, IconData icon, String title, String subtitle, double width) {
     return SizedBox(
       width: width,
       child: Card(
-        padding: EdgeInsets.all(isAndroid ? 12 : 16),
+        elevation: 0,
+        color: cs.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+          child: Column(
+            children: [
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(12)),
+                child: Center(child: Icon(icon, size: 20, color: cs.onPrimaryContainer)),
+              ),
+              const SizedBox(height: 10),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              const SizedBox(height: 2),
+              Text(subtitle, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant), textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Desktop: Fluent UI ───
+  Widget _buildFluentWelcome(BuildContext context) {
+    final theme = fluent.FluentTheme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80, height: 80,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [
+                Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.8),
+                theme.accentColor.lighter,
+              ]),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [BoxShadow(color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+            ),
+            child: const Center(child: Icon(fluent.FluentIcons.robot, size: 36, color: fluent.Colors.white)),
+          ),
+          const SizedBox(height: 24),
+          Text('Welcome to NexAI', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: theme.typography.body?.color)),
+          const SizedBox(height: 8),
+          Text('Your intelligent AI assistant', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
+          const SizedBox(height: 40),
+          Wrap(
+            spacing: 12, runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              _fluentCard(theme, isDark, fluent.FluentIcons.chat, 'Chat', 'Ask anything you want'),
+              _fluentCard(theme, isDark, fluent.FluentIcons.variable2, 'Math', 'Render LaTeX formulas'),
+              _fluentCard(theme, isDark, fluent.FluentIcons.test_beaker, 'Chemistry', 'Chemical equations'),
+              _fluentCard(theme, isDark, fluent.FluentIcons.code, 'Code', 'Syntax highlighted code'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fluentCard(fluent.FluentThemeData theme, bool isDark, IconData icon, String title, String subtitle) {
+    return SizedBox(
+      width: 180,
+      child: fluent.Card(
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Icon(icon, size: isAndroid ? 20 : 24, color: theme.accentColor),
-            SizedBox(height: isAndroid ? 8 : 10),
+            Icon(icon, size: 24, color: theme.accentColor),
+            const SizedBox(height: 10),
             Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 11, color: theme.inactiveColor),
-              textAlign: TextAlign.center,
-            ),
+            Text(subtitle, style: TextStyle(fontSize: 11, color: theme.inactiveColor), textAlign: TextAlign.center),
           ],
         ),
       ),

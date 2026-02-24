@@ -1,15 +1,27 @@
 class Message {
   final String role;
-  final String content;
+  String _content;
   final DateTime timestamp;
-  final bool isError;
+  bool _isError;
 
   Message({
     required this.role,
-    required this.content,
+    required String content,
     required this.timestamp,
-    this.isError = false,
-  });
+    bool isError = false,
+  })  : _content = content,
+        _isError = isError;
+
+  String get content => _content;
+  bool get isError => _isError;
+
+  void updateContent(String newContent) {
+    _content = newContent;
+  }
+
+  void markAsError() {
+    _isError = true;
+  }
 }
 
 class Conversation {

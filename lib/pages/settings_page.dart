@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../main.dart' show isAndroid;
 import '../providers/settings_provider.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -273,8 +274,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildCard(FluentThemeData theme, {required String title, required IconData icon, required List<Widget> children}) {
+    final cardPadding = isAndroid ? 14.0 : 20.0;
     return Card(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(cardPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

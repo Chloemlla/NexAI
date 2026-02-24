@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' as material show Material, SelectableText
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'flowchart/flowchart_widget.dart';
 
@@ -14,6 +15,7 @@ final _chargePattern = RegExp(r'(\d*[+-])(?!\})');
 final _mermaidBlockPattern = RegExp(r'```mermaid\s*\n([\s\S]*?)```', multiLine: true);
 
 /// Renders message content with Markdown, LaTeX/chemical formulas, and Mermaid flowcharts.
+/// Links are clickable and open in the system browser.
 class RichContentView extends StatefulWidget {
   final String content;
 
@@ -128,8 +130,22 @@ class _MarkdownWidget extends StatelessWidget {
         data: data,
         selectable: true,
         extensionSet: md.ExtensionSet.gitHubFlavored,
+        onTapLink: (text, href, title) {
+          if (href != null && href.isNotEmpty) {
+            final uri = Uri.tryParse(href);
+            if (uri != null) {
+              launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          }
+        },
         styleSheet: MarkdownStyleSheet(
           p: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
+          a: TextStyle(
+            fontSize: 14,
+            color: theme.accentColor,
+            decoration: TextDecoration.underline,
+            decorationColor: theme.accentColor,
+          ),
           code: TextStyle(
             fontSize: 13,
             fontFamily: 'Consolas',

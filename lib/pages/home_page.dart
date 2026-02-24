@@ -1,9 +1,8 @@
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../main.dart' show isDesktop;
+import '../main.dart' show isDesktop, isAndroid;
 import '../providers/chat_provider.dart';
 import 'chat_page.dart';
 import 'settings_page.dart';
@@ -17,7 +16,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WindowListener {
-  // Navigation targets: 'chat', 'settings', 'about'
   String _currentPage = 'chat';
 
   @override
@@ -32,17 +30,14 @@ class _HomePageState extends State<HomePage> with WindowListener {
     super.dispose();
   }
 
-  /// Compute the flat selected index from _currentPage + chat.currentIndex.
-  /// items: [PaneItemHeader(skip), ...N conversations]  → selectable indices 0..N-1
-  /// footerItems: [PaneItemSeparator(skip), Settings, About] → selectable indices N, N+1
   int _resolveSelectedIndex(int convCount, int chatIndex) {
     switch (_currentPage) {
       case 'settings':
-        return convCount; // first footer selectable
+        return convCount;
       case 'about':
-        return convCount + 1; // second footer selectable
-      default: // 'chat'
-        if (convCount == 0) return -1; // nothing to select
+        return convCount + 1;
+      default:
+        if (convCount == 0) return -1;
         return chatIndex.clamp(0, convCount - 1);
     }
   }
@@ -64,7 +59,6 @@ class _HomePageState extends State<HomePage> with WindowListener {
           icon: Icon(FluentIcons.delete, size: 12, color: theme.inactiveColor),
           onPressed: () {
             chat.deleteConversation(idx);
-            // Stay on chat page; provider already adjusts currentIndex
             setState(() {});
           },
         ),
@@ -124,7 +118,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
             }
           });
         },
-        displayMode: PaneDisplayMode.compact,
+        displayMode: isAndroid ? PaneDisplayMode.minimal : PaneDisplayMode.compact,
         items: [
           PaneItemHeader(header: const Text('Conversations')),
           ...conversationItems,
@@ -145,10 +139,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
       ),
     );
 
-    // Edge-to-edge safe area padding for Android
-    if (!isDesktop && mediaQuery.padding.bottom > 0) {
-      body = MediaQuery(
-        data: mediaQuery,
+    // Wrap with SafeArea for Android edge-to-edge
+    if (isAndroid) {
+      body = SafeArea(
+        bottom: false, // bottom handled per-page for input area
         child: body,
       );
     }

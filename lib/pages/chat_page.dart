@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../main.dart' show isAndroid;
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/message_bubble.dart';
@@ -80,6 +81,12 @@ class _ChatPageState extends State<ChatPage> {
     final theme = FluentTheme.of(context);
     final messages = chat.messages;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Responsive horizontal padding based on screen width
+    final horizontalPadding = isAndroid
+        ? (screenWidth < 400 ? 12.0 : 16.0)
+        : 24.0;
 
     if (messages.isNotEmpty) _scrollToBottom();
 
@@ -91,8 +98,10 @@ class _ChatPageState extends State<ChatPage> {
               ? const WelcomeView()
               : ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  // addAutomaticKeepAlives reduces widget recreation
+                  padding: EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 16,
+                  ),
                   addAutomaticKeepAlives: true,
                   itemCount: messages.length + (chat.isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
@@ -109,7 +118,6 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                       );
                     }
-                    // RepaintBoundary isolates each bubble's repaint
                     return RepaintBoundary(
                       child: MessageBubble(message: messages[index]),
                     );
@@ -123,7 +131,12 @@ class _ChatPageState extends State<ChatPage> {
             color: theme.micaBackgroundColor.withOpacity(0.8),
             border: Border(top: BorderSide(color: theme.resources.dividerStrokeColorDefault)),
           ),
-          padding: EdgeInsets.fromLTRB(24, 12, 24, 12 + bottomPadding),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            isAndroid ? 8 : 12,
+            horizontalPadding,
+            (isAndroid ? 8 : 12) + bottomPadding,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -132,10 +145,10 @@ class _ChatPageState extends State<ChatPage> {
                   controller: _controller,
                   focusNode: _focusNode,
                   placeholder: 'Type your message...',
-                  maxLines: 6,
+                  maxLines: isAndroid ? 4 : 6,
                   minLines: 1,
                   onSubmitted: (_) => _send(),
-                  style: const TextStyle(fontSize: 14),
+                  style: TextStyle(fontSize: isAndroid ? 15 : 14),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: theme.resources.dividerStrokeColorDefault),
@@ -147,9 +160,12 @@ class _ChatPageState extends State<ChatPage> {
                 padding: const EdgeInsets.only(bottom: 2),
                 child: FilledButton(
                   onPressed: chat.isLoading ? null : _send,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    child: Icon(FluentIcons.send, size: 16),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isAndroid ? 10 : 8,
+                      vertical: isAndroid ? 10 : 6,
+                    ),
+                    child: Icon(FluentIcons.send, size: isAndroid ? 18 : 16),
                   ),
                 ),
               ),

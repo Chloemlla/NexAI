@@ -1,6 +1,8 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../main.dart' show isAndroid;
+
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
@@ -28,7 +30,7 @@ class AboutPage extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(isAndroid ? 20 : 32),
             child: Column(
               children: [
                 Container(
@@ -119,7 +121,9 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 12),
             _infoRow(theme, 'Framework', 'Flutter + Fluent UI'),
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              spacing: 10,
+              runSpacing: 8,
               children: [
                 FilledButton(
                   onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI'),
@@ -132,7 +136,6 @@ class AboutPage extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
                 Button(
                   onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
                   child: const Row(
@@ -200,7 +203,7 @@ class AboutPage extends StatelessWidget {
 
   Widget _buildInfoCard(FluentThemeData theme, {required IconData icon, required String title, required List<Widget> children}) {
     return Card(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isAndroid ? 14 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

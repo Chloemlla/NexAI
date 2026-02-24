@@ -261,5 +261,10 @@ class FlowchartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(FlowchartPainter oldDelegate) =>
-      graph != oldDelegate.graph || nodeColor != oldDelegate.nodeColor;
+      graph != oldDelegate.graph ||
+      layout != oldDelegate.layout ||
+      nodeColor != oldDelegate.nodeColor ||
+      nodeBorderColor != oldDelegate.nodeBorderColor ||
+      textColor != oldDelegate.textColor ||
+      edgeColor != oldDelegate.edgeColor;
 }

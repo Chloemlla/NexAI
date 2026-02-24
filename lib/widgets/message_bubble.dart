@@ -24,18 +24,26 @@ class MessageBubble extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isUser) ...[
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: cs.primaryContainer,
-              child: Icon(Icons.smart_toy_outlined, size: 14, color: cs.onPrimaryContainer),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cs.primary, cs.tertiary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(child: Icon(Icons.smart_toy_rounded, size: 14, color: cs.onPrimary)),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
           ],
           Flexible(
             child: Container(
@@ -43,38 +51,45 @@ class MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isUser ? cs.primaryContainer : cs.surfaceContainerHighest,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(20),
-                  topRight: const Radius.circular(20),
-                  bottomLeft: Radius.circular(isUser ? 20 : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : 20),
+                  topLeft: const Radius.circular(22),
+                  topRight: const Radius.circular(22),
+                  bottomLeft: Radius.circular(isUser ? 22 : 6),
+                  bottomRight: Radius.circular(isUser ? 6 : 22),
                 ),
                 border: message.isError
-                    ? Border.all(color: cs.error.withAlpha((0.5 * 255).round()))
+                    ? Border.all(color: cs.error.withAlpha(120))
                     : null,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isUser)
-                    SelectableText(
-                      message.content,
-                      style: TextStyle(fontSize: 15, color: cs.onPrimaryContainer, height: 1.4),
+                    RepaintBoundary(
+                      child: SelectableText(
+                        message.content,
+                        style: TextStyle(fontSize: 15, color: cs.onPrimaryContainer, height: 1.45),
+                      ),
                     )
                   else
                     RepaintBoundary(child: RichContentView(content: message.content)),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   _M3Footer(message: message, isUser: isUser),
                 ],
               ),
             ),
           ),
           if (isUser) ...[
-            const SizedBox(width: 6),
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: cs.secondaryContainer,
-              child: Icon(Icons.person_outline, size: 14, color: cs.onSecondaryContainer),
+            const SizedBox(width: 8),
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: cs.secondaryContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(child: Icon(Icons.person_rounded, size: 14, color: cs.onSecondaryContainer)),
             ),
           ],
         ],
@@ -125,9 +140,12 @@ class MessageBubble extends StatelessWidget {
               padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isUser)
-                    SelectableText(message.content, style: TextStyle(fontSize: 14, color: theme.typography.body?.color))
+                    RepaintBoundary(
+                      child: SelectableText(message.content, style: TextStyle(fontSize: 14, color: theme.typography.body?.color)),
+                    )
                   else
                     RepaintBoundary(child: RichContentView(content: message.content)),
                   const SizedBox(height: 6),
@@ -166,19 +184,35 @@ class _M3Footer extends StatelessWidget {
       children: [
         Text(
           '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
-          style: TextStyle(fontSize: 10, color: cs.outline),
+          style: TextStyle(fontSize: 10, color: cs.outline.withAlpha(180)),
         ),
         if (!isUser) ...[
-          const SizedBox(width: 12),
-          InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: () {
-              Clipboard.setData(ClipboardData(text: message.content));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied'), duration: Duration(seconds: 1)));
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(Icons.copy_rounded, size: 14, color: cs.outline),
+          const SizedBox(width: 10),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: message.content));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('Copied to clipboard'),
+                      ],
+                    ),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.copy_rounded, size: 14, color: cs.outline.withAlpha(180)),
+              ),
             ),
           ),
         ],

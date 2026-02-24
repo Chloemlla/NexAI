@@ -45,8 +45,12 @@ class _RichContentViewState extends State<RichContentView> {
 
   @override
   Widget build(BuildContext context) {
+    if (_segments.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: _segments.map((seg) {
         switch (seg.type) {
           case _SegmentType.mermaid:
@@ -100,18 +104,21 @@ class _MathWidget extends StatelessWidget {
       width: display ? double.infinity : null,
       padding: display ? const EdgeInsets.symmetric(vertical: 8) : null,
       alignment: display ? Alignment.center : null,
-      child: Math.tex(
-        processed,
-        textStyle: TextStyle(
-          fontSize: display ? 18 : 14,
-          color: textColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Math.tex(
+          processed,
+          textStyle: TextStyle(
+            fontSize: display ? 18 : 14,
+            color: textColor,
+          ),
+          onErrorFallback: (err) {
+            return SelectableText(
+              tex,
+              style: TextStyle(fontSize: 13, fontFamily: 'Consolas', color: accentColor),
+            );
+          },
         ),
-        onErrorFallback: (err) {
-          return SelectableText(
-            tex,
-            style: TextStyle(fontSize: 13, fontFamily: 'Consolas', color: accentColor),
-          );
-        },
       ),
     );
   }
@@ -146,41 +153,45 @@ class _MarkdownWidget extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: MarkdownBody(
-        data: data,
-        selectable: true,
-        extensionSet: md.ExtensionSet.gitHubFlavored,
-        onTapLink: (text, href, title) {
-          if (href != null && href.isNotEmpty) {
-            final uri = Uri.tryParse(href);
-            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-        },
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
-          a: TextStyle(fontSize: 14, color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary),
-          code: TextStyle(
-            fontSize: 13, fontFamily: 'Consolas',
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-            color: cs.primary,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: MarkdownBody(
+          data: data,
+          selectable: true,
+          shrinkWrap: true,
+          extensionSet: md.ExtensionSet.gitHubFlavored,
+          onTapLink: (text, href, title) {
+            if (href != null && href.isNotEmpty) {
+              final uri = Uri.tryParse(href);
+              if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          styleSheet: MarkdownStyleSheet(
+            p: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
+            a: TextStyle(fontSize: 14, color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary),
+            code: TextStyle(
+              fontSize: 13, fontFamily: 'Consolas',
+              backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+              color: cs.primary,
+            ),
+            codeblockDecoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+            ),
+            codeblockPadding: const EdgeInsets.all(12),
+            blockquoteDecoration: BoxDecoration(
+              border: Border(left: BorderSide(color: cs.primary, width: 3)),
+              color: cs.primary.withAlpha((0.05 * 255).round()),
+            ),
+            blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+            h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cs.onSurface),
+            h2: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: cs.onSurface),
+            h3: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface),
+            listBullet: TextStyle(fontSize: 14, color: cs.onSurface),
+            tableHead: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
+            tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
           ),
-          codeblockDecoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
-          ),
-          codeblockPadding: const EdgeInsets.all(12),
-          blockquoteDecoration: BoxDecoration(
-            border: Border(left: BorderSide(color: cs.primary, width: 3)),
-            color: cs.primary.withAlpha((0.05 * 255).round()),
-          ),
-          blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-          h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cs.onSurface),
-          h2: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: cs.onSurface),
-          h3: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface),
-          listBullet: TextStyle(fontSize: 14, color: cs.onSurface),
-          tableHead: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
-          tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
         ),
       ),
     );
@@ -192,41 +203,45 @@ class _MarkdownWidget extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: MarkdownBody(
-        data: data,
-        selectable: true,
-        extensionSet: md.ExtensionSet.gitHubFlavored,
-        onTapLink: (text, href, title) {
-          if (href != null && href.isNotEmpty) {
-            final uri = Uri.tryParse(href);
-            if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-        },
-        styleSheet: MarkdownStyleSheet(
-          p: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
-          a: TextStyle(fontSize: 14, color: theme.accentColor, decoration: TextDecoration.underline, decorationColor: theme.accentColor),
-          code: TextStyle(
-            fontSize: 13, fontFamily: 'Consolas',
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-            color: theme.accentColor,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: MarkdownBody(
+          data: data,
+          selectable: true,
+          shrinkWrap: true,
+          extensionSet: md.ExtensionSet.gitHubFlavored,
+          onTapLink: (text, href, title) {
+            if (href != null && href.isNotEmpty) {
+              final uri = Uri.tryParse(href);
+              if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+            }
+          },
+          styleSheet: MarkdownStyleSheet(
+            p: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
+            a: TextStyle(fontSize: 14, color: theme.accentColor, decoration: TextDecoration.underline, decorationColor: theme.accentColor),
+            code: TextStyle(
+              fontSize: 13, fontFamily: 'Consolas',
+              backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+              color: theme.accentColor,
+            ),
+            codeblockDecoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+            ),
+            codeblockPadding: const EdgeInsets.all(12),
+            blockquoteDecoration: BoxDecoration(
+              border: Border(left: BorderSide(color: theme.accentColor, width: 3)),
+              color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.05),
+            ),
+            blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+            h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.typography.body?.color),
+            h2: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
+            h3: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
+            listBullet: TextStyle(fontSize: 14, color: theme.typography.body?.color),
+            tableHead: TextStyle(fontWeight: FontWeight.w600, color: theme.typography.body?.color),
+            tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
           ),
-          codeblockDecoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
-          ),
-          codeblockPadding: const EdgeInsets.all(12),
-          blockquoteDecoration: BoxDecoration(
-            border: Border(left: BorderSide(color: theme.accentColor, width: 3)),
-            color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.05),
-          ),
-          blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-          h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.typography.body?.color),
-          h2: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-          h3: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-          listBullet: TextStyle(fontSize: 14, color: theme.typography.body?.color),
-          tableHead: TextStyle(fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-          tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
         ),
       ),
     );

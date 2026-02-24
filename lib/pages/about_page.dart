@@ -24,44 +24,63 @@ class AboutPage extends StatelessWidget {
         // Hero card
         Card(
           elevation: 0,
-          color: cs.primaryContainer.withAlpha((0.4 * 255).round()),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          color: cs.primaryContainer.withAlpha(80),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
             child: Column(
               children: [
                 Container(
-                  width: 80, height: 80,
+                  width: 88, height: 88,
                   decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(22),
+                    gradient: LinearGradient(
+                      colors: [cs.primary, cs.tertiary],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(26),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cs.primary.withAlpha(60),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                  child: Center(child: Icon(Icons.smart_toy_rounded, size: 40, color: cs.onPrimaryContainer)),
+                  child: Center(child: Icon(Icons.smart_toy_rounded, size: 44, color: cs.onPrimary)),
                 ),
-                const SizedBox(height: 20),
-                Text('NexAI', style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text('v1.0.0', style: tt.bodySmall?.copyWith(color: cs.outline)),
+                const SizedBox(height: 22),
+                Text('NexAI', style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5)),
                 const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer.withAlpha(150),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('v1.0.0', style: tt.bodySmall?.copyWith(color: cs.onSecondaryContainer, fontWeight: FontWeight.w500)),
+                ),
+                const SizedBox(height: 10),
                 Text('A beautiful AI chat client', style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // Author
-        _m3Section(cs, tt, Icons.person_outline, 'Author', [
+        _m3Section(cs, tt, Icons.person_outline_rounded, 'Author', [
           _m3InfoRow(cs, 'Developer', 'Chloemlla'),
           const SizedBox(height: 10),
           _m3InfoRow(cs, 'GitHub', 'github.com/Chloemlla'),
-          const SizedBox(height: 14),
-          FilledButton.tonal(
+          const SizedBox(height: 16),
+          FilledButton.tonalIcon(
             onPressed: () => _openUrl('https://github.com/Chloemlla'),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.open_in_new_rounded, size: 16), SizedBox(width: 8), Text('Author Profile')]),
+            icon: const Icon(Icons.open_in_new_rounded, size: 16),
+            label: const Text('Author Profile'),
           ),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // Project
         _m3Section(cs, tt, Icons.folder_outlined, 'Project', [
@@ -70,35 +89,37 @@ class AboutPage extends StatelessWidget {
           _m3InfoRow(cs, 'License', 'MIT'),
           const SizedBox(height: 10),
           _m3InfoRow(cs, 'Framework', 'Flutter + Material 3'),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.tonal(
+            FilledButton.tonalIcon(
               onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.open_in_new_rounded, size: 16), SizedBox(width: 8), Text('GitHub')]),
+              icon: const Icon(Icons.open_in_new_rounded, size: 16),
+              label: const Text('GitHub'),
             ),
-            OutlinedButton(
+            OutlinedButton.icon(
               onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.bug_report_outlined, size: 16), SizedBox(width: 8), Text('Report Issue')]),
+              icon: const Icon(Icons.bug_report_outlined, size: 16),
+              label: const Text('Report Issue'),
             ),
           ]),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // Features
         _m3Section(cs, tt, Icons.auto_awesome_outlined, 'Features', [
           _m3Feature(cs, Icons.chat_rounded, 'OpenAI-compatible API with custom base URL'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _m3Feature(cs, Icons.functions_rounded, 'LaTeX math & chemical formula rendering'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _m3Feature(cs, Icons.palette_rounded, 'Material You dynamic color (Android)'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _m3Feature(cs, Icons.code_rounded, 'Markdown with syntax-highlighted code'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _m3Feature(cs, Icons.desktop_windows_rounded, 'Fluent Design with Mica/Acrylic (Desktop)'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _m3Feature(cs, Icons.tune_rounded, 'Configurable models, temperature & tokens'),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // Tech stack
         _m3Section(cs, tt, Icons.build_outlined, 'Tech Stack', [
@@ -106,9 +127,10 @@ class AboutPage extends StatelessWidget {
             for (final label in ['Flutter', 'Material 3', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences'])
               Chip(
                 label: Text(label, style: TextStyle(fontSize: 12, color: cs.onSecondaryContainer)),
-                backgroundColor: cs.secondaryContainer,
+                backgroundColor: cs.secondaryContainer.withAlpha(150),
                 side: BorderSide.none,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
           ]),
         ]),
@@ -120,16 +142,24 @@ class AboutPage extends StatelessWidget {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Icon(icon, size: 20, color: cs.primary),
-            const SizedBox(width: 10),
-            Text(title, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer.withAlpha(150),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(child: Icon(icon, size: 18, color: cs.primary)),
+            ),
+            const SizedBox(width: 12),
+            Text(title, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2)),
           ]),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           ...children,
         ]),
       ),
@@ -139,14 +169,22 @@ class AboutPage extends StatelessWidget {
   Widget _m3InfoRow(ColorScheme cs, String label, String value) {
     return Row(children: [
       SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 13, color: cs.outline))),
-      Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+      Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
     ]);
   }
 
   Widget _m3Feature(ColorScheme cs, IconData icon, String text) {
     return Row(children: [
-      Icon(icon, size: 16, color: cs.primary),
-      const SizedBox(width: 10),
+      Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: cs.primaryContainer.withAlpha(100),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(child: Icon(icon, size: 14, color: cs.primary)),
+      ),
+      const SizedBox(width: 12),
       Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
     ]);
   }
@@ -279,7 +317,7 @@ class AboutPage extends StatelessWidget {
   Widget _fluentInfoRow(fluent.FluentThemeData theme, String label, String value) {
     return Row(children: [
       SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 13, color: theme.inactiveColor))),
-      Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+      Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
     ]);
   }
 

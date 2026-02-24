@@ -62,11 +62,89 @@ class NexAIApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: effectiveLight,
         textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+        navigationBarTheme: NavigationBarThemeData(
+          elevation: 0,
+          indicatorColor: effectiveLight.secondaryContainer,
+          labelTextStyle: WidgetStatePropertyAll(
+            GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          height: 72,
+        ),
+        appBarTheme: AppBarTheme(
+          centerTitle: false,
+          scrolledUnderElevation: 2,
+          backgroundColor: effectiveLight.surface,
+        ),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: effectiveLight.surfaceContainerHighest.withAlpha(180),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: effectiveLight.primary, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: effectiveDark,
         textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+        navigationBarTheme: NavigationBarThemeData(
+          elevation: 0,
+          indicatorColor: effectiveDark.secondaryContainer,
+          labelTextStyle: WidgetStatePropertyAll(
+            GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
+          height: 72,
+        ),
+        appBarTheme: AppBarTheme(
+          centerTitle: false,
+          scrolledUnderElevation: 2,
+          backgroundColor: effectiveDark.surface,
+        ),
+        cardTheme: CardThemeData(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: effectiveDark.surfaceContainerHighest.withAlpha(180),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: effectiveDark.primary, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
       home: const HomePage(),
     );

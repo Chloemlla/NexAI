@@ -49,49 +49,86 @@ class _HomePageState extends State<HomePage> with WindowListener {
       const AboutPage(),
     ];
 
+    final pageTitles = ['NexAI', 'Settings', 'About'];
+
     return Scaffold(
       appBar: AppBar(
         surfaceTintColor: cs.surfaceTint,
         title: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  colors: [cs.primary, cs.tertiary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(11),
               ),
               child: Center(
-                child: Icon(Icons.smart_toy_outlined, size: 18, color: cs.onPrimaryContainer),
+                child: Icon(
+                  _androidNavIndex == 0
+                      ? Icons.smart_toy_rounded
+                      : _androidNavIndex == 1
+                          ? Icons.settings_rounded
+                          : Icons.info_rounded,
+                  size: 18,
+                  color: cs.onPrimary,
+                ),
               ),
             ),
             const SizedBox(width: 12),
-            Text('NexAI', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18, color: cs.onSurface)),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Text(
+                pageTitles[_androidNavIndex],
+                key: ValueKey(_androidNavIndex),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 19, color: cs.onSurface, letterSpacing: -0.3),
+              ),
+            ),
           ],
         ),
         actions: [
           if (_androidNavIndex == 0) ...[
-            IconButton(
-              icon: Icon(Icons.add_rounded, color: cs.onSurfaceVariant),
+            FilledButton.tonalIcon(
               onPressed: () => chat.newConversation(),
-              tooltip: 'New chat',
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('New'),
+              style: FilledButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
             ),
+            const SizedBox(width: 4),
             IconButton(
-              icon: Icon(Icons.menu_rounded, color: cs.onSurfaceVariant),
+              icon: Icon(Icons.history_rounded, color: cs.onSurfaceVariant),
               onPressed: () => _showConversationSheet(context),
               tooltip: 'Conversations',
             ),
+            const SizedBox(width: 4),
           ],
         ],
       ),
-      body: pages[_androidNavIndex],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        switchInCurve: Curves.easeOut,
+        switchOutCurve: Curves.easeIn,
+        child: KeyedSubtree(
+          key: ValueKey(_androidNavIndex),
+          child: pages[_androidNavIndex],
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _androidNavIndex,
         onDestinationSelected: (i) => setState(() => _androidNavIndex = i),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        animationDuration: const Duration(milliseconds: 400),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.chat_outlined), selectedIcon: Icon(Icons.chat_rounded), label: 'Chat'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings_rounded), label: 'Settings'),
+          NavigationDestination(icon: Icon(Icons.tune_outlined), selectedIcon: Icon(Icons.tune_rounded), label: 'Settings'),
           NavigationDestination(icon: Icon(Icons.info_outline_rounded), selectedIcon: Icon(Icons.info_rounded), label: 'About'),
         ],
       ),
@@ -107,6 +144,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
+      backgroundColor: cs.surfaceContainerLow,
       builder: (ctx) {
         return DraggableScrollableSheet(
           initialChildSize: 0.6,
@@ -120,51 +158,88 @@ class _HomePageState extends State<HomePage> with WindowListener {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: Row(
                     children: [
-                      Icon(Icons.chat_rounded, size: 20, color: cs.primary),
-                      const SizedBox(width: 10),
-                      Text('Conversations', style: Theme.of(ctx).textTheme.titleMedium),
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(child: Icon(Icons.history_rounded, size: 18, color: cs.onPrimaryContainer)),
+                      ),
+                      const SizedBox(width: 12),
+                      Text('Conversations', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                      const Spacer(),
+                      Text(
+                        '${chat.conversations.length}',
+                        style: TextStyle(fontSize: 13, color: cs.outline, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
-                const Divider(),
+                const SizedBox(height: 8),
+                Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
                 Expanded(
                   child: chat.conversations.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.chat_bubble_outline, size: 48, color: cs.outlineVariant),
-                              const SizedBox(height: 12),
-                              Text('No conversations yet', style: TextStyle(color: cs.outline)),
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: BoxDecoration(
+                                  color: cs.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Center(child: Icon(Icons.chat_bubble_outline_rounded, size: 28, color: cs.outlineVariant)),
+                              ),
+                              const SizedBox(height: 16),
+                              Text('No conversations yet', style: TextStyle(color: cs.outline, fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 4),
+                              Text('Start a new chat to begin', style: TextStyle(color: cs.outlineVariant, fontSize: 13)),
                             ],
                           ),
                         )
-                      : ListView.builder(
+                      : ListView.separated(
                           controller: scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           itemCount: chat.conversations.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 4),
                           itemBuilder: (_, idx) {
                             final conv = chat.conversations[idx];
                             final isActive = idx == chat.currentIndex;
                             return ListTile(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               selected: isActive,
-                              selectedTileColor: cs.secondaryContainer,
-                              leading: Icon(
-                                isActive ? Icons.chat_rounded : Icons.chat_outlined,
-                                color: isActive ? cs.onSecondaryContainer : cs.onSurfaceVariant,
-                                size: 20,
+                              selectedTileColor: cs.secondaryContainer.withAlpha(180),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: isActive ? cs.primary.withAlpha(30) : cs.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    isActive ? Icons.chat_rounded : Icons.chat_outlined,
+                                    color: isActive ? cs.primary : cs.onSurfaceVariant,
+                                    size: 18,
+                                  ),
+                                ),
                               ),
                               title: Text(
                                 conv.title,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                                  fontSize: 14,
                                   color: isActive ? cs.onSecondaryContainer : cs.onSurface,
                                 ),
                               ),
                               trailing: IconButton(
-                                icon: Icon(Icons.delete_outline, size: 18, color: cs.outline),
+                                icon: Icon(Icons.delete_outline_rounded, size: 18, color: cs.outline),
                                 onPressed: () {
                                   chat.deleteConversation(idx);
                                   if (chat.conversations.isEmpty) Navigator.of(ctx).pop();
@@ -194,7 +269,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
       case 'about':
         return convCount + 1;
       default:
-        if (convCount == 0) return 0; // fallback to first footer item
+        if (convCount == 0) {
+          // No conversations: fall back to settings (first footer item)
+          _currentPage = 'settings';
+          return 0;
+        }
         return chatIndex.clamp(0, convCount - 1);
     }
   }
@@ -214,7 +293,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
           icon: Icon(fluent.FluentIcons.delete, size: 12, color: theme.inactiveColor),
           onPressed: () {
             chat.deleteConversation(idx);
-            setState(() {});
+            if (chat.conversations.isEmpty) {
+              setState(() => _currentPage = 'settings');
+            } else {
+              setState(() {});
+            }
           },
         ),
       );

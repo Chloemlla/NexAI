@@ -51,12 +51,30 @@ class _SettingsPageState extends State<SettingsPage> {
     final tt = Theme.of(context).textTheme;
 
     Future<void> saveAll() async {
-      await settings.setBaseUrl(_baseUrlController.text);
-      await settings.setApiKey(_apiKeyController.text);
-      await settings.setModels(_modelsController.text);
-      await settings.setSystemPrompt(_systemPromptController.text);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
+      try {
+        await settings.setBaseUrl(_baseUrlController.text);
+        await settings.setApiKey(_apiKeyController.text);
+        await settings.setModels(_modelsController.text);
+        await settings.setSystemPrompt(_systemPromptController.text);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Settings saved'),
+                ],
+              ),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+        }
       }
     }
 
@@ -66,58 +84,93 @@ class _SettingsPageState extends State<SettingsPage> {
         // Save button
         Align(
           alignment: Alignment.centerRight,
-          child: FilledButton.tonal(
+          child: FilledButton.icon(
             onPressed: saveAll,
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.save_rounded, size: 18), SizedBox(width: 8), Text('Save All')]),
+            icon: const Icon(Icons.save_rounded, size: 18),
+            label: const Text('Save All'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // API Configuration
         _m3Section(cs, tt, Icons.cloud_outlined, 'API Configuration', [
-          TextField(controller: _baseUrlController, decoration: const InputDecoration(labelText: 'Base URL', border: OutlineInputBorder())),
+          TextField(controller: _baseUrlController, decoration: const InputDecoration(labelText: 'Base URL', prefixIcon: Icon(Icons.link_rounded, size: 20))),
           const SizedBox(height: 14),
           TextField(
             controller: _apiKeyController,
             obscureText: !_showApiKey,
             decoration: InputDecoration(
               labelText: 'API Key',
-              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.key_rounded, size: 20),
               suffixIcon: IconButton(
-                icon: Icon(_showApiKey ? Icons.visibility_off : Icons.visibility),
+                icon: Icon(_showApiKey ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20),
                 onPressed: () => setState(() => _showApiKey = !_showApiKey),
               ),
             ),
           ),
           const SizedBox(height: 14),
-          TextField(controller: _modelsController, maxLines: 2, decoration: const InputDecoration(labelText: 'Models (comma separated)', border: OutlineInputBorder())),
+          TextField(controller: _modelsController, maxLines: 2, decoration: const InputDecoration(labelText: 'Models (comma separated)', prefixIcon: Icon(Icons.model_training_rounded, size: 20))),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
-            value: settings.models.contains(settings.selectedModel) ? settings.selectedModel : (settings.models.isNotEmpty ? settings.models.first : null),
-            decoration: const InputDecoration(labelText: 'Active Model', border: OutlineInputBorder()),
-            items: settings.models.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+            value: settings.models.isNotEmpty && settings.models.contains(settings.selectedModel) ? settings.selectedModel : (settings.models.isNotEmpty ? settings.models.first : null),
+            decoration: const InputDecoration(labelText: 'Active Model', prefixIcon: Icon(Icons.smart_toy_outlined, size: 20)),
+            items: settings.models.map((m) => DropdownMenuItem(value: m, child: Text(m, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (v) { if (v != null) settings.setSelectedModel(v); },
           ),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // Generation
         _m3Section(cs, tt, Icons.tune_rounded, 'Generation', [
-          Text('Temperature: ${settings.temperature.toStringAsFixed(2)}', style: tt.bodySmall),
+          Row(
+            children: [
+              Icon(Icons.thermostat_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Text('Temperature', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer.withAlpha(120),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(settings.temperature.toStringAsFixed(2), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.primary)),
+              ),
+            ],
+          ),
           Slider(value: settings.temperature, min: 0, max: 2, divisions: 40, onChanged: (v) => settings.setTemperature(v)),
-          const SizedBox(height: 8),
-          Text('Max Tokens: ${settings.maxTokens}', style: tt.bodySmall),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.token_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Text('Max Tokens', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer.withAlpha(120),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('${settings.maxTokens}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.primary)),
+              ),
+            ],
+          ),
           Slider(value: settings.maxTokens.toDouble(), min: 256, max: 32768, divisions: 64, onChanged: (v) => settings.setMaxTokens(v.toInt())),
-          const SizedBox(height: 8),
-          TextField(controller: _systemPromptController, maxLines: 4, decoration: const InputDecoration(labelText: 'System Prompt', border: OutlineInputBorder())),
+          const SizedBox(height: 12),
+          TextField(controller: _systemPromptController, maxLines: 4, decoration: const InputDecoration(labelText: 'System Prompt', prefixIcon: Padding(padding: EdgeInsets.only(bottom: 56), child: Icon(Icons.description_outlined, size: 20)))),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
 
         // Appearance
         _m3Section(cs, tt, Icons.palette_outlined, 'Appearance', [
           DropdownButtonFormField<ThemeMode>(
             value: settings.themeMode,
-            decoration: const InputDecoration(labelText: 'Theme', border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Theme', prefixIcon: Icon(Icons.dark_mode_outlined, size: 20)),
             items: const [
               DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
               DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
@@ -125,9 +178,9 @@ class _SettingsPageState extends State<SettingsPage> {
             ],
             onChanged: (v) { if (v != null) settings.setThemeMode(v); },
           ),
-          const SizedBox(height: 16),
-          Text('Accent Color', style: tt.bodyMedium),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
+          Text('Accent Color', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 10, runSpacing: 10,
             children: [
@@ -141,10 +194,27 @@ class _SettingsPageState extends State<SettingsPage> {
               _m3ColorChip(cs, settings, 0xFFE3008C, 'Pink'),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            settings.accentColorValue == null ? 'Using Material You dynamic color' : 'Custom accent color',
-            style: TextStyle(fontSize: 12, color: cs.outline),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withAlpha(120),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  settings.accentColorValue == null ? Icons.auto_awesome_rounded : Icons.color_lens_rounded,
+                  size: 16,
+                  color: cs.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  settings.accentColorValue == null ? 'Using Material You dynamic color' : 'Custom accent color',
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
           ),
         ]),
       ],
@@ -155,18 +225,26 @@ class _SettingsPageState extends State<SettingsPage> {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              Icon(icon, size: 20, color: cs.primary),
-              const SizedBox(width: 10),
-              Text(title, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer.withAlpha(150),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(child: Icon(icon, size: 18, color: cs.primary)),
+              ),
+              const SizedBox(width: 12),
+              Text(title, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2)),
             ]),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
             ...children,
           ],
         ),
@@ -182,14 +260,20 @@ class _SettingsPageState extends State<SettingsPage> {
       message: label,
       child: GestureDetector(
         onTap: () => settings.setAccentColor(colorValue),
-        child: Container(
-          width: 38, height: 38,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 40, height: 40,
           decoration: BoxDecoration(
             color: displayColor,
             shape: BoxShape.circle,
-            border: isSelected ? Border.all(color: cs.onSurface, width: 3) : Border.all(color: displayColor.withAlpha((0.4 * 255).round())),
+            border: isSelected
+                ? Border.all(color: cs.onSurface, width: 3)
+                : Border.all(color: displayColor.withAlpha(80), width: 1.5),
+            boxShadow: isSelected
+                ? [BoxShadow(color: displayColor.withAlpha(80), blurRadius: 8, offset: const Offset(0, 2))]
+                : null,
           ),
-          child: isSelected ? Icon(Icons.check_rounded, size: 16, color: _contrastColor(displayColor)) : null,
+          child: isSelected ? Icon(Icons.check_rounded, size: 18, color: _contrastColor(displayColor)) : null,
         ),
       ),
     );
@@ -213,14 +297,22 @@ class _SettingsPageState extends State<SettingsPage> {
             fluent.FilledButton(
               child: const Row(children: [Icon(fluent.FluentIcons.save, size: 14), SizedBox(width: 8), Text('Save All')]),
               onPressed: () async {
-                await settings.setBaseUrl(_baseUrlController.text);
-                await settings.setApiKey(_apiKeyController.text);
-                await settings.setModels(_modelsController.text);
-                await settings.setSystemPrompt(_systemPromptController.text);
-                if (mounted) {
-                  fluent.displayInfoBar(context, builder: (ctx, close) {
-                    return fluent.InfoBar(title: const Text('Settings saved'), severity: fluent.InfoBarSeverity.success, action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close));
-                  });
+                try {
+                  await settings.setBaseUrl(_baseUrlController.text);
+                  await settings.setApiKey(_apiKeyController.text);
+                  await settings.setModels(_modelsController.text);
+                  await settings.setSystemPrompt(_systemPromptController.text);
+                  if (mounted) {
+                    fluent.displayInfoBar(context, builder: (ctx, close) {
+                      return fluent.InfoBar(title: const Text('Settings saved'), severity: fluent.InfoBarSeverity.success, action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close));
+                    });
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    fluent.displayInfoBar(context, builder: (ctx, close) {
+                      return fluent.InfoBar(title: Text('Failed to save: $e'), severity: fluent.InfoBarSeverity.error, action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close));
+                    });
+                  }
                 }
               },
             ),

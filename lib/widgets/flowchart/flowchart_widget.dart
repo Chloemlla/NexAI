@@ -43,6 +43,8 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       _layout = FlowchartLayout(graph: _graph);
       _parseError = null;
     } catch (e) {
+      _graph = MermaidGraph(nodes: [], edges: [], direction: MermaidDirection.topDown);
+      _layout = FlowchartLayout(graph: _graph);
       _parseError = e.toString();
     }
   }

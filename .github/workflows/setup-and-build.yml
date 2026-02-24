@@ -61,14 +61,13 @@ jobs:
           dart run flutter_launcher_icons
 
       - name: Write signing config
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks
-          echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> gradle.properties
-          echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> gradle.properties
-          echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> gradle.properties
-          echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> gradle.properties
-        working-directory: android
-        continue-on-error: true
+          echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> android/gradle.properties
+          echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
+          echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
 
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true

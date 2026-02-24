@@ -5,7 +5,10 @@ import 'package:window_manager/window_manager.dart';
 
 import '../main.dart' show isDesktop, isAndroid;
 import '../providers/chat_provider.dart';
+import '../providers/notes_provider.dart';
 import 'chat_page.dart';
+import 'notes_page.dart';
+import 'note_detail_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
 
@@ -45,11 +48,12 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
     final pages = <Widget>[
       const ChatPage(),
+      const NotesPage(),
       const SettingsPage(),
       const AboutPage(),
     ];
 
-    final pageTitles = ['NexAI', 'Settings', 'About'];
+    final pageTitles = ['NexAI', 'Notes', 'Settings', 'About'];
 
     return Scaffold(
       appBar: AppBar(
@@ -73,8 +77,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                   _androidNavIndex == 0
                       ? Icons.smart_toy_rounded
                       : _androidNavIndex == 1
-                          ? Icons.settings_rounded
-                          : Icons.info_rounded,
+                          ? Icons.note_alt_rounded
+                          : _androidNavIndex == 2
+                              ? Icons.settings_rounded
+                              : Icons.info_rounded,
                   size: 18,
                   color: cs.onPrimary,
                 ),
@@ -110,6 +116,25 @@ class _HomePageState extends State<HomePage> with WindowListener {
             ),
             const SizedBox(width: 4),
           ],
+          if (_androidNavIndex == 1) ...[
+            FilledButton.tonalIcon(
+              onPressed: () {
+                final note = context.read<NotesProvider>().createNote();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => NoteDetailPage(noteId: note.id),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('New'),
+              style: FilledButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
         ],
       ),
       body: AnimatedSwitcher(
@@ -128,6 +153,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
         animationDuration: const Duration(milliseconds: 400),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.chat_outlined), selectedIcon: Icon(Icons.chat_rounded), label: 'Chat'),
+          NavigationDestination(icon: Icon(Icons.note_alt_outlined), selectedIcon: Icon(Icons.note_alt_rounded), label: 'Notes'),
           NavigationDestination(icon: Icon(Icons.tune_outlined), selectedIcon: Icon(Icons.tune_rounded), label: 'Settings'),
           NavigationDestination(icon: Icon(Icons.info_outline_rounded), selectedIcon: Icon(Icons.info_rounded), label: 'About'),
         ],

@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:system_theme/system_theme.dart';
 
 import 'providers/chat_provider.dart';
+import 'providers/notes_provider.dart';
 import 'providers/settings_provider.dart';
 import 'app.dart';
 
@@ -49,11 +50,15 @@ void main() async {
   final settingsProvider = SettingsProvider();
   await settingsProvider.loadSettings();
 
+  final notesProvider = NotesProvider();
+  await notesProvider.loadNotes();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: settingsProvider),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider.value(value: notesProvider),
       ],
       child: const NexAIApp(),
     ),

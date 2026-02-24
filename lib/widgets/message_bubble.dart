@@ -1,9 +1,12 @@
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../main.dart' show isAndroid;
 import '../models/message.dart';
+import '../models/note.dart';
+import '../providers/notes_provider.dart';
 import 'rich_content_view.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -215,8 +218,142 @@ class _M3Footer extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(width: 6),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _showSaveToNoteSheet(context),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.note_add_outlined, size: 14, color: cs.outline.withAlpha(180)),
+              ),
+            ),
+          ),
         ],
       ],
+    );
+  }
+
+  void _showSaveToNoteSheet(BuildContext context) {
+    final notesProvider = context.read<NotesProvider>();
+    final cs = Theme.of(context).colorScheme;
+    final notes = notesProvider.notes;
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: cs.surfaceContainerLow,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.note_add_rounded, size: 20, color: cs.primary),
+                    const SizedBox(width: 10),
+                    Text('Save to Note', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
+              // New note option
+              ListTile(
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(child: Icon(Icons.add_rounded, size: 18, color: cs.onPrimaryContainer)),
+                ),
+                title: const Text('Create new note', style: TextStyle(fontWeight: FontWeight.w500)),
+                subtitle: Text('Save as a new note', style: TextStyle(fontSize: 12, color: cs.outline)),
+                onTap: () {
+                  final title = message.content.length > 40
+                      ? '${message.content.substring(0, 40)}...'
+                      : message.content;
+                  notesProvider.createNote(title: title, content: message.content);
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Row(
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('Saved to new note'),
+                        ],
+                      ),
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                },
+              ),
+              if (notes.isNotEmpty) ...[
+                Divider(height: 1, indent: 16, endIndent: 16, color: cs.outlineVariant.withAlpha(80)),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Existing notes', style: TextStyle(fontSize: 12, color: cs.outline, fontWeight: FontWeight.w500)),
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    itemCount: notes.length,
+                    itemBuilder: (_, idx) {
+                      final note = notes[idx];
+                      return ListTile(
+                        dense: true,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        leading: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(child: Icon(Icons.description_outlined, size: 16, color: cs.onSurfaceVariant)),
+                        ),
+                        title: Text(note.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+                        onTap: () {
+                          notesProvider.appendToNote(note.id, message.content);
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  Expanded(child: Text('Appended to "${note.title}"')),
+                                ],
+                              ),
+                              duration: const Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 }

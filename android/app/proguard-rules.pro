@@ -17,3 +17,8 @@
 # Kotlin
 -keep class kotlin.** { *; }
 -dontwarn kotlin.**
+
+# Flutter Play Store split install (not used, but referenced by Flutter engine)
+-dontwarn com.google.android.play.core.splitcompat.**
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../widgets/rich_content_view.dart';
 
@@ -61,6 +62,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         _contentController.text = note.content;
         _viewMode = note.content.isEmpty ? _ViewMode.edit : _ViewMode.split;
         _updateStats(note.content);
+        // Mark as recently viewed
+        context.read<NotesProvider>().markViewed(widget.noteId);
       }
       _initialized = true;
     }
@@ -385,6 +388,17 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               )
             : Text(note.title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, color: cs.onSurface)),
         actions: [
+          // Star button
+          IconButton(
+            icon: Icon(
+              note.isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+              size: 22,
+              color: note.isStarred ? Colors.amber : cs.onSurfaceVariant,
+            ),
+            onPressed: () => context.read<NotesProvider>().toggleStar(widget.noteId),
+            visualDensity: VisualDensity.compact,
+            tooltip: note.isStarred ? 'Unstar' : 'Star',
+          ),
           // View mode toggle
           SegmentedButton<_ViewMode>(
             segments: const [
@@ -410,6 +424,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             onSelected: _onMenuAction,
             itemBuilder: (_) => [
               PopupMenuItem(value: 'outline', child: _menuRow(Icons.segment_rounded, 'Outline')),
+              PopupMenuItem(value: 'frontmatter', child: _menuRow(Icons.data_object_rounded, 'Insert Frontmatter')),
+              PopupMenuItem(value: 'tags', child: _menuRow(Icons.tag_rounded, 'Tags')),
+              const PopupMenuDivider(),
               PopupMenuItem(value: 'focus', child: _menuRow(Icons.fullscreen_rounded, 'Focus mode')),
               PopupMenuItem(value: 'stats', child: _menuRow(Icons.analytics_outlined, 'Statistics')),
               const PopupMenuDivider(),
@@ -422,6 +439,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         children: [
           // Task progress bar
           if (_taskTotal > 0) _buildTaskProgress(cs),
+          // Tags bar
+          if (note.tags.isNotEmpty) _buildTagsBar(cs, note.tags),
           // Toolbar
           if (_showToolbar && _viewMode != _ViewMode.preview) _buildToolbar(cs),
           // Content area
@@ -459,6 +478,12 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       case 'outline':
         _showOutlineDrawer();
         break;
+      case 'frontmatter':
+        _insertFrontmatter();
+        break;
+      case 'tags':
+        _showTagsSheet();
+        break;
       case 'focus':
         _saveNote();
         setState(() => _focusMode = true);
@@ -476,6 +501,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   void _showStatsDialog() {
     final lines = _contentController.text.split('\n').length;
     final headings = _extractOutline(_contentController.text).length;
+    final note = context.read<NotesProvider>().notes
+        .where((n) => n.id == widget.noteId).firstOrNull;
+    final tagCount = note?.tags.length ?? 0;
+    final hasFm = _contentController.text.trimLeft().startsWith('---');
 
     showDialog(
       context: context,
@@ -488,8 +517,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             _statRow(Icons.abc_rounded, 'Characters', '$_charCount'),
             _statRow(Icons.format_list_numbered_rounded, 'Lines', '$lines'),
             _statRow(Icons.segment_rounded, 'Headings', '$headings'),
+            _statRow(Icons.tag_rounded, 'Tags', '$tagCount'),
             if (_taskTotal > 0)
               _statRow(Icons.check_box_outlined, 'Tasks', '$_taskDone / $_taskTotal'),
+            _statRow(Icons.data_object_rounded, 'Frontmatter', hasFm ? 'Yes' : 'No'),
           ],
         ),
         actions: [
@@ -510,6 +541,184 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           Text(label, style: const TextStyle(fontSize: 14)),
           const Spacer(),
           Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary)),
+        ],
+      ),
+    );
+  }
+
+  // ─── Frontmatter ───
+
+  void _insertFrontmatter() {
+    final text = _contentController.text;
+    // Check if frontmatter already exists
+    if (text.trimLeft().startsWith('---')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Frontmatter already exists'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final title = _titleController.text.trim().isEmpty ? 'Untitled' : _titleController.text.trim();
+    final fm = '---\ntitle: $title\ntags: \ndate: $dateStr\nauthor: \n---\n\n';
+
+    _contentController.value = TextEditingValue(
+      text: '$fm$text',
+      selection: TextSelection.collapsed(offset: fm.indexOf('tags: ') + 6),
+    );
+    setState(() {
+      if (_viewMode == _ViewMode.preview) _viewMode = _ViewMode.edit;
+    });
+    _editorFocus.requestFocus();
+  }
+
+  // ─── Tags sheet ───
+
+  void _showTagsSheet() {
+    final cs = Theme.of(context).colorScheme;
+    final note = context.read<NotesProvider>().notes
+        .where((n) => n.id == widget.noteId).firstOrNull;
+    if (note == null) return;
+
+    final tags = note.tags;
+    final tagController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: cs.surfaceContainerLow,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.tag_rounded, size: 20, color: cs.primary),
+                        const SizedBox(width: 10),
+                        Text('Tags', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                        const Spacer(),
+                        Text('${tags.length} tags', style: TextStyle(fontSize: 12, color: cs.outline)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Add tag input
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: tagController,
+                            decoration: InputDecoration(
+                              hintText: 'Add tag (e.g. project/web)',
+                              prefixText: '#',
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              filled: true,
+                              fillColor: cs.surfaceContainerHighest.withAlpha(140),
+                            ),
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.tonal(
+                          onPressed: () {
+                            final tag = tagController.text.trim();
+                            if (tag.isEmpty) return;
+                            // Append tag to content
+                            _insertAtCursor(' #$tag');
+                            _saveNote();
+                            tagController.clear();
+                            setSheetState(() {});
+                          },
+                          child: const Text('Add'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
+                  if (tags.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text('No tags in this note', style: TextStyle(color: cs.outline)),
+                    )
+                  else
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 200),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        itemCount: tags.length,
+                        itemBuilder: (_, idx) {
+                          final tag = tags[idx];
+                          return ListTile(
+                            dense: true,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            leading: Container(
+                              width: 28, height: 28,
+                              decoration: BoxDecoration(
+                                color: cs.secondaryContainer,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Center(child: Icon(Icons.tag_rounded, size: 14, color: cs.onSecondaryContainer)),
+                            ),
+                            title: Text('#$tag', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                          );
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ─── Tags bar ───
+
+  Widget _buildTagsBar(ColorScheme cs, List<String> tags) {
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withAlpha(60),
+        border: Border(bottom: BorderSide(color: cs.outlineVariant.withAlpha(40))),
+      ),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          Center(child: Icon(Icons.tag_rounded, size: 14, color: cs.outline)),
+          const SizedBox(width: 6),
+          ...tags.map((t) => Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: cs.secondaryContainer.withAlpha(160),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('#$t',
+                    style: TextStyle(fontSize: 11, color: cs.onSecondaryContainer, fontWeight: FontWeight.w500)),
+              ),
+            ),
+          )),
         ],
       ),
     );
@@ -580,6 +789,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           _toolDivider(cs),
           _toolBtn(Icons.functions_rounded, 'Inline math', () => _wrapSelection(r'$', r'$')),
           _toolBtn(Icons.calculate_outlined, 'Block math', () => _wrapSelection('\$\$\n', '\n\$\$')),
+          _toolDivider(cs),
+          _toolBtn(Icons.tag_rounded, 'Tag', () => _insertAtCursor('#')),
         ],
       ),
     );

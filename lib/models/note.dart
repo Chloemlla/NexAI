@@ -1,11 +1,20 @@
 import 'dart:convert';
 
+/// Regex to extract #tags (including nested like #category/subcategory)
+/// Avoids matching inside code blocks or frontmatter
+final tagPattern = RegExp(r'(?<!\w)#([\w\u4e00-\u9fff][\w\u4e00-\u9fff/]*)(?!\w)');
+
+/// Regex to extract YAML frontmatter
+final frontmatterPattern = RegExp(r'^---\s*\n([\s\S]*?)\n---', multiLine: true);
+
 class Note {
   final String id;
   String title;
   String content;
   final DateTime createdAt;
   DateTime updatedAt;
+  DateTime? lastViewedAt;
+  bool isStarred;
 
   Note({
     required this.id,
@@ -13,7 +22,56 @@ class Note {
     required this.content,
     required this.createdAt,
     required this.updatedAt,
+    this.lastViewedAt,
+    this.isStarred = false,
   });
+
+  /// Extract all tags from content (both body #tags and frontmatter tags)
+  List<String> get tags {
+    final result = <String>{};
+    // Extract from frontmatter
+    final fm = frontmatter;
+    if (fm.containsKey('tags')) {
+      final fmTags = fm['tags'];
+      if (fmTags is String) {
+        for (final m in tagPattern.allMatches(fmTags)) {
+          result.add(m.group(1)!);
+        }
+      }
+    }
+    // Extract from body (skip frontmatter and code blocks)
+    final body = bodyContent;
+    // Remove code blocks before scanning
+    final noCode = body.replaceAll(RegExp(r'```[\s\S]*?```'), '');
+    for (final m in tagPattern.allMatches(noCode)) {
+      result.add(m.group(1)!);
+    }
+    return result.toList()..sort();
+  }
+
+  /// Parse frontmatter as simple key-value map
+  Map<String, String> get frontmatter {
+    final match = frontmatterPattern.firstMatch(content);
+    if (match == null) return {};
+    final yaml = match.group(1)!;
+    final map = <String, String>{};
+    for (final line in yaml.split('\n')) {
+      final idx = line.indexOf(':');
+      if (idx > 0) {
+        final key = line.substring(0, idx).trim();
+        final value = line.substring(idx + 1).trim();
+        map[key] = value;
+      }
+    }
+    return map;
+  }
+
+  /// Content without frontmatter
+  String get bodyContent {
+    final match = frontmatterPattern.firstMatch(content);
+    if (match == null) return content;
+    return content.substring(match.end).trimLeft();
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -21,6 +79,8 @@ class Note {
         'content': content,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
+        'lastViewedAt': lastViewedAt?.toIso8601String(),
+        'isStarred': isStarred,
       };
 
   factory Note.fromJson(Map<String, dynamic> json) => Note(
@@ -29,6 +89,10 @@ class Note {
         content: json['content'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
+        lastViewedAt: json['lastViewedAt'] != null
+            ? DateTime.parse(json['lastViewedAt'] as String)
+            : null,
+        isStarred: json['isStarred'] as bool? ?? false,
       );
 
   static String encodeList(List<Note> notes) =>

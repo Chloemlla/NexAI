@@ -61,7 +61,7 @@ jobs:
           dart run flutter_launcher_icons
 
       - name: Write signing config
-        if: ${{ secrets.KEYSTORE_BASE64 }}
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks
           echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> gradle.properties

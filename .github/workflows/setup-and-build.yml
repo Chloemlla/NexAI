@@ -67,6 +67,7 @@ jobs:
           echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
           echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
           echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+        continue-on-error: true
 
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true

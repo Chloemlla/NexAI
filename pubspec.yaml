@@ -18,7 +18,7 @@ dependencies:
   markdown: ^7.3.0
   provider: ^6.1.5
   google_fonts: ^6.3.3
-  url_launcher: ^6.3.2
+  url_launcher: ^6.2.6
   system_theme: ^3.0.0
   window_manager: ^0.4.0
   dynamic_color: ^1.8.1

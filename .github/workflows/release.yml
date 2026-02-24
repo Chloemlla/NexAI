@@ -1,28 +1,15 @@
-name: Build & Release NexAI
+name: Release NexAI
 
 on:
   push:
     tags:
-      - v*
-  workflow_dispatch:
-    inputs:
-      build_target:
-        description: 'Build target platform'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-          - windows
-          - android
-          - web
-          - all
+      - 'v*'
 
 permissions:
   contents: write
 
 jobs:
   build-android:
-    if: ${{ github.event_name == 'push' || github.event.inputs.build_target == 'android' || github.event.inputs.build_target == 'all' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -103,31 +90,21 @@ jobs:
         with:
           name: NexAI-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-AAB
           path: build/app/outputs/bundle/release/app-release.aab
-          retention-days: 30
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: android-outputs
           path: build/app/outputs/
-
-      - name: Commit generated files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --cached --quiet || git commit -m "ci: generate android build files"
-          git push || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
+          retention-days: 7
 
   build-web:
-    if: ${{ github.event_name == 'push' || github.event.inputs.build_target == 'web' || github.event.inputs.build_target == 'all' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -160,46 +137,9 @@ jobs:
         with:
           name: NexAI-Web
           path: build/web/
-          retention-days: 30
-
-  build-windows:
-    if: false  # Disabled - Windows build not needed
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-          cache: true
-
-      - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~\AppData\Local\Pub\Cache
-            .dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: NexAI-Windows
-          path: build/windows/x64/runner/Release/
-          retention-days: 30
+          retention-days: 7
 
   release:
-    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     needs: [build-android, build-web]
     permissions: write-all
     runs-on: ubuntu-latest
@@ -221,11 +161,6 @@ jobs:
           name: NexAI-Web
           path: web-build
 
-      # - uses: actions/download-artifact@v4
-      #   with:
-      #     name: NexAI-Windows
-      #     path: windows-build
-
       - uses: actions/download-artifact@v4
         with:
           name: android-outputs
@@ -236,7 +171,6 @@ jobs:
           cp android-apk/app-release.apk NexAI-${{ github.ref_name }}.apk
           cp android-aab/app-release.aab NexAI-${{ github.ref_name }}.aab
           cd web-build && zip -r ../NexAI-Web-${{ github.ref_name }}.zip . && cd ..
-          # cd windows-build && zip -r ../NexAI-Windows-${{ github.ref_name }}.zip . && cd ..
           zip -r android-outputs-${{ github.ref_name }}.zip android-outputs
 
       - name: Generate release notes
@@ -296,16 +230,6 @@ jobs:
           asset_path: NexAI-Web-${{ github.ref_name }}.zip
           asset_name: NexAI-Web-${{ github.ref_name }}.zip
           asset_content_type: application/zip
-
-      # - name: Upload Windows zip
-      #   uses: actions/upload-release-asset@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ steps.create_release.outputs.upload_url }}
-      #     asset_path: NexAI-Windows-${{ github.ref_name }}.zip
-      #     asset_name: NexAI-Windows-${{ github.ref_name }}.zip
-      #     asset_content_type: application/zip
 
       - name: Upload full Android outputs
         uses: actions/upload-release-asset@v1

@@ -18,127 +18,127 @@ class AboutPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
-        // Hero card
-        Card(
-          elevation: 0,
-          color: cs.primaryContainer.withAlpha(80),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
-            child: Column(
-              children: [
-                Container(
-                  width: 88, height: 88,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [cs.primary, cs.tertiary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(26),
-                    boxShadow: [
-                      BoxShadow(
-                        color: cs.primary.withAlpha(60),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
+    return Scaffold(
+      backgroundColor: cs.surface,
+      body: CustomScrollView(
+        slivers: [
+          // Large collapsing hero AppBar
+          SliverAppBar(
+            automaticallyImplyLeading: false,
+            pinned: true,
+            expandedHeight: 220,
+            backgroundColor: cs.surface,
+            surfaceTintColor: cs.surfaceTint,
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      cs.primaryContainer.withAlpha(120),
+                      cs.tertiaryContainer.withAlpha(60),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 16),
+                      Hero(
+                        tag: 'nexai_logo',
+                        child: Container(
+                          width: 80, height: 80,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [cs.primary, cs.tertiary],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(color: cs.primary.withAlpha(70), blurRadius: 24, offset: const Offset(0, 8)),
+                            ],
+                          ),
+                          child: Center(child: Icon(Icons.smart_toy_rounded, size: 40, color: cs.onPrimary)),
+                        ),
                       ),
+                      const SizedBox(height: 14),
+                      Text('NexAI', style: tt.headlineSmall?.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5)),
+                      const SizedBox(height: 6),
+                      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        _VersionBadge(cs: cs, tt: tt, label: 'v1.0.0'),
+                        const SizedBox(width: 8),
+                        _VersionBadge(cs: cs, tt: tt, label: 'MIT', color: cs.tertiaryContainer, textColor: cs.onTertiaryContainer),
+                      ]),
                     ],
                   ),
-                  child: Center(child: Icon(Icons.smart_toy_rounded, size: 44, color: cs.onPrimary)),
                 ),
-                const SizedBox(height: 22),
-                Text('NexAI', style: tt.headlineMedium?.copyWith(fontWeight: FontWeight.bold, letterSpacing: -0.5)),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: cs.secondaryContainer.withAlpha(150),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text('v1.0.0', style: tt.bodySmall?.copyWith(color: cs.onSecondaryContainer, fontWeight: FontWeight.w500)),
-                ),
-                const SizedBox(height: 10),
-                Text('A beautiful AI chat client', style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-
-        // Author
-        _m3Section(cs, tt, Icons.person_outline_rounded, 'Author', [
-          _m3InfoRow(cs, 'Developer', 'Chloemlla'),
-          const SizedBox(height: 10),
-          _m3InfoRow(cs, 'GitHub', 'github.com/Chloemlla'),
-          const SizedBox(height: 16),
-          FilledButton.tonalIcon(
-            onPressed: () => _openUrl('https://github.com/Chloemlla'),
-            icon: const Icon(Icons.open_in_new_rounded, size: 16),
-            label: const Text('Author Profile'),
-          ),
-        ]),
-        const SizedBox(height: 14),
-
-        // Project
-        _m3Section(cs, tt, Icons.folder_outlined, 'Project', [
-          _m3InfoRow(cs, 'Repository', 'Chloemlla/NexAI'),
-          const SizedBox(height: 10),
-          _m3InfoRow(cs, 'License', 'MIT'),
-          const SizedBox(height: 10),
-          _m3InfoRow(cs, 'Framework', 'Flutter + Material 3'),
-          const SizedBox(height: 16),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.tonalIcon(
-              onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI'),
-              icon: const Icon(Icons.open_in_new_rounded, size: 16),
-              label: const Text('GitHub'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
-              icon: const Icon(Icons.bug_report_outlined, size: 16),
-              label: const Text('Report Issue'),
-            ),
-          ]),
-        ]),
-        const SizedBox(height: 14),
-
-        // Features
-        _m3Section(cs, tt, Icons.auto_awesome_outlined, 'Features', [
-          _m3Feature(cs, Icons.chat_rounded, 'OpenAI-compatible API with custom base URL'),
-          const SizedBox(height: 10),
-          _m3Feature(cs, Icons.functions_rounded, 'LaTeX math & chemical formula rendering'),
-          const SizedBox(height: 10),
-          _m3Feature(cs, Icons.palette_rounded, 'Material You dynamic color (Android)'),
-          const SizedBox(height: 10),
-          _m3Feature(cs, Icons.code_rounded, 'Markdown with syntax-highlighted code'),
-          const SizedBox(height: 10),
-          _m3Feature(cs, Icons.desktop_windows_rounded, 'Fluent Design with Mica/Acrylic (Desktop)'),
-          const SizedBox(height: 10),
-          _m3Feature(cs, Icons.tune_rounded, 'Configurable models, temperature & tokens'),
-        ]),
-        const SizedBox(height: 14),
-
-        // Tech stack
-        _m3Section(cs, tt, Icons.build_outlined, 'Tech Stack', [
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final label in ['Flutter', 'Material 3', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences'])
-              Chip(
-                label: Text(label, style: TextStyle(fontSize: 12, color: cs.onSecondaryContainer)),
-                backgroundColor: cs.secondaryContainer.withAlpha(150),
-                side: BorderSide.none,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
               ),
-          ]),
-        ]),
-      ],
-    );
-  }
+              title: Text('About', style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              titlePadding: const EdgeInsets.only(left: 16, bottom: 14),
+            ),
+          ),
 
-  Widget _m3Section(ColorScheme cs, TextTheme tt, IconData icon, String title, List<Widget> children) {
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+
+                // ── Quick action buttons ──
+                Row(children: [
+                  Expanded(
+                    child: _ActionCard(
+                      cs: cs, tt: tt,
+                      icon: Icons.code_rounded,
+                      label: 'GitHub',
+                      sublabel: 'View source',
+                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ActionCard(
+                      cs: cs, tt: tt,
+                      icon: Icons.bug_report_rounded,
+                      label: 'Issues',
+                      sublabel: 'Report a bug',
+                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ActionCard(
+                      cs: cs, tt: tt,
+                      icon: Icons.person_rounded,
+                      label: 'Author',
+                      sublabel: 'Chloemlla',
+                      onTap: () => _openUrl('https://github.com/Chloemlla'),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+
+                // ── App info ──
+                _AboutCard(cs: cs, tt: tt, icon: Icons.info_outline_rounded, title: 'App Info', children: [
+                  _InfoRow(cs: cs, tt: tt, label: 'Version', value: '1.0.0'),
+                  _InfoRow(cs: cs, tt: tt, label: 'Developer', value: 'Chloemlla'),
+                  _InfoRow(cs: cs, tt: tt, label: 'License', value: 'MIT'),
+                  _InfoRow(cs: cs, tt: tt, label: 'Framework', value: 'Flutter + Material 3'),
+                  _InfoRow(cs: cs, tt: tt, label: 'Repository', value: 'Chloemlla/NexAI', isLast: true),
+                ]),
+                const SizedBox(height: 14),
+
+                // ── Features ──
+                _AboutCard(cs: cs, tt: tt, icon: Icons.auto_awesome_rounded, title: 'Features', children: [
+                  _FeatureRow(cs: cs, icon: Icons.chat_rounded, text: 'OpenAI-compatible API with custom base URL'),
+                  _FeatureRow(cs: cs, icon: Icons.functions_rounded, text: 'LaTeX math & chemical formula rendering'),
+                  _FeatureRow(cs: cs, icon: Icons.palette_rounded, text: 'Material You dynamic color (Android)'),
+                  _FeatureRow(cs: cs, icon: Icons.code_rounded, text: 'Markdown with syntax-highlighted code'),
+                  _FeatureRow(cs: cs, icon: Icons.desktop_windows_rounded, text: 'Fluent Design with Mica/Acrylic (Desktop)'),
+                  _FeatureRow(cs: cs, icon: Icons.tune_roundcon, String title, List<Widget> children) {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,

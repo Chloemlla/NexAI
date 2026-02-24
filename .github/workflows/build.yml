@@ -1,0 +1,199 @@
+name: Build NexAI
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Build target platform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - windows
+          - android
+          - web
+          - all
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'android' || github.event.inputs.build_target == 'all' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Flutter pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate app icons
+        run: |
+          sudo apt-get install -y imagemagick
+          convert -size 1024x1024 xc:"#0078D4" \
+            -fill white -draw "roundrectangle 200,180 824,870 80,80" \
+            -fill "#0078D4" -draw "circle 400,450 400,510" \
+            -fill "#0078D4" -draw "circle 624,450 624,510" \
+            -fill "#0078D4" -draw "roundrectangle 380,600 644,700 40,40" \
+            assets/icon.png
+          convert -size 1024x1024 xc:none \
+            -fill white -draw "roundrectangle 280,260 744,790 70,70" \
+            -fill "#0078D4" -draw "circle 420,470 420,520" \
+            -fill "#0078D4" -draw "circle 604,470 604,520" \
+            -fill "#0078D4" -draw "roundrectangle 400,610 624,690 30,30" \
+            assets/icon_foreground.png
+          dart run flutter_launcher_icons
+
+      - name: Write signing config
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks
+          echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> android/gradle.properties
+          echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
+          echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+        continue-on-error: true
+
+      - name: Accept Android SDK licenses
+        run: yes | flutter doctor --android-licenses || true
+
+      - name: Build Android APK
+        run: flutter build apk --release --target-platform android-arm64 --verbose
+
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Android-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-outputs
+          path: build/app/outputs/
+
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "ci: generate android build files"
+          git push || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
+
+  build-web:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'web' || github.event.inputs.build_target == 'all' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Flutter pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.pub-cache
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release --web-renderer canvaskit
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Web
+          path: build/web/
+          retention-days: 30
+
+  build-windows:
+    if: false  # Disabled - Windows build not needed
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Flutter pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\Pub\Cache
+            .dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Windows
+          path: build/windows/x64/runner/Release/
+          retention-days: 30

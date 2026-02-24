@@ -1,0 +1,259 @@
+@echo off
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+
+REM ============================================================
+REM  NexAI Android 签名配置脚本 (Windows CMD)
+REM  生成 keystore 并自动配置 GitHub Secrets
+REM ============================================================
+
+echo.
+echo ========================================
+echo   NexAI Android 签名配置
+echo ========================================
+echo.
+
+REM --- 检查前置依赖 ---
+echo [1/6] 检查依赖工具...
+
+where keytool >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [错误] 未找到 keytool，请安装 JDK 并添加到 PATH
+    echo        下载地址: https://www.oracle.com/java/technologies/downloads/
+    pause
+    exit /b 1
+)
+echo   ✓ keytool 已安装
+
+where gh >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [警告] 在 PATH 中未找到 gh 命令
+    echo.
+    echo 正在检查常见安装位置...
+    
+    REM 检查常见安装路径
+    set "GH_PATH="
+    if exist "D:\Program Files\GitHub CLI\gh.exe" set "GH_PATH=D:\Program Files\GitHub CLI\gh.exe"
+    if exist "D:\Program Files (x86)\GitHub CLI\gh.exe" set "GH_PATH=D:\Program Files (x86)\GitHub CLI\gh.exe"
+    if exist "%LOCALAPPDATA%\Programs\GitHub CLI\gh.exe" set "GH_PATH=%LOCALAPPDATA%\Programs\GitHub CLI\gh.exe"
+    if exist "%ProgramFiles%\gh\gh.exe" set "GH_PATH=%ProgramFiles%\gh\gh.exe"
+    
+    if "!GH_PATH!"=="" (
+        echo [错误] 未找到 GitHub CLI 安装
+        echo.
+        echo 请执行以下操作之一:
+        echo   1. 下载并安装: https://cli.github.com/
+        echo   2. 使用 winget 安装: winget install --id GitHub.cli
+        echo   3. 使用 scoop 安装: scoop install gh
+        echo   4. 安装后重启终端或添加到 PATH
+        echo.
+        pause
+        exit /b 1
+    )
+    
+    echo   ✓ 找到 GitHub CLI: !GH_PATH!
+    echo   提示: 建议将 GitHub CLI 添加到 PATH 环境变量
+    set "gh=!GH_PATH!"
+) else (
+    echo   ✓ GitHub CLI 已安装
+    set "gh=gh"
+)
+
+where certutil >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [错误] 未找到 certutil（Windows 自带工具）
+    pause
+    exit /b 1
+)
+echo   ✓ certutil 可用
+
+where powershell >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [错误] 未找到 PowerShell
+    pause
+    exit /b 1
+)
+echo   ✓ PowerShell 可用
+
+echo.
+echo [2/6] 检查 GitHub 登录状态...
+
+REM 检查是否使用环境变量 GH_TOKEN
+if defined GH_TOKEN (
+    echo   ✓ 检测到 GH_TOKEN 环境变量
+    "%gh%" auth status >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo [错误] GH_TOKEN 无效或已过期
+        echo.
+        echo 请执行以下操作之一:
+        echo   1. 清除环境变量后重新登录:
+        echo      set GH_TOKEN=
+        echo      gh auth login
+        echo.
+        echo   2. 更新 GH_TOKEN 为有效的 Personal Access Token
+        echo      创建地址: https://github.com/settings/tokens
+        echo.
+        pause
+        exit /b 1
+    )
+    echo   ✓ 已通过 GH_TOKEN 认证
+) else (
+    "%gh%" auth status >nul 2>&1
+    if %errorlevel% neq 0 (
+        echo [错误] 未登录 GitHub CLI
+        echo.
+        echo 请先运行以下命令登录:
+        echo   "%gh%" auth login
+        echo.
+        echo 然后选择:
+        echo   1. GitHub.com
+        echo   2. HTTPS 协议
+        echo   3. Login with a web browser
+        echo.
+        pause
+        exit /b 1
+    )
+    echo   ✓ 已登录 GitHub
+)
+
+echo.
+echo [3/6] 检测 GitHub 仓库...
+for /f "tokens=*" %%r in ('"%gh%" repo view --json nameWithOwner -q .nameWithOwner 2^>nul') do set "REPO=%%r"
+if "%REPO%"=="" (
+    echo [错误] 无法检测到 GitHub 仓库
+    echo.
+    echo 请确保:
+    echo   1. 当前目录是 git 仓库
+    echo   2. 仓库已关联 GitHub remote
+    echo   3. 已推送到 GitHub
+    echo.
+    pause
+    exit /b 1
+)
+echo   ✓ 检测到仓库: %REPO%
+
+echo.
+echo [4/6] 配置签名参数...
+echo.
+
+REM --- 配置变量 ---
+set "KEYSTORE_FILE=nexai-release.jks"
+set "KEY_ALIAS=nexai"
+set "STORE_PASSWORD="
+set "KEY_PASSWORD="
+set "DNAME=CN=NexAI, OU=Dev, O=NexAI, L=Unknown, ST=Unknown, C=US"
+
+REM --- 输入密码 ---
+echo 请输入 keystore 密码（至少 6 位）:
+set /p STORE_PASSWORD="> "
+if "%STORE_PASSWORD%"=="" (
+    echo [错误] 密码不能为空
+    pause
+    exit /b 1
+)
+
+echo.
+echo 请输入 key 密码（直接回车则使用与 keystore 相同的密码）:
+set /p KEY_PASSWORD="> "
+if "%KEY_PASSWORD%"=="" set "KEY_PASSWORD=%STORE_PASSWORD%"
+
+echo.
+echo [5/6] 生成 keystore 文件...
+
+if exist "%KEYSTORE_FILE%" (
+    echo [警告] %KEYSTORE_FILE% 已存在，备份为 %KEYSTORE_FILE%.bak
+    copy /y "%KEYSTORE_FILE%" "%KEYSTORE_FILE%.bak" >nul
+)
+
+keytool -genkeypair ^
+    -v ^
+    -keystore "%KEYSTORE_FILE%" ^
+    -alias %KEY_ALIAS% ^
+    -keyalg RSA ^
+    -keysize 2048 ^
+    -validity 10000 ^
+    -storepass "%STORE_PASSWORD%" ^
+    -keypass "%KEY_PASSWORD%" ^
+    -dname "%DNAME%"
+
+if %errorlevel% neq 0 (
+    echo [错误] 生成 keystore 失败
+    pause
+    exit /b 1
+)
+
+echo   ✓ Keystore 生成成功: %KEYSTORE_FILE%
+
+echo.
+echo   正在编码为 Base64...
+for /f "usebackq tokens=*" %%b in (`powershell -NoProfile -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('%KEYSTORE_FILE%'))"`) do set "KEYSTORE_BASE64=%%b"
+
+if "%KEYSTORE_BASE64%"=="" (
+    echo [错误] Base64 编码失败
+    pause
+    exit /b 1
+)
+echo   ✓ Base64 编码完成
+
+echo.
+echo [6/6] 设置 GitHub Secrets...
+echo.
+
+echo   设置 KEYSTORE_BASE64...
+echo !KEYSTORE_BASE64! | "%gh%" secret set KEYSTORE_BASE64 --repo %REPO%
+if %errorlevel% neq 0 (
+    echo [错误] 设置 KEYSTORE_BASE64 失败
+    pause
+    exit /b 1
+)
+echo   ✓ KEYSTORE_BASE64
+
+echo   设置 KEYSTORE_PASSWORD...
+echo %STORE_PASSWORD% | "%gh%" secret set KEYSTORE_PASSWORD --repo %REPO%
+if %errorlevel% neq 0 (
+    echo [错误] 设置 KEYSTORE_PASSWORD 失败
+    pause
+    exit /b 1
+)
+echo   ✓ KEYSTORE_PASSWORD
+
+echo   设置 KEY_ALIAS...
+echo %KEY_ALIAS% | "%gh%" secret set KEY_ALIAS --repo %REPO%
+if %errorlevel% neq 0 (
+    echo [错误] 设置 KEY_ALIAS 失败
+    pause
+    exit /b 1
+)
+echo   ✓ KEY_ALIAS
+
+echo   设置 KEY_PASSWORD...
+echo %KEY_PASSWORD% | "%gh%" secret set KEY_PASSWORD --repo %REPO%
+if %errorlevel% neq 0 (
+    echo [错误] 设置 KEY_PASSWORD 失败
+    pause
+    exit /b 1
+)
+echo   ✓ KEY_PASSWORD
+
+echo.
+echo ========================================
+echo   配置完成！
+echo ========================================
+echo.
+echo Keystore 文件: %KEYSTORE_FILE%
+echo Key 别名     : %KEY_ALIAS%
+echo.
+echo 已在 %REPO% 设置以下 GitHub Secrets:
+echo   ✓ KEYSTORE_BASE64
+echo   ✓ KEYSTORE_PASSWORD
+echo   ✓ KEY_ALIAS
+echo   ✓ KEY_PASSWORD
+echo.
+echo [重要提示]
+echo   1. 请妥善保管 %KEYSTORE_FILE% 文件并备份
+echo   2. 该文件已在 .gitignore 中，不会被提交到 git
+echo   3. 现在可以运行 GitHub Actions 构建签名的 APK/AAB
+echo.
+pause
+
+endlocal

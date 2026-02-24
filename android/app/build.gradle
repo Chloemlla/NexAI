@@ -1,0 +1,90 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+android {
+    namespace "com.chloemlla.nexai"
+    compileSdk 36
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    kotlinOptions {
+        jvmTarget = '21'
+    }
+
+    defaultConfig {
+        applicationId "com.chloemlla.nexai"
+        minSdk 24
+        targetSdk 36
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+
+    // Signing config for release builds (CI injects via gradle.properties)
+    def nexaiStoreFile = project.hasProperty('NEXAI_STORE_FILE') ? project.property('NEXAI_STORE_FILE') : null
+    if (nexaiStoreFile != null) {
+        signingConfigs {
+            release {
+                storeFile file(nexaiStoreFile)
+                storePassword project.property('NEXAI_STORE_PASSWORD')
+                keyAlias project.property('NEXAI_KEY_ALIAS')
+                keyPassword project.property('NEXAI_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig nexaiStoreFile != null ? signingConfigs.release : signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            ndk {
+                debugSymbolLevel 'SYMBOL_TABLE'
+            }
+        }
+        debug {
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    // 16KB page size alignment for Android 15+ / Google Play requirement
+    packaging {
+        jniLibs {
+            useLegacyPackaging false
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "androidx.core:core-ktx:1.15.0"
+}

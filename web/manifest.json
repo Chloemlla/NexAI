@@ -1,0 +1,11 @@
+{
+  "name": "NexAI",
+  "short_name": "NexAI",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#60a5fa",
+  "description": "AI Assistant with Fluent Design",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}

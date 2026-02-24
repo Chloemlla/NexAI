@@ -1,0 +1,279 @@
+name: Build & Release NexAI
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Build target platform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - windows
+          - android
+          - web
+          - all
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    if: ${{ github.event_name == 'push' || github.event.inputs.build_target == 'android' || github.event.inputs.build_target == 'all' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate app icons
+        run: |
+          sudo apt-get install -y imagemagick
+          convert -size 1024x1024 xc:"#0078D4" \
+            -fill white -draw "roundrectangle 200,180 824,870 80,80" \
+            -fill "#0078D4" -draw "circle 400,450 400,510" \
+            -fill "#0078D4" -draw "circle 624,450 624,510" \
+            -fill "#0078D4" -draw "roundrectangle 380,600 644,700 40,40" \
+            assets/icon.png
+          convert -size 1024x1024 xc:none \
+            -fill white -draw "roundrectangle 280,260 744,790 70,70" \
+            -fill "#0078D4" -draw "circle 420,470 420,520" \
+            -fill "#0078D4" -draw "circle 604,470 604,520" \
+            -fill "#0078D4" -draw "roundrectangle 400,610 624,690 30,30" \
+            assets/icon_foreground.png
+          dart run flutter_launcher_icons
+
+      - name: Write signing config
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks
+          echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> gradle.properties
+          echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> gradle.properties
+          echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> gradle.properties
+          echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> gradle.properties
+        working-directory: android
+
+      - name: Accept Android SDK licenses
+        run: yes | flutter doctor --android-licenses || true
+
+      - name: Build Android APK
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Android-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-outputs
+          path: build/app/outputs/
+
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "ci: generate android build files"
+          git push || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
+
+  build-web:
+    if: ${{ github.event_name == 'push' || github.event.inputs.build_target == 'web' || github.event.inputs.build_target == 'all' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release --web-renderer canvaskit
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Web
+          path: build/web/
+          retention-days: 30
+
+  build-windows:
+    if: ${{ github.event_name == 'push' || github.event.inputs.build_target == 'windows' || github.event.inputs.build_target == 'all' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Windows
+          path: build/windows/x64/runner/Release/
+          retention-days: 30
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    needs: [build-android, build-web, build-windows]
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: NexAI-Android-APK
+          path: android-apk
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: NexAI-Android-AAB
+          path: android-aab
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: NexAI-Web
+          path: web-build
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: NexAI-Windows
+          path: windows-build
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-outputs
+          path: android-outputs
+
+      - name: Package release assets
+        run: |
+          cp android-apk/app-release.apk NexAI-${{ github.ref_name }}.apk
+          cp android-aab/app-release.aab NexAI-${{ github.ref_name }}.aab
+          cd web-build && zip -r ../NexAI-Web-${{ github.ref_name }}.zip . && cd ..
+          cd windows-build && zip -r ../NexAI-Windows-${{ github.ref_name }}.zip . && cd ..
+          zip -r android-outputs-${{ github.ref_name }}.zip android-outputs
+
+      - name: Generate release notes
+        run: |
+          echo "## NexAI ${{ github.ref_name }}" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "### Downloads" >> RELEASE_NOTES.md
+          echo "- **Android APK**: \`NexAI-${{ github.ref_name }}.apk\`" >> RELEASE_NOTES.md
+          echo "- **Android AAB**: \`NexAI-${{ github.ref_name }}.aab\`" >> RELEASE_NOTES.md
+          echo "- **Windows**: \`NexAI-Windows-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
+          echo "- **Web**: \`NexAI-Web-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "### Features" >> RELEASE_NOTES.md
+          echo "- Fluent Design UI with Mica/Acrylic effects" >> RELEASE_NOTES.md
+          echo "- Custom OpenAI-compatible API (base URL, key, models)" >> RELEASE_NOTES.md
+          echo "- LaTeX math & chemical formula rendering" >> RELEASE_NOTES.md
+          echo "- Material You dynamic color on Android" >> RELEASE_NOTES.md
+          echo "- Dark/Light/System theme support" >> RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: NexAI ${{ github.ref_name }}
+          body_path: ./RELEASE_NOTES.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
+
+      - name: Upload APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: NexAI-${{ github.ref_name }}.apk
+          asset_name: NexAI-${{ github.ref_name }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: Upload AAB
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: NexAI-${{ github.ref_name }}.aab
+          asset_name: NexAI-${{ github.ref_name }}.aab
+          asset_content_type: application/octet-stream
+
+      - name: Upload Windows zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: NexAI-Windows-${{ github.ref_name }}.zip
+          asset_name: NexAI-Windows-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Web zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: NexAI-Web-${{ github.ref_name }}.zip
+          asset_name: NexAI-Web-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload full Android outputs
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android-outputs-${{ github.ref_name }}.zip
+          asset_name: android-outputs-${{ github.ref_name }}.zip
+          asset_content_type: application/zip

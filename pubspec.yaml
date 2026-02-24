@@ -1,0 +1,42 @@
+name: nexai
+description: NexAI - A beautiful OpenAI client with Fluent Design
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  fluent_ui: ^4.9.1
+  http: ^1.2.1
+  shared_preferences: ^2.2.3
+  flutter_markdown: ^0.7.4+2
+  flutter_math_fork: ^0.7.2
+  markdown: ^7.2.2
+  provider: ^6.1.2
+  google_fonts: ^6.2.1
+  url_launcher: ^6.2.5
+  system_theme: ^3.0.0
+  window_manager: ^0.4.0
+  dynamic_color: ^1.7.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.2
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#0078D4"
+  adaptive_icon_foreground: "assets/icon_foreground.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

@@ -73,7 +73,7 @@ jobs:
         run: yes | flutter doctor --android-licenses || true
 
       - name: Build Android APK
-        run: flutter build apk --release --target-platform android-arm64
+        run: flutter build apk --release --target-platform android-arm64 --verbose
 
       - name: Build Android App Bundle
         run: flutter build appbundle --release

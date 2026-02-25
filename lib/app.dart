@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:system_theme/system_theme.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 
 import 'main.dart' show isDesktop;

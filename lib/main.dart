@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:system_theme/system_theme.dart';
 
 import 'providers/chat_provider.dart';
 import 'providers/notes_provider.dart';
@@ -32,7 +31,6 @@ void main() async {
   }
 
   if (isDesktop) {
-    await SystemTheme.accentColor.load();
     await windowManager.ensureInitialized();
     const windowOptions = WindowOptions(
       size: Size(1100, 750),

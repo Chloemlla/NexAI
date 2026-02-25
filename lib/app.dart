@@ -1,4 +1,3 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:system_theme/system_theme.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 
-import 'main.dart' show isDesktop, isAndroid;
+import 'main.dart' show isDesktop;
 import 'providers/settings_provider.dart';
 import 'pages/home_page.dart';
 
@@ -19,15 +18,11 @@ class NexAIApp extends StatelessWidget {
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        if (isAndroid) {
-          return _buildMaterialApp(settings, lightDynamic, darkDynamic);
-        }
-        return _buildFluentApp(settings, lightDynamic, darkDynamic);
+        return _buildMaterialApp(settings, lightDynamic, darkDynamic);
       },
     );
   }
 
-  // ─── Android: Material 3 ───
   Widget _buildMaterialApp(
     SettingsProvider settings,
     ColorScheme? lightDynamic,
@@ -46,7 +41,6 @@ class NexAIApp extends StatelessWidget {
       brightness: Brightness.dark,
     );
 
-    // If user picked a custom accent, override dynamic with seed-based
     final effectiveLight = settings.accentColorValue != null
         ? ColorScheme.fromSeed(seedColor: Color(settings.accentColorValue!), brightness: Brightness.light)
         : lightScheme;
@@ -148,65 +142,5 @@ class NexAIApp extends StatelessWidget {
       ),
       home: const HomePage(),
     );
-  }
-
-  // ─── Desktop: Fluent UI ───
-  Widget _buildFluentApp(
-    SettingsProvider settings,
-    ColorScheme? lightDynamic,
-    ColorScheme? darkDynamic,
-  ) {
-    final accentColor = _resolveDesktopAccent(settings, lightDynamic, darkDynamic);
-    final swatch = _buildSwatch(accentColor);
-
-    return fluent.FluentApp(
-      title: 'NexAI',
-      debugShowCheckedModeBanner: false,
-      themeMode: settings.themeMode,
-      theme: fluent.FluentThemeData(
-        brightness: Brightness.light,
-        accentColor: swatch,
-        visualDensity: VisualDensity.standard,
-        navigationPaneTheme: fluent.NavigationPaneThemeData(
-          backgroundColor: Colors.white.withAlpha((0.85 * 255).round()),
-        ),
-      ),
-      darkTheme: fluent.FluentThemeData(
-        brightness: Brightness.dark,
-        accentColor: swatch,
-        visualDensity: VisualDensity.standard,
-        navigationPaneTheme: fluent.NavigationPaneThemeData(
-          backgroundColor: const Color(0xFF202020).withAlpha((0.85 * 255).round()),
-        ),
-      ),
-      home: const HomePage(),
-    );
-  }
-
-  Color _resolveDesktopAccent(
-    SettingsProvider settings,
-    ColorScheme? lightDynamic,
-    ColorScheme? darkDynamic,
-  ) {
-    if (settings.accentColorValue != null) {
-      return Color(settings.accentColorValue!);
-    }
-    if (!kIsWeb) {
-      return SystemTheme.accentColor.accent;
-    }
-    return const Color(0xFF60A5FA);
-  }
-
-  fluent.AccentColor _buildSwatch(Color c) {
-    final hsl = HSLColor.fromColor(c);
-    return fluent.AccentColor.swatch({
-      'normal': c,
-      'dark': hsl.withLightness((hsl.lightness - 0.1).clamp(0.0, 1.0)).toColor(),
-      'darker': hsl.withLightness((hsl.lightness - 0.2).clamp(0.0, 1.0)).toColor(),
-      'darkest': hsl.withLightness((hsl.lightness - 0.3).clamp(0.0, 1.0)).toColor(),
-      'light': hsl.withLightness((hsl.lightness + 0.1).clamp(0.0, 1.0)).toColor(),
-      'lighter': hsl.withLightness((hsl.lightness + 0.2).clamp(0.0, 1.0)).toColor(),
-      'lightest': hsl.withLightness((hsl.lightness + 0.3).clamp(0.0, 1.0)).toColor(),
-    });
   }
 }

@@ -1,5 +1,5 @@
 name: nexai
-description: NexAI - A beautiful OpenAI client with Material Design 3 & Fluent Design
+description: NexAI - A beautiful OpenAI client with Material Design 3
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,7 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  fluent_ui: ^4.9.1
   http: ^1.6.0
   shared_preferences: ^2.5.3
   flutter_markdown: ^0.7.7+1

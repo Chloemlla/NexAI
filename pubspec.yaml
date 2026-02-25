@@ -4,31 +4,31 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
-  flutter: '>=3.22.0'
+  sdk: '>=3.11.0 <4.0.0'
+  flutter: '>=3.41.0'
 
 dependencies:
   flutter:
     sdk: flutter
   http: ^1.6.0
-  shared_preferences: ^2.5.3
-  flutter_markdown: ^0.7.7+1
-  flutter_math_fork: '>=0.7.2 <0.7.4'
+  shared_preferences: ^2.5.4
+  flutter_markdown_plus: '>=1.0.7'
+  flutter_math_fork: '>=0.7.4'
   markdown: ^7.3.0
   provider: ^6.1.5
-  google_fonts: ^6.1.0
-  url_launcher: ^6.2.6
-  system_theme: ^3.0.0
-  window_manager: ^0.4.0
-  dynamic_color: '>=1.7.0 <1.8.0'
-  fluent_ui: ^4.9.1
-  package_info_plus: ^8.0.0
+  google_fonts: ^8.0.2
+  url_launcher: ^6.3.2
+  system_theme: ^3.2.0
+  window_manager: ^0.5.1
+  dynamic_color: '>=1.8.1'
+  fluent_ui: ^4.14.0
+  package_info_plus: '>=9.0.0'
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
-  flutter_launcher_icons: ^0.14.2
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter_launcher_icons:
   android: true

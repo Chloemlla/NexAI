@@ -95,7 +95,7 @@ jobs:
         run: yes | flutter doctor --android-licenses || true
 
       - name: Build Android APK
-        run: flutter build apk --release --target-platform android-arm64 --verbose
+        run: flutter build apk --release --target-platform android-arm64
 
       - name: Build Android App Bundle
         run: flutter build appbundle --release
@@ -184,7 +184,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Web
-        run: flutter build web --release --verbose
+        run: flutter build web --release
 
       - uses: actions/upload-artifact@v4
         with:

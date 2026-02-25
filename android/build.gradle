@@ -34,3 +34,10 @@ subprojects { subproject ->
         }
     }
 }
+
+// Polyfill jcenter() → mavenCentral() for plugins still referencing it (e.g. system_theme 3.2.0).
+// jcenter() method was removed in Gradle 9.
+// We patch DefaultRepositoryHandler's metaClass at the class level so it applies everywhere.
+org.gradle.api.internal.artifacts.dsl.DefaultRepositoryHandler.metaClass.jcenter = { ->
+    delegate.mavenCentral()
+}

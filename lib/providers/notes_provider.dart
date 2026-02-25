@@ -209,8 +209,6 @@ class NotesProvider extends ChangeNotifier {
     notifyListeners();
     _save();
   }
-    _save();
-  }
 
   void appendToNote(String id, String text) {
     final idx = _notes.indexWhere((n) => n.id == id);

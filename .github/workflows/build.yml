@@ -130,7 +130,7 @@ jobs:
         if: success()
         uses: marvinpinto/action-automatic-releases@latest
         with:
-          repo_token: ${{ secrets.USER_PAT }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: ${{ steps.timestamp.outputs.timestamp }}
           prerelease: false
           title: "${{ steps.timestamp.outputs.repo_name }}-${{ steps.timestamp.outputs.short_sha }} Release"

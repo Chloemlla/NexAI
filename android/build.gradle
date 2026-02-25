@@ -16,6 +16,11 @@ allprojects {
     }
 }
 
+// Apply Kotlin plugin to all subprojects to prevent duplicate plugin application
+subprojects {
+    apply plugin: 'kotlin-android'
+}
+
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"

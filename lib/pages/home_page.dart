@@ -353,25 +353,21 @@ class _HomePageState extends State<HomePage> with WindowListener {
     }
 
     return fluent.NavigationView(
-      appBar: fluent.NavigationAppBar(
-        automaticallyImplyLeading: false,
-        title: titleWidget,
-        actions: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            fluent.IconButton(
-              icon: const Icon(fluent.FluentIcons.add, size: 14),
-              onPressed: () {
-                chat.newConversation();
-                setState(() => _currentPage = 'chat');
-              },
-            ),
-            if (isDesktop) ...[
-              const SizedBox(width: 4),
-              const WindowButtons(),
-            ],
+      titleBar: Row(
+        children: [
+          Expanded(child: titleWidget),
+          fluent.IconButton(
+            icon: const Icon(fluent.FluentIcons.add, size: 14),
+            onPressed: () {
+              chat.newConversation();
+              setState(() => _currentPage = 'chat');
+            },
+          ),
+          if (isDesktop) ...[
+            const SizedBox(width: 4),
+            const WindowButtons(),
           ],
-        ),
+        ],
       ),
       pane: fluent.NavigationPane(
         selected: selected,

@@ -69,7 +69,7 @@ class NexAIApp extends StatelessWidget {
           scrolledUnderElevation: 2,
           backgroundColor: effectiveLight.surface,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           clipBehavior: Clip.antiAlias,
@@ -113,7 +113,7 @@ class NexAIApp extends StatelessWidget {
           scrolledUnderElevation: 2,
           backgroundColor: effectiveDark.surface,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           clipBehavior: Clip.antiAlias,

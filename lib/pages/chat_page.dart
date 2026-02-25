@@ -421,10 +421,10 @@ class _ChatPageState extends State<ChatPage> {
                   minLines: 1,
                   onSubmitted: (_) => _send(),
                   style: const TextStyle(fontSize: 14),
-                  decoration: BoxDecoration(
+                  decoration: WidgetStatePropertyAll(BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: theme.resources.dividerStrokeColorDefault),
-                  ),
+                  )),
                 ),
               ),
               const SizedBox(width: 8),

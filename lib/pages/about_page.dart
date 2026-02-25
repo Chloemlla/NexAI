@@ -1,11 +1,31 @@
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart' show isAndroid;
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() => _version = info.version); // e.g. "1.0.6-abc1234"
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +107,7 @@ class AboutPage extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _Badge(label: 'v1.0.0', bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
+                        _Badge(label: _version.isNotEmpty ? 'v$_version' : '...', bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
                         const SizedBox(width: 8),
                         _Badge(label: 'MIT', bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
                         const SizedBox(width: 8),
@@ -148,7 +168,7 @@ class AboutPage extends StatelessWidget {
 
               // ── App Info section ──
               _m3Section(cs, tt, Icons.info_outline_rounded, 'App Info', [
-                _m3InfoRow(cs, 'Version', '1.0.0'),
+                _m3InfoRow(cs, 'Version', _version.isNotEmpty ? _version : '...'),
                 const SizedBox(height: 8),
                 _m3InfoRow(cs, 'License', 'MIT'),
                 const SizedBox(height: 8),
@@ -284,7 +304,7 @@ class AboutPage extends StatelessWidget {
               const SizedBox(height: 20),
               Text('NexAI', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: theme.typography.body?.color)),
               const SizedBox(height: 6),
-              Text('v1.0.0', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
+              Text(_version.isNotEmpty ? 'v$_version' : '', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
               const SizedBox(height: 8),
               Text('A beautiful AI chat client with Fluent Design', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
             ]),

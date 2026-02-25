@@ -93,6 +93,13 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true
 
+      - name: Set auto-incrementing versionCode
+        run: |
+          VERSION_CODE=$((106 + ${{ github.run_number }}))
+          echo "flutter.versionCode=$VERSION_CODE" >> android/local.properties
+          echo "flutter.versionName=1.0.6" >> android/local.properties
+          echo "Using versionCode=$VERSION_CODE"
+
       - name: Build Android APK
         run: flutter build apk --release --target-platform android-arm64
 

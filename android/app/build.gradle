@@ -44,8 +44,9 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = '21'
+    // AGP 9.0 built-in Kotlin: use kotlin block instead of kotlinOptions
+    kotlin {
+        jvmToolchain(21)
     }
 
     defaultConfig {
@@ -99,5 +100,5 @@ flutter {
 }
 
 dependencies {
-    implementation "androidx.core:core-ktx:1.15.0"
+    implementation "androidx.core:core-ktx:1.16.0"
 }

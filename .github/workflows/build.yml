@@ -66,6 +66,7 @@ jobs:
 
       - name: Generate app icons
         run: |
+          sudo apt-get update
           sudo apt-get install -y imagemagick
           convert -size 1024x1024 xc:"#0078D4" \
             -fill white -draw "roundrectangle 200,180 824,870 80,80" \

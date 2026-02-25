@@ -1,11 +1,7 @@
 buildscript {
-    ext.kotlin_version = '2.1.0'
     repositories {
         google()
         mavenCentral()
-    }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -34,13 +30,6 @@ subprojects { subproject ->
                     namespace subproject.group ?: subproject.name
                 }
                 compileSdk 36
-                
-                // Prevent duplicate Kotlin plugin application
-                subproject.plugins.withId('kotlin-android') {
-                    subproject.kotlin {
-                        jvmToolchain(21)
-                    }
-                }
             }
         }
     }

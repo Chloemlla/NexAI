@@ -60,39 +60,66 @@ class _HomePageState extends State<HomePage> with WindowListener {
         surfaceTintColor: cs.surfaceTint,
         title: Row(
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.tertiary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            Hero(
+              tag: 'app_icon',
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [cs.primary, cs.tertiary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(11),
+                  boxShadow: [
+                    BoxShadow(
+                      color: cs.primary.withAlpha(60),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Center(
-                child: Icon(
-                  _androidNavIndex == 0
-                      ? Icons.smart_toy_rounded
-                      : _androidNavIndex == 1
-                          ? Icons.note_alt_rounded
-                          : _androidNavIndex == 2
-                              ? Icons.settings_rounded
-                              : Icons.info_rounded,
-                  size: 18,
-                  color: cs.onPrimary,
+                child: Center(
+                  child: Icon(
+                    _androidNavIndex == 0
+                        ? Icons.smart_toy_rounded
+                        : _androidNavIndex == 1
+                            ? Icons.note_alt_rounded
+                            : _androidNavIndex == 2
+                                ? Icons.settings_rounded
+                                : Icons.info_rounded,
+                    size: 18,
+                    color: cs.onPrimary,
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 12),
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.2),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
               child: Text(
                 pageTitles[_androidNavIndex],
                 key: ValueKey(_androidNavIndex),
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 19, color: cs.onSurface, letterSpacing: -0.3),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 19,
+                  color: cs.onSurface,
+                  letterSpacing: -0.3,
+                ),
               ),
             ),
           ],
@@ -100,7 +127,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
         actions: [
           if (_androidNavIndex == 0) ...[
             FilledButton.tonalIcon(
-              onPressed: () => chat.newConversation(),
+              onPressed: () {
+                chat.newConversation();
+                // Haptic feedback would go here on mobile
+              },
               icon: const Icon(Icons.add_rounded, size: 18),
               label: const Text('New'),
               style: FilledButton.styleFrom(
@@ -109,10 +139,14 @@ class _HomePageState extends State<HomePage> with WindowListener {
               ),
             ),
             const SizedBox(width: 4),
-            IconButton(
-              icon: Icon(Icons.history_rounded, color: cs.onSurfaceVariant),
-              onPressed: () => _showConversationSheet(context),
-              tooltip: 'Conversations',
+            Badge(
+              isLabelVisible: chat.conversations.length > 1,
+              label: Text('${chat.conversations.length}'),
+              child: IconButton(
+                icon: Icon(Icons.history_rounded, color: cs.onSurfaceVariant),
+                onPressed: () => _showConversationSheet(context),
+                tooltip: 'Conversations',
+              ),
             ),
             const SizedBox(width: 4),
           ],
@@ -138,9 +172,24 @@ class _HomePageState extends State<HomePage> with WindowListener {
         ],
       ),
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        switchInCurve: Curves.easeOut,
-        switchOutCurve: Curves.easeIn,
+        duration: const Duration(milliseconds: 300),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.05, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            ),
+          );
+        },
         child: KeyedSubtree(
           key: ValueKey(_androidNavIndex),
           child: pages[_androidNavIndex],
@@ -151,11 +200,28 @@ class _HomePageState extends State<HomePage> with WindowListener {
         onDestinationSelected: (i) => setState(() => _androidNavIndex = i),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         animationDuration: const Duration(milliseconds: 400),
+        elevation: 3,
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.chat_outlined), selectedIcon: Icon(Icons.chat_rounded), label: 'Chat'),
-          NavigationDestination(icon: Icon(Icons.note_alt_outlined), selectedIcon: Icon(Icons.note_alt_rounded), label: 'Notes'),
-          NavigationDestination(icon: Icon(Icons.tune_outlined), selectedIcon: Icon(Icons.tune_rounded), label: 'Settings'),
-          NavigationDestination(icon: Icon(Icons.info_outline_rounded), selectedIcon: Icon(Icons.info_rounded), label: 'About'),
+          NavigationDestination(
+            icon: Icon(Icons.chat_outlined),
+            selectedIcon: Icon(Icons.chat_rounded),
+            label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.note_alt_outlined),
+            selectedIcon: Icon(Icons.note_alt_rounded),
+            label: 'Notes',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tune_outlined),
+            selectedIcon: Icon(Icons.tune_rounded),
+            label: 'Settings',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.info_outline_rounded),
+            selectedIcon: Icon(Icons.info_rounded),
+            label: 'About',
+          ),
         ],
       ),
     );
@@ -185,20 +251,58 @@ class _HomePageState extends State<HomePage> with WindowListener {
                   child: Row(
                     children: [
                       Container(
-                        width: 32,
-                        height: 32,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: cs.primaryContainer,
-                          borderRadius: BorderRadius.circular(10),
+                          gradient: LinearGradient(
+                            colors: [cs.primaryContainer, cs.secondaryContainer],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cs.primary.withAlpha(40),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                        child: Center(child: Icon(Icons.history_rounded, size: 18, color: cs.onPrimaryContainer)),
+                        child: Center(
+                          child: Icon(
+                            Icons.history_rounded,
+                            size: 20,
+                            color: cs.onPrimaryContainer,
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      Text('Conversations', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                      const Spacer(),
                       Text(
-                        '${chat.conversations.length}',
-                        style: TextStyle(fontSize: 13, color: cs.outline, fontWeight: FontWeight.w500),
+                        'Conversations',
+                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer.withAlpha(120),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: cs.primary.withAlpha(60),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          '${chat.conversations.length}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -208,73 +312,218 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 Expanded(
                   child: chat.conversations.isEmpty
                       ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  color: cs.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(20),
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        cs.surfaceContainerHighest,
+                                        cs.surfaceContainer,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.chat_bubble_outline_rounded,
+                                      size: 36,
+                                      color: cs.outlineVariant,
+                                    ),
+                                  ),
                                 ),
-                                child: Center(child: Icon(Icons.chat_bubble_outline_rounded, size: 28, color: cs.outlineVariant)),
-                              ),
-                              const SizedBox(height: 16),
-                              Text('No conversations yet', style: TextStyle(color: cs.outline, fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 4),
-                              Text('Start a new chat to begin', style: TextStyle(color: cs.outlineVariant, fontSize: 13)),
-                            ],
+                                const SizedBox(height: 20),
+                                Text(
+                                  'No conversations yet',
+                                  style: TextStyle(
+                                    color: cs.onSurface,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Start a new chat to begin',
+                                  style: TextStyle(
+                                    color: cs.onSurfaceVariant,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    chat.newConversation();
+                                    Navigator.of(ctx).pop();
+                                  },
+                                  icon: const Icon(Icons.add_rounded, size: 20),
+                                  label: const Text('New Conversation'),
+                                ),
+                              ],
+                            ),
                           ),
                         )
                       : ListView.separated(
                           controller: scrollController,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           itemCount: chat.conversations.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 4),
+                          separatorBuilder: (_, __) => const SizedBox(height: 6),
                           itemBuilder: (_, idx) {
                             final conv = chat.conversations[idx];
                             final isActive = idx == chat.currentIndex;
-                            return ListTile(
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              selected: isActive,
-                              selectedTileColor: cs.secondaryContainer.withAlpha(180),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                              leading: Container(
-                                width: 36,
-                                height: 36,
+                            return Dismissible(
+                              key: ValueKey('conv_$idx'),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
                                 decoration: BoxDecoration(
-                                  color: isActive ? cs.primary.withAlpha(30) : cs.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: cs.errorContainer,
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: Center(
-                                  child: Icon(
-                                    isActive ? Icons.chat_rounded : Icons.chat_outlined,
-                                    color: isActive ? cs.primary : cs.onSurfaceVariant,
-                                    size: 18,
+                                child: Icon(
+                                  Icons.delete_rounded,
+                                  color: cs.onErrorContainer,
+                                ),
+                              ),
+                              confirmDismiss: (direction) async {
+                                return await showDialog<bool>(
+                                  context: ctx,
+                                  builder: (dialogCtx) => AlertDialog(
+                                    icon: Icon(Icons.delete_outline_rounded, color: cs.error),
+                                    title: const Text('Delete Conversation'),
+                                    content: Text('Delete "${conv.title}"?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(dialogCtx).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () => Navigator.of(dialogCtx).pop(true),
+                                        style: FilledButton.styleFrom(
+                                          backgroundColor: cs.error,
+                                        ),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  ),
+                                ) ?? false;
+                              },
+                              onDismissed: (_) {
+                                chat.deleteConversation(idx);
+                                if (chat.conversations.isEmpty) {
+                                  Navigator.of(ctx).pop();
+                                }
+                              },
+                              child: ListTile(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                selected: isActive,
+                                selectedTileColor: cs.secondaryContainer.withAlpha(180),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 4,
+                                ),
+                                leading: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: isActive
+                                        ? LinearGradient(
+                                            colors: [cs.primary, cs.tertiary],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          )
+                                        : null,
+                                    color: isActive ? null : cs.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: isActive
+                                        ? [
+                                            BoxShadow(
+                                              color: cs.primary.withAlpha(60),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      isActive ? Icons.chat_rounded : Icons.chat_outlined,
+                                      color: isActive ? cs.onPrimary : cs.onSurfaceVariant,
+                                      size: 20,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              title: Text(
-                                conv.title,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                                  fontSize: 14,
-                                  color: isActive ? cs.onSecondaryContainer : cs.onSurface,
+                                title: Text(
+                                  conv.title,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                                    fontSize: 15,
+                                    color: isActive ? cs.onSecondaryContainer : cs.onSurface,
+                                    letterSpacing: -0.1,
+                                  ),
                                 ),
-                              ),
-                              trailing: IconButton(
-                                icon: Icon(Icons.delete_outline_rounded, size: 18, color: cs.outline),
-                                onPressed: () {
-                                  chat.deleteConversation(idx);
-                                  if (chat.conversations.isEmpty) Navigator.of(ctx).pop();
+                                subtitle: conv.messages.isNotEmpty
+                                    ? Text(
+                                        conv.messages.last.content.length > 50
+                                            ? '${conv.messages.last.content.substring(0, 50)}...'
+                                            : conv.messages.last.content,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isActive
+                                              ? cs.onSecondaryContainer.withAlpha(180)
+                                              : cs.onSurfaceVariant,
+                                        ),
+                                      )
+                                    : null,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (conv.messages.isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isActive
+                                              ? cs.primary.withAlpha(40)
+                                              : cs.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          '${conv.messages.length}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: isActive ? cs.primary : cs.outline,
+                                          ),
+                                        ),
+                                      ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 20,
+                                      color: cs.outline,
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  chat.selectConversation(idx);
+                                  Navigator.of(ctx).pop();
                                 },
                               ),
-                              onTap: () {
-                                chat.selectConversation(idx);
-                                Navigator.of(ctx).pop();
-                              },
                             );
                           },
                         ),

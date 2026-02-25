@@ -123,6 +123,7 @@ class _ChatPageState extends State<ChatPage> {
   // ─── Android: Material 3 ───
   Widget _buildAndroid(BuildContext context) {
     final chat = context.watch<ChatProvider>();
+    final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
     final messages = chat.messages;
     final mq = MediaQuery.of(context);
@@ -136,6 +137,10 @@ class _ChatPageState extends State<ChatPage> {
 
     return Column(
       children: [
+        // Quick settings bar (only show when not configured or when there are messages)
+        if (!settings.isConfigured || messages.isNotEmpty)
+          _buildQuickSettingsBar(cs, settings),
+        
         // ── Message list ──
         Expanded(
           child: messages.isEmpty
@@ -253,6 +258,127 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildQuickSettingsBar(ColorScheme cs, SettingsProvider settings) {
+    if (!settings.isConfigured) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [cs.errorContainer.withAlpha(200), cs.errorContainer.withAlpha(100)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          border: Border(
+            bottom: BorderSide(color: cs.error.withAlpha(60), width: 1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, size: 20, color: cs.error),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'API key not configured',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onErrorContainer,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                // Navigate to settings
+                DefaultTabController.of(context)?.animateTo(2);
+              },
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              child: const Text('Configure'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withAlpha(120),
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant.withAlpha(60), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.smart_toy_outlined, size: 16, color: cs.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              settings.selectedModel,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer.withAlpha(120),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: cs.primary.withAlpha(60), width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.thermostat_rounded, size: 12, color: cs.primary),
+                const SizedBox(width: 4),
+                Text(
+                  settings.temperature.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: cs.secondaryContainer.withAlpha(120),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: cs.secondary.withAlpha(60), width: 1),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.token_rounded, size: 12, color: cs.secondary),
+                const SizedBox(width: 4),
+                Text(
+                  settings.maxTokens >= 1000
+                      ? '${(settings.maxTokens / 1000).toStringAsFixed(1)}k'
+                      : '${settings.maxTokens}',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: cs.secondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

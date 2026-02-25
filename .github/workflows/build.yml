@@ -63,24 +63,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate app icons
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-          convert -size 1024x1024 xc:"#0078D4" \
-            -fill white -draw "roundrectangle 200,180 824,870 80,80" \
-            -fill "#0078D4" -draw "circle 400,450 400,510" \
-            -fill "#0078D4" -draw "circle 624,450 624,510" \
-            -fill "#0078D4" -draw "roundrectangle 380,600 644,700 40,40" \
-            assets/icon.png
-          convert -size 1024x1024 xc:none \
-            -fill white -draw "roundrectangle 280,260 744,790 70,70" \
-            -fill "#0078D4" -draw "circle 420,470 420,520" \
-            -fill "#0078D4" -draw "circle 604,470 604,520" \
-            -fill "#0078D4" -draw "roundrectangle 400,610 624,690 30,30" \
-            assets/icon_foreground.png
-          dart run flutter_launcher_icons
-
       - name: Write signing config
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks

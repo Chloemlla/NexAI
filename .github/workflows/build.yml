@@ -126,18 +126,34 @@ jobs:
           git push || true
         env:
           GITHUB_TOKEN: ${{ secrets.USER_PAT }}
+      - name: Gather release metadata
+        id: meta
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION_NAME=$(grep 'flutterVersionName' android/gradle.properties 2>/dev/null | cut -d= -f2 || grep "flutterVersionName = " android/app/build.gradle | head -1 | grep -oP "'[^']+'" | tr -d "'")
+          # Fallback: extract from build.gradle default
+          if [ -z "$VERSION_NAME" ]; then
+            VERSION_NAME=$(grep -oP "flutterVersionName = '\K[^']+" android/app/build.gradle || echo "1.0.0")
+          fi
+          TAG="v${VERSION_NAME}-${SHORT_SHA}"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Automatic release
         if: success()
-        uses: marvinpinto/action-automatic-releases@latest
+        uses: softprops/action-gh-release@master
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: ${{ steps.timestamp.outputs.timestamp }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          tag_name: ${{ steps.meta.outputs.tag }}
           prerelease: false
-          title: "${{ steps.timestamp.outputs.repo_name }}-${{ steps.timestamp.outputs.short_sha }} Release"
+          name: "NexAI ${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}"
           files: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
-            build/app/outputs/
 
   build-web:
     # if: false  # Disabled - Web build not needed

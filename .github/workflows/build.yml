@@ -125,8 +125,21 @@ jobs:
           git push || true
         env:
           GITHUB_TOKEN: ${{ secrets.USER_PAT }}
+      - name: Automatic release
+        if: success()
+        uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.USER_PAT }}
+          automatic_release_tag: ${{ steps.timestamp.outputs.timestamp }}
+          prerelease: false
+          title: "${{ steps.timestamp.outputs.repo_name }}-${{ steps.timestamp.outputs.short_sha }} Release"
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/
 
   build-web:
+    # if: false  # Disabled - Web build not needed
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'web' || github.event.inputs.build_target == 'all' }}
     runs-on: ubuntu-latest
     steps:

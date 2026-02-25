@@ -372,68 +372,133 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           child: Scaffold(
       appBar: AppBar(
         surfaceTintColor: cs.surfaceTint,
+        elevation: 0,
         titleSpacing: 0,
+        backgroundColor: cs.surface,
         title: _viewMode == _ViewMode.edit || _viewMode == _ViewMode.split
             ? TextField(
                 controller: _titleController,
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, color: cs.onSurface),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  color: cs.onSurface,
+                  letterSpacing: 0.15,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Note title...',
-                  hintStyle: TextStyle(color: cs.onSurfaceVariant.withAlpha(140)),
+                  hintStyle: TextStyle(
+                    color: cs.onSurfaceVariant.withAlpha(140),
+                    fontWeight: FontWeight.w500,
+                  ),
                   border: InputBorder.none,
                   filled: false,
                   contentPadding: EdgeInsets.zero,
                   isDense: true,
                 ),
               )
-            : Text(note.title, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17, color: cs.onSurface)),
+            : Text(
+                note.title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  color: cs.onSurface,
+                  letterSpacing: 0.15,
+                ),
+              ),
         actions: [
-          // Star button
+          // Star button with animation
           IconButton(
             icon: Icon(
               note.isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
-              size: 22,
-              color: note.isStarred ? Colors.amber : cs.onSurfaceVariant,
+              size: 24,
+              color: note.isStarred ? Colors.amber.shade600 : cs.onSurfaceVariant,
             ),
             onPressed: () => context.read<NotesProvider>().toggleStar(widget.noteId),
-            visualDensity: VisualDensity.compact,
+            visualDensity: VisualDensity.comfortable,
             tooltip: note.isStarred ? 'Unstar' : 'Star',
           ),
-          // View mode toggle
-          SegmentedButton<_ViewMode>(
-            segments: const [
-              ButtonSegment(value: _ViewMode.edit, icon: Icon(Icons.edit_rounded, size: 16)),
-              ButtonSegment(value: _ViewMode.split, icon: Icon(Icons.vertical_split_rounded, size: 16)),
-              ButtonSegment(value: _ViewMode.preview, icon: Icon(Icons.visibility_rounded, size: 16)),
-            ],
-            selected: {_viewMode},
-            onSelectionChanged: (s) {
-              if (_viewMode != _ViewMode.preview && s.first == _ViewMode.preview) _saveNote();
-              setState(() => _viewMode = s.first);
-            },
-            showSelectedIcon: false,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              padding: WidgetStatePropertyAll(const EdgeInsets.symmetric(horizontal: 6)),
+          const SizedBox(width: 4),
+          // View mode toggle with better styling
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SegmentedButton<_ViewMode>(
+              segments: [
+                ButtonSegment(
+                  value: _ViewMode.edit,
+                  icon: Icon(Icons.edit_rounded, size: 18),
+                  tooltip: 'Edit',
+                ),
+                ButtonSegment(
+                  value: _ViewMode.split,
+                  icon: Icon(Icons.vertical_split_rounded, size: 18),
+                  tooltip: 'Split view',
+                ),
+                ButtonSegment(
+                  value: _ViewMode.preview,
+                  icon: Icon(Icons.visibility_rounded, size: 18),
+                  tooltip: 'Preview',
+                ),
+              ],
+              selected: {_viewMode},
+              onSelectionChanged: (s) {
+                if (_viewMode != _ViewMode.preview && s.first == _ViewMode.preview) _saveNote();
+                setState(() => _viewMode = s.first);
+              },
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: WidgetStatePropertyAll(const EdgeInsets.symmetric(horizontal: 8)),
+              ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
           PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert_rounded, size: 20, color: cs.onSurfaceVariant),
+            icon: Icon(Icons.more_vert_rounded, size: 22, color: cs.onSurfaceVariant),
             onSelected: _onMenuAction,
+            tooltip: 'More options',
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'outline', child: _menuRow(Icons.segment_rounded, 'Outline')),
-              PopupMenuItem(value: 'backlinks', child: _menuRow(Icons.link_rounded, 'Backlinks')),
-              PopupMenuItem(value: 'frontmatter', child: _menuRow(Icons.data_object_rounded, 'Insert Frontmatter')),
-              PopupMenuItem(value: 'tags', child: _menuRow(Icons.tag_rounded, 'Tags')),
+              PopupMenuItem(
+                value: 'outline',
+                child: _menuRow(Icons.segment_rounded, 'Outline'),
+              ),
+              PopupMenuItem(
+                value: 'backlinks',
+                child: _menuRow(Icons.link_rounded, 'Links & Backlinks'),
+              ),
+              PopupMenuItem(
+                value: 'frontmatter',
+                child: _menuRow(Icons.data_object_rounded, 'Insert Frontmatter'),
+              ),
+              PopupMenuItem(
+                value: 'tags',
+                child: _menuRow(Icons.local_offer_rounded, 'Manage Tags'),
+              ),
               const PopupMenuDivider(),
-              PopupMenuItem(value: 'focus', child: _menuRow(Icons.fullscreen_rounded, 'Focus mode')),
-              PopupMenuItem(value: 'stats', child: _menuRow(Icons.analytics_outlined, 'Statistics')),
+              PopupMenuItem(
+                value: 'focus',
+                child: _menuRow(Icons.fullscreen_rounded, 'Focus Mode'),
+              ),
+              PopupMenuItem(
+                value: 'stats',
+                child: _menuRow(Icons.analytics_outlined, 'Statistics'),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: _menuRow(Icons.download_rounded, 'Export'),
+              ),
               const PopupMenuDivider(),
-              PopupMenuItem(value: 'delete', child: _menuRow(Icons.delete_outline_rounded, 'Delete', isDestructive: true)),
+              PopupMenuItem(
+                value: 'delete',
+                child: _menuRow(Icons.delete_outline_rounded, 'Delete', isDestructive: true),
+              ),
             ],
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
@@ -495,11 +560,72 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       case 'stats':
         _showStatsDialog();
         break;
+      case 'export':
+        _showExportDialog();
+        break;
       case 'delete':
         context.read<NotesProvider>().deleteNote(widget.noteId);
         Navigator.of(context).pop();
         break;
     }
+  }
+
+  void _showExportDialog() {
+    final cs = Theme.of(context).colorScheme;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.download_rounded, color: cs.primary),
+        title: const Text('Export Note'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.description_outlined, color: cs.primary),
+              title: const Text('Export as Markdown'),
+              subtitle: const Text('Save as .md file'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _exportAsMarkdown();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.content_copy_rounded, color: cs.primary),
+              title: const Text('Copy to Clipboard'),
+              subtitle: const Text('Copy content'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                Clipboard.setData(ClipboardData(text: _contentController.text));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Copied to clipboard'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _exportAsMarkdown() {
+    // This is a placeholder - actual file export would require platform-specific implementation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Export feature coming soon'),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   void _showStatsDialog() {
@@ -888,28 +1014,78 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _buildTaskProgress(ColorScheme cs) {
     final progress = _taskTotal > 0 ? _taskDone / _taskTotal : 0.0;
+    final isComplete = progress >= 1.0;
+    
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      color: cs.surfaceContainerHighest.withAlpha(80),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isComplete
+              ? [Colors.green.shade50, Colors.green.shade100]
+              : [cs.primaryContainer.withAlpha(60), cs.secondaryContainer.withAlpha(60)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: isComplete ? Colors.green.withAlpha(100) : cs.outlineVariant.withAlpha(60),
+            width: 1,
+          ),
+        ),
+      ),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline_rounded, size: 16, color: cs.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                backgroundColor: cs.surfaceContainerHighest,
-                color: progress >= 1.0 ? Colors.green : cs.primary,
-              ),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isComplete ? Colors.green.shade100 : cs.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              isComplete ? Icons.check_circle_rounded : Icons.checklist_rounded,
+              size: 18,
+              color: isComplete ? Colors.green.shade700 : cs.primary,
             ),
           ),
-          const SizedBox(width: 10),
-          Text(
-            '$_taskDone/$_taskTotal',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      isComplete ? 'All tasks completed!' : 'Task Progress',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isComplete ? Colors.green.shade700 : cs.onSurface,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '$_taskDone/$_taskTotal',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isComplete ? Colors.green.shade700 : cs.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 8,
+                    backgroundColor: cs.surfaceContainerHighest.withAlpha(120),
+                    color: isComplete ? Colors.green.shade600 : cs.primary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -920,37 +1096,46 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _buildToolbar(ColorScheme cs) {
     return Container(
-      height: 44,
+      height: 52,
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withAlpha(120),
-        border: Border(bottom: BorderSide(color: cs.outlineVariant.withAlpha(60))),
+        color: cs.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant.withAlpha(80), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: cs.shadow.withAlpha(10),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          _toolBtn(Icons.format_bold_rounded, 'Bold', () => _wrapSelection('**', '**')),
-          _toolBtn(Icons.format_italic_rounded, 'Italic', () => _wrapSelection('*', '*')),
+          _toolBtn(Icons.format_bold_rounded, 'Bold (Ctrl+B)', () => _wrapSelection('**', '**')),
+          _toolBtn(Icons.format_italic_rounded, 'Italic (Ctrl+I)', () => _wrapSelection('*', '*')),
           _toolBtn(Icons.strikethrough_s_rounded, 'Strikethrough', () => _wrapSelection('~~', '~~')),
           _toolDivider(cs),
           _toolBtn(Icons.title_rounded, 'Heading', () => _prependLine('## ')),
           _toolBtn(Icons.format_quote_rounded, 'Quote', () => _prependLine('> ')),
-          _toolBtn(Icons.code_rounded, 'Code', () => _wrapSelection('`', '`')),
-          _toolBtn(Icons.data_object_rounded, 'Code block', () => _wrapSelection('```\n', '\n```')),
+          _toolBtn(Icons.code_rounded, 'Inline Code', () => _wrapSelection('`', '`')),
+          _toolBtn(Icons.data_object_rounded, 'Code Block', () => _wrapSelection('```\n', '\n```')),
           _toolDivider(cs),
-          _toolBtn(Icons.format_list_bulleted_rounded, 'Bullet list', () => _prependLine('- ')),
-          _toolBtn(Icons.format_list_numbered_rounded, 'Numbered list', () => _prependLine('1. ')),
-          _toolBtn(Icons.check_box_outlined, 'Task', _toggleTaskItem),
+          _toolBtn(Icons.format_list_bulleted_rounded, 'Bullet List', () => _prependLine('- ')),
+          _toolBtn(Icons.format_list_numbered_rounded, 'Numbered List', () => _prependLine('1. ')),
+          _toolBtn(Icons.check_box_outlined, 'Task Item', _toggleTaskItem),
           _toolDivider(cs),
           _toolBtn(Icons.horizontal_rule_rounded, 'Divider', () => _insertAtCursor('\n---\n')),
           _toolBtn(Icons.link_rounded, 'Link', () => _wrapSelection('[', '](url)')),
           _toolBtn(Icons.image_outlined, 'Image', () => _insertAtCursor('![alt](url)')),
           _toolBtn(Icons.table_chart_outlined, 'Table', () => _insertAtCursor('\n| Header | Header |\n|--------|--------|\n| Cell   | Cell   |\n')),
           _toolDivider(cs),
-          _toolBtn(Icons.functions_rounded, 'Inline math', () => _wrapSelection(r'$', r'$')),
-          _toolBtn(Icons.calculate_outlined, 'Block math', () => _wrapSelection('\$\$\n', '\n\$\$')),
+          _toolBtn(Icons.functions_rounded, 'Inline Math', () => _wrapSelection(r'$', r'$')),
+          _toolBtn(Icons.calculate_outlined, 'Block Math', () => _wrapSelection('\$\$\n', '\n\$\$')),
           _toolDivider(cs),
-          _toolBtn(Icons.tag_rounded, 'Tag', () => _insertAtCursor('#')),
+          _toolBtn(Icons.local_offer_rounded, 'Tag', () => _insertAtCursor('#')),
           _toolBtn(Icons.add_link_rounded, 'Wiki Link', () => _insertAtCursor('[[')),
         ],
       ),
@@ -961,12 +1146,16 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     final cs = Theme.of(context).colorScheme;
     return Tooltip(
       message: tooltip,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          child: Icon(icon, size: 20, color: cs.onSurfaceVariant),
+      waitDuration: const Duration(milliseconds: 500),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Icon(icon, size: 22, color: cs.onSurfaceVariant),
+          ),
         ),
       ),
     );
@@ -974,8 +1163,22 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _toolDivider(ColorScheme cs) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-      child: Container(width: 1, height: 20, color: cs.outlineVariant.withAlpha(100)),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      child: Container(
+        width: 1,
+        height: 24,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              cs.outlineVariant.withAlpha(0),
+              cs.outlineVariant.withAlpha(120),
+              cs.outlineVariant.withAlpha(0),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+      ),
     );
   }
 
@@ -1058,31 +1261,93 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _buildBottomBar(ColorScheme cs) {
     return Container(
-      height: 32,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withAlpha(80),
-        border: Border(top: BorderSide(color: cs.outlineVariant.withAlpha(60))),
+        color: cs.surfaceContainerLow,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withAlpha(80), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: cs.shadow.withAlpha(10),
+            blurRadius: 4,
+            offset: const Offset(0, -1),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Text('$_wordCount words', style: TextStyle(fontSize: 11, color: cs.outline)),
+          _statChip(cs, Icons.text_fields_rounded, '$_wordCount words'),
           const SizedBox(width: 12),
-          Text('$_charCount chars', style: TextStyle(fontSize: 11, color: cs.outline)),
+          _statChip(cs, Icons.abc_rounded, '$_charCount chars'),
           if (_taskTotal > 0) ...[
             const SizedBox(width: 12),
-            Text('$_taskDone/$_taskTotal tasks', style: TextStyle(fontSize: 11, color: cs.outline)),
+            _statChip(
+              cs,
+              Icons.check_box_outlined,
+              '$_taskDone/$_taskTotal tasks',
+              color: _taskDone == _taskTotal ? Colors.green : null,
+            ),
           ],
           const Spacer(),
-          InkWell(
-            borderRadius: BorderRadius.circular(4),
-            onTap: () => setState(() => _showToolbar = !_showToolbar),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              child: Icon(
-                _showToolbar ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                size: 16, color: cs.outline,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => setState(() => _showToolbar = !_showToolbar),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _showToolbar ? 'Hide toolbar' : 'Show toolbar',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _showToolbar ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: cs.primary,
+                    ),
+                  ],
+                ),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statChip(ColorScheme cs, IconData icon, String label, {Color? color}) {
+    final chipColor = color ?? cs.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withAlpha(100),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: cs.outlineVariant.withAlpha(60),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: chipColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: chipColor,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

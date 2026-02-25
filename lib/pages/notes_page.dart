@@ -71,15 +71,24 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         },
         child: Focus(
           autofocus: true,
-          child: Column(
-            children: [
-              // Search bar (toggleable)
-              if (_showSearch) _buildSearchBar(cs),
-              // Tab bar
-              _buildTabBar(cs),
-              // Content
-              Expanded(child: _buildTabContent(cs, notesProvider)),
-            ],
+          child: Scaffold(
+            body: Column(
+              children: [
+                // Search bar (toggleable)
+                if (_showSearch) _buildSearchBar(cs),
+                // Tab bar
+                _buildTabBar(cs),
+                // Content
+                Expanded(child: _buildTabContent(cs, notesProvider)),
+              ],
+            ),
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () => _createAndOpen(context, notesProvider),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('New Note'),
+              elevation: 4,
+              tooltip: 'Create new note',
+            ),
           ),
         ),
       ),
@@ -87,38 +96,42 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
   }
 
   Widget _buildSearchBar(ColorScheme cs) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 2),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocus,
-              onChanged: (v) => setState(() => _searchQuery = v),
-              decoration: InputDecoration(
-                hintText: 'Search... (tag:name, is:starred, "exact", /regex/)',
-                hintStyle: TextStyle(fontSize: 12, color: cs.onSurfaceVariant.withAlpha(120)),
-                prefixIcon: Icon(Icons.search_rounded, size: 20, color: cs.onSurfaceVariant),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear_rounded, size: 18, color: cs.onSurfaceVariant),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                filled: true,
-                fillColor: cs.surfaceContainerHighest.withAlpha(140),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-              ),
-              style: const TextStyle(fontSize: 14),
-            ),
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: cs.shadow.withAlpha(20),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          const SizedBox(width: 6),
+        ],
+      ),
+      child: SearchBar(
+        controller: _searchController,
+        focusNode: _searchFocus,
+        onChanged: (v) => setState(() => _searchQuery = v),
+        hintText: 'Search notes...',
+        hintStyle: WidgetStatePropertyAll(
+          TextStyle(fontSize: 14, color: cs.onSurfaceVariant.withAlpha(160)),
+        ),
+        leading: Icon(Icons.search_rounded, size: 22, color: cs.onSurfaceVariant),
+        trailing: [
+          if (_searchQuery.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.clear_rounded, size: 20, color: cs.onSurfaceVariant),
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _searchQuery = '');
+              },
+              tooltip: 'Clear',
+            ),
+          IconButton(
+            icon: Icon(Icons.tune_rounded, size: 20, color: cs.onSurfaceVariant),
+            onPressed: _showSearchHelp,
+            tooltip: 'Search tips',
+          ),
           IconButton(
             icon: Icon(Icons.close_rounded, size: 20, color: cs.onSurfaceVariant),
             onPressed: () {
@@ -128,7 +141,80 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                 _showSearch = false;
               });
             },
-            visualDensity: VisualDensity.compact,
+            tooltip: 'Close search',
+          ),
+        ],
+        elevation: WidgetStatePropertyAll(0),
+        backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerLow),
+        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+      ),
+    );
+  }
+
+  void _showSearchHelp() {
+    final cs = Theme.of(context).colorScheme;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.help_outline_rounded, color: cs.primary),
+        title: const Text('Search Tips'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _searchTip(cs, '"exact phrase"', 'Find exact matches'),
+              _searchTip(cs, 'tag:project', 'Filter by tag'),
+              _searchTip(cs, 'is:starred', 'Show starred notes'),
+              _searchTip(cs, '/regex/', 'Use regular expressions'),
+              _searchTip(cs, 'term1 AND term2', 'Both terms must match'),
+              _searchTip(cs, 'term1 OR term2', 'Either term matches'),
+              _searchTip(cs, 'NOT term', 'Exclude term'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchTip(ColorScheme cs, String syntax, String description) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: cs.outlineVariant.withAlpha(100)),
+            ),
+            child: Text(
+              syntax,
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'monospace',
+                color: cs.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                description,
+                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+              ),
+            ),
           ),
         ],
       ),
@@ -136,18 +222,33 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
   }
 
   Widget _buildTabBar(ColorScheme cs) {
-    return TabBar(
-      controller: _tabController,
-      labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-      unselectedLabelStyle: const TextStyle(fontSize: 13),
-      indicatorSize: TabBarIndicatorSize.label,
-      dividerHeight: 0.5,
-      tabs: const [
-        Tab(text: 'All', icon: Icon(Icons.notes_rounded, size: 18)),
-        Tab(text: 'Starred', icon: Icon(Icons.star_rounded, size: 18)),
-        Tab(text: 'Recent', icon: Icon(Icons.history_rounded, size: 18)),
-        Tab(text: 'Tags', icon: Icon(Icons.tag_rounded, size: 18)),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant.withAlpha(60), width: 1),
+        ),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.1),
+        unselectedLabelStyle: const TextStyle(fontSize: 13, letterSpacing: 0.1),
+        labelColor: cs.primary,
+        unselectedLabelColor: cs.onSurfaceVariant,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: cs.primary, width: 3),
+          ),
+        ),
+        dividerHeight: 0,
+        tabs: const [
+          Tab(text: 'All', icon: Icon(Icons.notes_rounded, size: 20)),
+          Tab(text: 'Starred', icon: Icon(Icons.star_rounded, size: 20)),
+          Tab(text: 'Recent', icon: Icon(Icons.history_rounded, size: 20)),
+          Tab(text: 'Tags', icon: Icon(Icons.local_offer_rounded, size: 20)),
+        ],
+      ),
     );
   }
 
@@ -407,29 +508,68 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
 
   Widget _buildEmptyState(ColorScheme cs, NotesProvider provider) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 72, height: 72,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(22),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cs.primaryContainer, cs.secondaryContainer],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: cs.primary.withAlpha(40),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.note_add_rounded,
+                  size: 48,
+                  color: cs.onPrimaryContainer,
+                ),
+              ),
             ),
-            child: Center(child: Icon(Icons.note_alt_outlined, size: 32, color: cs.outlineVariant)),
-          ),
-          const SizedBox(height: 16),
-          Text('No notes yet', style: TextStyle(color: cs.outline, fontWeight: FontWeight.w500, fontSize: 16)),
-          const SizedBox(height: 6),
-          Text('Create a note or save AI replies here',
-              style: TextStyle(color: cs.outlineVariant, fontSize: 13)),
-          const SizedBox(height: 24),
-          FilledButton.tonalIcon(
-            onPressed: () => _createAndOpen(context, provider),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('New Note'),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              'No notes yet',
+              style: TextStyle(
+                color: cs.onSurface,
+                fontWeight: FontWeight.w600,
+                fontSize: 20,
+                letterSpacing: 0.15,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first note to get started',
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontSize: 14,
+                letterSpacing: 0.25,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: () => _createAndOpen(context, provider),
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: const Text('Create Note'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -567,10 +707,13 @@ class _NoteCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      color: cs.surfaceContainerHighest.withAlpha(160),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: cs.outlineVariant.withAlpha(80), width: 1),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         onTap: () {
           context.read<NotesProvider>().markViewed(note.id);
           Navigator.of(context).push(
@@ -578,105 +721,235 @@ class _NoteCard extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 32, height: 32,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: LinearGradient(
+                        colors: taskTotal > 0
+                            ? [cs.tertiaryContainer, cs.tertiary.withAlpha(100)]
+                            : [cs.primaryContainer, cs.primary.withAlpha(100)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (taskTotal > 0 ? cs.tertiary : cs.primary).withAlpha(30),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Icon(
-                        taskTotal > 0 ? Icons.checklist_rounded : Icons.description_outlined,
-                        size: 16, color: cs.onPrimaryContainer,
+                        taskTotal > 0 ? Icons.checklist_rounded : Icons.description_rounded,
+                        size: 20,
+                        color: taskTotal > 0 ? cs.onTertiaryContainer : cs.onPrimaryContainer,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: highlightTerms.isEmpty
-                        ? Text(note.title,
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: cs.onSurface),
-                            maxLines: 1, overflow: TextOverflow.ellipsis)
+                        ? Text(
+                            note.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: cs.onSurface,
+                              letterSpacing: 0.15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
                         : _HighlightText(
-                            text: note.title, terms: highlightTerms,
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: cs.onSurface),
-                            highlightColor: cs.primary.withAlpha(60),
+                            text: note.title,
+                            terms: highlightTerms,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                              color: cs.onSurface,
+                              letterSpacing: 0.15,
+                            ),
+                            highlightColor: cs.primary.withAlpha(80),
                           ),
                   ),
                   // Star button
                   IconButton(
                     icon: Icon(
                       note.isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
-                      size: 20,
-                      color: note.isStarred ? Colors.amber : cs.outline,
+                      size: 22,
+                      color: note.isStarred ? Colors.amber.shade600 : cs.onSurfaceVariant,
                     ),
                     onPressed: () => context.read<NotesProvider>().toggleStar(note.id),
                     visualDensity: VisualDensity.compact,
+                    tooltip: note.isStarred ? 'Unstar' : 'Star',
                   ),
-                  IconButton(
-                    icon: Icon(Icons.delete_outline_rounded, size: 18, color: cs.outline),
-                    onPressed: () => _confirmDelete(context),
-                    visualDensity: VisualDensity.compact,
+                  PopupMenuButton<String>(
+                    icon: Icon(Icons.more_vert_rounded, size: 20, color: cs.onSurfaceVariant),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _confirmDelete(context);
+                      }
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
+                            const SizedBox(width: 12),
+                            Text('Delete', style: TextStyle(color: cs.error)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
               if (preview.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 highlightTerms.isEmpty
-                    ? Text(preview,
-                        style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.4),
-                        maxLines: 3, overflow: TextOverflow.ellipsis)
+                    ? Text(
+                        preview,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: cs.onSurfaceVariant,
+                          height: 1.5,
+                          letterSpacing: 0.25,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      )
                     : _HighlightText(
-                        text: preview, terms: highlightTerms,
-                        style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.4),
-                        highlightColor: cs.primary.withAlpha(60),
+                        text: preview,
+                        terms: highlightTerms,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: cs.onSurfaceVariant,
+                          height: 1.5,
+                          letterSpacing: 0.25,
+                        ),
+                        highlightColor: cs.primary.withAlpha(80),
                         maxLines: 3,
                       ),
               ],
               // Tags row
               if (tags.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: tags.take(5).map((t) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: cs.secondaryContainer.withAlpha(160),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text('#$t',
-                        style: TextStyle(fontSize: 11, color: cs.onSecondaryContainer, fontWeight: FontWeight.w500)),
-                  )).toList(),
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: tags.take(5).map((t) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: cs.secondaryContainer,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: cs.secondary.withAlpha(60),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.tag_rounded,
+                            size: 12,
+                            color: cs.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            t,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSecondaryContainer,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ),
               ],
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              Divider(height: 1, color: cs.outlineVariant.withAlpha(60)),
+              const SizedBox(height: 10),
               Row(
                 children: [
-                  Text(timeStr, style: TextStyle(fontSize: 11, color: cs.outline)),
+                  Icon(Icons.schedule_rounded, size: 14, color: cs.outline),
+                  const SizedBox(width: 4),
+                  Text(
+                    timeStr,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.outline,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   if (taskTotal > 0) ...[
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                       decoration: BoxDecoration(
-                        color: taskDone == taskTotal ? Colors.green.withAlpha(30) : cs.primaryContainer.withAlpha(120),
-                        borderRadius: BorderRadius.circular(8),
+                        color: taskDone == taskTotal
+                            ? Colors.green.withAlpha(40)
+                            : cs.tertiaryContainer,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: taskDone == taskTotal
+                              ? Colors.green.withAlpha(100)
+                              : cs.tertiary.withAlpha(60),
+                          width: 1,
+                        ),
                       ),
-                      child: Text('$taskDone/$taskTotal',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                              color: taskDone == taskTotal ? Colors.green : cs.primary)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            taskDone == taskTotal
+                                ? Icons.check_circle_rounded
+                                : Icons.radio_button_unchecked_rounded,
+                            size: 12,
+                            color: taskDone == taskTotal
+                                ? Colors.green.shade700
+                                : cs.onTertiaryContainer,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$taskDone/$taskTotal',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: taskDone == taskTotal
+                                  ? Colors.green.shade700
+                                  : cs.onTertiaryContainer,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                   const Spacer(),
+                  Icon(Icons.text_fields_rounded, size: 14, color: cs.outline),
+                  const SizedBox(width: 4),
                   Text(
-                    '${note.content.trim().isEmpty ? 0 : note.content.trim().split(RegExp(r'\s+')).length} words',
-                    style: TextStyle(fontSize: 11, color: cs.outline),
+                    '${note.content.trim().isEmpty ? 0 : note.content.trim().split(RegExp(r'\s+')).length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.outline,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),

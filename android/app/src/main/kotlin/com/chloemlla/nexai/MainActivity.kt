@@ -6,17 +6,17 @@ import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Edge-to-edge must be set after super (FlutterActivity initializes window there)
         super.onCreate(savedInstanceState)
 
-        // Android 16 (API 36) enforces edge-to-edge, no opt-out.
+        // Android 16 (API 36) enforces edge-to-edge automatically, no manual setup needed.
         // For API 30-35, explicitly enable it.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.R until 36) {
+            @Suppress("DEPRECATION")
             window.setDecorFitsSystemWindows(false)
         }
 
-        // Transparent system bars
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        // Transparent system bars (skip on API 36+ where it's handled by the system)
+        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.LOLLIPOP until 36) {
             @Suppress("DEPRECATION")
             window.statusBarColor = android.graphics.Color.TRANSPARENT
             @Suppress("DEPRECATION")

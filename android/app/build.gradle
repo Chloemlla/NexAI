@@ -47,11 +47,6 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    // AGP 9.0 built-in Kotlin: use kotlin block instead of kotlinOptions
-    kotlin {
-        jvmToolchain(21)
-    }
-
     defaultConfig {
         applicationId "com.chloemlla.nexai"
         minSdk 24

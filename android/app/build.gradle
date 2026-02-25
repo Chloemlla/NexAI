@@ -38,6 +38,9 @@ flutterVersionName = "${flutterVersionName}-${gitShortSha}"
 android {
     namespace "com.chloemlla.nexai"
     compileSdk 36
+    
+    // Enable built-in Kotlin for this module only (AGP 9.0+)
+    enableKotlin = true
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21

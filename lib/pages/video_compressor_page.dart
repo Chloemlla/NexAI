@@ -75,6 +75,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       if (result == null || result.files.single.path == null) return;
 
+      if (!mounted) return;
+
       setState(() {
         _videoPath = result.files.single.path;
         _videoInfo = null;
@@ -83,6 +85,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       });
 
       final info = await _compressor.getVideoInfo(_videoPath!);
+      
+      if (!mounted) return;
+      
       setState(() {
         _videoInfo = info;
         _isLoadingInfo = false;
@@ -95,11 +100,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       });
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoadingInfo = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('选择视频失败: $e')),
         );
       }
-      setState(() => _isLoadingInfo = false);
     }
   }
 
@@ -124,12 +129,16 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           advanced: advancedConfig,
         ),
         onProgress: (progress) {
-          setState(() => _progress = progress);
+          if (mounted) {
+            setState(() => _progress = progress);
+          }
         },
         id: compressionId,
       );
 
-      if (result != null && mounted) {
+      if (!mounted) return;
+
+      if (result != null) {
         setState(() => _compressionResult = result);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -145,7 +154,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         );
       }
     } finally {
-      setState(() => _isCompressing = false);
+      if (mounted) {
+        setState(() => _isCompressing = false);
+      }
     }
   }
 
@@ -178,16 +189,51 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   }
 
   VVideoAdvancedConfig _buildAdvancedConfig() {
+    // Parse and validate custom resolution
+    int? customWidth;
+    int? customHeight;
+    if (_useCustomResolution) {
+      final width = int.tryParse(_widthController.text);
+      final height = int.tryParse(_heightController.text);
+      // Ensure dimensions are positive and reasonable
+      if (width != null && width > 0 && width <= 7680) {
+        customWidth = width;
+      }
+      if (height != null && height > 0 && height <= 4320) {
+        customHeight = height;
+      }
+    }
+
+    // Parse and validate bitrates
+    final videoBitrate = int.tryParse(_videoBitrateController.text);
+    final audioBitrate = int.tryParse(_audioBitrateController.text);
+
+    // Parse and validate trim times
+    int? trimStartMs;
+    int? trimEndMs;
+    if (_enableTrim) {
+      final trimStart = int.tryParse(_trimStartController.text);
+      final trimEnd = int.tryParse(_trimEndController.text);
+      
+      if (trimStart != null && trimStart >= 0) {
+        trimStartMs = trimStart * 1000;
+      }
+      if (trimEnd != null && trimEnd > 0) {
+        trimEndMs = trimEnd * 1000;
+      }
+      
+      // Ensure trim end is after trim start
+      if (trimStartMs != null && trimEndMs != null && trimEndMs <= trimStartMs) {
+        trimEndMs = null; // Invalid range, ignore trim end
+      }
+    }
+
     return VVideoAdvancedConfig(
       // Resolution & Quality
-      customWidth: _useCustomResolution && _widthController.text.isNotEmpty
-          ? int.tryParse(_widthController.text)
-          : null,
-      customHeight: _useCustomResolution && _heightController.text.isNotEmpty
-          ? int.tryParse(_heightController.text)
-          : null,
-      videoBitrate: _videoBitrateController.text.isNotEmpty
-          ? (int.tryParse(_videoBitrateController.text) ?? 2000) * 1000
+      customWidth: customWidth,
+      customHeight: customHeight,
+      videoBitrate: videoBitrate != null && videoBitrate > 0 
+          ? videoBitrate * 1000 
           : null,
       frameRate: _frameRate,
 
@@ -200,8 +246,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       hardwareAcceleration: _hardwareAcceleration,
 
       // Audio Settings
-      audioBitrate: _audioBitrateController.text.isNotEmpty
-          ? (int.tryParse(_audioBitrateController.text) ?? 128) * 1000
+      audioBitrate: audioBitrate != null && audioBitrate > 0 
+          ? audioBitrate * 1000 
           : null,
       audioSampleRate: _audioSampleRate,
       audioChannels: _audioChannels,
@@ -213,12 +259,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       saturation: _saturation,
 
       // Editing
-      trimStartMs: _enableTrim && _trimStartController.text.isNotEmpty
-          ? (int.tryParse(_trimStartController.text) ?? 0) * 1000
-          : null,
-      trimEndMs: _enableTrim && _trimEndController.text.isNotEmpty
-          ? (int.tryParse(_trimEndController.text) ?? 0) * 1000
-          : null,
+      trimStartMs: trimStartMs,
+      trimEndMs: trimEndMs,
       rotation: _rotation,
 
       // Orientation & Dimension

@@ -41,166 +41,169 @@ class _AboutPageState extends State<AboutPage> {
     final isWide = mq.size.width > 600;
     final hPad = isWide ? mq.size.width * 0.1 : 16.0;
 
-    return CustomScrollView(
-      slivers: [
-        // ── Collapsing hero AppBar ──
-        SliverAppBar(
-          automaticallyImplyLeading: false,
-          pinned: true,
-          expandedHeight: 230,
-          backgroundColor: cs.surface,
-          surfaceTintColor: cs.surfaceTint,
-          flexibleSpace: FlexibleSpaceBar(
-            collapseMode: CollapseMode.parallax,
-            titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
-            title: Text(
-              '关于',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            background: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    cs.primaryContainer.withAlpha(130),
-                    cs.tertiaryContainer.withAlpha(60),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+    return Scaffold(
+      backgroundColor: cs.surface,
+      body: CustomScrollView(
+        slivers: [
+          // ── Collapsing hero AppBar ──
+          SliverAppBar(
+            automaticallyImplyLeading: false,
+            pinned: true,
+            expandedHeight: 230,
+            backgroundColor: cs.surface,
+            surfaceTintColor: cs.surfaceTint,
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.parallax,
+              titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
+              title: Text(
+                '关于',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 20),
-                    Container(
-                      width: 76,
-                      height: 76,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [cs.primary, cs.tertiary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(22),
-                        boxShadow: [
-                          BoxShadow(
-                            color: cs.primary.withAlpha(70),
-                            blurRadius: 20,
-                            offset: const Offset(0, 6),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      cs.primaryContainer.withAlpha(130),
+                      cs.tertiaryContainer.withAlpha(60),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 20),
+                      Container(
+                        width: 76,
+                        height: 76,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [cs.primary, cs.tertiary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cs.primary.withAlpha(70),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Icon(Icons.smart_toy_rounded, size: 38, color: cs.onPrimary),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'NexAI',
+                        style: tt.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _Badge(label: _version.isNotEmpty ? 'v$_version' : '...', bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
+                          const SizedBox(width: 8),
+                          _Badge(label: 'MIT', bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
+                          const SizedBox(width: 8),
+                          _Badge(label: 'Flutter', bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
                         ],
                       ),
-                      child: Center(
-                        child: Icon(Icons.smart_toy_rounded, size: 38, color: cs.onPrimary),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'NexAI',
-                      style: tt.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _Badge(label: _version.isNotEmpty ? 'v$_version' : '...', bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
-                        const SizedBox(width: 8),
-                        _Badge(label: 'MIT', bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
-                        const SizedBox(width: 8),
-                        _Badge(label: 'Flutter', bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
-                      ],
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
 
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 40),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 40),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
 
-              // ── Quick action row ──
-              Row(children: [
-                Expanded(
-                  child: _ActionCard(
-                    cs: cs,
-                    icon: Icons.code_rounded,
-                    label: 'GitHub',
-                    sublabel: '查看源代码',
-                    color: cs.primaryContainer,
-                    iconColor: cs.onPrimaryContainer,
-                    onTap: () => _openUrl('https://github.com/Chloemlla/NexAI'),
+                // ── Quick action row ──
+                Row(children: [
+                  Expanded(
+                    child: _ActionCard(
+                      cs: cs,
+                      icon: Icons.code_rounded,
+                      label: 'GitHub',
+                      sublabel: '查看源代码',
+                      color: cs.primaryContainer,
+                      iconColor: cs.onPrimaryContainer,
+                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _ActionCard(
-                    cs: cs,
-                    icon: Icons.bug_report_rounded,
-                    label: '问题',
-                    sublabel: '报告错误',
-                    color: cs.errorContainer,
-                    iconColor: cs.onErrorContainer,
-                    onTap: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ActionCard(
+                      cs: cs,
+                      icon: Icons.bug_report_rounded,
+                      label: '问题',
+                      sublabel: '报告错误',
+                      color: cs.errorContainer,
+                      iconColor: cs.onErrorContainer,
+                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _ActionCard(
-                    cs: cs,
-                    icon: Icons.person_rounded,
-                    label: '作者',
-                    sublabel: 'Chloemlla',
-                    color: cs.tertiaryContainer,
-                    iconColor: cs.onTertiaryContainer,
-                    onTap: () => _openUrl('https://github.com/Chloemlla'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ActionCard(
+                      cs: cs,
+                      icon: Icons.person_rounded,
+                      label: '作者',
+                      sublabel: 'Chloemlla',
+                      color: cs.tertiaryContainer,
+                      iconColor: cs.onTertiaryContainer,
+                      onTap: () => _openUrl('https://github.com/Chloemlla'),
+                    ),
                   ),
-                ),
-              ]),
-              const SizedBox(height: 24),
+                ]),
+                const SizedBox(height: 24),
 
-              // ── App Info section ──
-              _m3Section(cs, tt, Icons.info_outline_rounded, '应用信息', [
-                _m3InfoRow(cs, '版本', _version.isNotEmpty ? _version : '...'),
-                const SizedBox(height: 8),
-                _m3InfoRow(cs, '许可证', 'MIT'),
-                const SizedBox(height: 8),
-                _m3InfoRow(cs, '框架', 'Flutter'),
-              ]),
-              const SizedBox(height: 12),
+                // ── App Info section ──
+                _m3Section(cs, tt, Icons.info_outline_rounded, '应用信息', [
+                  _m3InfoRow(cs, '版本', _version.isNotEmpty ? _version : '...'),
+                  const SizedBox(height: 8),
+                  _m3InfoRow(cs, '许可证', 'MIT'),
+                  const SizedBox(height: 8),
+                  _m3InfoRow(cs, '框架', 'Flutter'),
+                ]),
+                const SizedBox(height: 12),
 
-              // ── Features section ──
-              _m3Section(cs, tt, Icons.auto_awesome_rounded, '功能', [
-                _m3Feature(cs, Icons.chat_rounded, 'OpenAI 兼容 API，支持自定义基础 URL'),
-                const SizedBox(height: 8),
-                _m3Feature(cs, Icons.functions_rounded, 'LaTeX 数学和化学公式渲染'),
-                const SizedBox(height: 8),
-                _m3Feature(cs, Icons.color_lens_rounded, 'Material You 动态颜色（Android）'),
-                const SizedBox(height: 8),
-                _m3Feature(cs, Icons.code_rounded, '支持语法高亮的 Markdown 代码'),
-                const SizedBox(height: 8),
-                _m3Feature(cs, Icons.settings_rounded, '可配置的模型、温度和令牌'),
-              ]),
-              const SizedBox(height: 12),
+                // ── Features section ──
+                _m3Section(cs, tt, Icons.auto_awesome_rounded, '功能', [
+                  _m3Feature(cs, Icons.chat_rounded, 'OpenAI 兼容 API，支持自定义基础 URL'),
+                  const SizedBox(height: 8),
+                  _m3Feature(cs, Icons.functions_rounded, 'LaTeX 数学和化学公式渲染'),
+                  const SizedBox(height: 8),
+                  _m3Feature(cs, Icons.color_lens_rounded, 'Material You 动态颜色（Android）'),
+                  const SizedBox(height: 8),
+                  _m3Feature(cs, Icons.code_rounded, '支持语法高亮的 Markdown 代码'),
+                  const SizedBox(height: 8),
+                  _m3Feature(cs, Icons.settings_rounded, '可配置的模型、温度和令牌'),
+                ]),
+                const SizedBox(height: 12),
 
-              // ── Tech Stack section ──
-              _m3Section(cs, tt, Icons.layers_rounded, '技术栈', [
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final label in ['Flutter', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences'])
-                    _m3Chip(cs, label),
+                // ── Tech Stack section ──
+                _m3Section(cs, tt, Icons.layers_rounded, '技术栈', [
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final label in ['Flutter', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences'])
+                      _m3Chip(cs, label),
+                  ]),
                 ]),
               ]),
-            ]),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

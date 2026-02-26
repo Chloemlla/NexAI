@@ -71,9 +71,6 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
-
-        // Set APK/AAB output filename: NexAI-{versionName}+{versionCode}.apk
-        setProperty("archivesBaseName", "NexAI-${flutterVersionName}+${flutterVersionCode}")
     }
 
     // Signing config for release builds (CI injects via gradle.properties)

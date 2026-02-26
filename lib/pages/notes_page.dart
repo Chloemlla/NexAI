@@ -104,11 +104,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                 Expanded(child: _buildTabContent(cs, notesProvider)),
               ],
             ),
-            floatingActionButton: FloatingActionButton.extended(
+            floatingActionButton: FloatingActionButton(
               onPressed: () => _createAndOpen(context, notesProvider),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('创建笔记'),
-              elevation: 4,
+              child: const Icon(Icons.add_rounded),
               tooltip: '创建新笔记',
             ),
           ),

@@ -1,7 +1,7 @@
 name: nexai
 description: NexAI - A beautiful OpenAI client with Material Design 3
 publish_to: 'none'
-version: 1.1.6-4f2621a5d+1
+version: 1.1.6-23cc67044+1
 
 environment:
   sdk: '>=3.11.0 <4.0.0'

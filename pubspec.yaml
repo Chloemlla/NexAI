@@ -30,9 +30,8 @@ dependencies:
     sdk: flutter
   http: ^1.6.0
   shared_preferences: ^2.5.4
-  flutter_markdown_plus: '>=1.0.7'
   flutter_math_fork: '>=0.7.4'
-  markdown: ^7.3.0
+  gpt_markdown: ^1.1.5
   provider: ^6.1.5
   google_fonts: ^8.0.2
   url_launcher: ^6.3.2

@@ -221,7 +221,7 @@ class ChatProvider extends ChangeNotifier {
         final buffer = StringBuffer();
         String lineBuf = '';
 
-        await for (final chunk in response.data!.stream.transform(utf8.decoder)) {
+        await for (final chunk in response.data!.stream.transform(const Utf8Decoder())) {
           lineBuf += chunk;
           final lines = lineBuf.split('\n');
           // Keep the last potentially incomplete line in the buffer
@@ -254,14 +254,7 @@ class ChatProvider extends ChangeNotifier {
         }
       } else {
         // Non-200: handle error
-        String errorMsg;
-        try {
-          final errorBody = response.data;
-          errorMsg = errorBody['error']?['message'] ??
-              'Unknown error (${response.statusCode})';
-        } catch (_) {
-          errorMsg = 'HTTP ${response.statusCode}';
-        }
+        String errorMsg = 'HTTP ${response.statusCode}';
         conversation.messages.add(
           Message(
             role: 'assistant',
@@ -275,9 +268,12 @@ class ChatProvider extends ChangeNotifier {
       String errorMsg;
       if (e.response != null) {
         try {
-          final errorBody = e.response!.data;
-          errorMsg = errorBody['error']?['message'] ??
-              'HTTP ${e.response!.statusCode}';
+          final errorData = e.response!.data;
+          if (errorData is Map) {
+            errorMsg = errorData['error']?['message'] ?? 'HTTP ${e.response!.statusCode}';
+          } else {
+            errorMsg = 'HTTP ${e.response!.statusCode}';
+          }
         } catch (_) {
           errorMsg = 'HTTP ${e.response!.statusCode}';
         }

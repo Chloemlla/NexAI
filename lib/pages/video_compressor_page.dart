@@ -6,6 +6,9 @@ import 'package:v_video_compressor/v_video_compressor.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'package:gal/gal.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class VideoCompressorPage extends StatefulWidget {
   const VideoCompressorPage({super.key});
@@ -186,19 +189,31 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     if (_compressionResult == null) return;
 
     try {
-      final directory = await getExternalStorageDirectory();
-      if (directory == null) {
-        throw Exception('无法访问存储目录');
+      // Request gallery/storage permission based on Android version
+      final hasAccess = await _requestGalleryPermission();
+      if (!hasAccess) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('需要相册权限才能保存视频'),
+              action: SnackBarAction(
+                label: '去设置',
+                onPressed: () => openAppSettings(),
+              ),
+            ),
+          );
+        }
+        return;
       }
 
-      final fileName = 'compressed_${DateTime.now().millisecondsSinceEpoch}.mp4';
-      final savePath = '${directory.path}/$fileName';
-
-      await File(_compressionResult!.compressedFilePath).copy(savePath);
+      await Gal.putVideo(_compressionResult!.compressedFilePath, album: 'NexAI');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('✅ 已保存到: $savePath')),
+          const SnackBar(
+            content: Text('✅ 已保存到相册'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
@@ -208,6 +223,36 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         );
       }
     }
+  }
+
+  Future<bool> _requestGalleryPermission() async {
+    // Android 13+ (API 33): use READ_MEDIA_VIDEO, no write permission needed for MediaStore
+    // Android 10-12 (API 29-32): scoped storage, no WRITE_EXTERNAL_STORAGE needed
+    // Android 9 and below (API ≤ 28): need WRITE_EXTERNAL_STORAGE
+    if (Platform.isAndroid) {
+      final deviceInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkInt = deviceInfo.version.sdkInt;
+
+      if (sdkInt >= 33) {
+        // Android 13+: check if Gal has access (uses MediaStore, no extra permission needed usually)
+        final hasAccess = await Gal.hasAccess(toAlbum: true);
+        if (hasAccess) return true;
+        return await Gal.requestAccess(toAlbum: true);
+      } else if (sdkInt >= 29) {
+        // Android 10-12: scoped storage handles it
+        final hasAccess = await Gal.hasAccess(toAlbum: true);
+        if (hasAccess) return true;
+        return await Gal.requestAccess(toAlbum: true);
+      } else {
+        // Android 9 and below
+        final status = await Permission.storage.request();
+        return status.isGranted;
+      }
+    }
+    // Non-Android platforms
+    final hasAccess = await Gal.hasAccess(toAlbum: true);
+    if (hasAccess) return true;
+    return await Gal.requestAccess(toAlbum: true);
   }
 
   VVideoAdvancedConfig _buildAdvancedConfig() {

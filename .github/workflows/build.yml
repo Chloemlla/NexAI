@@ -90,6 +90,21 @@ jobs:
               cp "$file" "build/app/outputs/flutter-apk/NexAI_android_${VERSION}_${abi}.apk"
             fi
           done
+          
+      - name: Rename AAB output
+        run: |
+          VERSION="${{ env.version }}"
+          AAB_FILE="build/app/outputs/bundle/release/app-release.aab"
+          if [ -f "$AAB_FILE" ]; then
+            cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI_android_${VERSION}.aab"
+          fi
+          
+      - name: List generated files
+        run: |
+          echo "=== APK files ==="
+          ls -lh build/app/outputs/flutter-apk/
+          echo "=== AAB files ==="
+          ls -lh build/app/outputs/bundle/release/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -124,7 +139,8 @@ jobs:
           prerelease: false
           name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           files: |
-            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/flutter-apk/NexAI_android_*.apk
+            build/app/outputs/bundle/release/NexAI_android_*.aab
 
   build-web:
     # if: false  # Disabled - Web build not needed

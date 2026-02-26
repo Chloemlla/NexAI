@@ -221,7 +221,7 @@ class ChatProvider extends ChangeNotifier {
         final buffer = StringBuffer();
         String lineBuf = '';
 
-        await for (final chunk in response.data!.stream.transform(utf8.decoder)) {
+        await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
           lineBuf += chunk;
           final lines = lineBuf.split('\n');
           // Keep the last potentially incomplete line in the buffer

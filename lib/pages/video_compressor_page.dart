@@ -161,7 +161,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       if (result != null) {
         setState(() => _compressionResult = result);
-        _initializePlayer(result.path);
+        _initializePlayer(result.outputPath);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ 压缩完成！'),
@@ -194,8 +194,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       final fileName = 'compressed_${DateTime.now().millisecondsSinceEpoch}.mp4';
       final savePath = '${directory.path}/$fileName';
 
-      // outputPath is no longer available, use path instead
-      await File(_compressionResult!.path).copy(savePath);
+      await File(_compressionResult!.outputPath).copy(savePath);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

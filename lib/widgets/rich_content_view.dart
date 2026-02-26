@@ -195,7 +195,7 @@ class _MarkdownWidget extends StatelessWidget {
         child: GptMarkdown(
           data,
           style: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
-          onTapLink: (href) {
+          onLinkTap: (href) {
             if (href != null && href.isNotEmpty) {
               final uri = Uri.tryParse(href);
               if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -237,7 +237,7 @@ class _MarkdownWidget extends StatelessWidget {
         child: GptMarkdown(
           data,
           style: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
-          onTapLink: (href) {
+          onLinkTap: (href) {
             if (href != null && href.isNotEmpty) {
               final uri = Uri.tryParse(href);
               if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);

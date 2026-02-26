@@ -1274,8 +1274,6 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       child: SingleChildScrollView(
         controller: _previewScroll,
         padding: const EdgeInsets.all(16),
-        // Use cacheExtent for better scrolling performance
-        cacheExtent: 1000,
         child: RichContentView(content: content, enableWikiLinks: true),
       ),
     );

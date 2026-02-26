@@ -8,6 +8,7 @@ import 'package:media_kit/media_kit.dart';
 import 'providers/chat_provider.dart';
 import 'providers/notes_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/image_generation_provider.dart';
 import 'app.dart';
 
 bool get isDesktop => !kIsWeb &&
@@ -61,6 +62,7 @@ void main() async {
         ChangeNotifierProvider.value(value: settingsProvider),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider.value(value: notesProvider),
+        ChangeNotifierProvider(create: (_) => ImageGenerationProvider()),
       ],
       child: const NexAIApp(),
     ),

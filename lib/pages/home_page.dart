@@ -14,6 +14,7 @@ import 'note_detail_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
 import 'tools_page.dart';
+import 'image_generation_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,7 +34,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
     NavigationHelper.navigateToSettings = () {
       setState(() {
         if (isAndroid) {
-          _androidNavIndex = 3; // Settings tab index (after Tools)
+          _androidNavIndex = 4; // Settings tab index (after Image Generation)
         } else {
           _currentPage = 'settings';
         }
@@ -72,12 +73,13 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
     final pages = <Widget>[
       const ChatPage(),
+      const ImageGenerationPage(),
       const NotesPage(),
       const ToolsPage(),
       const SettingsPage(),
     ];
 
-    final pageTitles = ['NexAI', '笔记', '工具', '设置'];
+    final pageTitles = ['NexAI', '图片生成', '笔记', '工具', '设置'];
 
     return Scaffold(
       appBar: AppBar(
@@ -110,10 +112,12 @@ class _HomePageState extends State<HomePage> with WindowListener {
                     _androidNavIndex == 0
                         ? Icons.smart_toy_rounded
                         : _androidNavIndex == 1
-                            ? Icons.note_alt_rounded
+                            ? Icons.image_rounded
                             : _androidNavIndex == 2
-                                ? Icons.build_rounded
-                                : Icons.settings_rounded,
+                                ? Icons.note_alt_rounded
+                                : _androidNavIndex == 3
+                                    ? Icons.build_rounded
+                                    : Icons.settings_rounded,
                     size: 18,
                     color: cs.onPrimary,
                   ),
@@ -175,6 +179,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
             const SizedBox(width: 4),
           ],
           if (_androidNavIndex == 1) ...[
+            // Image generation page actions can be added here if needed
+          ],
+          if (_androidNavIndex == 2) ...[
             FilledButton.tonalIcon(
               onPressed: () {
                 final note = context.read<NotesProvider>().createNote();
@@ -230,6 +237,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
             icon: Icon(Icons.chat_outlined),
             selectedIcon: Icon(Icons.chat_rounded),
             label: '聊天',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.image_outlined),
+            selectedIcon: Icon(Icons.image_rounded),
+            label: '图片',
           ),
           NavigationDestination(
             icon: Icon(Icons.note_alt_outlined),

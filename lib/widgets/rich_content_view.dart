@@ -186,7 +186,6 @@ class _MarkdownWidget extends StatelessWidget {
 
   Widget _buildM3Markdown(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Material(
       color: Colors.transparent,
@@ -195,32 +194,12 @@ class _MarkdownWidget extends StatelessWidget {
         child: GptMarkdown(
           data,
           style: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
-          onLinkTap: (href) {
-            if (href != null && href.isNotEmpty) {
-              final uri = Uri.tryParse(href);
+          onLinkTap: (url, title) {
+            if (url.isNotEmpty) {
+              final uri = Uri.tryParse(url);
               if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
             }
           },
-          codeStyle: TextStyle(
-            fontSize: 13,
-            fontFamily: 'Consolas',
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-            color: cs.primary,
-          ),
-          codeBackgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
-          codeBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
-          codeBorderRadius: 12,
-          codePadding: const EdgeInsets.all(12),
-          blockQuoteBorderColor: cs.primary,
-          blockQuoteBackgroundColor: cs.primary.withAlpha((0.05 * 255).round()),
-          blockQuotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-          h1Style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cs.onSurface),
-          h2Style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: cs.onSurface),
-          h3Style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface),
-          listBulletStyle: TextStyle(fontSize: 14, color: cs.onSurface),
-          tableHeaderStyle: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
-          tableBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
-          linkStyle: TextStyle(fontSize: 14, color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary),
         ),
       ),
     );
@@ -237,37 +216,12 @@ class _MarkdownWidget extends StatelessWidget {
         child: GptMarkdown(
           data,
           style: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
-          onLinkTap: (href) {
-            if (href != null && href.isNotEmpty) {
-              final uri = Uri.tryParse(href);
+          onLinkTap: (url, title) {
+            if (url.isNotEmpty) {
+              final uri = Uri.tryParse(url);
               if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
             }
           },
-          codeStyle: TextStyle(
-            fontSize: 13,
-            fontFamily: 'Consolas',
-            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-            color: theme.accentColor,
-          ),
-          codeBackgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
-          codeBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
-          codeBorderRadius: 8,
-          codePadding: const EdgeInsets.all(12),
-          blockQuoteBorderColor: theme.accentColor,
-          blockQuoteBackgroundColor: Color.fromRGBO(
-            theme.accentColor.value >> 16 & 0xFF,
-            theme.accentColor.value >> 8 & 0xFF,
-            theme.accentColor.value & 0xFF,
-            0.05,
-          ),
-          blockQuotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-          h1Style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.typography.body?.color),
-          h2Style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-          h3Style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-          listBulletStyle: TextStyle(fontSize: 14, color: theme.typography.body?.color),
-          tableHeaderStyle: TextStyle(fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-          tableBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
-          linkStyle: TextStyle(fontSize: 14, color: theme.accentColor, decoration: TextDecoration.underline, decorationColor: theme.accentColor),
         ),
       ),
     );

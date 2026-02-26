@@ -326,6 +326,47 @@ class _ChatPageState extends State<ChatPage> {
                           });
                         },
                       ),
+                      const SizedBox(height: 12),
+
+                      // Type explanation card
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer.withAlpha(100),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: cs.primary.withAlpha(60)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.lightbulb_outline, size: 16, color: cs.primary),
+                                const SizedBox(width: 6),
+                                Text(
+                                  imageType == 'normal' ? 'Normal 模式说明' : 'Group 模式说明',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              imageType == 'normal'
+                                  ? '相关性不强，主要根据提示词生成独立图片。\n示例：画一只猫在树上玩耍'
+                                  : '相关性较强，适合生成连贯的系列图片。\n示例：生成 6 张 3:4 比例的分镜图，整体画风为 Q 版治愈风，内容讲述王子与公主的故事，每张图作为一个分镜，画风统一，人物形象保持一致，连贯成小故事。',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: cs.onPrimaryContainer,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 16),
 
                       // Watermark
@@ -346,13 +387,20 @@ class _ChatPageState extends State<ChatPage> {
                       decoration: InputDecoration(
                         labelText: '提示词',
                         hintText: isDoubao
-                            ? '画一只猫在树上玩耍'
+                            ? (imageType == 'normal'
+                                ? '画一只猫在树上玩耍'
+                                : '生成 6 张 3:4 比例的分镜图，Q 版治愈风...')
                             : (mode == ImageGenerationMode.chat
                                 ? '帮我画一只宇航猫在月球漫步[1024:1024]'
                                 : 'a cat on the moon'),
                         prefixIcon: const Icon(Icons.edit_note, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        helperText: isDoubao ? '豆包模型主要根据提示词生成，相关性较强' : null,
+                        helperText: isDoubao
+                            ? (imageType == 'normal'
+                                ? '提示词决定生成内容，每张图独立'
+                                : '详细描述整体风格和连贯故事，生成系列图片')
+                            : null,
+                        helperMaxLines: 2,
                       ),
                     ),
                     const SizedBox(height: 16),

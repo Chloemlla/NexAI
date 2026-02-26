@@ -9,7 +9,7 @@ environment:
 
 dependencies:
     # 图标
-  font_awesome_flutter: 10.9.0
+  font_awesome_flutter: ^10.12.0
   # material_design_icons_flutter: ^7.0.7296
   material_design_icons_flutter:
     git:
@@ -21,14 +21,14 @@ dependencies:
   crypto: ^3.0.6
   encrypt: ^5.0.3
     # 视频播放器
-  media_kit: 1.1.11 # Primary package.
+  media_kit: ^1.2.6 # Primary package.
   # media_kit_video: ^1.2.5 # For video rendering.
   media_kit_video:
     git:
       url: https://github.com/bggRGjQaUbCoE/media-kit.git
       path: media_kit_video
       ref: version_1.2.5
-  media_kit_libs_video: 1.0.5
+  media_kit_libs_video: ^1.0.7
   # 高帧率
   flutter_displaymode: ^0.7.0
   flutter:
@@ -45,9 +45,9 @@ dependencies:
   dynamic_color: '>=1.8.1'
   fluent_ui: ^4.14.0
   package_info_plus: '>=9.0.0'
-  device_info_plus: ^11.2.0
-  v_video_compressor: ^1.2.0
-  file_picker: ^8.0.0
+  device_info_plus: ^12.3.0
+  v_video_compressor: ^2.0.0
+  file_picker: ^10.3.10
   path_provider: ^2.1.5
 
 dev_dependencies:

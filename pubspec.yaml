@@ -44,6 +44,10 @@ dependencies:
   v_video_compressor: ^2.0.0
   file_picker: ^10.3.10
   path_provider: ^2.1.5
+  meta: ^1.18.1
+  pointycastle: ^4.0.0
+  win32: ^6.0.0
+  win32_registry: ^3.0.0
 
 dev_dependencies:
   flutter_test:

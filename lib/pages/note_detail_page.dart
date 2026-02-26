@@ -252,9 +252,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   children: [
                     Icon(Icons.segment_rounded, size: 36, color: cs.outlineVariant),
                     const SizedBox(height: 12),
-                    Text('No headings found', style: TextStyle(color: cs.outline)),
+                    Text('未找到标题', style: TextStyle(color: cs.outline)),
                     const SizedBox(height: 4),
-                    Text('Use # to create headings', style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
+                    Text('使用 # 创建标题', style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
                   ],
                 ),
               ),
@@ -272,9 +272,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   children: [
                     Icon(Icons.segment_rounded, size: 20, color: cs.primary),
                     const SizedBox(width: 10),
-                    Text('Outline', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    Text('大纲', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                     const Spacer(),
-                    Text('${outline.length} headings', style: TextStyle(fontSize: 12, color: cs.outline)),
+                    Text('${outline.length} 个标题', style: TextStyle(fontSize: 12, color: cs.outline)),
                   ],
                 ),
               ),
@@ -328,8 +328,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         .where((n) => n.id == widget.noteId).firstOrNull;
     if (note == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Note')),
-        body: const Center(child: Text('Note not found')),
+        appBar: AppBar(title: const Text('笔记')),
+        body: const Center(child: Text('未找到笔记')),
       );
     }
 
@@ -390,7 +390,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   letterSpacing: 0.15,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Note title...',
+                  hintText: '笔记标题...',
                   hintStyle: TextStyle(
                     color: cs.onSurfaceVariant.withAlpha(140),
                     fontWeight: FontWeight.w500,
@@ -422,7 +422,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     children: [
                       Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                       SizedBox(width: 10),
-                      Text('Note saved'),
+                      Text('笔记已保存'),
                     ],
                   ),
                   behavior: SnackBarBehavior.floating,
@@ -433,7 +433,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               );
             },
             visualDensity: VisualDensity.comfortable,
-            tooltip: 'Save note (Ctrl+S)',
+            tooltip: '保存笔记 (Ctrl+S)',
           ),
           // Star button with animation
           IconButton(
@@ -444,7 +444,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             ),
             onPressed: () => context.read<NotesProvider>().toggleStar(widget.noteId),
             visualDensity: VisualDensity.comfortable,
-            tooltip: note.isStarred ? 'Unstar' : 'Star',
+            tooltip: note.isStarred ? '取消星标' : '星标',
           ),
           const SizedBox(width: 4),
           // View mode toggle with better styling
@@ -459,17 +459,17 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 ButtonSegment(
                   value: _ViewMode.edit,
                   icon: Icon(Icons.edit_rounded, size: 18),
-                  tooltip: 'Edit',
+                  tooltip: '编辑',
                 ),
                 ButtonSegment(
                   value: _ViewMode.split,
                   icon: Icon(Icons.vertical_split_rounded, size: 18),
-                  tooltip: 'Split view',
+                  tooltip: '分割视图',
                 ),
                 ButtonSegment(
                   value: _ViewMode.preview,
                   icon: Icon(Icons.visibility_rounded, size: 18),
-                  tooltip: 'Preview',
+                  tooltip: '预览',
                 ),
               ],
               selected: {_viewMode},
@@ -489,41 +489,41 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           PopupMenuButton<String>(
             icon: Icon(Icons.more_vert_rounded, size: 22, color: cs.onSurfaceVariant),
             onSelected: _onMenuAction,
-            tooltip: 'More options',
+            tooltip: '更多选项',
             itemBuilder: (_) => [
               PopupMenuItem(
                 value: 'outline',
-                child: _menuRow(Icons.segment_rounded, 'Outline'),
+                child: _menuRow(Icons.segment_rounded, '大纲'),
               ),
               PopupMenuItem(
                 value: 'backlinks',
-                child: _menuRow(Icons.link_rounded, 'Links & Backlinks'),
+                child: _menuRow(Icons.link_rounded, '链接和反向链接'),
               ),
               PopupMenuItem(
                 value: 'frontmatter',
-                child: _menuRow(Icons.data_object_rounded, 'Insert Frontmatter'),
+                child: _menuRow(Icons.data_object_rounded, '插入前置元数据'),
               ),
               PopupMenuItem(
                 value: 'tags',
-                child: _menuRow(Icons.local_offer_rounded, 'Manage Tags'),
+                child: _menuRow(Icons.local_offer_rounded, '管理标签'),
               ),
               const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'focus',
-                child: _menuRow(Icons.fullscreen_rounded, 'Focus Mode'),
+                child: _menuRow(Icons.fullscreen_rounded, '专注模式'),
               ),
               PopupMenuItem(
                 value: 'stats',
-                child: _menuRow(Icons.analytics_outlined, 'Statistics'),
+                child: _menuRow(Icons.analytics_outlined, '统计信息'),
               ),
               PopupMenuItem(
                 value: 'export',
-                child: _menuRow(Icons.download_rounded, 'Export'),
+                child: _menuRow(Icons.download_rounded, '导出'),
               ),
               const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'delete',
-                child: _menuRow(Icons.delete_outline_rounded, 'Delete', isDestructive: true),
+                child: _menuRow(Icons.delete_outline_rounded, '删除', isDestructive: true),
               ),
             ],
           ),
@@ -605,14 +605,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         icon: Icon(Icons.download_rounded, color: cs.primary),
-        title: const Text('Export Note'),
+        title: const Text('导出笔记'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: Icon(Icons.description_outlined, color: cs.primary),
-              title: const Text('Export as Markdown'),
-              subtitle: const Text('Save as .md file'),
+              title: const Text('导出为 Markdown'),
+              subtitle: const Text('保存为 .md 文件'),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _exportAsMarkdown();
@@ -620,14 +620,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             ),
             ListTile(
               leading: Icon(Icons.content_copy_rounded, color: cs.primary),
-              title: const Text('Copy to Clipboard'),
-              subtitle: const Text('Copy content'),
+              title: const Text('复制到剪贴板'),
+              subtitle: const Text('复制内容'),
               onTap: () {
                 Navigator.of(ctx).pop();
                 Clipboard.setData(ClipboardData(text: _contentController.text));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Copied to clipboard'),
+                    content: const Text('已复制到剪贴板'),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -639,7 +639,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: const Text('取消'),
           ),
         ],
       ),
@@ -650,7 +650,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     // This is a placeholder - actual file export would require platform-specific implementation
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Export feature coming soon'),
+        content: const Text('导出功能即将推出'),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -668,22 +668,22 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Statistics'),
+        title: const Text('统计信息'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _statRow(Icons.text_fields_rounded, 'Words', '$_wordCount'),
-            _statRow(Icons.abc_rounded, 'Characters', '$_charCount'),
-            _statRow(Icons.format_list_numbered_rounded, 'Lines', '$lines'),
-            _statRow(Icons.segment_rounded, 'Headings', '$headings'),
-            _statRow(Icons.tag_rounded, 'Tags', '$tagCount'),
+            _statRow(Icons.text_fields_rounded, '单词', '$_wordCount'),
+            _statRow(Icons.abc_rounded, '字符', '$_charCount'),
+            _statRow(Icons.format_list_numbered_rounded, '行数', '$lines'),
+            _statRow(Icons.segment_rounded, '标题', '$headings'),
+            _statRow(Icons.tag_rounded, '标签', '$tagCount'),
             if (_taskTotal > 0)
-              _statRow(Icons.check_box_outlined, 'Tasks', '$_taskDone / $_taskTotal'),
-            _statRow(Icons.data_object_rounded, 'Frontmatter', hasFm ? 'Yes' : 'No'),
+              _statRow(Icons.check_box_outlined, '任务', '$_taskDone / $_taskTotal'),
+            _statRow(Icons.data_object_rounded, '前置元数据', hasFm ? '是' : '否'),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Close')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭')),
         ],
       ),
     );
@@ -713,7 +713,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     if (text.trimLeft().startsWith('---')) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Frontmatter already exists'),
+          content: const Text('前置元数据已存在'),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
@@ -723,7 +723,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
     final now = DateTime.now();
     final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final title = _titleController.text.trim().isEmpty ? 'Untitled' : _titleController.text.trim();
+    final title = _titleController.text.trim().isEmpty ? '无标题' : _titleController.text.trim();
     final fm = '---\ntitle: $title\ntags: \ndate: $dateStr\nauthor: \n---\n\n';
 
     _contentController.value = TextEditingValue(
@@ -764,9 +764,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                       children: [
                         Icon(Icons.tag_rounded, size: 20, color: cs.primary),
                         const SizedBox(width: 10),
-                        Text('Tags', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                        Text('标签', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                         const Spacer(),
-                        Text('${tags.length} tags', style: TextStyle(fontSize: 12, color: cs.outline)),
+                        Text('${tags.length} 个标签', style: TextStyle(fontSize: 12, color: cs.outline)),
                       ],
                     ),
                   ),
@@ -780,7 +780,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                           child: TextField(
                             controller: tagController,
                             decoration: InputDecoration(
-                              hintText: 'Add tag (e.g. project/web)',
+                              hintText: '添加标签（例如 project/web）',
                               prefixText: '#',
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -802,7 +802,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                             tagController.clear();
                             setSheetState(() {});
                           },
-                          child: const Text('Add'),
+                          child: const Text('添加'),
                         ),
                       ],
                     ),
@@ -812,7 +812,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   if (tags.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text('No tags in this note', style: TextStyle(color: cs.outline)),
+                      child: Text('此笔记中没有标签', style: TextStyle(color: cs.outline)),
                     )
                   else
                     ConstrainedBox(
@@ -878,7 +878,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     children: [
                       Icon(Icons.link_rounded, size: 20, color: cs.primary),
                       const SizedBox(width: 10),
-                      Text('Links', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                      Text('链接', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                     ],
                   ),
                 ),
@@ -890,23 +890,23 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     children: [
                       // Backlinks section
-                      _linkSectionHeader(cs, Icons.arrow_back_rounded, 'Backlinks', backlinks.length),
+                      _linkSectionHeader(cs, Icons.arrow_back_rounded, '反向链接', backlinks.length),
                       if (backlinks.isEmpty)
-                        _emptyLinkHint(cs, 'No notes link to this note')
+                        _emptyLinkHint(cs, '没有笔记链接到此笔记')
                       else
                         ...backlinks.map((n) => _linkTile(cs, n)),
                       const SizedBox(height: 12),
                       // Outgoing links
-                      _linkSectionHeader(cs, Icons.arrow_forward_rounded, 'Outgoing Links', outgoing.length),
+                      _linkSectionHeader(cs, Icons.arrow_forward_rounded, '传出链接', outgoing.length),
                       if (outgoing.isEmpty)
-                        _emptyLinkHint(cs, 'This note has no wiki-links')
+                        _emptyLinkHint(cs, '此笔记没有 wiki 链接')
                       else
                         ...outgoing.map((n) => _linkTile(cs, n)),
                       const SizedBox(height: 12),
                       // Unlinked mentions
-                      _linkSectionHeader(cs, Icons.link_off_rounded, 'Unlinked Mentions', unlinked.length),
+                      _linkSectionHeader(cs, Icons.link_off_rounded, '未链接的提及', unlinked.length),
                       if (unlinked.isEmpty)
-                        _emptyLinkHint(cs, 'No unlinked mentions found')
+                        _emptyLinkHint(cs, '未找到未链接的提及')
                       else
                         ...unlinked.map((n) => _unlinkedTile(cs, n, provider)),
                     ],
@@ -994,7 +994,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           visualDensity: VisualDensity.compact,
           padding: const EdgeInsets.symmetric(horizontal: 10),
         ),
-        child: const Text('Link', style: TextStyle(fontSize: 12)),
+        child: const Text('链接', style: TextStyle(fontSize: 12)),
       ),
       onTap: () {
         Navigator.of(context).pop();
@@ -1084,7 +1084,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 Row(
                   children: [
                     Text(
-                      isComplete ? 'All tasks completed!' : 'Task Progress',
+                      isComplete ? '所有任务已完成！' : '任务进度',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -1143,29 +1143,29 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          _toolBtn(Icons.format_bold_rounded, 'Bold (Ctrl+B)', () => _wrapSelection('**', '**')),
-          _toolBtn(Icons.format_italic_rounded, 'Italic (Ctrl+I)', () => _wrapSelection('*', '*')),
-          _toolBtn(Icons.strikethrough_s_rounded, 'Strikethrough', () => _wrapSelection('~~', '~~')),
+          _toolBtn(Icons.format_bold_rounded, '粗体 (Ctrl+B)', () => _wrapSelection('**', '**')),
+          _toolBtn(Icons.format_italic_rounded, '斜体 (Ctrl+I)', () => _wrapSelection('*', '*')),
+          _toolBtn(Icons.strikethrough_s_rounded, '删除线', () => _wrapSelection('~~', '~~')),
           _toolDivider(cs),
-          _toolBtn(Icons.title_rounded, 'Heading', () => _prependLine('## ')),
-          _toolBtn(Icons.format_quote_rounded, 'Quote', () => _prependLine('> ')),
-          _toolBtn(Icons.code_rounded, 'Inline Code', () => _wrapSelection('`', '`')),
-          _toolBtn(Icons.data_object_rounded, 'Code Block', () => _wrapSelection('```\n', '\n```')),
+          _toolBtn(Icons.title_rounded, '标题', () => _prependLine('## ')),
+          _toolBtn(Icons.format_quote_rounded, '引用', () => _prependLine('> ')),
+          _toolBtn(Icons.code_rounded, '行内代码', () => _wrapSelection('`', '`')),
+          _toolBtn(Icons.data_object_rounded, '代码块', () => _wrapSelection('```\n', '\n```')),
           _toolDivider(cs),
-          _toolBtn(Icons.format_list_bulleted_rounded, 'Bullet List', () => _prependLine('- ')),
-          _toolBtn(Icons.format_list_numbered_rounded, 'Numbered List', () => _prependLine('1. ')),
-          _toolBtn(Icons.check_box_outlined, 'Task Item', _toggleTaskItem),
+          _toolBtn(Icons.format_list_bulleted_rounded, '项目符号列表', () => _prependLine('- ')),
+          _toolBtn(Icons.format_list_numbered_rounded, '编号列表', () => _prependLine('1. ')),
+          _toolBtn(Icons.check_box_outlined, '任务项', _toggleTaskItem),
           _toolDivider(cs),
-          _toolBtn(Icons.horizontal_rule_rounded, 'Divider', () => _insertAtCursor('\n---\n')),
-          _toolBtn(Icons.link_rounded, 'Link', () => _wrapSelection('[', '](url)')),
-          _toolBtn(Icons.image_outlined, 'Image', () => _insertAtCursor('![alt](url)')),
-          _toolBtn(Icons.table_chart_outlined, 'Table', () => _insertAtCursor('\n| Header | Header |\n|--------|--------|\n| Cell   | Cell   |\n')),
+          _toolBtn(Icons.horizontal_rule_rounded, '分隔线', () => _insertAtCursor('\n---\n')),
+          _toolBtn(Icons.link_rounded, '链接', () => _wrapSelection('[', '](url)')),
+          _toolBtn(Icons.image_outlined, '图片', () => _insertAtCursor('![alt](url)')),
+          _toolBtn(Icons.table_chart_outlined, '表格', () => _insertAtCursor('\n| 标题 | 标题 |\n|--------|--------|\n| 单元格   | 单元格   |\n')),
           _toolDivider(cs),
-          _toolBtn(Icons.functions_rounded, 'Inline Math', () => _wrapSelection(r'$', r'$')),
-          _toolBtn(Icons.calculate_outlined, 'Block Math', () => _wrapSelection('\$\$\n', '\n\$\$')),
+          _toolBtn(Icons.functions_rounded, '行内数学', () => _wrapSelection(r'$', r'$')),
+          _toolBtn(Icons.calculate_outlined, '块数学', () => _wrapSelection('\$\$\n', '\n\$\$')),
           _toolDivider(cs),
-          _toolBtn(Icons.local_offer_rounded, 'Tag', () => _insertAtCursor('#')),
-          _toolBtn(Icons.add_link_rounded, 'Wiki Link', () => _insertAtCursor('[[')),
+          _toolBtn(Icons.local_offer_rounded, '标签', () => _insertAtCursor('#')),
+          _toolBtn(Icons.add_link_rounded, 'Wiki 链接', () => _insertAtCursor('[[')),
         ],
       ),
     );
@@ -1225,7 +1225,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         textAlignVertical: TextAlignVertical.top,
         style: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.7, fontFamily: 'monospace'),
         decoration: InputDecoration(
-          hintText: 'Write markdown here...\n\nSupports:\n- **Bold**, *italic*, ~~strikethrough~~\n- \$E=mc^2\$ (inline math)\n- \$\$\\\\int_0^1 f(x)dx\$\$ (block math)\n- - [ ] Task lists\n- Code blocks, tables, links...',
+          hintText: '在此处写 markdown...\n\n支持：\n- **粗体**、*斜体*、~~删除线~~\n- \$E=mc^2\$ (行内数学)\n- \$\$\\\\int_0^1 f(x)dx\$\$ (块数学)\n- - [ ] 任务列表\n- 代码块、表格、链接...',
           hintStyle: TextStyle(color: cs.onSurfaceVariant.withAlpha(100), fontSize: 13),
           border: InputBorder.none,
           filled: false,
@@ -1245,12 +1245,12 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           children: [
             Icon(Icons.article_outlined, size: 48, color: cs.outlineVariant),
             const SizedBox(height: 12),
-            Text('Empty note', style: TextStyle(color: cs.outline)),
+            Text('空笔记', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 8),
             FilledButton.tonalIcon(
               onPressed: () => setState(() => _viewMode = _ViewMode.edit),
               icon: const Icon(Icons.edit_rounded, size: 16),
-              label: const Text('Start writing'),
+              label: const Text('开始写作'),
             ),
           ],
         ),
@@ -1307,15 +1307,15 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       ),
       child: Row(
         children: [
-          _statChip(cs, Icons.text_fields_rounded, '$_wordCount words'),
+          _statChip(cs, Icons.text_fields_rounded, '$_wordCount 个单词'),
           const SizedBox(width: 12),
-          _statChip(cs, Icons.abc_rounded, '$_charCount chars'),
+          _statChip(cs, Icons.abc_rounded, '$_charCount 个字符'),
           if (_taskTotal > 0) ...[
             const SizedBox(width: 12),
             _statChip(
               cs,
               Icons.check_box_outlined,
-              '$_taskDone/$_taskTotal tasks',
+              '$_taskDone/$_taskTotal 个任务',
               color: _taskDone == _taskTotal ? Colors.green : null,
             ),
           ],
@@ -1331,7 +1331,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _showToolbar ? 'Hide toolbar' : 'Show toolbar',
+                      _showToolbar ? '隐藏工具栏' : '显示工具栏',
                       style: TextStyle(
                         fontSize: 12,
                         color: cs.primary,
@@ -1402,10 +1402,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   IconButton(
                     icon: Icon(Icons.close_rounded, color: cs.onSurfaceVariant),
                     onPressed: () => setState(() => _focusMode = false),
-                    tooltip: 'Exit focus mode',
+                    tooltip: '退出专注模式',
                   ),
                   const Spacer(),
-                  Text('$_wordCount words', style: TextStyle(fontSize: 12, color: cs.outline)),
+                  Text('$_wordCount 个单词', style: TextStyle(fontSize: 12, color: cs.outline)),
                   const SizedBox(width: 12),
                   // Toggle between edit and preview in focus mode
                   SegmentedButton<_ViewMode>(

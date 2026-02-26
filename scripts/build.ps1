@@ -34,8 +34,9 @@ try {
 
     $buildTime = [int]([DateTimeOffset]::Now.ToUnixTimeSeconds())
 
+    # Use displayName (with hash for android) instead of versionName
     $data = @{
-        'nexai.name'  = $versionName
+        'nexai.name'  = $displayName
         'nexai.code'  = $versionCode
         'nexai.hash'  = $commitHash
         'nexai.time'  = $buildTime

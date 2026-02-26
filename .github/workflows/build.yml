@@ -65,12 +65,16 @@ jobs:
 
       - name: Write signing config
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks
-          echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> android/gradle.properties
-          echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
-          echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
-          echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
-        continue-on-error: true
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Warning: KEYSTORE_BASE64 secret not set, using debug signing"
+            echo "NEXAI_USE_DEBUG_SIGNING=true" >> android/gradle.properties
+          else
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks
+            echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> android/gradle.properties
+            echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+            echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
+            echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+          fi
 
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true

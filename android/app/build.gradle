@@ -75,6 +75,8 @@ android {
 
     // Signing config for release builds (CI injects via gradle.properties)
     def nexaiStoreFile = project.hasProperty('NEXAI_STORE_FILE') ? project.property('NEXAI_STORE_FILE') : null
+    def useDebugSigning = project.hasProperty('NEXAI_USE_DEBUG_SIGNING') && project.property('NEXAI_USE_DEBUG_SIGNING') == 'true'
+    
     if (nexaiStoreFile != null) {
         signingConfigs {
             release {
@@ -84,11 +86,22 @@ android {
                 keyPassword project.property('NEXAI_KEY_PASSWORD')
             }
         }
+        logger.lifecycle("✓ Using RELEASE signing configuration")
+    } else if (useDebugSigning) {
+        logger.warn("⚠ Using DEBUG signing - APK cannot be upgraded from release builds!")
+    } else {
+        logger.error("✗ No signing configuration found!")
     }
 
     buildTypes {
         release {
-            signingConfig nexaiStoreFile != null ? signingConfigs.release : signingConfigs.debug
+            if (nexaiStoreFile != null) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+                // Add debug suffix to version name to distinguish from release builds
+                versionNameSuffix "-debug"
+            }
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -99,6 +112,7 @@ android {
         }
         debug {
             signingConfig signingConfigs.debug
+            versionNameSuffix "-debug"
         }
     }
 

@@ -186,21 +186,33 @@ echo   ✓ Keystore 生成成功: %KEYSTORE_FILE%
 
 echo.
 echo   正在编码为 Base64...
-for /f "usebackq tokens=*" %%b in (`powershell -NoProfile -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('%KEYSTORE_FILE%'))"`) do set "KEYSTORE_BASE64=%%b"
-
-if "%KEYSTORE_BASE64%"=="" (
+powershell -NoProfile -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('%KEYSTORE_FILE%'))" > keystore_base64.txt
+if %errorlevel% neq 0 (
     echo [错误] Base64 编码失败
     pause
     exit /b 1
 )
-echo   ✓ Base64 编码完成
+
+REM 读取 Base64 内容（去除换行符）
+set "KEYSTORE_BASE64="
+for /f "usebackq delims=" %%b in ("keystore_base64.txt") do (
+    set "KEYSTORE_BASE64=!KEYSTORE_BASE64!%%b"
+)
+
+if "%KEYSTORE_BASE64%"=="" (
+    echo [错误] Base64 内容为空
+    pause
+    exit /b 1
+)
+
+echo   ✓ Base64 编码完成 (长度: !KEYSTORE_BASE64:~0,50!...)
 
 echo.
 echo [6/6] 设置 GitHub Secrets...
 echo.
 
 echo   设置 KEYSTORE_BASE64...
-echo !KEYSTORE_BASE64! | "%gh%" secret set KEYSTORE_BASE64 --repo %REPO%
+type keystore_base64.txt | "%gh%" secret set KEYSTORE_BASE64 --repo %REPO%
 if %errorlevel% neq 0 (
     echo [错误] 设置 KEYSTORE_BASE64 失败
     pause
@@ -253,6 +265,19 @@ echo [重要提示]
 echo   1. 请妥善保管 %KEYSTORE_FILE% 文件并备份
 echo   2. 该文件已在 .gitignore 中，不会被提交到 git
 echo   3. 现在可以运行 GitHub Actions 构建签名的 APK/AAB
+echo   4. 临时文件 keystore_base64.txt 已生成，可以手动删除
+echo.
+
+REM 清理临时文件（可选）
+if exist keystore_base64.txt (
+    echo 是否删除临时 Base64 文件? (Y/N)
+    set /p DELETE_TEMP="> "
+    if /i "!DELETE_TEMP!"=="Y" (
+        del keystore_base64.txt
+        echo   ✓ 已删除 keystore_base64.txt
+    )
+)
+
 echo.
 pause
 

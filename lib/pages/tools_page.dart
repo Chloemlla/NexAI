@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'video_compressor_page.dart';
+import 'date_time_converter_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -66,6 +67,27 @@ class ToolsPage extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const VideoCompressorPage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildToolCard(
+                  context,
+                  icon: Icons.access_time_rounded,
+                  title: '日期时间转换',
+                  description: '多种格式互转',
+                  gradient: LinearGradient(
+                    colors: [
+                      cs.tertiaryContainer,
+                      cs.primaryContainer,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const DateTimeConverterPage(),
                       ),
                     );
                   },

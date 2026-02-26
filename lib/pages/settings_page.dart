@@ -6,6 +6,7 @@ import '../main.dart' show isAndroid;
 import '../providers/settings_provider.dart';
 import '../utils/update_checker.dart';
 import '../utils/build_config.dart';
+import 'about_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -417,6 +418,42 @@ class _SettingsPageState extends State<SettingsPage> {
                       minimumSize: const Size(double.infinity, 48),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+
+                // ── About ──
+                _SectionHeader(icon: Icons.info_outline_rounded, label: 'About', cs: cs, tt: tt),
+                const SizedBox(height: 10),
+                _SettingsCard(cs: cs, children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [cs.primary, cs.tertiary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Icon(Icons.smart_toy_rounded, size: 20, color: cs.onPrimary),
+                      ),
+                    ),
+                    title: Text('About NexAI', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    subtitle: Text(
+                      'App info, features & credits',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    trailing: Icon(Icons.chevron_right_rounded, color: cs.outline),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AboutPage()),
+                      );
+                    },
                   ),
                 ]),
 

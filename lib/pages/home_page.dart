@@ -69,10 +69,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
       const ChatPage(),
       const NotesPage(),
       const SettingsPage(),
-      const AboutPage(),
     ];
 
-    final pageTitles = ['NexAI', 'Notes', 'Settings', 'About'];
+    final pageTitles = ['NexAI', 'Notes', 'Settings'];
 
     return Scaffold(
       appBar: AppBar(
@@ -106,9 +105,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         ? Icons.smart_toy_rounded
                         : _androidNavIndex == 1
                             ? Icons.note_alt_rounded
-                            : _androidNavIndex == 2
-                                ? Icons.settings_rounded
-                                : Icons.info_rounded,
+                            : Icons.settings_rounded,
                     size: 18,
                     color: cs.onPrimary,
                   ),
@@ -235,11 +232,6 @@ class _HomePageState extends State<HomePage> with WindowListener {
             icon: Icon(Icons.tune_outlined),
             selectedIcon: Icon(Icons.tune_rounded),
             label: 'Settings',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.info_outline_rounded),
-            selectedIcon: Icon(Icons.info_rounded),
-            label: 'About',
           ),
         ],
       ),

@@ -75,29 +75,32 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true
 
-      - name: Set auto-incrementing versionCode
-        run: |
-          VERSION_CODE=$((106 + ${{ github.run_number }}))
-          echo "flutter.versionCode=$VERSION_CODE" >> android/local.properties
-          echo "flutter.versionName=1.0.6" >> android/local.properties
-          echo "Using versionCode=$VERSION_CODE"
+      - name: Run build.ps1 (version control)
+        run: pwsh scripts/build.ps1 -Arg android
 
       - name: Build Android APK
-        run: flutter build apk --release --target-platform android-arm64
+        run: flutter build apk --release --target-platform android-arm64 --dart-define-from-file=pili_release.json
 
       - name: Build Android App Bundle
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define-from-file=pili_release.json
+
+      - name: Rename outputs for release
+        run: |
+          APK_FILE=$(find build/app/outputs/flutter-apk -name '*.apk' -type f | head -1)
+          AAB_FILE=$(find build/app/outputs/bundle/release -name '*.aab' -type f | head -1)
+          cp "$APK_FILE" "build/app/outputs/flutter-apk/NexAI-${VERSION_NAME}-${SHORT_HASH}+${VERSION_CODE}.apk"
+          cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI-${VERSION_NAME}-${SHORT_HASH}+${VERSION_CODE}.aab"
 
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/NexAI-*.apk
           retention-days: 30
 
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-AAB
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: build/app/outputs/bundle/release/NexAI-*.aab
           retention-days: 30
 
       - uses: actions/upload-artifact@v4
@@ -114,19 +117,6 @@ jobs:
           git push || true
         env:
           GITHUB_TOKEN: ${{ secrets.USER_PAT }}
-      - name: Gather release metadata
-        id: meta
-        run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          VERSION_NAME=$(grep 'flutterVersionName' android/gradle.properties 2>/dev/null | cut -d= -f2 || grep "flutterVersionName = " android/app/build.gradle | head -1 | grep -oP "'[^']+'" | tr -d "'")
-          # Fallback: extract from build.gradle default
-          if [ -z "$VERSION_NAME" ]; then
-            VERSION_NAME=$(grep -oP "flutterVersionName = '\K[^']+" android/app/build.gradle || echo "1.0.0")
-          fi
-          TAG="v${VERSION_NAME}-${SHORT_SHA}"
-          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Automatic release
         if: success()
@@ -136,12 +126,12 @@ jobs:
           draft: false
           make_latest: true
           generate_release_notes: true
-          tag_name: ${{ steps.meta.outputs.tag }}
+          tag_name: "v${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           prerelease: false
-          name: "NexAI ${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.short_sha }}"
+          name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           files: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/NexAI-*.apk
+            build/app/outputs/bundle/release/NexAI-*.aab
 
   build-web:
     # if: false  # Disabled - Web build not needed

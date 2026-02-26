@@ -23,7 +23,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.41.0'
           channel: 'stable'
           cache: true
 
@@ -79,29 +79,32 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true
 
-      - name: Set auto-incrementing versionCode
-        run: |
-          VERSION_CODE=$((106 + ${{ github.run_number }}))
-          echo "flutter.versionCode=$VERSION_CODE" >> android/local.properties
-          echo "flutter.versionName=1.0.6" >> android/local.properties
-          echo "Using versionCode=$VERSION_CODE"
+      - name: Run build.ps1 (version control)
+        run: pwsh scripts/build.ps1 -Arg android
 
       - name: Build Android APK
-        run: flutter build apk --release --target-platform android-arm64 --verbose
+        run: flutter build apk --release --target-platform android-arm64 --verbose --dart-define-from-file=pili_release.json
 
       - name: Build Android App Bundle
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --dart-define-from-file=pili_release.json
+
+      - name: Rename outputs for release
+        run: |
+          APK_FILE=$(find build/app/outputs/flutter-apk -name '*.apk' -type f | head -1)
+          AAB_FILE=$(find build/app/outputs/bundle/release -name '*.aab' -type f | head -1)
+          cp "$APK_FILE" "build/app/outputs/flutter-apk/NexAI-${VERSION_NAME}-${SHORT_HASH}+${VERSION_CODE}.apk"
+          cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI-${VERSION_NAME}-${SHORT_HASH}+${VERSION_CODE}.aab"
 
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/NexAI-*.apk
           retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-AAB
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: build/app/outputs/bundle/release/NexAI-*.aab
           retention-days: 7
 
       - uses: actions/upload-artifact@v4
@@ -119,7 +122,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.41.0'
           channel: 'stable'
           cache: true
 
@@ -173,8 +176,10 @@ jobs:
 
       - name: Package release assets
         run: |
-          cp android-apk/app-release.apk NexAI-${{ github.ref_name }}.apk
-          cp android-aab/app-release.aab NexAI-${{ github.ref_name }}.aab
+          APK_FILE=$(find android-apk -name 'NexAI-*.apk' -type f | head -1)
+          AAB_FILE=$(find android-aab -name 'NexAI-*.aab' -type f | head -1)
+          cp "$APK_FILE" "NexAI-${{ github.ref_name }}.apk"
+          cp "$AAB_FILE" "NexAI-${{ github.ref_name }}.aab"
           cd web-build && zip -r ../NexAI-Web-${{ github.ref_name }}.zip . && cd ..
           zip -r android-outputs-${{ github.ref_name }}.zip android-outputs
 

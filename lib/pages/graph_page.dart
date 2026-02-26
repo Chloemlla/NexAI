@@ -228,11 +228,13 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
                       colorScheme: cs,
                     ),
                     child: Stack(
+                      clipBehavior: Clip.none,
                       children: _graphData.nodes.map((node) {
                         final radius = _nodeRadius(node);
                         final isHighlighted = _highlightedNodeId == node.id;
+                        final labelWidth = math.max((radius + 20) * 2, 80.0);
                         return Positioned(
-                          left: node.x - radius - 20,
+                          left: node.x - labelWidth / 2,
                           top: node.y + radius + 4,
                           child: GestureDetector(
                             onTap: () => _onNodeTap(node),
@@ -240,7 +242,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
                               _highlightedNodeId = _highlightedNodeId == node.id ? null : node.id;
                             }),
                             child: SizedBox(
-                              width: (radius + 20) * 2,
+                              width: labelWidth,
                               child: Text(
                                 node.title,
                                 textAlign: TextAlign.center,
@@ -250,6 +252,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
                                   fontSize: isHighlighted ? 12 : 10,
                                   fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,
                                   color: isHighlighted ? cs.primary : cs.onSurfaceVariant,
+                                  height: 1.3,
                                 ),
                               ),
                             ),

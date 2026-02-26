@@ -77,7 +77,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       const SettingsPage(),
     ];
 
-    final pageTitles = ['NexAI', 'Notes', 'Tools', 'Settings'];
+    final pageTitles = ['NexAI', '笔记', '工具', '设置'];
 
     return Scaffold(
       appBar: AppBar(
@@ -156,7 +156,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 // Haptic feedback would go here on mobile
               },
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('New'),
+              label: const Text('新建'),
               style: FilledButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -169,7 +169,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
               child: IconButton(
                 icon: Icon(Icons.history_rounded, color: cs.onSurfaceVariant),
                 onPressed: () => _showConversationSheet(context),
-                tooltip: 'Conversations',
+                tooltip: '对话',
               ),
             ),
             const SizedBox(width: 4),
@@ -185,7 +185,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 );
               },
               icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('New'),
+              label: const Text('新建'),
               style: FilledButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -229,22 +229,22 @@ class _HomePageState extends State<HomePage> with WindowListener {
           NavigationDestination(
             icon: Icon(Icons.chat_outlined),
             selectedIcon: Icon(Icons.chat_rounded),
-            label: 'Chat',
+            label: '聊天',
           ),
           NavigationDestination(
             icon: Icon(Icons.note_alt_outlined),
             selectedIcon: Icon(Icons.note_alt_rounded),
-            label: 'Notes',
+            label: '笔记',
           ),
           NavigationDestination(
             icon: Icon(Icons.build_outlined),
             selectedIcon: Icon(Icons.build_rounded),
-            label: 'Tools',
+            label: '工具',
           ),
           NavigationDestination(
             icon: Icon(Icons.tune_outlined),
             selectedIcon: Icon(Icons.tune_rounded),
-            label: 'Settings',
+            label: '设置',
           ),
         ],
       ),
@@ -302,7 +302,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Conversations',
+                        '对话',
                         style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                           letterSpacing: -0.2,
@@ -365,7 +365,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                 ),
                                 const SizedBox(height: 20),
                                 Text(
-                                  'No conversations yet',
+                                  '还没有对话',
                                   style: TextStyle(
                                     color: cs.onSurface,
                                     fontWeight: FontWeight.w600,
@@ -374,7 +374,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'Start a new chat to begin',
+                                  '开始新的聊天',
                                   style: TextStyle(
                                     color: cs.onSurfaceVariant,
                                     fontSize: 14,
@@ -387,7 +387,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                     Navigator.of(ctx).pop();
                                   },
                                   icon: const Icon(Icons.add_rounded, size: 20),
-                                  label: const Text('New Conversation'),
+                                  label: const Text('新建对话'),
                                 ),
                               ],
                             ),
@@ -421,19 +421,19 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                   context: ctx,
                                   builder: (dialogCtx) => AlertDialog(
                                     icon: Icon(Icons.delete_outline_rounded, color: cs.error),
-                                    title: const Text('Delete Conversation'),
-                                    content: Text('Delete "${conv.title}"?'),
+                                    title: const Text('删除对话'),
+                                    content: Text('删除 "${conv.title}"?'),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.of(dialogCtx).pop(false),
-                                        child: const Text('Cancel'),
+                                        child: const Text('取消'),
                                       ),
                                       FilledButton(
                                         onPressed: () => Navigator.of(dialogCtx).pop(true),
                                         style: FilledButton.styleFrom(
                                           backgroundColor: cs.error,
                                         ),
-                                        child: const Text('Delete'),
+                                        child: const Text('删除'),
                                       ),
                                     ],
                                   ),
@@ -658,19 +658,19 @@ class _HomePageState extends State<HomePage> with WindowListener {
         },
         displayMode: fluent.PaneDisplayMode.compact,
         items: [
-          fluent.PaneItemHeader(header: const Text('Conversations')),
+          fluent.PaneItemHeader(header: const Text('对话')),
           ...conversationItems,
         ],
         footerItems: [
           fluent.PaneItemSeparator(),
           fluent.PaneItem(
             icon: const Icon(fluent.FluentIcons.settings),
-            title: const Text('Settings'),
+            title: const Text('设置'),
             body: const SettingsPage(),
           ),
           fluent.PaneItem(
             icon: const Icon(fluent.FluentIcons.info),
-            title: const Text('About'),
+            title: const Text('关于'),
             body: const AboutPage(),
           ),
         ],

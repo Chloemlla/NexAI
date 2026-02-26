@@ -147,9 +147,9 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
           children: [
             Icon(Icons.hub_rounded, size: 22, color: cs.primary),
             const SizedBox(width: 10),
-            const Text('Knowledge Graph', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
+            const Text('知识图谱', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
             const Spacer(),
-            Text('${_graphData.nodes.length} nodes · ${_graphData.edges.length} links',
+            Text('${_graphData.nodes.length} 个节点 · ${_graphData.edges.length} 条链接',
                 style: TextStyle(fontSize: 12, color: cs.outline)),
           ],
         ),
@@ -158,7 +158,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
           IconButton(
             icon: Icon(Icons.search_rounded, size: 20, color: cs.onSurfaceVariant),
             onPressed: () => _showSearchDialog(cs, provider),
-            tooltip: 'Search node',
+            tooltip: '搜索节点',
           ),
           // Filter
           PopupMenuButton<String>(
@@ -177,23 +177,23 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
             itemBuilder: (_) {
               final tags = provider.allTags.take(10).toList();
               return [
-                const PopupMenuItem(value: 'clear', child: Text('Clear filters')),
+                const PopupMenuItem(value: 'clear', child: Text('清除筛选')),
                 PopupMenuItem(
                   value: 'starred',
                   child: Row(children: [
                     Icon(_starredOnly ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded, size: 18),
                     const SizedBox(width: 8),
-                    const Text('Starred only'),
+                    const Text('仅显示星标'),
                   ]),
                 ),
                 const PopupMenuDivider(),
-                const PopupMenuItem(enabled: false, child: Text('Color by')),
-                PopupMenuItem(value: 'color:links', child: Text(_colorBy == 'links' ? '● Link count' : '○ Link count')),
-                PopupMenuItem(value: 'color:starred', child: Text(_colorBy == 'starred' ? '● Starred' : '○ Starred')),
-                PopupMenuItem(value: 'color:tags', child: Text(_colorBy == 'tags' ? '● Tags' : '○ Tags')),
+                const PopupMenuItem(enabled: false, child: Text('按以下方式着色')),
+                PopupMenuItem(value: 'color:links', child: Text(_colorBy == 'links' ? '● 链接数' : '○ 链接数')),
+                PopupMenuItem(value: 'color:starred', child: Text(_colorBy == 'starred' ? '● 星标' : '○ 星标')),
+                PopupMenuItem(value: 'color:tags', child: Text(_colorBy == 'tags' ? '● 标签' : '○ 标签')),
                 if (tags.isNotEmpty) ...[
                   const PopupMenuDivider(),
-                  const PopupMenuItem(enabled: false, child: Text('Filter by tag')),
+                  const PopupMenuItem(enabled: false, child: Text('按标签筛选')),
                   ...tags.map((t) => PopupMenuItem(
                     value: 'tag:${t.name}',
                     child: Text('#${t.name}${_tagFilter == t.name ? ' ✓' : ''}'),
@@ -287,7 +287,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
                   .take(10)
                   .toList();
           return AlertDialog(
-            title: const Text('Search Node'),
+            title: const Text('搜索节点'),
             content: SizedBox(
               width: 300,
               child: Column(
@@ -297,7 +297,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
                     autofocus: true,
                     onChanged: (v) => setDialogState(() => query = v),
                     decoration: InputDecoration(
-                      hintText: 'Note title...',
+                      hintText: '笔记标题...',
                       prefixIcon: const Icon(Icons.search_rounded, size: 20),
                       isDense: true,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -316,7 +316,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
                             dense: true,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             title: Text(n.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text('${n.linkCount} links', style: TextStyle(fontSize: 11, color: cs.outline)),
+                            subtitle: Text('${n.linkCount} 条链接', style: TextStyle(fontSize: 11, color: cs.outline)),
                             onTap: () {
                               Navigator.of(ctx).pop();
                               setState(() => _highlightedNodeId = n.id);
@@ -333,7 +333,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Close')),
+              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭')),
             ],
           );
         });
@@ -348,9 +348,9 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
         children: [
           Icon(Icons.hub_outlined, size: 64, color: cs.outlineVariant),
           const SizedBox(height: 16),
-          Text('No connections yet', style: TextStyle(color: cs.outline, fontSize: 16, fontWeight: FontWeight.w500)),
+          Text('还没有连接', style: TextStyle(color: cs.outline, fontSize: 16, fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
-          Text('Use [[note name]] in your notes to create links',
+          Text('在笔记中使用 [[笔记名称]] 来创建链接',
               style: TextStyle(color: cs.outlineVariant, fontSize: 13)),
         ],
       ),

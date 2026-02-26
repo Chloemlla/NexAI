@@ -85,9 +85,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             floatingActionButton: FloatingActionButton.extended(
               onPressed: () => _createAndOpen(context, notesProvider),
               icon: const Icon(Icons.add_rounded),
-              label: const Text('New Note'),
+              label: const Text('创建笔记'),
               elevation: 4,
-              tooltip: 'Create new note',
+              tooltip: '创建新笔记',
             ),
           ),
         ),
@@ -112,7 +112,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         controller: _searchController,
         focusNode: _searchFocus,
         onChanged: (v) => setState(() => _searchQuery = v),
-        hintText: 'Search notes...',
+        hintText: '搜索笔记...',
         hintStyle: WidgetStatePropertyAll(
           TextStyle(fontSize: 14, color: cs.onSurfaceVariant.withAlpha(160)),
         ),
@@ -125,12 +125,12 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                 _searchController.clear();
                 setState(() => _searchQuery = '');
               },
-              tooltip: 'Clear',
+              tooltip: '清除',
             ),
           IconButton(
             icon: Icon(Icons.tune_rounded, size: 20, color: cs.onSurfaceVariant),
             onPressed: _showSearchHelp,
-            tooltip: 'Search tips',
+            tooltip: '搜索提示',
           ),
           IconButton(
             icon: Icon(Icons.close_rounded, size: 20, color: cs.onSurfaceVariant),
@@ -141,7 +141,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                 _showSearch = false;
               });
             },
-            tooltip: 'Close search',
+            tooltip: '关闭搜索',
           ),
         ],
         elevation: WidgetStatePropertyAll(0),
@@ -157,26 +157,26 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
       context: context,
       builder: (ctx) => AlertDialog(
         icon: Icon(Icons.help_outline_rounded, color: cs.primary),
-        title: const Text('Search Tips'),
+        title: const Text('搜索提示'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _searchTip(cs, '"exact phrase"', 'Find exact matches'),
-              _searchTip(cs, 'tag:project', 'Filter by tag'),
-              _searchTip(cs, 'is:starred', 'Show starred notes'),
-              _searchTip(cs, '/regex/', 'Use regular expressions'),
-              _searchTip(cs, 'term1 AND term2', 'Both terms must match'),
-              _searchTip(cs, 'term1 OR term2', 'Either term matches'),
-              _searchTip(cs, 'NOT term', 'Exclude term'),
+              _searchTip(cs, '"精确短语"', '查找精确匹配'),
+              _searchTip(cs, 'tag:项目', '按标签筛选'),
+              _searchTip(cs, 'is:starred', '显示星标笔记'),
+              _searchTip(cs, '/正则表达式/', '使用正则表达式'),
+              _searchTip(cs, '术语1 AND 术语2', '两个术语都必须匹配'),
+              _searchTip(cs, '术语1 OR 术语2', '任一术语匹配'),
+              _searchTip(cs, 'NOT 术语', '排除术语'),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Got it'),
+            child: const Text('明白了'),
           ),
         ],
       ),
@@ -243,10 +243,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         ),
         dividerHeight: 0,
         tabs: const [
-          Tab(text: 'All', icon: Icon(Icons.notes_rounded, size: 20)),
-          Tab(text: 'Starred', icon: Icon(Icons.star_rounded, size: 20)),
-          Tab(text: 'Recent', icon: Icon(Icons.history_rounded, size: 20)),
-          Tab(text: 'Tags', icon: Icon(Icons.local_offer_rounded, size: 20)),
+          Tab(text: '全部', icon: Icon(Icons.notes_rounded, size: 20)),
+          Tab(text: '星标', icon: Icon(Icons.star_rounded, size: 20)),
+          Tab(text: '最近', icon: Icon(Icons.history_rounded, size: 20)),
+          Tab(text: '标签', icon: Icon(Icons.local_offer_rounded, size: 20)),
         ],
       ),
     );
@@ -278,9 +278,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
           children: [
             Icon(Icons.search_off_rounded, size: 48, color: cs.outlineVariant),
             const SizedBox(height: 12),
-            Text('No results for "$_searchQuery"', style: TextStyle(color: cs.outline)),
+            Text('未找到 "$_searchQuery" 的结果', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('Try: "exact match", tag:name, is:starred, /regex/',
+            Text('尝试："精确匹配"、tag:名称、is:starred、/正则表达式/',
                 style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
           ],
         ),
@@ -328,9 +328,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
           children: [
             Icon(Icons.star_outline_rounded, size: 48, color: cs.outlineVariant),
             const SizedBox(height: 12),
-            Text('No starred notes', style: TextStyle(color: cs.outline)),
+            Text('没有星标笔记', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('Star important notes for quick access',
+            Text('为重要笔记加星标以便快速访问',
                 style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
           ],
         ),
@@ -348,9 +348,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
           children: [
             Icon(Icons.history_rounded, size: 48, color: cs.outlineVariant),
             const SizedBox(height: 12),
-            Text('No recent notes', style: TextStyle(color: cs.outline)),
+            Text('没有最近的笔记', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('Notes you open will appear here',
+            Text('您打开的笔记将显示在此处',
                 style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
           ],
         ),
@@ -381,7 +381,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                       children: [
                         Icon(Icons.arrow_back_rounded, size: 16, color: cs.primary),
                         const SizedBox(width: 4),
-                        Text('Tags', style: TextStyle(fontSize: 13, color: cs.primary, fontWeight: FontWeight.w500)),
+                        Text('标签', style: TextStyle(fontSize: 13, color: cs.primary, fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ),
@@ -415,9 +415,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
           children: [
             Icon(Icons.tag_rounded, size: 48, color: cs.outlineVariant),
             const SizedBox(height: 12),
-            Text('No tags yet', style: TextStyle(color: cs.outline)),
+            Text('还没有标签', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('Use #tag in notes to organize them',
+            Text('在笔记中使用 #tag 来组织它们',
                 style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
           ],
         ),
@@ -447,19 +447,19 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename Tag'),
+        title: const Text('重命名标签'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('All occurrences of #$oldTag will be replaced.',
+            Text('所有 #$oldTag 的出现都将被替换。',
                 style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'New tag name',
+                labelText: '新标签名称',
                 prefixText: '#',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -467,7 +467,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('取消')),
           FilledButton(
             onPressed: () {
               final newTag = controller.text.trim();
@@ -476,7 +476,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               }
               Navigator.of(ctx).pop();
             },
-            child: const Text('Rename'),
+            child: const Text('重命名'),
           ),
         ],
       ),
@@ -488,10 +488,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Tag'),
-        content: Text('Remove #$tag from all notes?'),
+        title: const Text('删除标签'),
+        content: Text('从所有笔记中删除 #$tag?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('取消')),
           FilledButton(
             onPressed: () {
               context.read<NotesProvider>().deleteTag(tag);
@@ -499,7 +499,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               setState(() => _selectedTag = null);
             },
             style: FilledButton.styleFrom(backgroundColor: cs.error),
-            child: const Text('Delete'),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -541,7 +541,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             ),
             const SizedBox(height: 24),
             Text(
-              'No notes yet',
+              '还没有笔记',
               style: TextStyle(
                 color: cs.onSurface,
                 fontWeight: FontWeight.w600,
@@ -551,7 +551,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             ),
             const SizedBox(height: 8),
             Text(
-              'Create your first note to get started',
+              '创建您的第一条笔记以开始',
               style: TextStyle(
                 color: cs.onSurfaceVariant,
                 fontSize: 14,
@@ -563,7 +563,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             FilledButton.icon(
               onPressed: () => _createAndOpen(context, provider),
               icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('Create Note'),
+              label: const Text('创建笔记'),
               style: FilledButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
@@ -662,7 +662,7 @@ class _TagTile extends StatelessWidget {
                     else
                       Text('#${tag.name}',
                           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.onSurface)),
-                    Text('${tag.count} note${tag.count != 1 ? 's' : ''}',
+                    Text('${tag.count} 条笔记${tag.count != 1 ? 's' : ''}',
                         style: TextStyle(fontSize: 11, color: cs.outline)),
                   ],
                 ),
@@ -674,8 +674,8 @@ class _TagTile extends StatelessWidget {
                   if (v == 'delete') onDelete();
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'rename', child: Text('Rename')),
-                  const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                  const PopupMenuItem(value: 'rename', child: Text('重命名')),
+                  const PopupMenuItem(value: 'delete', child: Text('删除')),
                 ],
               ),
             ],
@@ -790,7 +790,7 @@ class _NoteCard extends StatelessWidget {
                     ),
                     onPressed: () => context.read<NotesProvider>().toggleStar(note.id),
                     visualDensity: VisualDensity.compact,
-                    tooltip: note.isStarred ? 'Unstar' : 'Star',
+                    tooltip: note.isStarred ? '取消星标' : '星标',
                   ),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert_rounded, size: 20, color: cs.onSurfaceVariant),
@@ -806,7 +806,7 @@ class _NoteCard extends StatelessWidget {
                           children: [
                             Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
                             const SizedBox(width: 12),
-                            Text('Delete', style: TextStyle(color: cs.error)),
+                            Text('删除', style: TextStyle(color: cs.error)),
                           ],
                         ),
                       ),
@@ -965,17 +965,17 @@ class _NoteCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: Text('Delete "${note.title}"?'),
+        title: const Text('删除笔记'),
+        content: Text('删除 "${note.title}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('取消')),
           FilledButton(
             onPressed: () {
               context.read<NotesProvider>().deleteNote(note.id);
               Navigator.of(ctx).pop();
             },
             style: FilledButton.styleFrom(backgroundColor: cs.error),
-            child: const Text('Delete'),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -985,10 +985,10 @@ class _NoteCard extends StatelessWidget {
   String _formatTime(DateTime dt) {
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inHours < 1) return '${diff.inMinutes}分钟前';
+    if (diff.inDays < 1) return '${diff.inHours}小时前';
+    if (diff.inDays < 7) return '${diff.inDays}天前';
     return '${dt.month}/${dt.day}/${dt.year}';
   }
 }

@@ -54,7 +54,7 @@ class _AboutPageState extends State<AboutPage> {
             collapseMode: CollapseMode.parallax,
             titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
             title: Text(
-              'About',
+              '关于',
               style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             background: Container(
@@ -133,7 +133,7 @@ class _AboutPageState extends State<AboutPage> {
                     cs: cs,
                     icon: Icons.code_rounded,
                     label: 'GitHub',
-                    sublabel: 'View source',
+                    sublabel: '查看源代码',
                     color: cs.primaryContainer,
                     iconColor: cs.onPrimaryContainer,
                     onTap: () => _openUrl('https://github.com/Chloemlla/NexAI'),
@@ -144,8 +144,8 @@ class _AboutPageState extends State<AboutPage> {
                   child: _ActionCard(
                     cs: cs,
                     icon: Icons.bug_report_rounded,
-                    label: 'Issues',
-                    sublabel: 'Report a bug',
+                    label: '问题',
+                    sublabel: '报告错误',
                     color: cs.errorContainer,
                     iconColor: cs.onErrorContainer,
                     onTap: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
@@ -156,7 +156,7 @@ class _AboutPageState extends State<AboutPage> {
                   child: _ActionCard(
                     cs: cs,
                     icon: Icons.person_rounded,
-                    label: 'Author',
+                    label: '作者',
                     sublabel: 'Chloemlla',
                     color: cs.tertiaryContainer,
                     iconColor: cs.onTertiaryContainer,
@@ -167,31 +167,31 @@ class _AboutPageState extends State<AboutPage> {
               const SizedBox(height: 24),
 
               // ── App Info section ──
-              _m3Section(cs, tt, Icons.info_outline_rounded, 'App Info', [
-                _m3InfoRow(cs, 'Version', _version.isNotEmpty ? _version : '...'),
+              _m3Section(cs, tt, Icons.info_outline_rounded, '应用信息', [
+                _m3InfoRow(cs, '版本', _version.isNotEmpty ? _version : '...'),
                 const SizedBox(height: 8),
-                _m3InfoRow(cs, 'License', 'MIT'),
+                _m3InfoRow(cs, '许可证', 'MIT'),
                 const SizedBox(height: 8),
-                _m3InfoRow(cs, 'Framework', 'Flutter'),
+                _m3InfoRow(cs, '框架', 'Flutter'),
               ]),
               const SizedBox(height: 12),
 
               // ── Features section ──
-              _m3Section(cs, tt, Icons.auto_awesome_rounded, 'Features', [
-                _m3Feature(cs, Icons.chat_rounded, 'OpenAI-compatible API with custom base URL'),
+              _m3Section(cs, tt, Icons.auto_awesome_rounded, '功能', [
+                _m3Feature(cs, Icons.chat_rounded, 'OpenAI 兼容 API，支持自定义基础 URL'),
                 const SizedBox(height: 8),
-                _m3Feature(cs, Icons.functions_rounded, 'LaTeX math & chemical formula rendering'),
+                _m3Feature(cs, Icons.functions_rounded, 'LaTeX 数学和化学公式渲染'),
                 const SizedBox(height: 8),
-                _m3Feature(cs, Icons.color_lens_rounded, 'Material You dynamic color (Android)'),
+                _m3Feature(cs, Icons.color_lens_rounded, 'Material You 动态颜色（Android）'),
                 const SizedBox(height: 8),
-                _m3Feature(cs, Icons.code_rounded, 'Markdown with syntax-highlighted code'),
+                _m3Feature(cs, Icons.code_rounded, '支持语法高亮的 Markdown 代码'),
                 const SizedBox(height: 8),
-                _m3Feature(cs, Icons.settings_rounded, 'Configurable models, temperature & tokens'),
+                _m3Feature(cs, Icons.settings_rounded, '可配置的模型、温度和令牌'),
               ]),
               const SizedBox(height: 12),
 
               // ── Tech Stack section ──
-              _m3Section(cs, tt, Icons.layers_rounded, 'Tech Stack', [
+              _m3Section(cs, tt, Icons.layers_rounded, '技术栈', [
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   for (final label in ['Flutter', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences'])
                     _m3Chip(cs, label),
@@ -272,7 +272,7 @@ class _AboutPageState extends State<AboutPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     return fluent.ScaffoldPage.scrollable(
-      header: const fluent.PageHeader(title: Text('About')),
+      header: const fluent.PageHeader(title: Text('关于')),
       children: [
         // Hero card
         fluent.Card(
@@ -306,66 +306,66 @@ class _AboutPageState extends State<AboutPage> {
               const SizedBox(height: 6),
               Text(_version.isNotEmpty ? 'v$_version' : '', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
               const SizedBox(height: 8),
-              Text('A beautiful AI chat client with Fluent Design', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
+              Text('一个美观的 AI 聊天客户端，采用 Fluent Design', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
             ]),
           ),
         ),
         const SizedBox(height: 16),
 
         // Author
-        _fluentInfoCard(theme, fluent.FluentIcons.contact, 'Author', [
-          _fluentInfoRow(theme, 'Developer', 'Chloemlla'),
+        _fluentInfoCard(theme, fluent.FluentIcons.contact, '作者', [
+          _fluentInfoRow(theme, '开发者', 'Chloemlla'),
           const SizedBox(height: 12),
           _fluentInfoRow(theme, 'GitHub', 'github.com/Chloemlla'),
           const SizedBox(height: 16),
           Row(children: [
             fluent.FilledButton(
               onPressed: () => _openUrl('https://github.com/Chloemlla'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.open_in_new_tab, size: 14), SizedBox(width: 8), Text('Author Profile')]),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.open_in_new_tab, size: 14), SizedBox(width: 8), Text('作者资料')]),
             ),
           ]),
         ]),
         const SizedBox(height: 12),
 
         // Project
-        _fluentInfoCard(theme, fluent.FluentIcons.repo, 'Project', [
-          _fluentInfoRow(theme, 'Repository', 'Chloemlla/NexAI'),
+        _fluentInfoCard(theme, fluent.FluentIcons.repo, '项目', [
+          _fluentInfoRow(theme, '仓库', 'Chloemlla/NexAI'),
           const SizedBox(height: 12),
-          _fluentInfoRow(theme, 'License', 'MIT'),
+          _fluentInfoRow(theme, '许可证', 'MIT'),
           const SizedBox(height: 12),
-          _fluentInfoRow(theme, 'Framework', 'Flutter + Fluent UI'),
+          _fluentInfoRow(theme, '框架', 'Flutter + Fluent UI'),
           const SizedBox(height: 16),
           Wrap(spacing: 10, runSpacing: 8, children: [
             fluent.FilledButton(
               onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.open_in_new_tab, size: 14), SizedBox(width: 8), Text('View on GitHub')]),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.open_in_new_tab, size: 14), SizedBox(width: 8), Text('在 GitHub 上查看')]),
             ),
             fluent.Button(
               onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.bug, size: 14), SizedBox(width: 8), Text('Report Issue')]),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.bug, size: 14), SizedBox(width: 8), Text('报告问题')]),
             ),
           ]),
         ]),
         const SizedBox(height: 12),
 
         // Features
-        _fluentInfoCard(theme, fluent.FluentIcons.sunny, 'Features', [
-          _fluentFeature(theme, fluent.FluentIcons.chat, 'OpenAI-compatible API with custom base URL'),
+        _fluentInfoCard(theme, fluent.FluentIcons.sunny, '功能', [
+          _fluentFeature(theme, fluent.FluentIcons.chat, 'OpenAI 兼容 API，支持自定义基础 URL'),
           const SizedBox(height: 10),
-          _fluentFeature(theme, fluent.FluentIcons.variable2, 'LaTeX math & chemical formula rendering'),
+          _fluentFeature(theme, fluent.FluentIcons.variable2, 'LaTeX 数学和化学公式渲染'),
           const SizedBox(height: 10),
-          _fluentFeature(theme, fluent.FluentIcons.color, 'Material You dynamic color (Android)'),
+          _fluentFeature(theme, fluent.FluentIcons.color, 'Material You 动态颜色（Android）'),
           const SizedBox(height: 10),
-          _fluentFeature(theme, fluent.FluentIcons.code, 'Markdown with syntax-highlighted code'),
+          _fluentFeature(theme, fluent.FluentIcons.code, '支持语法高亮的 Markdown 代码'),
           const SizedBox(height: 10),
           _fluentFeature(theme, fluent.FluentIcons.design, 'Fluent Design with Mica/Acrylic effects'),
           const SizedBox(height: 10),
-          _fluentFeature(theme, fluent.FluentIcons.settings, 'Configurable models, temperature & tokens'),
+          _fluentFeature(theme, fluent.FluentIcons.settings, '可配置的模型、温度和令牌'),
         ]),
         const SizedBox(height: 12),
 
         // Tech stack
-        _fluentInfoCard(theme, fluent.FluentIcons.developer_tools, 'Tech Stack', [
+        _fluentInfoCard(theme, fluent.FluentIcons.developer_tools, '技术栈', [
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final label in ['Flutter', 'Fluent UI', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences', 'window_manager'])
               _fluentChip(theme, label),

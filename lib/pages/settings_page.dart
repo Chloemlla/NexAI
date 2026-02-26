@@ -70,7 +70,7 @@ class _SettingsPageState extends State<SettingsPage> {
               content: const Row(children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                 SizedBox(width: 10),
-                Text('Settings saved'),
+                Text('设置已保存'),
               ]),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -83,7 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to save: $e'),
+              content: Text('保存失败: $e'),
               behavior: SnackBarBehavior.floating,
               backgroundColor: cs.error,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -104,7 +104,7 @@ class _SettingsPageState extends State<SettingsPage> {
         child: FloatingActionButton.extended(
           onPressed: saveAll,
           icon: const Icon(Icons.save_rounded),
-          label: const Text('Save'),
+          label: const Text('保存'),
           elevation: 3,
         ),
       ),
@@ -117,7 +117,7 @@ class _SettingsPageState extends State<SettingsPage> {
             expandedHeight: 0,
             backgroundColor: cs.surface,
             surfaceTintColor: cs.surfaceTint,
-            title: Text('Settings', style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
+            title: Text('设置', style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
             actions: [
               if (!_isDirty)
                 Padding(
@@ -125,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: TextButton.icon(
                     onPressed: saveAll,
                     icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('Save'),
+                    label: const Text('保存'),
                   ),
                 ),
             ],
@@ -137,16 +137,16 @@ class _SettingsPageState extends State<SettingsPage> {
               delegate: SliverChildListDelegate([
 
                 // ── API Configuration ──
-                _SectionHeader(icon: Icons.cloud_outlined, label: 'API Configuration', cs: cs, tt: tt),
+                _SectionHeader(icon: Icons.cloud_outlined, label: 'API 配置', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
                   TextField(
                     controller: _baseUrlController,
                     decoration: InputDecoration(
-                      labelText: 'Base URL',
+                      labelText: '基础 URL',
                       hintText: 'https://api.openai.com/v1',
                       prefixIcon: const Icon(Icons.link_rounded, size: 20),
-                      helperText: 'OpenAI-compatible endpoint',
+                      helperText: 'OpenAI 兼容端点',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -154,7 +154,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     controller: _apiKeyController,
                     obscureText: !_showApiKey,
                     decoration: InputDecoration(
-                      labelText: 'API Key',
+                      labelText: 'API 密钥',
                       hintText: 'sk-...',
                       prefixIcon: const Icon(Icons.key_rounded, size: 20),
                       suffixIcon: IconButton(
@@ -162,7 +162,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           _showApiKey ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                           size: 20,
                         ),
-                        tooltip: _showApiKey ? 'Hide key' : 'Show key',
+                        tooltip: _showApiKey ? '隐藏密钥' : '显示密钥',
                         onPressed: () => setState(() => _showApiKey = !_showApiKey),
                       ),
                     ),
@@ -172,10 +172,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     controller: _modelsController,
                     maxLines: 2,
                     decoration: const InputDecoration(
-                      labelText: 'Available Models',
+                      labelText: '可用模型',
                       hintText: 'gpt-4o, gpt-4o-mini',
                       prefixIcon: Icon(Icons.model_training_rounded, size: 20),
-                      helperText: 'Comma-separated list',
+                      helperText: '逗号分隔列表',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -184,7 +184,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         ? settings.selectedModel
                         : (settings.models.isNotEmpty ? settings.models.first : null),
                     decoration: const InputDecoration(
-                      labelText: 'Active Model',
+                      labelText: '当前模型',
                       prefixIcon: Icon(Icons.smart_toy_outlined, size: 20),
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -197,13 +197,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 20),
 
                 // ── Generation ──
-                _SectionHeader(icon: Icons.tune_rounded, label: 'Generation', cs: cs, tt: tt),
+                _SectionHeader(icon: Icons.tune_rounded, label: '生成设置', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
                   _SliderRow(
                     cs: cs, tt: tt,
                     icon: Icons.thermostat_rounded,
-                    label: 'Temperature',
+                    label: '温度',
                     value: settings.temperature,
                     displayValue: settings.temperature.toStringAsFixed(2),
                     min: 0, max: 2, divisions: 40,
@@ -214,10 +214,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     padding: const EdgeInsets.only(left: 4, bottom: 8),
                     child: Text(
                       settings.temperature < 0.5
-                          ? 'More focused & deterministic'
+                          ? '更专注和确定'
                           : settings.temperature < 1.2
-                              ? 'Balanced creativity'
-                              : 'More creative & random',
+                              ? '平衡创造力'
+                              : '更有创意和随机',
                       style: tt.bodySmall?.copyWith(color: cs.primary, fontStyle: FontStyle.italic),
                     ),
                   ),
@@ -225,7 +225,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   _SliderRow(
                     cs: cs, tt: tt,
                     icon: Icons.token_rounded,
-                    label: 'Max Tokens',
+                    label: '最大令牌数',
                     value: settings.maxTokens.toDouble(),
                     displayValue: settings.maxTokens >= 1000
                         ? '${(settings.maxTokens / 1000).toStringAsFixed(1)}k'
@@ -238,35 +238,35 @@ class _SettingsPageState extends State<SettingsPage> {
                     controller: _systemPromptController,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      labelText: 'System Prompt',
-                      hintText: 'You are a helpful assistant...',
+                      labelText: '系统提示词',
+                      hintText: '你是一个有帮助的助手...',
                       alignLabelWithHint: true,
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(bottom: 60),
                         child: Icon(Icons.description_outlined, size: 20),
                       ),
-                      helperText: 'Sets the AI\'s behavior and persona',
+                      helperText: '设置 AI 的行为和角色',
                     ),
                   ),
                 ]),
                 const SizedBox(height: 20),
 
                 // ── Appearance ──
-                _SectionHeader(icon: Icons.palette_outlined, label: 'Appearance', cs: cs, tt: tt),
+                _SectionHeader(icon: Icons.palette_outlined, label: '外观', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
                   // Theme segmented button
                   Row(children: [
                     Icon(Icons.brightness_6_rounded, size: 18, color: cs.primary),
                     const SizedBox(width: 10),
-                    Text('Theme', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                    Text('主题', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
                   ]),
                   const SizedBox(height: 12),
                   SegmentedButton<ThemeMode>(
                     segments: const [
-                      ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_rounded, size: 18), label: Text('Light')),
-                      ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto_rounded, size: 18), label: Text('Auto')),
-                      ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_rounded, size: 18), label: Text('Dark')),
+                      ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_rounded, size: 18), label: Text('浅色')),
+                      ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto_rounded, size: 18), label: Text('自动')),
+                      ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_rounded, size: 18), label: Text('深色')),
                     ],
                     selected: {settings.themeMode},
                     onSelectionChanged: (s) => settings.setThemeMode(s.first),
@@ -280,20 +280,20 @@ class _SettingsPageState extends State<SettingsPage> {
                   Row(children: [
                     Icon(Icons.color_lens_rounded, size: 18, color: cs.primary),
                     const SizedBox(width: 10),
-                    Text('Accent Color', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                    Text('强调色', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
                   ]),
                   const SizedBox(height: 14),
                   Wrap(
                     spacing: 10, runSpacing: 10,
                     children: [
-                      _m3ColorChip(cs, settings, null, 'Dynamic'),
-                      _m3ColorChip(cs, settings, 0xFF6750A4, 'Purple'),
-                      _m3ColorChip(cs, settings, 0xFF0078D4, 'Blue'),
-                      _m3ColorChip(cs, settings, 0xFFE74856, 'Red'),
-                      _m3ColorChip(cs, settings, 0xFFFF8C00, 'Orange'),
-                      _m3ColorChip(cs, settings, 0xFF10893E, 'Green'),
-                      _m3ColorChip(cs, settings, 0xFF00B7C3, 'Teal'),
-                      _m3ColorChip(cs, settings, 0xFFE3008C, 'Pink'),
+                      _m3ColorChip(cs, settings, null, '动态'),
+                      _m3ColorChip(cs, settings, 0xFF6750A4, '紫色'),
+                      _m3ColorChip(cs, settings, 0xFF0078D4, '蓝色'),
+                      _m3ColorChip(cs, settings, 0xFFE74856, '红色'),
+                      _m3ColorChip(cs, settings, 0xFFFF8C00, '橙色'),
+                      _m3ColorChip(cs, settings, 0xFF10893E, '绿色'),
+                      _m3ColorChip(cs, settings, 0xFF00B7C3, '青色'),
+                      _m3ColorChip(cs, settings, 0xFFE3008C, '粉色'),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -316,8 +316,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       Expanded(
                         child: Text(
                           settings.accentColorValue == null
-                              ? 'Using Material You wallpaper color'
-                              : 'Custom accent applied',
+                              ? '使用 Material You 壁纸颜色'
+                              : '已应用自定义强调色',
                           style: tt.bodySmall?.copyWith(color: cs.onPrimaryContainer),
                         ),
                       ),
@@ -327,15 +327,15 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 20),
 
                 // ── Notes ──
-                _SectionHeader(icon: Icons.note_alt_rounded, label: 'Notes', cs: cs, tt: tt),
+                _SectionHeader(icon: Icons.note_alt_rounded, label: '笔记', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
                   SwitchListTile(
                     value: settings.notesAutoSave,
                     onChanged: (value) => settings.setNotesAutoSave(value),
-                    title: Text('Auto-save notes', style: tt.bodyMedium),
+                    title: Text('自动保存笔记', style: tt.bodyMedium),
                     subtitle: Text(
-                      'Automatically save notes when navigating away',
+                      '离开编辑器时自动保存笔记',
                       style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     ),
                     contentPadding: EdgeInsets.zero,
@@ -356,8 +356,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         Expanded(
                           child: Text(
                             settings.notesAutoSave
-                                ? 'Notes will be saved automatically when you leave the editor'
-                                : 'You need to manually save notes using the save button',
+                                ? '离开编辑器时笔记将自动保存'
+                                : '需要使用保存按钮手动保存笔记',
                             style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                           ),
                         ),
@@ -368,13 +368,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 20),
 
                 // ── Updates ──
-                _SectionHeader(icon: Icons.system_update_rounded, label: 'Updates', cs: cs, tt: tt),
+                _SectionHeader(icon: Icons.system_update_rounded, label: '更新', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
                   Row(children: [
                     Icon(Icons.info_outline_rounded, size: 18, color: cs.primary),
                     const SizedBox(width: 10),
-                    Text('Version', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                    Text('版本', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -399,9 +399,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           await UpdateChecker.setAutoUpdate(value);
                           setState(() {});
                         },
-                        title: Text('Auto-check for updates', style: tt.bodyMedium),
+                        title: Text('自动检查更新', style: tt.bodyMedium),
                         subtitle: Text(
-                          'Check for updates on app start',
+                          '应用启动时检查更新',
                           style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                         ),
                         contentPadding: EdgeInsets.zero,
@@ -413,7 +413,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   FilledButton.icon(
                     onPressed: () => UpdateChecker.checkUpdate(context, isAuto: false),
                     icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('Check for Updates'),
+                    label: const Text('检查更新'),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size(double.infinity, 48),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -423,7 +423,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 20),
 
                 // ── About ──
-                _SectionHeader(icon: Icons.info_outline_rounded, label: 'About', cs: cs, tt: tt),
+                _SectionHeader(icon: Icons.info_outline_rounded, label: '关于', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
                   ListTile(
@@ -443,9 +443,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         child: Icon(Icons.smart_toy_rounded, size: 20, color: cs.onPrimary),
                       ),
                     ),
-                    title: Text('About NexAI', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    title: Text('关于 NexAI', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                     subtitle: Text(
-                      'App info, features & credits',
+                      '应用信息、功能和致谢',
                       style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     ),
                     trailing: Icon(Icons.chevron_right_rounded, color: cs.outline),

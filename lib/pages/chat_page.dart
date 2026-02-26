@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../main.dart' show isAndroid;
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/image_generation_provider.dart';
 import '../utils/navigation_helper.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/welcome_view.dart';
@@ -21,6 +22,11 @@ class _ChatPageState extends State<ChatPage> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
   bool _hasText = false;
+
+  // Image generation controllers
+  final _imagePromptController = TextEditingController();
+  final _imageUrlController = TextEditingController();
+  final _imageModelController = TextEditingController(text: 'flux.1-kontext-dev');
 
   @override
   void initState() {
@@ -41,6 +47,9 @@ class _ChatPageState extends State<ChatPage> {
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
+    _imagePromptController.dispose();
+    _imageUrlController.dispose();
+    _imageModelController.dispose();
     super.dispose();
   }
 
@@ -113,6 +122,488 @@ class _ChatPageState extends State<ChatPage> {
     if (!mounted) return;
     _scrollToBottom();
     _focusNode.requestFocus();
+  }
+
+  void _showImageGenerationDialog(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: cs.surfaceContainerLow,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (_, scrollController) => _buildImageGenerationSheet(ctx, scrollController),
+      ),
+    );
+  }
+
+  Widget _buildImageGenerationSheet(BuildContext context, ScrollController scrollController) {
+    final cs = Theme.of(context).colorScheme;
+    final provider = context.watch<ImageGenerationProvider>();
+    final settings = context.watch<SettingsProvider>();
+
+    ImageGenerationMode mode = ImageGenerationMode.chat;
+    String size = '1024x1024';
+
+    return StatefulBuilder(
+      builder: (context, setModalState) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [cs.primary, cs.tertiary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.image_rounded, size: 20, color: cs.onPrimary),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      '图片生成',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: cs.outlineVariant),
+              
+              // Content
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    // Mode selector
+                    SegmentedButton<ImageGenerationMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: ImageGenerationMode.chat,
+                          label: Text('对话'),
+                          icon: Icon(Icons.chat_outlined, size: 16),
+                        ),
+                        ButtonSegment(
+                          value: ImageGenerationMode.generation,
+                          label: Text('生成'),
+                          icon: Icon(Icons.image_outlined, size: 16),
+                        ),
+                        ButtonSegment(
+                          value: ImageGenerationMode.edit,
+                          label: Text('编辑'),
+                          icon: Icon(Icons.edit_outlined, size: 16),
+                        ),
+                      ],
+                      selected: {mode},
+                      onSelectionChanged: (Set<ImageGenerationMode> newSelection) {
+                        setModalState(() => mode = newSelection.first);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Model input (for non-chat modes)
+                    if (mode != ImageGenerationMode.chat) ...[
+                      TextField(
+                        controller: _imageModelController,
+                        decoration: InputDecoration(
+                          labelText: '模型',
+                          hintText: 'flux.1-kontext-dev',
+                          prefixIcon: const Icon(Icons.memory, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Image URL input (for edit and image-to-image)
+                    if (mode == ImageGenerationMode.edit || mode == ImageGenerationMode.chat) ...[
+                      TextField(
+                        controller: _imageUrlController,
+                        decoration: InputDecoration(
+                          labelText: mode == ImageGenerationMode.edit ? '图片 URL *' : '图片 URL (可选)',
+                          hintText: 'https://...',
+                          prefixIcon: const Icon(Icons.link, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Size selector (for generation and edit)
+                    if (mode != ImageGenerationMode.chat) ...[
+                      DropdownButtonFormField<String>(
+                        value: size,
+                        decoration: InputDecoration(
+                          labelText: '尺寸',
+                          prefixIcon: const Icon(Icons.aspect_ratio, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        items: ['1024x1024', '1024x1792', '1792x1024', '512x512']
+                            .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                            .toList(),
+                        onChanged: (value) => setModalState(() => size = value!),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+
+                    // Prompt input
+                    TextField(
+                      controller: _imagePromptController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        labelText: '提示词',
+                        hintText: mode == ImageGenerationMode.chat
+                            ? '帮我画一只宇航猫在月球漫步[1024:1024]'
+                            : 'a cat on the moon',
+                        prefixIcon: const Icon(Icons.edit_note, size: 20),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Generate button
+                    FilledButton.icon(
+                      onPressed: provider.isLoading
+                          ? null
+                          : () async {
+                              final prompt = _imagePromptController.text.trim();
+                              if (prompt.isEmpty) return;
+
+                              if (!settings.isConfigured) {
+                                Navigator.pop(context);
+                                _showError('请先在设置中配置 API 密钥');
+                                return;
+                              }
+
+                              final model = _imageModelController.text.trim();
+                              final imageUrl = _imageUrlController.text.trim();
+
+                              switch (mode) {
+                                case ImageGenerationMode.chat:
+                                  await provider.generateImageViaChat(
+                                    baseUrl: settings.baseUrl,
+                                    apiKey: settings.apiKey,
+                                    model: model.isEmpty ? settings.selectedModel : model,
+                                    prompt: prompt,
+                                    imageUrl: imageUrl.isEmpty ? null : imageUrl,
+                                  );
+                                  break;
+                                case ImageGenerationMode.generation:
+                                  await provider.generateImage(
+                                    baseUrl: settings.baseUrl,
+                                    apiKey: settings.apiKey,
+                                    model: model,
+                                    prompt: prompt,
+                                    size: size,
+                                  );
+                                  break;
+                                case ImageGenerationMode.edit:
+                                  if (imageUrl.isEmpty) {
+                                    _showError('编辑模式需要提供图片 URL');
+                                    return;
+                                  }
+                                  await provider.editImage(
+                                    baseUrl: settings.baseUrl,
+                                    apiKey: settings.apiKey,
+                                    model: model,
+                                    image: imageUrl,
+                                    prompt: prompt,
+                                    size: size,
+                                  );
+                                  break;
+                              }
+
+                              if (provider.error == null) {
+                                _imagePromptController.clear();
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                _showImageGallery(context);
+                              }
+                            },
+                      icon: provider.isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.auto_awesome),
+                      label: Text(provider.isLoading ? '生成中...' : '生成图片'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                    ),
+
+                    // Error display
+                    if (provider.error != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: cs.errorContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline, color: cs.error, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                provider.error!,
+                                style: TextStyle(color: cs.onErrorContainer),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    // Recent images preview
+                    if (provider.images.isNotEmpty) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            '最近生成',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showImageGallery(context);
+                            },
+                            icon: const Icon(Icons.grid_view, size: 16),
+                            label: const Text('查看全部'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 120,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: provider.images.take(5).length,
+                          itemBuilder: (context, index) {
+                            final image = provider.images[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  image.url,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 120,
+                                    height: 120,
+                                    color: cs.surfaceContainerHighest,
+                                    child: Icon(Icons.broken_image, color: cs.outline),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showImageGallery(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final provider = context.read<ImageGenerationProvider>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: cs.surfaceContainerLow,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (_, scrollController) {
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [cs.primary, cs.tertiary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.photo_library, size: 20, color: cs.onPrimary),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      '图片画廊',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${provider.images.length}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: cs.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: cs.outlineVariant),
+              Expanded(
+                child: provider.images.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.image_outlined, size: 64, color: cs.outline),
+                            const SizedBox(height: 16),
+                            Text(
+                              '还没有生成图片',
+                              style: TextStyle(color: cs.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      )
+                    : GridView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.75,
+                        ),
+                        itemCount: provider.images.length,
+                        itemBuilder: (context, index) {
+                          final image = provider.images[index];
+                          return Card(
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                  child: Image.network(
+                                    image.url,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      color: cs.surfaceContainerHighest,
+                                      child: Icon(Icons.broken_image, color: cs.outline),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  color: cs.surfaceContainerHighest,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        image.prompt,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            image.mode == ImageGenerationMode.chat
+                                                ? Icons.chat_outlined
+                                                : image.mode == ImageGenerationMode.generation
+                                                    ? Icons.image_outlined
+                                                    : Icons.edit_outlined,
+                                            size: 12,
+                                            color: cs.primary,
+                                          ),
+                                          const Spacer(),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_outline, size: 16),
+                                            onPressed: () {
+                                              provider.deleteImage(index);
+                                            },
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   @override
@@ -196,6 +687,21 @@ class _ChatPageState extends State<ChatPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  // Image generation button
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 8),
+                    child: IconButton(
+                      icon: Icon(Icons.image_outlined, color: cs.primary, size: 24),
+                      onPressed: () => _showImageGenerationDialog(context),
+                      tooltip: '生成图片',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(23),
+                        ),
+                      ),
+                    ),
+                  ),
                   // Text field
                   Expanded(
                     child: ConstrainedBox(

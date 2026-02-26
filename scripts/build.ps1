@@ -35,14 +35,14 @@ try {
     $buildTime = [int]([DateTimeOffset]::Now.ToUnixTimeSeconds())
 
     $data = @{
-        'pili.name'  = $versionName
-        'pili.code'  = $versionCode
-        'pili.hash'  = $commitHash
-        'pili.time'  = $buildTime
-        'pili.short' = $shortHash
+        'nexai.name'  = $versionName
+        'nexai.code'  = $versionCode
+        'nexai.hash'  = $commitHash
+        'nexai.time'  = $buildTime
+        'nexai.short' = $shortHash
     }
 
-    $data | ConvertTo-Json -Compress | Out-File 'pili_release.json' -Encoding UTF8
+    $data | ConvertTo-Json -Compress | Out-File 'nexai_release.json' -Encoding UTF8
 
     # Export for GitHub Actions
     if ($env:GITHUB_ENV) {

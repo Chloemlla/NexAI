@@ -10,131 +10,190 @@ class ToolsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isNarrow = MediaQuery.of(context).size.width < 600;
+    final hPad = isNarrow ? 20.0 : 28.0;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
+          // ── Header ──
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              padding: EdgeInsets.fromLTRB(hPad, 32, hPad, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '工具箱',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onSurface,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '实用工具集合，提升效率',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: cs.onSurfaceVariant,
-                      letterSpacing: -0.1,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [cs.primary, cs.tertiary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cs.primary.withAlpha(50),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Icon(Icons.build_circle_rounded, size: 24, color: cs.onPrimary),
+                      ),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '工具箱',
+                            style: tt.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '实用工具集合，提升效率',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: cs.onSurfaceVariant,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
+
+          // ── Section: 媒体处理 ──
+          SliverToBoxAdapter(
+            child: _SectionHeader(
+              cs: cs,
+              icon: Icons.movie_filter_rounded,
+              title: '媒体处理',
+              subtitle: '视频与多媒体工具',
+              padding: EdgeInsets.fromLTRB(hPad, 28, hPad, 12),
+            ),
+          ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: EdgeInsets.symmetric(horizontal: hPad),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 200,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.95,
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: isNarrow ? 180 : 200,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.92,
               ),
               delegate: SliverChildListDelegate([
-                _buildToolCard(
-                  context,
+                _ToolCard(
                   icon: Icons.video_file_rounded,
                   title: '视频压缩',
                   description: '减小视频体积',
                   gradient: LinearGradient(
-                    colors: [
-                      cs.primaryContainer,
-                      cs.secondaryContainer,
-                    ],
+                    colors: [cs.primaryContainer, cs.secondaryContainer],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const VideoCompressorPage(),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const VideoCompressorPage()),
+                  ),
                 ),
-                _buildToolCard(
-                  context,
+              ]),
+            ),
+          ),
+
+          // ── Section: 编码转换 ──
+          SliverToBoxAdapter(
+            child: _SectionHeader(
+              cs: cs,
+              icon: Icons.swap_horiz_rounded,
+              title: '编码转换',
+              subtitle: '格式转换与编解码',
+              padding: EdgeInsets.fromLTRB(hPad, 32, hPad, 12),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: hPad),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: isNarrow ? 180 : 200,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.92,
+              ),
+              delegate: SliverChildListDelegate([
+                _ToolCard(
                   icon: Icons.access_time_rounded,
                   title: '日期时间转换',
                   description: '多种格式互转',
                   gradient: LinearGradient(
-                    colors: [
-                      cs.tertiaryContainer,
-                      cs.primaryContainer,
-                    ],
+                    colors: [cs.tertiaryContainer, cs.primaryContainer],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const DateTimeConverterPage(),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const DateTimeConverterPage()),
+                  ),
                 ),
-                _buildToolCard(
-                  context,
+                _ToolCard(
                   icon: Icons.code_rounded,
                   title: 'Base64 编解码',
                   description: '字符串编码解码',
                   gradient: LinearGradient(
-                    colors: [
-                      cs.secondaryContainer,
-                      cs.tertiaryContainer,
-                    ],
+                    colors: [cs.secondaryContainer, cs.tertiaryContainer],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const Base64ConverterPage(),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const Base64ConverterPage()),
+                  ),
                 ),
-                _buildToolCard(
-                  context,
+              ]),
+            ),
+          ),
+
+          // ── Section: 安全工具 ──
+          SliverToBoxAdapter(
+            child: _SectionHeader(
+              cs: cs,
+              icon: Icons.shield_rounded,
+              title: '安全工具',
+              subtitle: '密码与加密相关',
+              padding: EdgeInsets.fromLTRB(hPad, 32, hPad, 12),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 40),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: isNarrow ? 180 : 200,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.92,
+              ),
+              delegate: SliverChildListDelegate([
+                _ToolCard(
                   icon: Icons.password_rounded,
                   title: '密码生成器',
                   description: '安全随机密码',
                   gradient: LinearGradient(
-                    colors: [
-                      cs.primaryContainer,
-                      cs.tertiaryContainer,
-                    ],
+                    colors: [cs.primaryContainer, cs.tertiaryContainer],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const PasswordGeneratorPage(),
-                      ),
-                    );
-                  },
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PasswordGeneratorPage()),
+                  ),
                 ),
               ]),
             ),
@@ -143,30 +202,101 @@ class ToolsPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildToolCard(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String description,
-    required Gradient gradient,
-    required VoidCallback onTap,
-  }) {
+// ── Section header widget ──
+class _SectionHeader extends StatelessWidget {
+  final ColorScheme cs;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final EdgeInsets padding;
+
+  const _SectionHeader({
+    required this.cs,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.padding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: cs.primaryContainer.withAlpha(140),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Center(child: Icon(icon, size: 16, color: cs.primary)),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: cs.outline,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Tool card widget ──
+class _ToolCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  const _ToolCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: cs.outlineVariant.withAlpha(40),
               width: 1,
@@ -174,57 +304,50 @@ class ToolsPage extends StatelessWidget {
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 72,
-                height: 72,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   gradient: gradient,
-                  borderRadius: BorderRadius.circular(22),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: cs.primary.withAlpha(40),
-                      blurRadius: 16,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 6),
+                      color: cs.primary.withAlpha(35),
+                      blurRadius: 14,
+                      offset: const Offset(0, 5),
                     ),
                   ],
                 ),
-                child: Icon(
-                  icon,
-                  size: 36,
-                  color: cs.onPrimaryContainer,
-                ),
+                child: Icon(icon, size: 32, color: cs.onPrimaryContainer),
               ),
               const Spacer(),
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
-                  letterSpacing: -0.3,
+                  letterSpacing: -0.2,
                   height: 1.2,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 5),
               Text(
                 description,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 12,
                   color: cs.onSurfaceVariant,
                   height: 1.4,
-                  letterSpacing: -0.1,
+                  letterSpacing: 0.1,
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
             ],
           ),
         ),

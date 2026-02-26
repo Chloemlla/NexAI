@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/rich_content_view.dart';
 
 /// Regex to find headings in markdown for outline generation
@@ -71,7 +72,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   @override
   void dispose() {
-    _saveNote();
+    // Auto-save based on settings
+    final settings = context.read<SettingsProvider>();
+    if (settings.notesAutoSave) {
+      _saveNote();
+    }
     _contentController.removeListener(_onContentChanged);
     _titleController.dispose();
     _contentController.dispose();
@@ -406,6 +411,30 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 ),
               ),
         actions: [
+          // Save button (manual save)
+          IconButton(
+            icon: Icon(Icons.save_rounded, size: 22, color: cs.primary),
+            onPressed: () {
+              _saveNote();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                      SizedBox(width: 10),
+                      Text('Note saved'),
+                    ],
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  duration: const Duration(seconds: 1),
+                ),
+              );
+            },
+            visualDensity: VisualDensity.comfortable,
+            tooltip: 'Save note (Ctrl+S)',
+          ),
           // Star button with animation
           IconButton(
             icon: Icon(

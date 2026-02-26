@@ -22,6 +22,10 @@ class SettingsProvider extends ChangeNotifier {
   String get systemPrompt => _systemPrompt;
   int? get accentColorValue => _accentColorValue;
 
+  // Notes auto-save setting
+  bool _notesAutoSave = true;
+  bool get notesAutoSave => _notesAutoSave;
+
   bool get isConfigured => _apiKey.isNotEmpty;
 
   Future<void> loadSettings() async {
@@ -32,6 +36,7 @@ class SettingsProvider extends ChangeNotifier {
     _temperature = prefs.getDouble('temperature') ?? _temperature;
     _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
     _systemPrompt = prefs.getString('systemPrompt') ?? _systemPrompt;
+    _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
 
     final accentVal = prefs.getInt('accentColorValue');
     _accentColorValue = accentVal;
@@ -65,6 +70,7 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setDouble('temperature', _temperature);
     await prefs.setInt('maxTokens', _maxTokens);
     await prefs.setString('systemPrompt', _systemPrompt);
+    await prefs.setBool('notesAutoSave', _notesAutoSave);
     if (_accentColorValue != null) {
       await prefs.setInt('accentColorValue', _accentColorValue!);
     } else {
@@ -131,3 +137,9 @@ class SettingsProvider extends ChangeNotifier {
     await _save();
   }
 }
+
+  Future<void> setNotesAutoSave(bool value) async {
+    _notesAutoSave = value;
+    notifyListeners();
+    await _save();
+  }

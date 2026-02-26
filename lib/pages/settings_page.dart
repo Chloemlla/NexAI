@@ -325,6 +325,47 @@ class _SettingsPageState extends State<SettingsPage> {
                 ]),
                 const SizedBox(height: 20),
 
+                // ── Notes ──
+                _SectionHeader(icon: Icons.note_alt_rounded, label: 'Notes', cs: cs, tt: tt),
+                const SizedBox(height: 10),
+                _SettingsCard(cs: cs, children: [
+                  SwitchListTile(
+                    value: settings.notesAutoSave,
+                    onChanged: (value) => settings.setNotesAutoSave(value),
+                    title: Text('Auto-save notes', style: tt.bodyMedium),
+                    subtitle: Text(
+                      'Automatically save notes when navigating away',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest.withAlpha(100),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, size: 16, color: cs.primary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            settings.notesAutoSave
+                                ? 'Notes will be saved automatically when you leave the editor'
+                                : 'You need to manually save notes using the save button',
+                            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+
                 // ── Updates ──
                 _SectionHeader(icon: Icons.system_update_rounded, label: 'Updates', cs: cs, tt: tt),
                 const SizedBox(height: 10),

@@ -15,17 +15,17 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage> {
   String _selectedFormat = 'Timestamp';
   String? _errorMessage;
 
-  final List<DateFormat> _formats = [
-    DateFormat('Timestamp'),
-    DateFormat('JS locale'),
-    DateFormat('ISO 8601'),
-    DateFormat('ISO 9075'),
-    DateFormat('RFC 3339'),
-    DateFormat('RFC 7231'),
-    DateFormat('Unix timestamp'),
-    DateFormat('UTC format'),
-    DateFormat('Mongo ObjectID'),
-    DateFormat('Excel date/time'),
+  static const _formatNames = [
+    'Timestamp',
+    'JS locale',
+    'ISO 8601',
+    'ISO 9075',
+    'RFC 3339',
+    'RFC 7231',
+    'Unix timestamp',
+    'UTC format',
+    'Mongo ObjectID',
+    'Excel date/time',
   ];
 
   @override
@@ -59,13 +59,13 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage> {
       case 'RFC 3339':
         return date.toIso8601String();
       case 'RFC 7231':
-        return DateFormat('EEE, dd MMM yyyy HH:mm:ss').format(date.toUtc()) + ' GMT';
+        return '${DateFormat('EEE, dd MMM yyyy HH:mm:ss').format(date.toUtc())} GMT';
       case 'Unix timestamp':
         return (date.millisecondsSinceEpoch ~/ 1000).toString();
       case 'UTC format':
         return date.toUtc().toString();
       case 'Mongo ObjectID':
-        return (date.millisecondsSinceEpoch ~/ 1000).toRadixString(16).padLeft(8, '0') + '0000000000000000';
+        return '${(date.millisecondsSinceEpoch ~/ 1000).toRadixString(16).padLeft(8, '0')}0000000000000000';
       case 'Excel date/time':
         final excelEpoch = DateTime(1899, 12, 30);
         final diff = date.difference(excelEpoch);
@@ -112,7 +112,6 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage> {
       });
       return;
     }
-
     final parsed = _parseDate(value, _selectedFormat);
     setState(() {
       if (parsed != null) {
@@ -154,6 +153,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final isNarrow = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
       appBar: AppBar(
@@ -161,153 +161,167 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage> {
         centerTitle: false,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(isNarrow ? 16 : 24),
         children: [
-          // Input section
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: _inputController,
-                  decoration: InputDecoration(
-                    labelText: '输入日期时间',
-                    hintText: '输入日期时间字符串...',
-                    errorText: _errorMessage,
-                    prefixIcon: const Icon(Icons.edit_calendar),
-                    suffixIcon: _inputController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _inputController.clear();
-                              _onInputChanged('');
-                            },
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onChanged: _onInputChanged,
-                ),
+          // Input section — vertical on narrow, horizontal on wide
+          if (isNarrow) ...[
+            DropdownButtonFormField<String>(
+              value: _selectedFormat,
+              decoration: InputDecoration(
+                labelText: '输入格式',
+                prefixIcon: const Icon(Icons.format_list_bulleted),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: DropdownButtonFormField<String>(
-                  value: _selectedFormat,
-                  decoration: InputDecoration(
-                    labelText: '输入格式',
-                    prefixIcon: const Icon(Icons.format_list_bulleted),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  items: [
-                    'Timestamp',
-                    'JS locale',
-                    'ISO 8601',
-                    'ISO 9075',
-                    'RFC 3339',
-                    'RFC 7231',
-                    'Unix timestamp',
-                    'UTC format',
-                    'Mongo ObjectID',
-                    'Excel date/time',
-                  ].map((format) {
-                    return DropdownMenuItem(
-                      value: format,
-                      child: Text(format),
-                    );
-                  }).toList(),
-                  onChanged: _onFormatChanged,
-                ),
+              items: _formatNames.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+              onChanged: _onFormatChanged,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _inputController,
+              decoration: InputDecoration(
+                labelText: '输入日期时间',
+                hintText: '输入日期时间字符串...',
+                errorText: _errorMessage,
+                prefixIcon: const Icon(Icons.edit_calendar),
+                suffixIcon: _inputController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _inputController.clear();
+                          _onInputChanged('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-          Divider(color: cs.outlineVariant),
-          const SizedBox(height: 24),
-
-          // Output section
-          Text(
-            '转换结果',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: cs.onSurface,
+              onChanged: _onInputChanged,
             ),
-          ),
-          const SizedBox(height: 16),
-
-          if (_selectedDate != null) ...[
-            _buildOutputField(
-              context,
-              'Timestamp',
-              _formatDate(_selectedDate!, 'Timestamp'),
-            ),
-            _buildOutputField(
-              context,
-              'JS locale date string',
-              _formatDate(_selectedDate!, 'JS locale'),
-            ),
-            _buildOutputField(
-              context,
-              'ISO 8601',
-              _formatDate(_selectedDate!, 'ISO 8601'),
-            ),
-            _buildOutputField(
-              context,
-              'ISO 9075',
-              _formatDate(_selectedDate!, 'ISO 9075'),
-            ),
-            _buildOutputField(
-              context,
-              'RFC 3339',
-              _formatDate(_selectedDate!, 'RFC 3339'),
-            ),
-            _buildOutputField(
-              context,
-              'RFC 7231',
-              _formatDate(_selectedDate!, 'RFC 7231'),
-            ),
-            _buildOutputField(
-              context,
-              'Unix timestamp',
-              _formatDate(_selectedDate!, 'Unix timestamp'),
-            ),
-            _buildOutputField(
-              context,
-              'UTC format',
-              _formatDate(_selectedDate!, 'UTC format'),
-            ),
-            _buildOutputField(
-              context,
-              'Mongo ObjectID',
-              _formatDate(_selectedDate!, 'Mongo ObjectID'),
-            ),
-            _buildOutputField(
-              context,
-              'Excel date/time',
-              _formatDate(_selectedDate!, 'Excel date/time'),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextField(
+                    controller: _inputController,
+                    decoration: InputDecoration(
+                      labelText: '输入日期时间',
+                      hintText: '输入日期时间字符串...',
+                      errorText: _errorMessage,
+                      prefixIcon: const Icon(Icons.edit_calendar),
+                      suffixIcon: _inputController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _inputController.clear();
+                                _onInputChanged('');
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onChanged: _onInputChanged,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedFormat,
+                    decoration: InputDecoration(
+                      labelText: '输入格式',
+                      prefixIcon: const Icon(Icons.format_list_bulleted),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    items: _formatNames.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+                    onChanged: _onFormatChanged,
+                  ),
+                ),
+              ],
             ),
           ],
+
+          const SizedBox(height: 24),
+          Divider(color: cs.outlineVariant),
+          const SizedBox(height: 16),
+
+          Text(
+            '转换结果',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: cs.onSurface),
+          ),
+          const SizedBox(height: 12),
+
+          if (_selectedDate != null)
+            ...(_formatNames.map((name) => _buildOutputItem(
+                  cs,
+                  name,
+                  _formatDate(_selectedDate!, name),
+                  isNarrow,
+                ))),
         ],
       ),
     );
   }
 
-  Widget _buildOutputField(BuildContext context, String label, String value) {
-    final cs = Theme.of(context).colorScheme;
+  Widget _buildOutputItem(ColorScheme cs, String label, String value, bool isNarrow) {
+    if (isNarrow) {
+      // Vertical card layout for mobile — label on top, value below, copy button at trailing
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _copyToClipboard(value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: cs.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: cs.onSurface,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(Icons.copy_rounded, size: 18, color: cs.outline),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
+    // Wide layout — horizontal row with label, value, copy button
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
           SizedBox(
-            width: 180,
+            width: 160,
             child: Text(
               label,
               style: TextStyle(
@@ -320,32 +334,27 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage> {
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: TextField(
-              controller: TextEditingController(text: value),
-              readOnly: true,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: cs.surfaceContainerHighest.withAlpha(100),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.copy, size: 18),
-                  onPressed: () => _copyToClipboard(value),
-                  tooltip: '复制',
-                ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withAlpha(100),
+                borderRadius: BorderRadius.circular(12),
               ),
-              style: TextStyle(
-                fontSize: 14,
-                color: cs.onSurface,
-                fontFamily: 'monospace',
+              child: SelectableText(
+                value,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: cs.onSurface,
+                  fontFamily: 'monospace',
+                ),
               ),
             ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.copy_rounded, size: 18),
+            onPressed: () => _copyToClipboard(value),
+            tooltip: '复制',
           ),
         ],
       ),

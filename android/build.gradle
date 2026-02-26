@@ -21,7 +21,7 @@ tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
 
-// Force all subprojects (Flutter plugins) to use compileSdk 36
+// Force all subprojects (Flutter plugins) to use compileSdk 35
 subprojects { subproject ->
     subproject.afterEvaluate {
         if (subproject.hasProperty('android')) {
@@ -29,7 +29,7 @@ subprojects { subproject ->
                 if (namespace == null) {
                     namespace subproject.group ?: subproject.name
                 }
-                compileSdk 36
+                compileSdk 35
             }
         }
     }

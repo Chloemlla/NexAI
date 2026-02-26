@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../main.dart' show isAndroid;
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
+import '../utils/navigation_helper.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/welcome_view.dart';
 
@@ -291,8 +292,8 @@ class _ChatPageState extends State<ChatPage> {
             ),
             TextButton(
               onPressed: () {
-                // Navigate to settings
-                DefaultTabController.of(context)?.animateTo(2);
+                // Navigate to settings page
+                NavigationHelper.goToSettings();
               },
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,

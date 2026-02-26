@@ -7,6 +7,7 @@ import '../main.dart' show isDesktop, isAndroid;
 import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
 import '../utils/update_checker.dart';
+import '../utils/navigation_helper.dart';
 import 'chat_page.dart';
 import 'notes_page.dart';
 import 'note_detail_page.dart';
@@ -29,6 +30,17 @@ class _HomePageState extends State<HomePage> with WindowListener {
     super.initState();
     if (isDesktop) windowManager.addListener(this);
     
+    // Set up navigation callback
+    NavigationHelper.navigateToSettings = () {
+      setState(() {
+        if (isAndroid) {
+          _androidNavIndex = 2; // Settings tab index
+        } else {
+          _currentPage = 'settings';
+        }
+      });
+    };
+    
     // Check for updates on app start
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UpdateChecker.checkUpdateOnStart(context);
@@ -38,6 +50,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
   @override
   void dispose() {
     if (isDesktop) windowManager.removeListener(this);
+    NavigationHelper.navigateToSettings = null; // Clean up callback
     super.dispose();
   }
 

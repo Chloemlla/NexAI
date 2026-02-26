@@ -79,6 +79,99 @@ class ChatProvider extends ChangeNotifier {
       conversation.title = content.length > 30 ? '${content.substring(0, 30)}...' : content;
     }
 
+    await _performApiCall(
+      conversation: conversation,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      model: model,
+      temperature: temperature,
+      maxTokens: maxTokens,
+      systemPrompt: systemPrompt,
+    );
+  }
+
+  /// Resend a message (for failed messages)
+  Future<void> resendMessage({
+    required int messageIndex,
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required double temperature,
+    required int maxTokens,
+    required String systemPrompt,
+  }) async {
+    if (_isLoading) return;
+    final conversation = currentConversation;
+    if (conversation == null || messageIndex < 0 || messageIndex >= conversation.messages.length) {
+      return;
+    }
+
+    final message = conversation.messages[messageIndex];
+    if (message.role != 'user') return;
+
+    // Remove all messages after this one (including the error response)
+    conversation.messages.removeRange(messageIndex + 1, conversation.messages.length);
+    notifyListeners();
+
+    await _performApiCall(
+      conversation: conversation,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      model: model,
+      temperature: temperature,
+      maxTokens: maxTokens,
+      systemPrompt: systemPrompt,
+    );
+  }
+
+  /// Edit and resend a message
+  Future<void> editAndResendMessage({
+    required int messageIndex,
+    required String newContent,
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required double temperature,
+    required int maxTokens,
+    required String systemPrompt,
+  }) async {
+    if (_isLoading) return;
+    final conversation = currentConversation;
+    if (conversation == null || messageIndex < 0 || messageIndex >= conversation.messages.length) {
+      return;
+    }
+
+    final message = conversation.messages[messageIndex];
+    if (message.role != 'user') return;
+
+    // Update the message content
+    message.updateContent(newContent);
+
+    // Remove all messages after this one
+    conversation.messages.removeRange(messageIndex + 1, conversation.messages.length);
+    notifyListeners();
+
+    await _performApiCall(
+      conversation: conversation,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      model: model,
+      temperature: temperature,
+      maxTokens: maxTokens,
+      systemPrompt: systemPrompt,
+    );
+  }
+
+  /// Core API call logic (extracted for reuse)
+  Future<void> _performApiCall({
+    required Conversation conversation,
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required double temperature,
+    required int maxTokens,
+    required String systemPrompt,
+  }) async {
     _isLoading = true;
     notifyListeners();
 

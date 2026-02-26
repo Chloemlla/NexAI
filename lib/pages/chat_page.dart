@@ -167,7 +167,7 @@ class _ChatPageState extends State<ChatPage> {
                           key: ValueKey(
                             'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
                           ),
-                          child: MessageBubble(message: messages[index]),
+                          child: MessageBubble(message: messages[index], messageIndex: index),
                         );
                       },
                     ),
@@ -525,7 +525,7 @@ class _ChatPageState extends State<ChatPage> {
                     }
                     return RepaintBoundary(
                       key: ValueKey('msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index'),
-                      child: MessageBubble(message: messages[index]),
+                      child: MessageBubble(message: messages[index], messageIndex: index),
                     );
                   },
                 ),

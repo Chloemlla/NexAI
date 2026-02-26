@@ -6,13 +6,16 @@ import 'package:provider/provider.dart';
 import '../main.dart' show isAndroid;
 import '../models/message.dart';
 import '../models/note.dart';
+import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
+import '../providers/settings_provider.dart';
 import 'rich_content_view.dart';
 
 class MessageBubble extends StatelessWidget {
   final Message message;
+  final int messageIndex;
 
-  const MessageBubble({super.key, required this.message});
+  const MessageBubble({super.key, required this.message, required this.messageIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +81,7 @@ class MessageBubble extends StatelessWidget {
                   else
                     RepaintBoundary(child: RichContentView(content: message.content)),
                   const SizedBox(height: 6),
-                  _M3Footer(message: message, isUser: isUser),
+                  _M3Footer(message: message, isUser: isUser, messageIndex: messageIndex),
                 ],
               ),
             ),
@@ -152,7 +155,7 @@ class MessageBubble extends StatelessWidget {
                   else
                     RepaintBoundary(child: RichContentView(content: message.content)),
                   const SizedBox(height: 6),
-                  _FluentFooter(message: message, isUser: isUser),
+                  _FluentFooter(message: message, isUser: isUser, messageIndex: messageIndex),
                 ],
               ),
             ),
@@ -177,7 +180,8 @@ class MessageBubble extends StatelessWidget {
 class _M3Footer extends StatelessWidget {
   final Message message;
   final bool isUser;
-  const _M3Footer({required this.message, required this.isUser});
+  final int messageIndex;
+  const _M3Footer({required this.message, required this.isUser, required this.messageIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -189,6 +193,34 @@ class _M3Footer extends StatelessWidget {
           '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
           style: TextStyle(fontSize: 10, color: cs.outline.withAlpha(180)),
         ),
+        if (isUser) ...[
+          const SizedBox(width: 10),
+          // Edit button
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _showEditDialog(context),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.edit_outlined, size: 14, color: cs.outline.withAlpha(180)),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          // Resend button (show if next message is error or this is last user message)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => _resendMessage(context),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(Icons.refresh_rounded, size: 14, color: cs.outline.withAlpha(180)),
+              ),
+            ),
+          ),
+        ],
         if (!isUser) ...[
           const SizedBox(width: 10),
           Material(
@@ -232,6 +264,74 @@ class _M3Footer extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  void _showEditDialog(BuildContext context) {
+    final controller = TextEditingController(text: message.content);
+    final cs = Theme.of(context).colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: Icon(Icons.edit_rounded, color: cs.primary),
+        title: const Text('编辑消息'),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: '编辑您的消息...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newContent = controller.text.trim();
+              if (newContent.isEmpty) return;
+              Navigator.of(ctx).pop();
+              _editAndResend(context, newContent);
+            },
+            child: const Text('发送'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resendMessage(BuildContext context) async {
+    final chatProvider = context.read<ChatProvider>();
+    final settings = context.read<SettingsProvider>();
+
+    await chatProvider.resendMessage(
+      messageIndex: messageIndex,
+      baseUrl: settings.baseUrl,
+      apiKey: settings.apiKey,
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      systemPrompt: settings.systemPrompt,
+    );
+  }
+
+  void _editAndResend(BuildContext context, String newContent) async {
+    final chatProvider = context.read<ChatProvider>();
+    final settings = context.read<SettingsProvider>();
+
+    await chatProvider.editAndResendMessage(
+      messageIndex: messageIndex,
+      newContent: newContent,
+      baseUrl: settings.baseUrl,
+      apiKey: settings.apiKey,
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      systemPrompt: settings.systemPrompt,
     );
   }
 
@@ -361,7 +461,8 @@ class _M3Footer extends StatelessWidget {
 class _FluentFooter extends StatelessWidget {
   final Message message;
   final bool isUser;
-  const _FluentFooter({required this.message, required this.isUser});
+  final int messageIndex;
+  const _FluentFooter({required this.message, required this.isUser, required this.messageIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -373,6 +474,18 @@ class _FluentFooter extends StatelessWidget {
           '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
           style: TextStyle(fontSize: 10, color: theme.inactiveColor),
         ),
+        if (isUser) ...[
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _showEditDialog(context),
+            child: Icon(fluent.FluentIcons.edit, size: 12, color: theme.inactiveColor),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _resendMessage(context),
+            child: Icon(fluent.FluentIcons.refresh, size: 12, color: theme.inactiveColor),
+          ),
+        ],
         if (!isUser) ...[
           const SizedBox(width: 8),
           GestureDetector(
@@ -390,6 +503,69 @@ class _FluentFooter extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  void _showEditDialog(BuildContext context) {
+    final controller = fluent.TextEditingController(text: message.content);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => fluent.ContentDialog(
+        title: const Text('Edit Message'),
+        content: fluent.TextBox(
+          controller: controller,
+          maxLines: 5,
+          autofocus: true,
+          placeholder: 'Edit your message...',
+        ),
+        actions: [
+          fluent.Button(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          fluent.FilledButton(
+            onPressed: () {
+              final newContent = controller.text.trim();
+              if (newContent.isEmpty) return;
+              Navigator.of(ctx).pop();
+              _editAndResend(context, newContent);
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resendMessage(BuildContext context) async {
+    final chatProvider = context.read<ChatProvider>();
+    final settings = context.read<SettingsProvider>();
+
+    await chatProvider.resendMessage(
+      messageIndex: messageIndex,
+      baseUrl: settings.baseUrl,
+      apiKey: settings.apiKey,
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      systemPrompt: settings.systemPrompt,
+    );
+  }
+
+  void _editAndResend(BuildContext context, String newContent) async {
+    final chatProvider = context.read<ChatProvider>();
+    final settings = context.read<SettingsProvider>();
+
+    await chatProvider.editAndResendMessage(
+      messageIndex: messageIndex,
+      newContent: newContent,
+      baseUrl: settings.baseUrl,
+      apiKey: settings.apiKey,
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      systemPrompt: settings.systemPrompt,
     );
   }
 }

@@ -9,26 +9,69 @@ class ToolsPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildToolCard(
-            context,
-            icon: Icons.video_file_rounded,
-            title: '视频压缩',
-            description: '减小视频体积，便于分享',
-            gradient: LinearGradient(
-              colors: [cs.primaryContainer, cs.secondaryContainer],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '工具箱',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: cs.onSurface,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '实用工具集合，提升效率',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: cs.onSurfaceVariant,
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const VideoCompressorPage(),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 200,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 1.0,
+              ),
+              delegate: SliverChildListDelegate([
+                _buildToolCard(
+                  context,
+                  icon: Icons.video_file_rounded,
+                  title: '视频压缩',
+                  description: '减小视频体积',
+                  gradient: LinearGradient(
+                    colors: [
+                      cs.primaryContainer,
+                      cs.secondaryContainer,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const VideoCompressorPage(),
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
+              ]),
+            ),
           ),
         ],
       ),
@@ -47,67 +90,63 @@ class ToolsPage extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: cs.outlineVariant.withAlpha(60),
+          width: 1,
+        ),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
           padding: const EdgeInsets.all(20),
-          child: Row(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 56,
-                height: 56,
+                width: 64,
+                height: 64,
                 decoration: BoxDecoration(
                   gradient: gradient,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: cs.primary.withAlpha(40),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
+                      color: cs.primary.withAlpha(30),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 child: Icon(
                   icon,
-                  size: 28,
+                  size: 32,
                   color: cs.onPrimaryContainer,
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                  letterSpacing: -0.2,
                 ),
+                textAlign: TextAlign.center,
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: cs.outline,
-                size: 24,
+              const SizedBox(height: 6),
+              Text(
+                description,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                  height: 1.3,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

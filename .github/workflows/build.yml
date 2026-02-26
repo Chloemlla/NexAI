@@ -81,28 +81,36 @@ jobs:
       - name: Build Android APK
         run: flutter build apk --release --split-per-abi --dart-define-from-file=nexai_release.json
 
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release --dart-define-from-file=nexai_release.json
+
       - name: Rename APK outputs for release
         run: |
           VERSION="${{ env.version }}"
+          echo "Version: $VERSION"
+          echo "=== Original APK files ==="
+          ls -lh build/app/outputs/flutter-apk/
+          
           for file in build/app/outputs/flutter-apk/app-*-release.apk; do
             if [ -f "$file" ]; then
               abi=$(echo "$file" | sed -E 's|.*app-(.*)-release\.apk|\1|')
+              echo "Processing: $file -> NexAI_android_${VERSION}_${abi}.apk"
               cp "$file" "build/app/outputs/flutter-apk/NexAI_android_${VERSION}_${abi}.apk"
             fi
           done
+          
+          echo "=== Renamed APK files ==="
+          ls -lh build/app/outputs/flutter-apk/NexAI_android_*.apk
           
       - name: Rename AAB output
         run: |
           VERSION="${{ env.version }}"
           AAB_FILE="build/app/outputs/bundle/release/app-release.aab"
           if [ -f "$AAB_FILE" ]; then
+            echo "Renaming AAB: $AAB_FILE -> NexAI_android_${VERSION}.aab"
             cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI_android_${VERSION}.aab"
           fi
           
-      - name: List generated files
-        run: |
-          echo "=== APK files ==="
-          ls -lh build/app/outputs/flutter-apk/
           echo "=== AAB files ==="
           ls -lh build/app/outputs/bundle/release/
 

@@ -94,7 +94,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-APK
-          path: build/app/outputs/flutter-apk/NexAI_android_*.apk
+          path: build/app/outputs/flutter-apk/*.apk
           retention-days: 30
 
       - uses: actions/upload-artifact@v4
@@ -124,7 +124,7 @@ jobs:
           prerelease: false
           name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           files: |
-            build/app/outputs/flutter-apk/NexAI_android_*.apk
+            build/app/outputs/flutter-apk/*.apk
 
   build-web:
     # if: false  # Disabled - Web build not needed

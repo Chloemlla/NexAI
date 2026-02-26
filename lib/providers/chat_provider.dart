@@ -219,23 +219,31 @@ class ChatProvider extends ChangeNotifier {
         notifyListeners();
 
         final buffer = StringBuffer();
+        String lineBuf = '';
 
-        await for (final line in response.data!.stream.transform(const Utf8Decoder()).transform(const LineSplitter())) {
-          final trimmed = line.trim();
-          if (trimmed.isEmpty || !trimmed.startsWith('data: ')) continue;
-          final data = trimmed.substring(6);
-          if (data == '[DONE]') break;
+        await for (final chunk in response.data!.stream.transform(utf8.decoder)) {
+          lineBuf += chunk;
+          final lines = lineBuf.split('\n');
+          // Keep the last potentially incomplete line in the buffer
+          lineBuf = lines.removeLast();
 
-          try {
-            final json = jsonDecode(data) as Map<String, dynamic>;
-            final delta = json['choices']?[0]?['delta'];
-            if (delta != null && delta['content'] != null) {
-              buffer.write(delta['content'] as String);
-              assistantMessage.updateContent(buffer.toString());
-              notifyListeners();
+          for (final line in lines) {
+            final trimmed = line.trim();
+            if (trimmed.isEmpty || !trimmed.startsWith('data: ')) continue;
+            final data = trimmed.substring(6);
+            if (data == '[DONE]') break;
+
+            try {
+              final json = jsonDecode(data) as Map<String, dynamic>;
+              final delta = json['choices']?[0]?['delta'];
+              if (delta != null && delta['content'] != null) {
+                buffer.write(delta['content'] as String);
+                assistantMessage.updateContent(buffer.toString());
+                notifyListeners();
+              }
+            } catch (_) {
+              // Skip malformed SSE chunks
             }
-          } catch (_) {
-            // Skip malformed SSE chunks
           }
         }
 

@@ -13,6 +13,7 @@ import 'notes_page.dart';
 import 'note_detail_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
+import 'tools_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -26,20 +27,24 @@ class _HomePageState extends State<HomePage> with WindowListener {
   String _currentPage = 'chat';
 
   @override
-  void initState() {
-    super.initState();
-    if (isDesktop) windowManager.addListener(this);
-    
-    // Set up navigation callback
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Ensure navigation callback is set up
     NavigationHelper.navigateToSettings = () {
       setState(() {
         if (isAndroid) {
-          _androidNavIndex = 2; // Settings tab index
+          _androidNavIndex = 3; // Settings tab index (after Tools)
         } else {
           _currentPage = 'settings';
         }
       });
     };
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (isDesktop) windowManager.addListener(this);
     
     // Check for updates on app start
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,10 +73,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
     final pages = <Widget>[
       const ChatPage(),
       const NotesPage(),
+      const ToolsPage(),
       const SettingsPage(),
     ];
 
-    final pageTitles = ['NexAI', 'Notes', 'Settings'];
+    final pageTitles = ['NexAI', 'Notes', 'Tools', 'Settings'];
 
     return Scaffold(
       appBar: AppBar(
@@ -105,7 +111,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         ? Icons.smart_toy_rounded
                         : _androidNavIndex == 1
                             ? Icons.note_alt_rounded
-                            : Icons.settings_rounded,
+                            : _androidNavIndex == 2
+                                ? Icons.build_rounded
+                                : Icons.settings_rounded,
                     size: 18,
                     color: cs.onPrimary,
                   ),
@@ -227,6 +235,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
             icon: Icon(Icons.note_alt_outlined),
             selectedIcon: Icon(Icons.note_alt_rounded),
             label: 'Notes',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.build_outlined),
+            selectedIcon: Icon(Icons.build_rounded),
+            label: 'Tools',
           ),
           NavigationDestination(
             icon: Icon(Icons.tune_outlined),

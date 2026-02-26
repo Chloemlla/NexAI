@@ -1,8 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
-import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -193,81 +192,35 @@ class _MarkdownWidget extends StatelessWidget {
       color: Colors.transparent,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: MarkdownBody(
-          data: data,
-          selectable: true,
-          shrinkWrap: true,
-          // Disable image loading for better performance
-          imageBuilder: (uri, title, alt) {
-            return RepaintBoundary(
-              child: Image.network(
-                uri.toString(),
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: cs.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.broken_image_rounded, color: cs.error, size: 16),
-                        const SizedBox(width: 8),
-                        Text(alt ?? '图片加载失败', style: TextStyle(color: cs.error, fontSize: 12)),
-                      ],
-                    ),
-                  );
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-          extensionSet: md.ExtensionSet.gitHubFlavored,
-          onTapLink: (text, href, title) {
+        child: GptMarkdown(
+          data,
+          style: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
+          onTapLink: (href) {
             if (href != null && href.isNotEmpty) {
               final uri = Uri.tryParse(href);
               if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
             }
           },
-          styleSheet: MarkdownStyleSheet(
-            p: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
-            a: TextStyle(fontSize: 14, color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary),
-            code: TextStyle(
-              fontSize: 13, fontFamily: 'Consolas',
-              backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-              color: cs.primary,
-            ),
-            codeblockDecoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
-            ),
-            codeblockPadding: const EdgeInsets.all(12),
-            blockquoteDecoration: BoxDecoration(
-              border: Border(left: BorderSide(color: cs.primary, width: 3)),
-              color: cs.primary.withAlpha((0.05 * 255).round()),
-            ),
-            blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-            h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cs.onSurface),
-            h2: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: cs.onSurface),
-            h3: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface),
-            listBullet: TextStyle(fontSize: 14, color: cs.onSurface),
-            tableHead: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
-            tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+          codeStyle: TextStyle(
+            fontSize: 13,
+            fontFamily: 'Consolas',
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+            color: cs.primary,
           ),
+          codeBackgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
+          codeBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
+          codeBorderRadius: 12,
+          codePadding: const EdgeInsets.all(12),
+          blockQuoteBorderColor: cs.primary,
+          blockQuoteBackgroundColor: cs.primary.withAlpha((0.05 * 255).round()),
+          blockQuotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          h1Style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: cs.onSurface),
+          h2Style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: cs.onSurface),
+          h3Style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface),
+          listBulletStyle: TextStyle(fontSize: 14, color: cs.onSurface),
+          tableHeaderStyle: TextStyle(fontWeight: FontWeight.w600, color: cs.onSurface),
+          tableBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
+          linkStyle: TextStyle(fontSize: 14, color: cs.primary, decoration: TextDecoration.underline, decorationColor: cs.primary),
         ),
       ),
     );
@@ -281,43 +234,40 @@ class _MarkdownWidget extends StatelessWidget {
       color: Colors.transparent,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
-        child: MarkdownBody(
-          data: data,
-          selectable: true,
-          shrinkWrap: true,
-          extensionSet: md.ExtensionSet.gitHubFlavored,
-          onTapLink: (text, href, title) {
+        child: GptMarkdown(
+          data,
+          style: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
+          onTapLink: (href) {
             if (href != null && href.isNotEmpty) {
               final uri = Uri.tryParse(href);
               if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
             }
           },
-          styleSheet: MarkdownStyleSheet(
-            p: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
-            a: TextStyle(fontSize: 14, color: theme.accentColor, decoration: TextDecoration.underline, decorationColor: theme.accentColor),
-            code: TextStyle(
-              fontSize: 13, fontFamily: 'Consolas',
-              backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-              color: theme.accentColor,
-            ),
-            codeblockDecoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
-            ),
-            codeblockPadding: const EdgeInsets.all(12),
-            blockquoteDecoration: BoxDecoration(
-              border: Border(left: BorderSide(color: theme.accentColor, width: 3)),
-              color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.05),
-            ),
-            blockquotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-            h1: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.typography.body?.color),
-            h2: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-            h3: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-            listBullet: TextStyle(fontSize: 14, color: theme.typography.body?.color),
-            tableHead: TextStyle(fontWeight: FontWeight.w600, color: theme.typography.body?.color),
-            tableBorder: TableBorder.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+          codeStyle: TextStyle(
+            fontSize: 13,
+            fontFamily: 'Consolas',
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+            color: theme.accentColor,
           ),
+          codeBackgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
+          codeBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
+          codeBorderRadius: 8,
+          codePadding: const EdgeInsets.all(12),
+          blockQuoteBorderColor: theme.accentColor,
+          blockQuoteBackgroundColor: Color.fromRGBO(
+            theme.accentColor.value >> 16 & 0xFF,
+            theme.accentColor.value >> 8 & 0xFF,
+            theme.accentColor.value & 0xFF,
+            0.05,
+          ),
+          blockQuotePadding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+          h1Style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: theme.typography.body?.color),
+          h2Style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
+          h3Style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.typography.body?.color),
+          listBulletStyle: TextStyle(fontSize: 14, color: theme.typography.body?.color),
+          tableHeaderStyle: TextStyle(fontWeight: FontWeight.w600, color: theme.typography.body?.color),
+          tableBorderColor: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
+          linkStyle: TextStyle(fontSize: 14, color: theme.accentColor, decoration: TextDecoration.underline, decorationColor: theme.accentColor),
         ),
       ),
     );

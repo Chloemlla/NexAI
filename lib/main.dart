@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:media_kit/media_kit.dart';
 
 import 'providers/chat_provider.dart';
 import 'providers/notes_provider.dart';
@@ -18,6 +19,9 @@ bool get isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize media_kit for video playback
+  MediaKit.ensureInitialized();
 
   if (isAndroid) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

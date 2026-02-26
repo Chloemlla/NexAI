@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:v_video_compressor/v_video_compressor.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
 class VideoCompressorPage extends StatefulWidget {
   const VideoCompressorPage({super.key});
@@ -54,6 +56,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   
   bool _autoCorrectOrientation = true;
 
+  // Video player
+  Player? _player;
+  VideoController? _videoController;
+  bool _isPlaying = false;
+
   @override
   void dispose() {
     _compressor.cleanup();
@@ -63,7 +70,22 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _audioBitrateController.dispose();
     _trimStartController.dispose();
     _trimEndController.dispose();
+    _player?.dispose();
     super.dispose();
+  }
+
+  void _initializePlayer(String videoPath) {
+    _player?.dispose();
+    _player = Player();
+    _videoController = VideoController(_player!);
+    _player!.open(Media(videoPath));
+    setState(() => _isPlaying = false);
+  }
+
+  void _togglePlayPause() {
+    if (_player == null) return;
+    _player!.playOrPause();
+    setState(() => _isPlaying = !_isPlaying);
   }
 
   Future<void> _pickVideo() async {
@@ -139,6 +161,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       if (result != null) {
         setState(() => _compressionResult = result);
+        _initializePlayer(result.path);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ 压缩完成！'),
@@ -354,6 +377,12 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                 _buildInfoRow('节省空间', _compressionResult!.spaceSavedFormatted),
               ],
             ),
+
+            // Video player
+            if (_videoController != null) ...[
+              const SizedBox(height: 16),
+              _buildVideoPlayer(cs),
+            ],
 
             // 保存按钮
             const SizedBox(height: 16),
@@ -995,5 +1024,138 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         ),
       ],
     );
+  }
+
+  Widget _buildVideoPlayer(ColorScheme cs) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.play_circle_outline_rounded,
+                    color: cs.onSecondaryContainer,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '视频预览',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Video(
+                  controller: _videoController!,
+                  controls: NoVideoControls,
+                ),
+                Positioned.fill(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _togglePlayPause,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withAlpha(100),
+                              Colors.transparent,
+                              Colors.black.withAlpha(100),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withAlpha(150),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton.filledTonal(
+                  onPressed: () {
+                    _player?.seek(Duration.zero);
+                  },
+                  icon: const Icon(Icons.replay_rounded),
+                  tooltip: '重新播放',
+                ),
+                IconButton.filled(
+                  onPressed: _togglePlayPause,
+                  icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                  tooltip: _isPlaying ? '暂停' : '播放',
+                ),
+                StreamBuilder<Duration>(
+                  stream: _player?.stream.position,
+                  builder: (context, snapshot) {
+                    final position = snapshot.data ?? Duration.zero;
+                    final duration = _player?.state.duration ?? Duration.zero;
+                    return Text(
+                      '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
 }

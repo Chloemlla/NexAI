@@ -9,6 +9,7 @@ import 'providers/chat_provider.dart';
 import 'providers/notes_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/image_generation_provider.dart';
+import 'providers/password_provider.dart';
 import 'app.dart';
 
 bool get isDesktop => !kIsWeb &&
@@ -56,6 +57,9 @@ void main() async {
   final notesProvider = NotesProvider();
   await notesProvider.loadNotes();
 
+  final passwordProvider = PasswordProvider();
+  await passwordProvider.loadPasswords();
+
   runApp(
     MultiProvider(
       providers: [
@@ -63,6 +67,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider.value(value: notesProvider),
         ChangeNotifierProvider(create: (_) => ImageGenerationProvider()),
+        ChangeNotifierProvider.value(value: passwordProvider),
       ],
       child: const NexAIApp(),
     ),

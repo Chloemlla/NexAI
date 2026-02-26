@@ -1,6 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
+import '../providers/password_provider.dart';
+import '../models/saved_password.dart';
 
 enum PasswordType {
   random,
@@ -16,9 +21,14 @@ class PasswordGeneratorPage extends StatefulWidget {
   State<PasswordGeneratorPage> createState() => _PasswordGeneratorPageState();
 }
 
-class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> {
+class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with SingleTickerProviderStateMixin {
   PasswordType _selectedType = PasswordType.random;
   String _generatedPassword = '';
+  late TabController _tabController;
+  
+  // Batch generation
+  int _batchCount = 10;
+  List<String> _batchPasswords = [];
   
   // Random password settings
   int _length = 16;
@@ -50,7 +60,14 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _generatePassword();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _generatePassword() {

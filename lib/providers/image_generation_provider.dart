@@ -40,6 +40,7 @@ class ImageGenerationProvider extends ChangeNotifier {
 
   /// Chat-based image generation (v1/chat/completions)
   /// Supports text-to-image and image-to-image
+  /// For Doubao models, supports special parameters: type, n, watermark, size
   Future<void> generateImageViaChat({
     required String baseUrl,
     required String apiKey,
@@ -47,6 +48,9 @@ class ImageGenerationProvider extends ChangeNotifier {
     required String prompt,
     String? imageUrl,
     String? imageBase64,
+    int imageCount = 1,
+    String? imageType,
+    bool watermark = false,
   }) async {
     _isLoading = true;
     _error = null;
@@ -54,6 +58,23 @@ class ImageGenerationProvider extends ChangeNotifier {
 
     try {
       final messages = <Map<String, dynamic>>[];
+      
+      // Build prompt with Doubao parameters if it's a Doubao model
+      String finalPrompt = prompt;
+      if (model.contains('doubao') || model.contains('seedream')) {
+        final params = <String>[];
+        if (imageType != null && imageType.isNotEmpty) {
+          params.add('-type=$imageType');
+        }
+        if (imageCount > 1) {
+          params.add('-n=$imageCount');
+        }
+        params.add('-watermark=$watermark');
+        
+        if (params.isNotEmpty) {
+          finalPrompt = '$prompt ${params.join(' ')}';
+        }
+      }
       
       if (imageUrl != null || imageBase64 != null) {
         // Image-to-image
@@ -66,14 +87,14 @@ class ImageGenerationProvider extends ChangeNotifier {
                 'url': imageUrl ?? 'data:image/jpeg;base64,$imageBase64',
               },
             },
-            {'type': 'text', 'text': prompt},
+            {'type': 'text', 'text': finalPrompt},
           ],
         });
       } else {
         // Text-to-image
         messages.add({
           'role': 'user',
-          'content': prompt,
+          'content': finalPrompt,
         });
       }
 
@@ -82,6 +103,7 @@ class ImageGenerationProvider extends ChangeNotifier {
         data: {
           'model': model,
           'messages': messages,
+          'stream': false,
         },
         options: Options(
           headers: {'Authorization': 'Bearer $apiKey'},
@@ -93,22 +115,29 @@ class ImageGenerationProvider extends ChangeNotifier {
         final content = data['choices']?[0]?['message']?['content'];
         
         if (content != null) {
-          // Extract image URL from response
-          String? extractedUrl;
+          // Extract image URLs from response (support multiple images)
+          final urls = <String>[];
           if (content is String) {
-            // Try to find URL in markdown format or plain text
-            final urlPattern = RegExp(r'https?://[^\s\)]+');
-            final match = urlPattern.firstMatch(content);
-            extractedUrl = match?.group(0);
+            // Try to find all URLs in markdown format or plain text
+            final urlPattern = RegExp(r'https?://[^\s\)\]]+');
+            final matches = urlPattern.allMatches(content);
+            for (final match in matches) {
+              final url = match.group(0);
+              if (url != null && (url.contains('.jpg') || url.contains('.png') || url.contains('.jpeg') || url.contains('image'))) {
+                urls.add(url);
+              }
+            }
           }
 
-          if (extractedUrl != null) {
-            _images.insert(0, GeneratedImage(
-              url: extractedUrl,
-              prompt: prompt,
-              timestamp: DateTime.now(),
-              mode: ImageGenerationMode.chat,
-            ));
+          if (urls.isNotEmpty) {
+            for (final url in urls) {
+              _images.insert(0, GeneratedImage(
+                url: url,
+                prompt: prompt,
+                timestamp: DateTime.now(),
+                mode: ImageGenerationMode.chat,
+              ));
+            }
             _error = null;
           } else {
             _error = 'No image URL found in response';
@@ -137,6 +166,7 @@ class ImageGenerationProvider extends ChangeNotifier {
   }
 
   /// Professional image generation (v1/images/generations)
+  /// For Doubao models, supports special parameters: type, n, watermark
   Future<void> generateImage({
     required String baseUrl,
     required String apiKey,
@@ -144,20 +174,36 @@ class ImageGenerationProvider extends ChangeNotifier {
     required String prompt,
     String size = '1024x1024',
     String responseFormat = 'url',
+    int imageCount = 1,
+    String? imageType,
+    bool watermark = false,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      final requestData = <String, dynamic>{
+        'model': model,
+        'prompt': prompt,
+        'size': size,
+        'response_format': responseFormat,
+      };
+
+      // Add Doubao-specific parameters
+      if (model.contains('doubao') || model.contains('seedream')) {
+        if (imageCount > 1) {
+          requestData['n'] = imageCount;
+        }
+        if (imageType != null && imageType.isNotEmpty) {
+          requestData['type'] = imageType;
+        }
+        requestData['watermark'] = watermark;
+      }
+
       final response = await _dio.post(
         '$baseUrl/images/generations',
-        data: {
-          'model': model,
-          'prompt': prompt,
-          'size': size,
-          'response_format': responseFormat,
-        },
+        data: requestData,
         options: Options(
           headers: {'Authorization': 'Bearer $apiKey'},
         ),
@@ -165,16 +211,18 @@ class ImageGenerationProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = response.data;
-        final imageData = data['data']?[0];
+        final imageDataList = data['data'] as List?;
         
-        if (imageData != null) {
-          _images.insert(0, GeneratedImage(
-            url: imageData['url'] ?? '',
-            b64Json: imageData['b64_json'],
-            prompt: prompt,
-            timestamp: DateTime.now(),
-            mode: ImageGenerationMode.generation,
-          ));
+        if (imageDataList != null && imageDataList.isNotEmpty) {
+          for (final imageData in imageDataList) {
+            _images.insert(0, GeneratedImage(
+              url: imageData['url'] ?? '',
+              b64Json: imageData['b64_json'],
+              prompt: prompt,
+              timestamp: DateTime.now(),
+              mode: ImageGenerationMode.generation,
+            ));
+          }
           _error = null;
         }
       } else {

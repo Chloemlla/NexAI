@@ -26,7 +26,7 @@ class _ChatPageState extends State<ChatPage> {
   // Image generation controllers
   final _imagePromptController = TextEditingController();
   final _imageUrlController = TextEditingController();
-  final _imageModelController = TextEditingController(text: 'flux.1-kontext-dev');
+  final _imageModelController = TextEditingController(text: 'doubao-seedream-4-0-250828');
 
   @override
   void initState() {
@@ -149,10 +149,16 @@ class _ChatPageState extends State<ChatPage> {
     final settings = context.watch<SettingsProvider>();
 
     ImageGenerationMode mode = ImageGenerationMode.chat;
-    String size = '1024x1024';
+    String size = '1k';
+    int imageCount = 1;
+    String imageType = 'normal';
+    bool watermark = false;
 
     return StatefulBuilder(
       builder: (context, setModalState) {
+        final model = _imageModelController.text.trim();
+        final isDoubao = model.contains('doubao') || model.contains('seedream');
+
         return Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -225,10 +231,13 @@ class _ChatPageState extends State<ChatPage> {
                         controller: _imageModelController,
                         decoration: InputDecoration(
                           labelText: '模型',
-                          hintText: 'flux.1-kontext-dev',
+                          hintText: 'doubao-seedream-4-0-250828',
                           prefixIcon: const Icon(Icons.memory, size: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          helperText: '豆包模型: doubao-seedream-4-0-250828 或 doubao-seedream-3-0-t2i-250415',
+                          helperMaxLines: 2,
                         ),
+                        onChanged: (_) => setModalState(() {}),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -255,13 +264,79 @@ class _ChatPageState extends State<ChatPage> {
                           labelText: '尺寸',
                           prefixIcon: const Icon(Icons.aspect_ratio, size: 20),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          helperText: isDoubao ? '支持: 1k/2k/4k, 1024x1024, 16:9等' : null,
                         ),
-                        items: ['1024x1024', '1024x1792', '1792x1024', '512x512']
+                        items: (isDoubao
+                                ? ['1k', '2k', '4k', '1024x1024', '1280x720', '2560x1440', '16:9', '4:3', '3:2']
+                                : ['1024x1024', '1024x1792', '1792x1024', '512x512'])
                             .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                             .toList(),
                         onChanged: (value) => setModalState(() => size = value!),
                       ),
                       const SizedBox(height: 16),
+                    ],
+
+                    // Doubao-specific parameters
+                    if (isDoubao) ...[
+                      // Image count
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '生成数量: $imageCount',
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          Text(
+                            imageType == 'normal' ? '(最多4张)' : '(最多10张)',
+                            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        value: imageCount.toDouble(),
+                        min: 1,
+                        max: (imageType == 'normal' ? 4 : 10).toDouble(),
+                        divisions: (imageType == 'normal' ? 3 : 9),
+                        label: imageCount.toString(),
+                        onChanged: (value) => setModalState(() => imageCount = value.toInt()),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Image type
+                      DropdownButtonFormField<String>(
+                        value: imageType,
+                        decoration: InputDecoration(
+                          labelText: '生成类型',
+                          prefixIcon: const Icon(Icons.category, size: 20),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          helperText: 'normal: 单次最多4张, group: 单次最多10张',
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'normal', child: Text('Normal (标准)')),
+                          DropdownMenuItem(value: 'group', child: Text('Group (批量)')),
+                        ],
+                        onChanged: (value) {
+                          setModalState(() {
+                            imageType = value!;
+                            // Adjust imageCount if it exceeds the new limit
+                            if (imageType == 'normal' && imageCount > 4) {
+                              imageCount = 4;
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Watermark
+                      SwitchListTile(
+                        title: const Text('添加水印'),
+                        subtitle: const Text('在图片右下角显示 AI 生成标识'),
+                        value: watermark,
+                        onChanged: (value) => setModalState(() => watermark = value),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(height: 8),
                     ],
 
                     // Prompt input
@@ -270,11 +345,14 @@ class _ChatPageState extends State<ChatPage> {
                       maxLines: 4,
                       decoration: InputDecoration(
                         labelText: '提示词',
-                        hintText: mode == ImageGenerationMode.chat
-                            ? '帮我画一只宇航猫在月球漫步[1024:1024]'
-                            : 'a cat on the moon',
+                        hintText: isDoubao
+                            ? '画一只猫在树上玩耍'
+                            : (mode == ImageGenerationMode.chat
+                                ? '帮我画一只宇航猫在月球漫步[1024:1024]'
+                                : 'a cat on the moon'),
                         prefixIcon: const Icon(Icons.edit_note, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        helperText: isDoubao ? '豆包模型主要根据提示词生成，相关性较强' : null,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -304,6 +382,9 @@ class _ChatPageState extends State<ChatPage> {
                                     model: model.isEmpty ? settings.selectedModel : model,
                                     prompt: prompt,
                                     imageUrl: imageUrl.isEmpty ? null : imageUrl,
+                                    imageCount: isDoubao ? imageCount : 1,
+                                    imageType: isDoubao ? imageType : null,
+                                    watermark: isDoubao ? watermark : false,
                                   );
                                   break;
                                 case ImageGenerationMode.generation:
@@ -313,6 +394,9 @@ class _ChatPageState extends State<ChatPage> {
                                     model: model,
                                     prompt: prompt,
                                     size: size,
+                                    imageCount: isDoubao ? imageCount : 1,
+                                    imageType: isDoubao ? imageType : null,
+                                    watermark: isDoubao ? watermark : false,
                                   );
                                   break;
                                 case ImageGenerationMode.edit:

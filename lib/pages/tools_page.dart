@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'video_compressor_page.dart';
 import 'date_time_converter_page.dart';
 import 'base64_converter_page.dart';
+import 'password_generator_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -110,6 +111,27 @@ class ToolsPage extends StatelessWidget {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const Base64ConverterPage(),
+                      ),
+                    );
+                  },
+                ),
+                _buildToolCard(
+                  context,
+                  icon: Icons.password_rounded,
+                  title: '密码生成器',
+                  description: '安全随机密码',
+                  gradient: LinearGradient(
+                    colors: [
+                      cs.primaryContainer,
+                      cs.tertiaryContainer,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PasswordGeneratorPage(),
                       ),
                     );
                   },

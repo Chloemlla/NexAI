@@ -53,7 +53,6 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   int _rotation = 0;
   
   bool _autoCorrectOrientation = true;
-  VDimensionHandling _dimensionHandling = VDimensionHandling.autoAlign;
 
   @override
   void dispose() {
@@ -95,7 +94,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         if (info != null) {
           _widthController.text = info.width.toString();
           _heightController.text = info.height.toString();
-          _trimEndController.text = info.duration.toString();
+          // Duration is no longer available in VVideoInfo
         }
       });
     } catch (e) {
@@ -172,7 +171,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       final fileName = 'compressed_${DateTime.now().millisecondsSinceEpoch}.mp4';
       final savePath = '${directory.path}/$fileName';
 
-      await File(_compressionResult!.outputPath).copy(savePath);
+      // outputPath is no longer available, use path instead
+      await File(_compressionResult!.path).copy(savePath);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -265,7 +265,6 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       // Orientation & Dimension
       autoCorrectOrientation: _autoCorrectOrientation,
-      dimensionHandling: _dimensionHandling,
     );
   }
 
@@ -306,7 +305,6 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                 _buildInfoRow('时长', _videoInfo!.durationFormatted),
                 _buildInfoRow('分辨率', '${_videoInfo!.width}x${_videoInfo!.height}'),
                 _buildInfoRow('文件大小', _videoInfo!.fileSizeFormatted),
-                _buildInfoRow('比特率', '${(_videoInfo!.bitrate / 1000000).toStringAsFixed(2)} Mbps'),
               ],
             ),
 
@@ -354,10 +352,6 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                 _buildInfoRow('原大小', _compressionResult!.originalSizeFormatted),
                 _buildInfoRow('压缩后', _compressionResult!.compressedSizeFormatted),
                 _buildInfoRow('节省空间', _compressionResult!.spaceSavedFormatted),
-                _buildInfoRow(
-                  '压缩率',
-                  '${((_compressionResult!.originalSize - _compressionResult!.compressedSize) / _compressionResult!.originalSize * 100).toStringAsFixed(1)}%',
-                ),
               ],
             ),
 
@@ -926,29 +920,6 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               subtitle: const Text('修复竖屏视频显示为横屏的问题'),
               value: _autoCorrectOrientation,
               onChanged: (v) => setState(() => _autoCorrectOrientation = v),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<VDimensionHandling>(
-              value: _dimensionHandling,
-              decoration: const InputDecoration(
-                labelText: '尺寸处理方式',
-                helperText: '防止边缘出现彩色条纹',
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: VDimensionHandling.autoAlign,
-                  child: Text('自动对齐 (推荐)'),
-                ),
-                DropdownMenuItem(
-                  value: VDimensionHandling.letterbox,
-                  child: Text('添加黑边'),
-                ),
-                DropdownMenuItem(
-                  value: VDimensionHandling.exact,
-                  child: Text('精确尺寸'),
-                ),
-              ],
-              onChanged: (v) => setState(() => _dimensionHandling = v!),
             ),
           ],
         ),

@@ -136,10 +136,10 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     await _save();
   }
-}
 
   Future<void> setNotesAutoSave(bool value) async {
     _notesAutoSave = value;
     notifyListeners();
     await _save();
   }
+}

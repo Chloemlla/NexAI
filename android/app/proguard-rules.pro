@@ -18,6 +18,10 @@
 # Keep shared_preferences plugin
 -keep class io.flutter.plugins.sharedpreferences.** { *; }
 
+# Keep ffmpeg_kit_flutter_new native classes
+-keep class com.antonkarpenko.ffmpegkit.** { *; }
+-keep class com.arthenica.ffmpegkit.** { *; }
+
 # Keep url_launcher plugin
 -keep class io.flutter.plugins.urllauncher.** { *; }
 

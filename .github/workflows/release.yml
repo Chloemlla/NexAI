@@ -83,28 +83,39 @@ jobs:
         run: pwsh scripts/build.ps1 -Arg android
 
       - name: Build Android APK
-        run: flutter build apk --release --target-platform android-arm64 --verbose --dart-define-from-file=nexai_release.json
+        run: flutter build apk --release --split-per-abi --dart-define-from-file=nexai_release.json
 
       - name: Build Android App Bundle
         run: flutter build appbundle --release --dart-define-from-file=nexai_release.json
 
-      - name: Rename outputs for release
+      - name: Rename APK outputs for release
         run: |
-          APK_FILE=$(find build/app/outputs/flutter-apk -name '*.apk' -type f | head -1)
-          AAB_FILE=$(find build/app/outputs/bundle/release -name '*.aab' -type f | head -1)
-          cp "$APK_FILE" "build/app/outputs/flutter-apk/NexAI-${VERSION_NAME}-${SHORT_HASH}+${VERSION_CODE}.apk"
-          cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI-${VERSION_NAME}-${SHORT_HASH}+${VERSION_CODE}.aab"
+          VERSION="${{ env.version }}"
+          for file in build/app/outputs/flutter-apk/app-*-release.apk; do
+            if [ -f "$file" ]; then
+              abi=$(echo "$file" | sed -E 's|.*app-(.*)-release\.apk|\1|')
+              cp "$file" "build/app/outputs/flutter-apk/NexAI_android_${VERSION}_${abi}.apk"
+            fi
+          done
+          
+      - name: Rename AAB output
+        run: |
+          VERSION="${{ env.version }}"
+          AAB_FILE="build/app/outputs/bundle/release/app-release.aab"
+          if [ -f "$AAB_FILE" ]; then
+            cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI_android_${VERSION}.aab"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-APK
-          path: build/app/outputs/flutter-apk/NexAI-*.apk
+          path: build/app/outputs/flutter-apk/NexAI_android_*.apk
           retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: NexAI-Android-AAB
-          path: build/app/outputs/bundle/release/NexAI-*.aab
+          path: build/app/outputs/bundle/release/NexAI_android_*.aab
           retention-days: 7
 
       - uses: actions/upload-artifact@v4
@@ -176,24 +187,42 @@ jobs:
 
       - name: Package release assets
         run: |
-          APK_FILE=$(find android-apk -name 'NexAI-*.apk' -type f | head -1)
-          AAB_FILE=$(find android-aab -name 'NexAI-*.aab' -type f | head -1)
-          cp "$APK_FILE" "NexAI-${{ github.ref_name }}.apk"
-          cp "$AAB_FILE" "NexAI-${{ github.ref_name }}.aab"
-          cd web-build && zip -r ../NexAI-Web-${{ github.ref_name }}.zip . && cd ..
-          zip -r android-outputs-${{ github.ref_name }}.zip android-outputs
+          # Find all APK files with architecture suffix
+          mkdir -p release-assets
+          for apk in android-apk/NexAI_android_*.apk; do
+            if [ -f "$apk" ]; then
+              cp "$apk" release-assets/
+            fi
+          done
+          
+          # Copy AAB
+          AAB_FILE=$(find android-aab -name 'NexAI_android_*.aab' -type f | head -1)
+          if [ -f "$AAB_FILE" ]; then
+            cp "$AAB_FILE" release-assets/
+          fi
+          
+          # Package web build
+          cd web-build && zip -r ../release-assets/NexAI-Web-${{ github.ref_name }}.zip . && cd ..
+          
+          # Package all android outputs for debugging
+          zip -r release-assets/android-outputs-${{ github.ref_name }}.zip android-outputs
 
       - name: Generate release notes
         run: |
           echo "## NexAI ${{ github.ref_name }}" > RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "### Downloads" >> RELEASE_NOTES.md
-          echo "- **Android APK**: \`NexAI-${{ github.ref_name }}.apk\`" >> RELEASE_NOTES.md
-          echo "- **Android AAB**: \`NexAI-${{ github.ref_name }}.aab\`" >> RELEASE_NOTES.md
+          echo "- **Android APK** (multiple architectures available)" >> RELEASE_NOTES.md
+          echo "- **Android AAB**: For Google Play Store" >> RELEASE_NOTES.md
           echo "- **Web**: \`NexAI-Web-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
+          echo "### APK Architecture Guide" >> RELEASE_NOTES.md
+          echo "- \`arm64-v8a\`: Modern 64-bit ARM devices (recommended for most users)" >> RELEASE_NOTES.md
+          echo "- \`armeabi-v7a\`: Older 32-bit ARM devices" >> RELEASE_NOTES.md
+          echo "- \`x86_64\`: 64-bit x86 devices (emulators, some tablets)" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
           echo "### Features" >> RELEASE_NOTES.md
-          echo "- Fluent Design UI with Mica/Acrylic effects" >> RELEASE_NOTES.md
+          echo "- Auto-update detection via GitHub Releases" >> RELEASE_NOTES.md
           echo "- Custom OpenAI-compatible API (base URL, key, models)" >> RELEASE_NOTES.md
           echo "- LaTeX math & chemical formula rendering" >> RELEASE_NOTES.md
           echo "- Material You dynamic color on Android" >> RELEASE_NOTES.md
@@ -201,52 +230,17 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.USER_PAT }}
         with:
           tag_name: ${{ github.ref_name }}
-          release_name: NexAI ${{ github.ref_name }}
+          name: NexAI ${{ github.ref_name }}
           body_path: ./RELEASE_NOTES.md
           draft: false
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
-
-      - name: Upload APK
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: NexAI-${{ github.ref_name }}.apk
-          asset_name: NexAI-${{ github.ref_name }}.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      - name: Upload AAB
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: NexAI-${{ github.ref_name }}.aab
-          asset_name: NexAI-${{ github.ref_name }}.aab
-          asset_content_type: application/octet-stream
-
-      - name: Upload Web zip
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: NexAI-Web-${{ github.ref_name }}.zip
-          asset_name: NexAI-Web-${{ github.ref_name }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload full Android outputs
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: android-outputs-${{ github.ref_name }}.zip
-          asset_name: android-outputs-${{ github.ref_name }}.zip
-          asset_content_type: application/zip
+          files: |
+            release-assets/NexAI_android_*.apk
+            release-assets/NexAI_android_*.aab
+            release-assets/NexAI-Web-${{ github.ref_name }}.zip
+            release-assets/android-outputs-${{ github.ref_name }}.zip

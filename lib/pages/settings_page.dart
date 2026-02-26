@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../main.dart' show isAndroid;
 import '../providers/settings_provider.dart';
+import '../utils/update_checker.dart';
+import '../utils/build_config.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -319,6 +321,61 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                     ]),
+                  ),
+                ]),
+                const SizedBox(height: 20),
+
+                // ── Updates ──
+                _SectionHeader(icon: Icons.system_update_rounded, label: 'Updates', cs: cs, tt: tt),
+                const SizedBox(height: 10),
+                _SettingsCard(cs: cs, children: [
+                  Row(children: [
+                    Icon(Icons.info_outline_rounded, size: 18, color: cs.primary),
+                    const SizedBox(width: 10),
+                    Text('Version', style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer.withAlpha(120),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        BuildConfig.fullVersion,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cs.primary),
+                      ),
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+                  FutureBuilder<bool>(
+                    future: UpdateChecker.getAutoUpdate(),
+                    builder: (context, snapshot) {
+                      final autoUpdate = snapshot.data ?? true;
+                      return SwitchListTile(
+                        value: autoUpdate,
+                        onChanged: (value) async {
+                          await UpdateChecker.setAutoUpdate(value);
+                          setState(() {});
+                        },
+                        title: Text('Auto-check for updates', style: tt.bodyMedium),
+                        subtitle: Text(
+                          'Check for updates on app start',
+                          style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: () => UpdateChecker.checkUpdate(context, isAuto: false),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Check for Updates'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
                   ),
                 ]),
 

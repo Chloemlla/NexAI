@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import '../main.dart' show isDesktop, isAndroid;
 import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
+import '../utils/update_checker.dart';
 import 'chat_page.dart';
 import 'notes_page.dart';
 import 'note_detail_page.dart';
@@ -27,6 +28,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
   void initState() {
     super.initState();
     if (isDesktop) windowManager.addListener(this);
+    
+    // Check for updates on app start
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateChecker.checkUpdateOnStart(context);
+    });
   }
 
   @override

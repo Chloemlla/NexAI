@@ -236,7 +236,46 @@ if "%KEYSTORE_BASE64%"=="" (
 echo   ✓ Base64 编码完成 (长度: !KEYSTORE_BASE64:~0,50!...)
 
 echo.
-echo [6/6] 设置 GitHub Secrets...
+echo [6/6] 准备设置 GitHub Secrets...
+echo.
+echo ========================================
+echo   即将推送以下变量到远程仓库
+echo ========================================
+echo.
+echo 仓库: %REPO%
+echo.
+echo 变量列表:
+echo   1. KEYSTORE_BASE64
+echo      长度: 
+powershell -NoProfile -Command "Write-Host ('      ' + '%KEYSTORE_BASE64%'.Length + ' 字符')"
+echo      预览: %KEYSTORE_BASE64:~0,60%...
+echo.
+echo   2. KEYSTORE_PASSWORD
+echo      值: %STORE_PASSWORD%
+echo.
+echo   3. KEY_ALIAS
+echo      值: %KEY_ALIAS%
+echo.
+echo   4. KEY_PASSWORD
+echo      值: %KEY_PASSWORD%
+echo.
+echo ========================================
+echo.
+echo [警告] 这些敏感信息将被推送到 GitHub Secrets
+echo        请确认以上信息正确无误
+echo.
+set /p CONFIRM="确认推送? (输入 YES 继续): "
+
+if /i not "%CONFIRM%"=="YES" (
+    echo.
+    echo [已取消] 未推送任何变量
+    echo.
+    pause
+    exit /b 0
+)
+
+echo.
+echo 开始推送变量...
 echo.
 
 echo   设置 KEYSTORE_BASE64...

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import '../models/message.dart';
 
 class ChatProvider extends ChangeNotifier {
@@ -9,8 +9,12 @@ class ChatProvider extends ChangeNotifier {
   int _currentIndex = -1;
   bool _isLoading = false;
 
-  // Reuse HTTP client for connection pooling
-  final http.Client _httpClient = http.Client();
+  // Reuse Dio instance for connection pooling
+  final Dio _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 120),
+    sendTimeout: const Duration(seconds: 30),
+  ));
 
   List<Conversation> get conversations => _conversations;
   int get currentIndex => _currentIndex;
@@ -185,29 +189,26 @@ class ChatProvider extends ChangeNotifier {
         messagesPayload.add({'role': msg.role, 'content': msg.content});
       }
 
-      // Use streaming SSE request
-      final request = http.Request(
-        'POST',
-        Uri.parse('$baseUrl/chat/completions'),
+      // Use Dio streaming SSE request
+      final response = await _dio.post<ResponseBody>(
+        '$baseUrl/chat/completions',
+        data: {
+          'model': model,
+          'messages': messagesPayload,
+          'temperature': temperature,
+          'max_tokens': maxTokens,
+          'stream': true,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $apiKey',
+            'Accept': 'text/event-stream',
+          },
+          responseType: ResponseType.stream,
+        ),
       );
-      request.headers.addAll({
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
-        'Accept': 'text/event-stream',
-      });
-      request.body = jsonEncode({
-        'model': model,
-        'messages': messagesPayload,
-        'temperature': temperature,
-        'max_tokens': maxTokens,
-        'stream': true,
-      });
 
-      final streamedResponse = await _httpClient
-          .send(request)
-          .timeout(const Duration(seconds: 120));
-
-      if (streamedResponse.statusCode == 200) {
+      if (response.statusCode == 200) {
         // Add an empty assistant message that we'll append to
         final assistantMessage = Message(
           role: 'assistant',
@@ -220,8 +221,7 @@ class ChatProvider extends ChangeNotifier {
         final buffer = StringBuffer();
         String lineBuf = '';
 
-        await for (final chunk in streamedResponse.stream
-            .transform(utf8.decoder)) {
+        await for (final chunk in response.data!.stream.transform(utf8.decoder)) {
           lineBuf += chunk;
           final lines = lineBuf.split('\n');
           // Keep the last potentially incomplete line in the buffer
@@ -253,17 +253,14 @@ class ChatProvider extends ChangeNotifier {
           assistantMessage.markAsError();
         }
       } else {
-        // Non-200: read full body for error
-        final body = await streamedResponse.stream
-            .transform(utf8.decoder)
-            .join();
+        // Non-200: handle error
         String errorMsg;
         try {
-          final errorBody = jsonDecode(body);
+          final errorBody = response.data;
           errorMsg = errorBody['error']?['message'] ??
-              'Unknown error (${streamedResponse.statusCode})';
+              'Unknown error (${response.statusCode})';
         } catch (_) {
-          errorMsg = 'HTTP ${streamedResponse.statusCode}';
+          errorMsg = 'HTTP ${response.statusCode}';
         }
         conversation.messages.add(
           Message(
@@ -274,6 +271,27 @@ class ChatProvider extends ChangeNotifier {
           ),
         );
       }
+    } on DioException catch (e) {
+      String errorMsg;
+      if (e.response != null) {
+        try {
+          final errorBody = e.response!.data;
+          errorMsg = errorBody['error']?['message'] ??
+              'HTTP ${e.response!.statusCode}';
+        } catch (_) {
+          errorMsg = 'HTTP ${e.response!.statusCode}';
+        }
+      } else {
+        errorMsg = e.message ?? 'Connection error';
+      }
+      conversation.messages.add(
+        Message(
+          role: 'assistant',
+          content: '⚠️ Error: $errorMsg',
+          timestamp: DateTime.now(),
+          isError: true,
+        ),
+      );
     } catch (e) {
       conversation.messages.add(
         Message(
@@ -291,7 +309,7 @@ class ChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _httpClient.close();
+    _dio.close();
     super.dispose();
   }
 }

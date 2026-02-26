@@ -73,7 +73,7 @@ class _ChatPageState extends State<ChatPage> {
               children: [
                 Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 10),
-                Expanded(child: Text('Please configure your API key in Settings.')),
+                Expanded(child: Text('请在设置中配置您的 API 密钥。')),
               ],
             ),
             behavior: SnackBarBehavior.floating,
@@ -84,7 +84,7 @@ class _ChatPageState extends State<ChatPage> {
       } else {
         fluent.displayInfoBar(context, builder: (ctx, close) {
           return fluent.InfoBar(
-            title: const Text('Please configure your API key in Settings.'),
+            title: const Text('请在设置中配置您的 API 密钥。'),
             severity: fluent.InfoBarSeverity.warning,
             action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close),
           );
@@ -217,7 +217,7 @@ class _ChatPageState extends State<ChatPage> {
                           height: 1.4,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Ask anything...',
+                          hintText: '问我任何问题...',
                           hintStyle: TextStyle(
                             color: cs.onSurfaceVariant.withAlpha(140),
                             fontWeight: FontWeight.w400,
@@ -282,7 +282,7 @@ class _ChatPageState extends State<ChatPage> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'API key not configured',
+                'API 密钥未配置',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -299,7 +299,7 @@ class _ChatPageState extends State<ChatPage> {
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
               ),
-              child: const Text('Configure'),
+              child: const Text('配置'),
             ),
           ],
         ),
@@ -474,7 +474,7 @@ class _ChatPageState extends State<ChatPage> {
                   _ThinkingDots(color: cs.primary),
                   const SizedBox(width: 12),
                   Text(
-                    'Thinking...',
+                    '思考中...',
                     style: TextStyle(
                       fontSize: 13,
                       color: cs.onSurfaceVariant,
@@ -518,7 +518,7 @@ class _ChatPageState extends State<ChatPage> {
                             SizedBox(width: 48),
                             fluent.ProgressRing(strokeWidth: 2),
                             SizedBox(width: 12),
-                            Text('Thinking...'),
+                            Text('思考中...'),
                           ],
                         ),
                       );
@@ -543,7 +543,7 @@ class _ChatPageState extends State<ChatPage> {
                 child: fluent.TextBox(
                   controller: _controller,
                   focusNode: _focusNode,
-                  placeholder: 'Type your message...',
+                  placeholder: '输入您的消息...',
                   maxLines: 6,
                   minLines: 1,
                   onSubmitted: (_) => _send(),

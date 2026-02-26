@@ -118,7 +118,32 @@ if defined GH_TOKEN (
 
 echo.
 echo [3/6] 检测 GitHub 仓库...
+
+REM 尝试多种方式检测仓库
+set "REPO="
+
+REM 方法1: 使用 gh repo view
 for /f "tokens=*" %%r in ('"%gh%" repo view --json nameWithOwner -q .nameWithOwner 2^>nul') do set "REPO=%%r"
+
+REM 方法2: 如果方法1失败，从 git remote 解析
+if "%REPO%"=="" (
+    echo   方法1失败，尝试从 git remote 解析...
+    for /f "tokens=*" %%u in ('git config --get remote.origin.url 2^>nul') do set "REMOTE_URL=%%u"
+    
+    if not "!REMOTE_URL!"=="" (
+        REM 解析 https://github.com/owner/repo.git 或 git@github.com:owner/repo.git
+        echo !REMOTE_URL! | findstr /C:"github.com" >nul
+        if !errorlevel! equ 0 (
+            REM 提取 owner/repo
+            set "TEMP_URL=!REMOTE_URL!"
+            set "TEMP_URL=!TEMP_URL:https://github.com/=!"
+            set "TEMP_URL=!TEMP_URL:git@github.com:=!"
+            set "TEMP_URL=!TEMP_URL:.git=!"
+            set "REPO=!TEMP_URL!"
+        )
+    )
+)
+
 if "%REPO%"=="" (
     echo [错误] 无法检测到 GitHub 仓库
     echo.
@@ -126,6 +151,9 @@ if "%REPO%"=="" (
     echo   1. 当前目录是 git 仓库
     echo   2. 仓库已关联 GitHub remote
     echo   3. 已推送到 GitHub
+    echo.
+    echo 调试信息:
+    git remote -v
     echo.
     pause
     exit /b 1

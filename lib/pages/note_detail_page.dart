@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -77,6 +78,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     if (settings.notesAutoSave) {
       _saveNote();
     }
+    _statsDebounceTimer?.cancel();
     _contentController.removeListener(_onContentChanged);
     _titleController.dispose();
     _contentController.dispose();
@@ -87,7 +89,17 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   }
 
   void _onContentChanged() {
-    _updateStats(_contentController.text);
+    // Debounce stats update to avoid excessive rebuilds during typing
+    _debounceStatsUpdate();
+  }
+  
+  Timer? _statsDebounceTimer;
+  
+  void _debounceStatsUpdate() {
+    _statsDebounceTimer?.cancel();
+    _statsDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _updateStats(_contentController.text);
+    });
   }
 
   void _updateStats(String text) {
@@ -1257,10 +1269,15 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       );
     }
 
-    return SingleChildScrollView(
-      controller: _previewScroll,
-      padding: const EdgeInsets.all(16),
-      child: RichContentView(content: content, enableWikiLinks: true),
+    // Wrap preview in RepaintBoundary to isolate repaints
+    return RepaintBoundary(
+      child: SingleChildScrollView(
+        controller: _previewScroll,
+        padding: const EdgeInsets.all(16),
+        // Use cacheExtent for better scrolling performance
+        cacheExtent: 1000,
+        child: RichContentView(content: content, enableWikiLinks: true),
+      ),
     );
   }
 

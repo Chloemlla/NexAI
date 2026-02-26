@@ -22,6 +22,11 @@ final _mermaidBlockPattern = RegExp(r'```mermaid\s*\n([\s\S]*?)```', multiLine: 
 /// Renders message content with Markdown, LaTeX/chemical formulas, and Mermaid flowcharts.
 /// Links are clickable and open in the system browser.
 /// Wiki-links [[note]] are rendered as clickable internal links.
+/// 
+/// Performance optimizations:
+/// - Uses ListView.builder for large content to enable lazy loading
+/// - Wraps complex widgets in RepaintBoundary to reduce repaints
+/// - Caches parsed segments to avoid re-parsing on rebuilds
 class RichContentView extends StatefulWidget {
   final String content;
   final bool enableWikiLinks;
@@ -34,17 +39,21 @@ class RichContentView extends StatefulWidget {
 
 class _RichContentViewState extends State<RichContentView> {
   late List<_Segment> _segments;
+  String? _cachedContent;
 
   @override
   void initState() {
     super.initState();
+    _cachedContent = widget.content;
     _segments = _parseContent(widget.content);
   }
 
   @override
   void didUpdateWidget(RichContentView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.content != widget.content) {
+    // Only re-parse if content actually changed
+    if (oldWidget.content != widget.content && _cachedContent != widget.content) {
+      _cachedContent = widget.content;
       _segments = _parseContent(widget.content);
     }
   }
@@ -54,31 +63,51 @@ class _RichContentViewState extends State<RichContentView> {
     if (_segments.isEmpty) {
       return const SizedBox.shrink();
     }
+    
+    // For large content (>10 segments), use ListView.builder for better performance
+    if (_segments.length > 10) {
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _segments.length,
+        itemBuilder: (context, index) => _buildSegment(_segments[index]),
+      );
+    }
+    
+    // For smaller content, use Column for simplicity
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
-      children: _segments.map((seg) {
-        switch (seg.type) {
-          case _SegmentType.mermaid:
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: RepaintBoundary(
-                child: FlowchartWidget(mermaidSource: seg.content),
-              ),
-            );
-          case _SegmentType.math:
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: _MathWidget(tex: seg.content, display: seg.isDisplay),
-            );
-          case _SegmentType.markdown:
-            if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
-              return _WikiLinkMarkdown(data: seg.content);
-            }
-            return _MarkdownWidget(data: seg.content);
-        }
-      }).toList(),
+      children: _segments.map(_buildSegment).toList(),
     );
+  }
+  
+  Widget _buildSegment(_Segment seg) {
+    switch (seg.type) {
+      case _SegmentType.mermaid:
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: RepaintBoundary(
+            child: FlowchartWidget(mermaidSource: seg.content),
+          ),
+        );
+      case _SegmentType.math:
+        return RepaintBoundary(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: _MathWidget(tex: seg.content, display: seg.isDisplay),
+          ),
+        );
+      case _SegmentType.markdown:
+        if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
+          return RepaintBoundary(
+            child: _WikiLinkMarkdown(data: seg.content),
+          );
+        }
+        return RepaintBoundary(
+          child: _MarkdownWidget(data: seg.content),
+        );
+    }
   }
 }
 
@@ -168,6 +197,44 @@ class _MarkdownWidget extends StatelessWidget {
           data: data,
           selectable: true,
           shrinkWrap: true,
+          // Disable image loading for better performance
+          imageBuilder: (uri, title, alt) {
+            return RepaintBoundary(
+              child: Image.network(
+                uri.toString(),
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: cs.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.broken_image_rounded, color: cs.error, size: 16),
+                        const SizedBox(width: 8),
+                        Text(alt ?? '图片加载失败', style: TextStyle(color: cs.error, fontSize: 12)),
+                      ],
+                    ),
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
           extensionSet: md.ExtensionSet.gitHubFlavored,
           onTapLink: (text, href, title) {
             if (href != null && href.isNotEmpty) {

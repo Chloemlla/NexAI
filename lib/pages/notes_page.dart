@@ -105,7 +105,6 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               ],
             ),
             floatingActionButton: FloatingActionButton.extended(
-              heroTag: 'create_fab',
               onPressed: () => _createAndOpen(context, notesProvider),
               icon: const Icon(Icons.add_rounded),
               label: const Text('创建笔记'),
@@ -340,6 +339,58 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
     final notes = provider.notes;
     if (notes.isEmpty) return _buildEmptyState(cs, provider);
     
+    // 如果有笔记且有链接，显示知识图谱提示卡片
+    final graphData = provider.getGraphData();
+    final showGraphHint = notes.length >= 3 && graphData.edges.isNotEmpty;
+    
+    if (showGraphHint) {
+      return Column(
+        children: [
+          // 知识图谱提示卡片
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+            child: Card(
+              elevation: 0,
+              color: cs.tertiaryContainer.withAlpha(120),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: cs.tertiary.withAlpha(60), width: 1),
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const GraphPage()),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Icon(Icons.hub_rounded, size: 20, color: cs.onTertiaryContainer),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '查看 ${graphData.nodes.length} 个笔记的 ${graphData.edges.length} 条连接',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onTertiaryContainer,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_rounded, color: cs.tertiary, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(child: _buildNotesList(notes)),
+        ],
+      );
+    }
+    
     return _buildNotesList(notes);
   }
 
@@ -448,20 +499,100 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      itemCount: tags.length,
-      itemBuilder: (_, idx) {
-        final tag = tags[idx];
-        final isNested = tag.name.contains('/');
-        return _TagTile(
-          tag: tag,
-          isNested: isNested,
-          onTap: () => setState(() => _selectedTag = tag.name),
-          onRename: () => _showRenameTagDialog(tag.name),
-          onDelete: () => _showDeleteTagDialog(tag.name),
-        );
-      },
+    return Column(
+      children: [
+        // 知识图谱卡片
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+          child: Card(
+            elevation: 0,
+            color: cs.primaryContainer.withAlpha(120),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: cs.primary.withAlpha(60), width: 1.5),
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const GraphPage()),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [cs.primary, cs.tertiary],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: cs.primary.withAlpha(60),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(Icons.hub_rounded, size: 24, color: cs.onPrimary),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '知识图谱',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: cs.onPrimaryContainer,
+                              letterSpacing: 0.15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '可视化笔记之间的连接关系',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: cs.onPrimaryContainer.withAlpha(200),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_rounded, color: cs.primary, size: 20),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        // 标签列表
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            itemCount: tags.length,
+            itemBuilder: (_, idx) {
+              final tag = tags[idx];
+              final isNested = tag.name.contains('/');
+              return _TagTile(
+                tag: tag,
+                isNested: isNested,
+                onTap: () => setState(() => _selectedTag = tag.name),
+                onRename: () => _showRenameTagDialog(tag.name),
+                onDelete: () => _showDeleteTagDialog(tag.name),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

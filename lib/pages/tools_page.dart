@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'video_compressor_page.dart';
+import 'video_to_audio_page.dart';
 import 'date_time_converter_page.dart';
 import 'base64_converter_page.dart';
 import 'password_generator_page.dart';
@@ -106,6 +107,19 @@ class ToolsPage extends StatelessWidget {
                   ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const VideoCompressorPage()),
+                  ),
+                ),
+                _ToolCard(
+                  icon: Icons.audiotrack_rounded,
+                  title: '视频转音频',
+                  description: '批量提取音频',
+                  gradient: LinearGradient(
+                    colors: [cs.tertiaryContainer, cs.secondaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const VideoToAudioPage()),
                   ),
                 ),
               ]),

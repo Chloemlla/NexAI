@@ -1,9 +1,18 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:gal/gal.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../main.dart' show isAndroid;
+import '../main.dart' show isAndroid, isDesktop;
 import '../models/message.dart';
 import '../models/note.dart';
 import '../providers/chat_provider.dart';
@@ -11,11 +20,18 @@ import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import 'rich_content_view.dart';
 
-class MessageBubble extends StatelessWidget {
+class MessageBubble extends StatefulWidget {
   final Message message;
   final int messageIndex;
 
   const MessageBubble({super.key, required this.message, required this.messageIndex});
+
+  @override
+  State<MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<MessageBubble> {
+  final GlobalKey _repaintKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -27,88 +43,99 @@ class MessageBubble extends StatelessWidget {
   Widget _buildM3Bubble(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
-    final isUser = message.role == 'user';
+    final isUser = widget.message.role == 'user';
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isUser) ...[
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.tertiary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(child: Icon(Icons.smart_toy_rounded, size: 14, color: cs.onPrimary)),
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              constraints: BoxConstraints(maxWidth: screenWidth * 0.82),
-              decoration: settings.borderlessMode
-                  ? null
-                  : BoxDecoration(
-                      color: isUser ? cs.primaryContainer : cs.surfaceContainerHighest,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(22),
-                        topRight: const Radius.circular(22),
-                        bottomLeft: Radius.circular(isUser ? 22 : 6),
-                        bottomRight: Radius.circular(isUser ? 6 : 22),
-                      ),
-                      border: message.isError
-                          ? Border.all(color: cs.error.withAlpha(120))
-                          : null,
+      child: RepaintBoundary(
+        key: _repaintKey,
+        child: Container(
+          color: settings.borderlessMode ? cs.surface : Colors.transparent, // Background for PNG
+          child: Row(
+            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (!isUser) ...[
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [cs.primary, cs.tertiary],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-              padding: settings.borderlessMode 
-                  ? const EdgeInsets.symmetric(horizontal: 4, vertical: 8)
-                  : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isUser)
-                    RepaintBoundary(
-                      child: SelectableText(
-                        message.content,
-                        style: TextStyle(
-                          fontSize: settings.fontSize + 1,
-                          fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
-                          color: settings.borderlessMode ? cs.onSurface : cs.onPrimaryContainer,
-                          height: 1.45,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(child: Icon(Icons.smart_toy_rounded, size: 14, color: cs.onPrimary)),
+                ),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: screenWidth * 0.82),
+                  decoration: settings.borderlessMode
+                      ? null
+                      : BoxDecoration(
+                          color: isUser ? cs.primaryContainer : cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(22),
+                            topRight: const Radius.circular(22),
+                            bottomLeft: Radius.circular(isUser ? 22 : 6),
+                            bottomRight: Radius.circular(isUser ? 6 : 22),
+                          ),
+                          border: widget.message.isError
+                              ? Border.all(color: cs.error.withAlpha(120))
+                              : null,
                         ),
+                  padding: settings.borderlessMode 
+                      ? const EdgeInsets.symmetric(horizontal: 4, vertical: 8)
+                      : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isUser)
+                        RepaintBoundary(
+                          child: SelectableText(
+                            widget.message.content,
+                            style: TextStyle(
+                              fontSize: settings.fontSize + 1,
+                              fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+                              color: settings.borderlessMode ? cs.onSurface : cs.onPrimaryContainer,
+                              height: 1.45,
+                            ),
+                          ),
+                        )
+                      else
+                        RepaintBoundary(child: RichContentView(content: widget.message.content)),
+                      const SizedBox(height: 6),
+                      _M3Footer(
+                        message: widget.message,
+                        isUser: isUser,
+                        messageIndex: widget.messageIndex,
+                        repaintKey: _repaintKey,
                       ),
-                    )
-                  else
-                    RepaintBoundary(child: RichContentView(content: message.content)),
-                  const SizedBox(height: 6),
-                  _M3Footer(message: message, isUser: isUser, messageIndex: messageIndex),
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+              if (isUser) ...[
+                const SizedBox(width: 8),
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(child: Icon(Icons.person_rounded, size: 14, color: cs.onSecondaryContainer)),
+                ),
+              ],
+            ],
           ),
-          if (isUser) ...[
-            const SizedBox(width: 8),
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: cs.secondaryContainer,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(child: Icon(Icons.person_rounded, size: 14, color: cs.onSecondaryContainer)),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -117,81 +144,92 @@ class MessageBubble extends StatelessWidget {
   Widget _buildFluentBubble(BuildContext context) {
     final theme = fluent.FluentTheme.of(context);
     final settings = context.watch<SettingsProvider>();
-    final isUser = message.role == 'user';
+    final isUser = widget.message.role == 'user';
     final isDark = theme.brightness == Brightness.dark;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser) ...[
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [theme.accentColor, theme.accentColor.lighter]),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Center(child: Icon(fluent.FluentIcons.robot, size: 16, color: fluent.Colors.white)),
-            ),
-            const SizedBox(width: 10),
-          ],
-          Flexible(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 720),
-              decoration: settings.borderlessMode
-                  ? null
-                  : BoxDecoration(
-                      color: isUser
-                          ? Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, isDark ? 0.3 : 0.12)
-                          : (isDark ? const Color(0xFF2D2D2D) : fluent.Colors.white),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(12), topRight: const Radius.circular(12),
-                        bottomLeft: Radius.circular(isUser ? 12 : 2),
-                        bottomRight: Radius.circular(isUser ? 2 : 12),
-                      ),
-                      border: message.isError
-                          ? Border.all(color: fluent.Colors.red.withAlpha((0.5 * 255).round()))
-                          : (isDark ? null : Border.all(color: const Color(0xFFE8E8E8))),
-                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? (0.2 * 255).round() : (0.05 * 255).round()), blurRadius: 8, offset: const Offset(0, 2))],
-                    ),
-              padding: settings.borderlessMode ? const EdgeInsets.all(4) : const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isUser)
-                    RepaintBoundary(
-                      child: SelectableText(
-                        message.content,
-                        style: TextStyle(
-                          fontSize: settings.fontSize,
-                          fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
-                          color: theme.typography.body?.color,
+      child: RepaintBoundary(
+        key: _repaintKey,
+        child: Container(
+          color: settings.borderlessMode ? (isDark ? const Color(0xFF202020) : fluent.Colors.white) : Colors.transparent,
+          child: Row(
+            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!isUser) ...[
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [theme.accentColor, theme.accentColor.lighter]),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Center(child: Icon(fluent.FluentIcons.robot, size: 16, color: fluent.Colors.white)),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Flexible(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  decoration: settings.borderlessMode
+                      ? null
+                      : BoxDecoration(
+                          color: isUser
+                              ? Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, isDark ? 0.3 : 0.12)
+                              : (isDark ? const Color(0xFF2D2D2D) : fluent.Colors.white),
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(12), topRight: const Radius.circular(12),
+                            bottomLeft: Radius.circular(isUser ? 12 : 2),
+                            bottomRight: Radius.circular(isUser ? 2 : 12),
+                          ),
+                          border: widget.message.isError
+                              ? Border.all(color: fluent.Colors.red.withAlpha((0.5 * 255).round()))
+                              : (isDark ? null : Border.all(color: const Color(0xFFE8E8E8))),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? (0.2 * 255).round() : (0.05 * 255).round()), blurRadius: 8, offset: const Offset(0, 2))],
                         ),
+                  padding: settings.borderlessMode ? const EdgeInsets.all(4) : const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isUser)
+                        RepaintBoundary(
+                          child: SelectableText(
+                            widget.message.content,
+                            style: TextStyle(
+                              fontSize: settings.fontSize,
+                              fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+                              color: theme.typography.body?.color,
+                            ),
+                          ),
+                        )
+                      else
+                        RepaintBoundary(child: RichContentView(content: widget.message.content)),
+                      const SizedBox(height: 6),
+                      _FluentFooter(
+                        message: widget.message,
+                        isUser: isUser,
+                        messageIndex: widget.messageIndex,
+                        repaintKey: _repaintKey,
                       ),
-                    )
-                  else
-                    RepaintBoundary(child: RichContentView(content: message.content)),
-                  const SizedBox(height: 6),
-                  _FluentFooter(message: message, isUser: isUser, messageIndex: messageIndex),
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+              if (isUser) ...[
+                const SizedBox(width: 10),
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE8E8E8),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Center(child: Icon(fluent.FluentIcons.contact, size: 16, color: theme.typography.body?.color)),
+                ),
+              ],
+            ],
           ),
-          if (isUser) ...[
-            const SizedBox(width: 10),
-            Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE8E8E8),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Center(child: Icon(fluent.FluentIcons.contact, size: 16, color: theme.typography.body?.color)),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -201,7 +239,14 @@ class _M3Footer extends StatelessWidget {
   final Message message;
   final bool isUser;
   final int messageIndex;
-  const _M3Footer({required this.message, required this.isUser, required this.messageIndex});
+  final GlobalKey repaintKey;
+  
+  const _M3Footer({
+    required this.message, 
+    required this.isUser, 
+    required this.messageIndex,
+    required this.repaintKey,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -288,9 +333,62 @@ class _M3Footer extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('对话已作为 Markdown 复制')));
   }
 
-  void _exportImage(BuildContext context) {
+  Future<void> _exportImage(BuildContext context) async {
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('图片生成中... (需要 RepaintBoundary 实现)')));
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.showSnackBar(const SnackBar(content: Text('正在保存图片...')));
+
+    try {
+      final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        scaffoldMessenger.showSnackBar(const SnackBar(content: Text('无法获取图片')));
+        return;
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('Image data is null');
+
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+
+      if (isAndroid) {
+        final deviceInfo = await DeviceInfoPlugin().androidInfo;
+        final sdkInt = deviceInfo.version.sdkInt;
+        
+        bool hasAccess = false;
+        if (sdkInt >= 29) {
+          hasAccess = await Gal.hasAccess(toAlbum: true);
+          if (!hasAccess) hasAccess = await Gal.requestAccess(toAlbum: true);
+        } else {
+          final status = await Permission.storage.request();
+          hasAccess = status.isGranted;
+        }
+
+        if (hasAccess) {
+          final tempDir = await getTemporaryDirectory();
+          final file = File('${tempDir.path}/nexai_chat_${DateTime.now().millisecondsSinceEpoch}.png');
+          await file.writeAsBytes(pngBytes);
+          await Gal.putImage(file.path, album: 'NexAI');
+          scaffoldMessenger.showSnackBar(const SnackBar(content: Text('✅ 图片已保存到系统相册')));
+        } else {
+          scaffoldMessenger.showSnackBar(const SnackBar(content: Text('⚠️ 缺少存储权限')));
+        }
+      } else if (isDesktop) {
+        final String? path = await FilePicker.platform.saveFile(
+          dialogTitle: '保存聊天截图',
+          fileName: 'nexai_chat_${DateTime.now().millisecondsSinceEpoch}.png',
+          type: FileType.custom,
+          allowedExtensions: ['png'],
+        );
+        if (path != null) {
+          final file = File(path);
+          await file.writeAsBytes(pngBytes);
+          scaffoldMessenger.showSnackBar(SnackBar(content: Text('✅ 图片已保存到: $path')));
+        }
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ 保存失败: $e')));
+    }
   }
 
   void _shareToShareGPT(BuildContext context) {
@@ -536,7 +634,8 @@ class _FluentFooter extends StatelessWidget {
   final Message message;
   final bool isUser;
   final int messageIndex;
-  const _FluentFooter({required this.message, required this.isUser, required this.messageIndex});
+  final GlobalKey repaintKey;
+  const _FluentFooter({required this.message, required this.isUser, required this.messageIndex, required this.repaintKey});
 
   @override
   Widget build(BuildContext context) {
@@ -576,8 +675,53 @@ class _FluentFooter extends StatelessWidget {
             child: Icon(fluent.FluentIcons.copy, size: 12, color: theme.inactiveColor),
           ),
         ],
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: () => _exportImage(context),
+          child: Icon(fluent.FluentIcons.save, size: 12, color: theme.inactiveColor),
+        ),
       ],
     );
+  }
+
+  Future<void> _exportImage(BuildContext context) async {
+    try {
+      final boundary = repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        fluent.displayInfoBar(context, builder: (ctx, close) {
+          return fluent.InfoBar(title: const Text('Cannot capture image'), severity: fluent.InfoBarSeverity.error, action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close));
+        });
+        return;
+      }
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw Exception('Image data is null');
+
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+
+      final String? path = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save Chat Image',
+        fileName: 'nexai_chat_${DateTime.now().millisecondsSinceEpoch}.png',
+        type: FileType.custom,
+        allowedExtensions: ['png'],
+      );
+      if (path != null) {
+        final file = File(path);
+        await file.writeAsBytes(pngBytes);
+        if (context.mounted) {
+          fluent.displayInfoBar(context, builder: (ctx, close) {
+            return fluent.InfoBar(title: Text('Saved to: $path'), severity: fluent.InfoBarSeverity.success, action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close));
+          });
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        fluent.displayInfoBar(context, builder: (ctx, close) {
+          return fluent.InfoBar(title: Text('Error: $e'), severity: fluent.InfoBarSeverity.error, action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close));
+        });
+      }
+    }
   }
 
   void _showEditDialog(BuildContext context) {

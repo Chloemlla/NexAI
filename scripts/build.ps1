@@ -19,7 +19,7 @@ try {
             else {
                 $displayName = $versionName
             }
-            "version: $displayName+$versionCode"
+            "version: $versionName+$versionCode"
         }
         else {
             $line

@@ -106,7 +106,7 @@ jobs:
 
       - name: Rename APK outputs for release
         run: |
-          VERSION="${{ env.version }}"
+          VERSION="${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           echo "Version: $VERSION"
           echo "=== Original APK files ==="
           ls -lh build/app/outputs/flutter-apk/

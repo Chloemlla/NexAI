@@ -101,8 +101,8 @@ jobs:
       - name: Build Android APK
         run: flutter build apk --release --split-per-abi --dart-define-from-file=nexai_release.json
 
-      - name: Build Android App Bundle
-        run: flutter build appbundle --release --dart-define-from-file=nexai_release.json
+      # - name: Build Android App Bundle
+      #   run: flutter build appbundle --release --dart-define-from-file=nexai_release.json
 
       - name: Rename APK outputs for release
         run: |
@@ -122,17 +122,17 @@ jobs:
           echo "=== Renamed APK files ==="
           ls -lh build/app/outputs/flutter-apk/NexAI_android_*.apk
           
-      - name: Rename AAB output
-        run: |
-          VERSION="${{ env.version }}"
-          AAB_FILE="build/app/outputs/bundle/release/app-release.aab"
-          if [ -f "$AAB_FILE" ]; then
-            echo "Renaming AAB: $AAB_FILE -> NexAI_android_${VERSION}.aab"
-            cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI_android_${VERSION}.aab"
-          fi
-          
-          echo "=== AAB files ==="
-          ls -lh build/app/outputs/bundle/release/
+      # - name: Rename AAB output
+      #   run: |
+      #     VERSION="${{ env.version }}"
+      #     AAB_FILE="build/app/outputs/bundle/release/app-release.aab"
+      #     if [ -f "$AAB_FILE" ]; then
+      #       echo "Renaming AAB: $AAB_FILE -> NexAI_android_${VERSION}.aab"
+      #       cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI_android_${VERSION}.aab"
+      #     fi
+      #     
+      #     echo "=== AAB files ==="
+      #     ls -lh build/app/outputs/bundle/release/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -168,7 +168,6 @@ jobs:
           name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           files: |
             build/app/outputs/flutter-apk/NexAI_android_*.apk
-            build/app/outputs/bundle/release/NexAI_android_*.aab
 
   build-web:
     # if: false  # Disabled - Web build not needed

@@ -22,6 +22,8 @@ class _ChatPageState extends State<ChatPage> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
   bool _hasText = false;
+  bool _isAtBottom = true;
+  bool _forceScroll = false;
 
   // Image generation controllers
   final _imagePromptController = TextEditingController();
@@ -32,6 +34,16 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     _controller.addListener(_onTextChanged);
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final pos = _scrollController.position;
+    final isAtBottom = pos.pixels >= pos.maxScrollExtent - 100;
+    if (isAtBottom != _isAtBottom) {
+      setState(() => _isAtBottom = isAtBottom);
+    }
   }
 
   void _onTextChanged() {
@@ -44,6 +56,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void dispose() {
     _controller.removeListener(_onTextChanged);
+    _scrollController.removeListener(_onScroll);
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -54,6 +67,12 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _scrollToBottom() {
+    final settings = context.read<SettingsProvider>();
+    if (!settings.smartAutoScroll && !_forceScroll) return;
+    
+    // If not at bottom and not forced, don't scroll
+    if (!_isAtBottom && !_forceScroll) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
@@ -63,6 +82,7 @@ class _ChatPageState extends State<ChatPage> {
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOutCubic,
           );
+          _forceScroll = false;
         } catch (_) {}
       }
     });
@@ -104,6 +124,8 @@ class _ChatPageState extends State<ChatPage> {
 
     _controller.clear();
     final chat = context.read<ChatProvider>();
+    
+    _forceScroll = true;
 
     try {
       await chat.sendMessage(
@@ -798,6 +820,10 @@ class _ChatPageState extends State<ChatPage> {
                 ),
         ),
 
+        // ── Preview bubble ──
+        if (_hasText)
+          _buildPreviewBubble(cs),
+
         // ── Input bar ──
         // AnimatedPadding so the bar slides up smoothly with the keyboard
         Material(
@@ -897,6 +923,56 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPreviewBubble(ColorScheme cs) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.primary.withAlpha(40)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(20),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.visibility_outlined, size: 12, color: cs.primary),
+              const SizedBox(width: 6),
+              Text(
+                '预览',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: cs.primary,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.2,
+            ),
+            child: SingleChildScrollView(
+              child: RichContentView(content: _controller.text),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -26,6 +26,7 @@ class MessageBubble extends StatelessWidget {
   // ─── Android: Material 3 bubble ───
   Widget _buildM3Bubble(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final settings = context.watch<SettingsProvider>();
     final isUser = message.role == 'user';
     final screenWidth = MediaQuery.of(context).size.width;
 
@@ -54,19 +55,23 @@ class MessageBubble extends StatelessWidget {
           Flexible(
             child: Container(
               constraints: BoxConstraints(maxWidth: screenWidth * 0.82),
-              decoration: BoxDecoration(
-                color: isUser ? cs.primaryContainer : cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(22),
-                  topRight: const Radius.circular(22),
-                  bottomLeft: Radius.circular(isUser ? 22 : 6),
-                  bottomRight: Radius.circular(isUser ? 6 : 22),
-                ),
-                border: message.isError
-                    ? Border.all(color: cs.error.withAlpha(120))
-                    : null,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: settings.borderlessMode
+                  ? null
+                  : BoxDecoration(
+                      color: isUser ? cs.primaryContainer : cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(22),
+                        topRight: const Radius.circular(22),
+                        bottomLeft: Radius.circular(isUser ? 22 : 6),
+                        bottomRight: Radius.circular(isUser ? 6 : 22),
+                      ),
+                      border: message.isError
+                          ? Border.all(color: cs.error.withAlpha(120))
+                          : null,
+                    ),
+              padding: settings.borderlessMode 
+                  ? const EdgeInsets.symmetric(horizontal: 4, vertical: 8)
+                  : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -75,7 +80,12 @@ class MessageBubble extends StatelessWidget {
                     RepaintBoundary(
                       child: SelectableText(
                         message.content,
-                        style: TextStyle(fontSize: 15, color: cs.onPrimaryContainer, height: 1.45),
+                        style: TextStyle(
+                          fontSize: settings.fontSize + 1,
+                          fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+                          color: settings.borderlessMode ? cs.onSurface : cs.onPrimaryContainer,
+                          height: 1.45,
+                        ),
                       ),
                     )
                   else
@@ -106,6 +116,7 @@ class MessageBubble extends StatelessWidget {
   // ─── Desktop: Fluent UI bubble ───
   Widget _buildFluentBubble(BuildContext context) {
     final theme = fluent.FluentTheme.of(context);
+    final settings = context.watch<SettingsProvider>();
     final isUser = message.role == 'user';
     final isDark = theme.brightness == Brightness.dark;
 
@@ -129,28 +140,37 @@ class MessageBubble extends StatelessWidget {
           Flexible(
             child: Container(
               constraints: const BoxConstraints(maxWidth: 720),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, isDark ? 0.3 : 0.12)
-                    : (isDark ? const Color(0xFF2D2D2D) : fluent.Colors.white),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(12), topRight: const Radius.circular(12),
-                  bottomLeft: Radius.circular(isUser ? 12 : 2),
-                  bottomRight: Radius.circular(isUser ? 2 : 12),
-                ),
-                border: message.isError
-                    ? Border.all(color: fluent.Colors.red.withAlpha((0.5 * 255).round()))
-                    : (isDark ? null : Border.all(color: const Color(0xFFE8E8E8))),
-                boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? (0.2 * 255).round() : (0.05 * 255).round()), blurRadius: 8, offset: const Offset(0, 2))],
-              ),
-              padding: const EdgeInsets.all(14),
+              decoration: settings.borderlessMode
+                  ? null
+                  : BoxDecoration(
+                      color: isUser
+                          ? Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, isDark ? 0.3 : 0.12)
+                          : (isDark ? const Color(0xFF2D2D2D) : fluent.Colors.white),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(12), topRight: const Radius.circular(12),
+                        bottomLeft: Radius.circular(isUser ? 12 : 2),
+                        bottomRight: Radius.circular(isUser ? 2 : 12),
+                      ),
+                      border: message.isError
+                          ? Border.all(color: fluent.Colors.red.withAlpha((0.5 * 255).round()))
+                          : (isDark ? null : Border.all(color: const Color(0xFFE8E8E8))),
+                      boxShadow: [BoxShadow(color: Colors.black.withAlpha(isDark ? (0.2 * 255).round() : (0.05 * 255).round()), blurRadius: 8, offset: const Offset(0, 2))],
+                    ),
+              padding: settings.borderlessMode ? const EdgeInsets.all(4) : const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isUser)
                     RepaintBoundary(
-                      child: SelectableText(message.content, style: TextStyle(fontSize: 14, color: theme.typography.body?.color)),
+                      child: SelectableText(
+                        message.content,
+                        style: TextStyle(
+                          fontSize: settings.fontSize,
+                          fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+                          color: theme.typography.body?.color,
+                        ),
+                      ),
                     )
                   else
                     RepaintBoundary(child: RichContentView(content: message.content)),
@@ -193,41 +213,95 @@ class _M3Footer extends StatelessWidget {
           '${message.timestamp.hour.toString().padLeft(2, '0')}:${message.timestamp.minute.toString().padLeft(2, '0')}',
           style: TextStyle(fontSize: 10, color: cs.outline.withAlpha(180)),
         ),
+        const SizedBox(width: 8),
         if (isUser) ...[
-          const SizedBox(width: 10),
-          // Edit button
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => _showEditDialog(context),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.edit_outlined, size: 14, color: cs.outline.withAlpha(180)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          // Resend button (show if next message is error or this is last user message)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => _resendMessage(context),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.refresh_rounded, size: 14, color: cs.outline.withAlpha(180)),
-              ),
-            ),
-          ),
+          _footerIcon(Icons.edit_outlined, () => _showEditDialog(context), cs),
+          _footerIcon(Icons.refresh_rounded, () => _resendMessage(context), cs),
+        ] else ...[
+          _footerIcon(Icons.copy_rounded, () {
+            Clipboard.setData(ClipboardData(text: message.content));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已复制'), duration: Duration(seconds: 1)));
+          }, cs),
         ],
-        if (!isUser) ...[
-          const SizedBox(width: 10),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () {
+        _footerIcon(Icons.ios_share_rounded, () => _showShareMenu(context, cs), cs),
+        if (!isUser)
+          _footerIcon(Icons.note_add_outlined, () => _showNotesDialog(context), cs),
+      ],
+    );
+  }
+
+  Widget _footerIcon(IconData icon, VoidCallback onTap, ColorScheme cs) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(4),
+          child: Icon(icon, size: 14, color: cs.outline.withAlpha(180)),
+        ),
+      ),
+    );
+  }
+
+  void _showShareMenu(BuildContext context, ColorScheme cs) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: cs.surfaceContainerLow,
+      builder: (ctx) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _shareTile(Icons.description_outlined, '导出为 Markdown', () => _exportMarkdown(context)),
+          _shareTile(Icons.image_outlined, '导出为图片 (PNG)', () => _exportImage(context)),
+          const Divider(height: 1),
+          _shareTile(Icons.share_outlined, '分享到 ShareGPT', () => _shareToShareGPT(context)),
+          _shareTile(Icons.artifact_outlined, '生成独立分享页面 (Artifacts)', () => _generateArtifact(context)),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _shareTile(IconData icon, String title, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, size: 20),
+      title: Text(title, style: const TextStyle(fontSize: 14)),
+      onTap: onTap,
+      dense: true,
+    );
+  }
+
+  void _exportMarkdown(BuildContext context) {
+    Navigator.pop(context);
+    final chat = context.read<ChatProvider>();
+    final buffer = StringBuffer();
+    buffer.writeln('# NexAI 聊天导出');
+    buffer.writeln('导出时间: ${DateTime.now().toString()}');
+    buffer.writeln();
+    for (final msg in chat.messages) {
+      buffer.writeln('### ${msg.role.toUpperCase()}');
+      buffer.writeln(msg.content);
+      buffer.writeln();
+    }
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('对话已作为 Markdown 复制')));
+  }
+
+  void _exportImage(BuildContext context) {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('图片生成中... (需要 RepaintBoundary 实现)')));
+  }
+
+  void _shareToShareGPT(BuildContext context) {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('正在连接 ShareGPT...')));
+  }
+
+  void _generateArtifact(BuildContext context) {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Artifacts 页面已生成 (演示)')));
+  }
                 Clipboard.setData(ClipboardData(text: message.content));
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

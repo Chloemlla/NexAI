@@ -4,10 +4,52 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../models/message.dart';
 
+class SearchResult {
+  final int conversationIndex;
+  final Conversation conversation;
+  final Message message;
+  final int messageIndex;
+
+  SearchResult({
+    required this.conversationIndex,
+    required this.conversation,
+    required this.message,
+    required this.messageIndex,
+  });
+}
+
 class ChatProvider extends ChangeNotifier {
   final List<Conversation> _conversations = [];
   int _currentIndex = -1;
   bool _isLoading = false;
+
+  List<SearchResult> searchMessages(String query) {
+    if (query.isEmpty) return [];
+    final results = <SearchResult>[];
+    final q = query.toLowerCase();
+
+    for (int i = 0; i < _conversations.length; i++) {
+      final conv = _conversations[i];
+      for (int j = 0; j < conv.messages.length; j++) {
+        final msg = conv.messages[j];
+        if (msg.content.toLowerCase().contains(q)) {
+          results.add(SearchResult(
+            conversationIndex: i,
+            conversation: conv,
+            message: msg,
+            messageIndex: j,
+          ));
+        }
+      }
+    }
+    // Simple relevance sorting: closer match to start of content comes first
+    results.sort((a, b) {
+      final aIdx = a.message.content.toLowerCase().indexOf(q);
+      final bIdx = b.message.content.toLowerCase().indexOf(q);
+      return aIdx.compareTo(bIdx);
+    });
+    return results;
+  }
 
   // Reuse Dio instance for connection pooling
   final Dio _dio = Dio(BaseOptions(

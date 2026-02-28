@@ -11,6 +11,22 @@ class SettingsProvider extends ChangeNotifier {
   int _maxTokens = 4096;
   String _systemPrompt = 'You are a helpful assistant. When responding with mathematical or chemical formulas, use LaTeX notation.';
   int? _accentColorValue;
+  
+  // Appearance
+  double _fontSize = 14.0;
+  String _fontFamily = 'System';
+  bool _borderlessMode = false;
+  bool _fullScreenMode = false;
+  bool _smartAutoScroll = true;
+
+  // Cloud Sync
+  bool _syncEnabled = false;
+  String _syncMethod = 'WebDAV'; // 'WebDAV' or 'UpStash'
+  String _webdavServer = '';
+  String _webdavUser = '';
+  String _webdavPassword = '';
+  String _upstashUrl = '';
+  String _upstashToken = '';
 
   String get baseUrl => _baseUrl;
   String get apiKey => _apiKey;
@@ -21,6 +37,20 @@ class SettingsProvider extends ChangeNotifier {
   int get maxTokens => _maxTokens;
   String get systemPrompt => _systemPrompt;
   int? get accentColorValue => _accentColorValue;
+  
+  double get fontSize => _fontSize;
+  String get fontFamily => _fontFamily;
+  bool get borderlessMode => _borderlessMode;
+  bool get fullScreenMode => _fullScreenMode;
+  bool get smartAutoScroll => _smartAutoScroll;
+
+  bool get syncEnabled => _syncEnabled;
+  String get syncMethod => _syncMethod;
+  String get webdavServer => _webdavServer;
+  String get webdavUser => _webdavUser;
+  String get webdavPassword => _webdavPassword;
+  String get upstashUrl => _upstashUrl;
+  String get upstashToken => _upstashToken;
 
   // Notes auto-save setting
   bool _notesAutoSave = true;
@@ -37,6 +67,20 @@ class SettingsProvider extends ChangeNotifier {
     _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
     _systemPrompt = prefs.getString('systemPrompt') ?? _systemPrompt;
     _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
+    
+    _fontSize = prefs.getDouble('fontSize') ?? 14.0;
+    _fontFamily = prefs.getString('fontFamily') ?? 'System';
+    _borderlessMode = prefs.getBool('borderlessMode') ?? false;
+    _fullScreenMode = prefs.getBool('fullScreenMode') ?? false;
+    _smartAutoScroll = prefs.getBool('smartAutoScroll') ?? true;
+
+    _syncEnabled = prefs.getBool('syncEnabled') ?? false;
+    _syncMethod = prefs.getString('syncMethod') ?? 'WebDAV';
+    _webdavServer = prefs.getString('webdavServer') ?? '';
+    _webdavUser = prefs.getString('webdavUser') ?? '';
+    _webdavPassword = prefs.getString('webdavPassword') ?? '';
+    _upstashUrl = prefs.getString('upstashUrl') ?? '';
+    _upstashToken = prefs.getString('upstashToken') ?? '';
 
     final accentVal = prefs.getInt('accentColorValue');
     _accentColorValue = accentVal;
@@ -71,11 +115,56 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setInt('maxTokens', _maxTokens);
     await prefs.setString('systemPrompt', _systemPrompt);
     await prefs.setBool('notesAutoSave', _notesAutoSave);
+    
+    await prefs.setDouble('fontSize', _fontSize);
+    await prefs.setString('fontFamily', _fontFamily);
+    await prefs.setBool('borderlessMode', _borderlessMode);
+    await prefs.setBool('fullScreenMode', _fullScreenMode);
+    await prefs.setBool('smartAutoScroll', _smartAutoScroll);
+
+    await prefs.setBool('syncEnabled', _syncEnabled);
+    await prefs.setString('syncMethod', _syncMethod);
+    await prefs.setString('webdavServer', _webdavServer);
+    await prefs.setString('webdavUser', _webdavUser);
+    await prefs.setString('webdavPassword', _webdavPassword);
+    await prefs.setString('upstashUrl', _upstashUrl);
+    await prefs.setString('upstashToken', _upstashToken);
+
     if (_accentColorValue != null) {
       await prefs.setInt('accentColorValue', _accentColorValue!);
     } else {
       await prefs.remove('accentColorValue');
     }
+  }
+
+  Future<void> setFontSize(double size) async {
+    _fontSize = size;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setFontFamily(String family) async {
+    _fontFamily = family;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setBorderlessMode(bool value) async {
+    _borderlessMode = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setFullScreenMode(bool value) async {
+    _fullScreenMode = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setSmartAutoScroll(bool value) async {
+    _smartAutoScroll = value;
+    notifyListeners();
+    await _save();
   }
 
   Future<void> setBaseUrl(String url) async {
@@ -139,6 +228,48 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setNotesAutoSave(bool value) async {
     _notesAutoSave = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setSyncEnabled(bool value) async {
+    _syncEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setSyncMethod(String value) async {
+    _syncMethod = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setWebdavServer(String value) async {
+    _webdavServer = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setWebdavUser(String value) async {
+    _webdavUser = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setWebdavPassword(String value) async {
+    _webdavPassword = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setUpstashUrl(String value) async {
+    _upstashUrl = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setUpstashToken(String value) async {
+    _upstashToken = value;
     notifyListeners();
     await _save();
   }

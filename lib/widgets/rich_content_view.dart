@@ -120,6 +120,7 @@ class _MathWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Color textColor;
     Color accentColor;
+    final settings = context.watch<SettingsProvider>();
 
     if (isAndroid) {
       final cs = Theme.of(context).colorScheme;
@@ -146,13 +147,18 @@ class _MathWidget extends StatelessWidget {
         child: Math.tex(
           processed,
           textStyle: TextStyle(
-            fontSize: display ? 18 : 14,
+            fontSize: display ? settings.fontSize * 1.28 : settings.fontSize,
+            fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
             color: textColor,
           ),
           onErrorFallback: (err) {
             return SelectableText(
               tex,
-              style: TextStyle(fontSize: 13, fontFamily: 'Consolas', color: accentColor),
+              style: TextStyle(
+                fontSize: settings.fontSize - 1,
+                fontFamily: 'Consolas',
+                color: accentColor,
+              ),
             );
           },
         ),
@@ -186,6 +192,7 @@ class _MarkdownWidget extends StatelessWidget {
 
   Widget _buildM3Markdown(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final settings = context.watch<SettingsProvider>();
 
     return Material(
       color: Colors.transparent,
@@ -193,7 +200,12 @@ class _MarkdownWidget extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 720),
         child: GptMarkdown(
           data,
-          style: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.6),
+          style: TextStyle(
+            fontSize: settings.fontSize,
+            fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+            color: cs.onSurface,
+            height: 1.6,
+          ),
           onLinkTap: (url, title) {
             if (url.isNotEmpty) {
               final uri = Uri.tryParse(url);
@@ -207,7 +219,7 @@ class _MarkdownWidget extends StatelessWidget {
 
   Widget _buildFluentMarkdown(BuildContext context) {
     final theme = fluent.FluentTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final settings = context.watch<SettingsProvider>();
 
     return Material(
       color: Colors.transparent,
@@ -215,7 +227,12 @@ class _MarkdownWidget extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 720),
         child: GptMarkdown(
           data,
-          style: TextStyle(fontSize: 14, color: theme.typography.body?.color, height: 1.6),
+          style: TextStyle(
+            fontSize: settings.fontSize,
+            fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+            color: theme.typography.body?.color,
+            height: 1.6,
+          ),
           onLinkTap: (url, title) {
             if (url.isNotEmpty) {
               final uri = Uri.tryParse(url);

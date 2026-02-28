@@ -326,6 +326,115 @@ class _SettingsPageState extends State<SettingsPage> {
                 ]),
                 const SizedBox(height: 20),
 
+                // ── Chat Display ──
+                _SectionHeader(icon: Icons.chat_bubble_outline_rounded, label: '聊天显示', cs: cs, tt: tt),
+                const SizedBox(height: 10),
+                _SettingsCard(cs: cs, children: [
+                  _SliderRow(
+                    cs: cs, tt: tt,
+                    icon: Icons.format_size_rounded,
+                    label: '字体大小',
+                    value: settings.fontSize,
+                    displayValue: '${settings.fontSize.toInt()}px',
+                    min: 10, max: 24, divisions: 14,
+                    onChanged: (v) => settings.setFontSize(v),
+                  ),
+                  const Divider(height: 24),
+                  DropdownButtonFormField<String>(
+                    value: settings.fontFamily,
+                    decoration: const InputDecoration(
+                      labelText: '字体系列',
+                      prefixIcon: Icon(Icons.font_download_outlined, size: 20),
+                    ),
+                    items: ['System', 'Roboto', 'Open Sans', 'Lato', 'Monospace']
+                        .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                        .toList(),
+                    onChanged: (v) { if (v != null) settings.setFontFamily(v); },
+                  ),
+                  const Divider(height: 24),
+                  SwitchListTile(
+                    value: settings.borderlessMode,
+                    onChanged: (v) => settings.setBorderlessMode(v),
+                    title: const Text('无边框模式'),
+                    subtitle: const Text('隐藏对话气泡边框，更加简洁'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  SwitchListTile(
+                    value: settings.fullScreenMode,
+                    onChanged: (v) => settings.setFullScreenMode(v),
+                    title: const Text('全屏显示'),
+                    subtitle: const Text('沉浸式聊天体验'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  SwitchListTile(
+                    value: settings.smartAutoScroll,
+                    onChanged: (v) => settings.setSmartAutoScroll(v),
+                    title: const Text('智能滚动'),
+                    subtitle: const Text('输入时自动滚动到底部'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ]),
+                const SizedBox(height: 20),
+
+                // ── Cloud Sync ──
+                _SectionHeader(icon: Icons.cloud_sync_rounded, label: '云同步', cs: cs, tt: tt),
+                const SizedBox(height: 10),
+                _SettingsCard(cs: cs, children: [
+                  SwitchListTile(
+                    value: settings.syncEnabled,
+                    onChanged: (v) => settings.setSyncEnabled(v),
+                    title: const Text('启用云同步'),
+                    subtitle: const Text('同步聊天记录和笔记'),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  if (settings.syncEnabled) ...[
+                    const Divider(height: 24),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'WebDAV', label: Text('WebDAV'), icon: Icon(Icons.storage_rounded, size: 16)),
+                        ButtonSegment(value: 'UpStash', label: Text('UpStash'), icon: Icon(Icons.bolt_rounded, size: 16)),
+                      ],
+                      selected: {settings.syncMethod},
+                      onSelectionChanged: (s) => settings.setSyncMethod(s.first),
+                    ),
+                    const SizedBox(height: 16),
+                    if (settings.syncMethod == 'WebDAV') ...[
+                      TextField(
+                        controller: TextEditingController(text: settings.webdavServer),
+                        decoration: const InputDecoration(labelText: '服务器地址', hintText: 'https://dav.example.com'),
+                        onChanged: (v) => settings.setWebdavServer(v),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: TextEditingController(text: settings.webdavUser),
+                        decoration: const InputDecoration(labelText: '用户名'),
+                        onChanged: (v) => settings.setWebdavUser(v),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: TextEditingController(text: settings.webdavPassword),
+                        decoration: const InputDecoration(labelText: '密码 / 令牌'),
+                        obscureText: true,
+                        onChanged: (v) => settings.setWebdavPassword(v),
+                      ),
+                    ] else ...[
+                      TextField(
+                        controller: TextEditingController(text: settings.upstashUrl),
+                        decoration: const InputDecoration(labelText: 'REST URL'),
+                        onChanged: (v) => settings.setUpstashUrl(v),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: TextEditingController(text: settings.upstashToken),
+                        decoration: const InputDecoration(labelText: 'REST Token'),
+                        obscureText: true,
+                        onChanged: (v) => settings.setUpstashToken(v),
+                      ),
+                    ],
+                  ],
+                ]),
+                const SizedBox(height: 20),
+
                 // ── Notes ──
                 _SectionHeader(icon: Icons.note_alt_rounded, label: '笔记', cs: cs, tt: tt),
                 const SizedBox(height: 10),

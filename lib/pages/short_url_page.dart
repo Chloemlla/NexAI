@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ShortUrlPage extends StatefulWidget {
@@ -14,52 +13,22 @@ class ShortUrlPage extends StatefulWidget {
 
 class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderStateMixin {
   final _targetController = TextEditingController();
-  final _customCodeController = TextEditingController();
-  final _passwordController = TextEditingController();
   String? _resultUrl;
   bool _isLoading = false;
 
-  final String _baseUrl = 'https://api.951100.xyz';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadSavedPassword();
-  }
+  final String _apiUrl = 'https://api.mmp.cc/api/dwz';
 
   @override
   void dispose() {
     _targetController.dispose();
-    _customCodeController.dispose();
-    _passwordController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadSavedPassword() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedPassword = prefs.getString('short_url_server_password');
-    if (savedPassword != null) {
-      _passwordController.text = savedPassword;
-    }
-  }
-
-  Future<void> _savePassword(String password) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('short_url_server_password', password);
   }
 
   Future<void> _createShortUrl() async {
     final target = _targetController.text.trim();
-    final customCode = _customCodeController.text.trim();
-    final password = _passwordController.text.trim();
 
     if (target.isEmpty) {
       SmartDialog.showToast('请输入目标地址');
-      return;
-    }
-
-    if (password.isEmpty) {
-      SmartDialog.showToast('请输入服务器密码');
       return;
     }
 
@@ -68,26 +37,23 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
 
     try {
       final dio = Dio();
-      final response = await dio.post(
-        '$_baseUrl/public/create',
-        data: {
-          'target': target,
-          'customCode': customCode.isEmpty ? null : customCode,
-          'password': password,
+      final response = await dio.get(
+        _apiUrl,
+        queryParameters: {
+          'longurl': target,
         },
       );
 
-      if (response.data['success'] == true) {
+      if (response.data['status'] == 200) {
         setState(() {
-          _resultUrl = response.data['shortUrl'];
+          _resultUrl = response.data['shorturl'];
         });
-        _savePassword(password);
         SmartDialog.showToast('🎉 短链接生成成功！');
       } else {
-        SmartDialog.showToast(response.data['error'] ?? '生成失败，请重试');
+        SmartDialog.showToast(response.data['msg'] ?? '生成失败，请重试');
       }
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?['error'] ?? e.message ?? '网络连接异常，请检查网络';
+      final errorMsg = e.response?.data?['msg'] ?? e.message ?? '网络连接异常，请检查网络';
       SmartDialog.showToast(errorMsg);
     } catch (e) {
       SmartDialog.showToast('程序发生未知错误: $e');
@@ -267,23 +233,6 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
             cs: cs,
             maxLines: 3,
             minLines: 1,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            controller: _customCodeController,
-            label: '自定义后缀 (可选)',
-            hint: '例如: my-blog',
-            icon: Icons.edit_note_rounded,
-            cs: cs,
-          ),
-          const SizedBox(height: 16),
-          _buildTextField(
-            controller: _passwordController,
-            label: '服务器密码',
-            hint: '验证权限',
-            icon: Icons.admin_panel_settings_rounded,
-            cs: cs,
-            isPassword: true,
           ),
           const SizedBox(height: 32),
           SizedBox(

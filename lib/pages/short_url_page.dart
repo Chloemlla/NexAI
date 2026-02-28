@@ -32,11 +32,20 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
       return;
     }
 
+    final uri = Uri.tryParse(target);
+    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
+      SmartDialog.showToast('请输入有效的包含 http:// 或 https:// 的网址');
+      return;
+    }
+
     setState(() => _isLoading = true);
     SmartDialog.showLoading(msg: '正在生成专属链接...');
 
     try {
-      final dio = Dio();
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+      ));
       final response = await dio.get(
         _apiUrl,
         queryParameters: {
@@ -44,22 +53,34 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
         },
       );
 
-      if (response.data['status'] == 200) {
+      if (!mounted) return;
+
+      if (response.data is Map<String, dynamic> && response.data['status'] == 200) {
         setState(() {
           _resultUrl = response.data['shorturl'];
         });
         SmartDialog.showToast('🎉 短链接生成成功！');
       } else {
-        SmartDialog.showToast(response.data['msg'] ?? '生成失败，请重试');
+        final msg = response.data is Map<String, dynamic> ? response.data['msg'] : '生成失败，请重试';
+        SmartDialog.showToast(msg?.toString() ?? '生成失败，请重试');
       }
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?['msg'] ?? e.message ?? '网络连接异常，请检查网络';
+      if (!mounted) return;
+      String errorMsg = '网络连接异常，请检查网络';
+      if (e.response?.data is Map<String, dynamic>) {
+        errorMsg = e.response?.data['msg']?.toString() ?? e.message ?? errorMsg;
+      } else {
+        errorMsg = e.message ?? errorMsg;
+      }
       SmartDialog.showToast(errorMsg);
     } catch (e) {
+      if (!mounted) return;
       SmartDialog.showToast('程序发生未知错误: $e');
     } finally {
       SmartDialog.dismiss();
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -69,11 +90,15 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
   }
 
   Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      SmartDialog.showToast('无法唤起浏览器打开链接');
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        SmartDialog.showToast('无法唤起浏览器打开链接');
+      }
+    } catch (e) {
+      SmartDialog.showToast('链接格式不正确');
     }
   }
 

@@ -19,7 +19,7 @@ try {
             else {
                 $displayName = $versionName
             }
-            "version: $versionName+$versionCode"
+            "version: $displayName"
         }
         else {
             $line
@@ -47,7 +47,7 @@ try {
 
     # Export for GitHub Actions
     if ($env:GITHUB_ENV) {
-        Add-Content -Path $env:GITHUB_ENV -Value "version=$displayName+$versionCode"
+        Add-Content -Path $env:GITHUB_ENV -Value "version=$displayName"
         Add-Content -Path $env:GITHUB_ENV -Value "VERSION_NAME=$versionName"
         Add-Content -Path $env:GITHUB_ENV -Value "VERSION_CODE=$versionCode"
         Add-Content -Path $env:GITHUB_ENV -Value "SHORT_HASH=$shortHash"

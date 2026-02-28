@@ -99,10 +99,10 @@ jobs:
         run: pwsh scripts/build.ps1 -Arg android
 
       - name: Build Android APK
-        run: flutter build apk --release --split-per-abi --dart-define-from-file=nexai_release.json
+        run: flutter build apk --release --split-per-abi --dart-define-from-file=nexai_release.json --build-number=${{ env.VERSION_CODE }}
 
       # - name: Build Android App Bundle
-      #   run: flutter build appbundle --release --dart-define-from-file=nexai_release.json
+      #   run: flutter build appbundle --release --dart-define-from-file=nexai_release.json --build-number=${{ env.VERSION_CODE }}
 
       - name: Rename APK outputs for release
         run: |

@@ -4,6 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../providers/password_provider.dart';
 import '../models/saved_password.dart';
 
@@ -16,36 +20,51 @@ class PasswordGeneratorPage extends StatefulWidget {
   State<PasswordGeneratorPage> createState() => _PasswordGeneratorPageState();
 }
 
-class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with SingleTickerProviderStateMixin {
+class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
+    with SingleTickerProviderStateMixin {
   PasswordType _selectedType = PasswordType.random;
   String _generatedPassword = '';
   late TabController _tabController;
-  
+
   // Batch generation
   int _batchCount = 10;
   List<String> _batchPasswords = [];
-  
+
   // Random password settings
   int _length = 16;
   bool _includeUppercase = true;
   bool _includeLowercase = true;
   bool _includeNumbers = true;
   bool _includeSymbols = true;
-  
+
   // Memorable password settings
   int _wordCount = 4;
   String _separator = '-';
   bool _capitalizeWords = true;
   bool _addNumbers = true;
-  
+
   // PIN settings
   int _pinLength = 6;
-  
+
   final _random = Random.secure();
-  
+
   final List<String> _words = [
-    'apple', 'banana', 'cherry', 'dragon', 'eagle', 'forest', 'garden', 'happy',
-    'island', 'jungle', 'kitten', 'lemon', 'mountain', 'nature', 'ocean', 'panda',
+    'apple',
+    'banana',
+    'cherry',
+    'dragon',
+    'eagle',
+    'forest',
+    'garden',
+    'happy',
+    'island',
+    'jungle',
+    'kitten',
+    'lemon',
+    'mountain',
+    'nature',
+    'ocean',
+    'panda',
   ];
 
   @override
@@ -59,6 +78,42 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<bool> _requestStoragePermission() async {
+    if (Platform.isAndroid) {
+      final deviceInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkInt = deviceInfo.version.sdkInt;
+      if (sdkInt >= 30) {
+        final status = await Permission.manageExternalStorage.request();
+        return status.isGranted;
+      } else {
+        final status = await Permission.storage.request();
+        return status.isGranted;
+      }
+    }
+    return true;
+  }
+
+  Future<String> _getSafeSavePath(String fileName) async {
+    if (Platform.isAndroid) {
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        throw '需要存储权限才能保存文件';
+      }
+      final dir = Directory('/storage/emulated/0/Download/NexAI');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      return p.join(dir.path, fileName);
+    } else {
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: '保存文件',
+        fileName: fileName,
+      );
+      if (path == null) throw '取消保存';
+      return path;
+    }
   }
 
   void _generatePassword() {
@@ -84,7 +139,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
     if (_includeNumbers) chars += '0123456789';
     if (_includeSymbols) chars += '!@#\$%^&*()_+-=[]{}|;:,.<>?';
     if (chars.isEmpty) chars = 'abcdefghijklmnopqrstuvwxyz';
-    return List.generate(_length, (_) => chars[_random.nextInt(chars.length)]).join();
+    return List.generate(_length, (_) => chars[_random.nextInt(chars.length)])
+        .join();
   }
 
   String _generateMemorablePassword() {
@@ -95,7 +151,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
       availableWords.remove(word);
       String processedWord = word;
       if (_capitalizeWords) {
-        processedWord = processedWord[0].toUpperCase() + processedWord.substring(1);
+        processedWord =
+            processedWord[0].toUpperCase() + processedWord.substring(1);
       }
       selectedWords.add(processedWord);
     }
@@ -140,7 +197,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
     if (RegExp(r'[a-z]').hasMatch(password)) strength += 15;
     if (RegExp(r'[A-Z]').hasMatch(password)) strength += 15;
     if (RegExp(r'[0-9]').hasMatch(password)) strength += 10;
-    if (RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]').hasMatch(password)) strength += 10;
+    if (RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]').hasMatch(password))
+      strength += 10;
     return strength.clamp(0, 100);
   }
 
@@ -165,7 +223,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
   Future<void> _savePassword(String password) async {
     final categoryController = TextEditingController();
     final noteController = TextEditingController();
-    
+
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -185,7 +243,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
               decoration: InputDecoration(
                 labelText: '用途/分类',
                 hintText: '例如：微信、邮箱、淘宝',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 prefixIcon: const Icon(Icons.category_rounded),
               ),
             ),
@@ -194,7 +253,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
               controller: noteController,
               decoration: InputDecoration(
                 labelText: '备注（可选）',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 prefixIcon: const Icon(Icons.note_rounded),
               ),
               maxLines: 2,
@@ -209,7 +269,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text('保存'),
           ),
@@ -226,11 +287,12 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
         createdAt: DateTime.now(),
         strength: _calculatePasswordStrength(password),
       );
-      
+
       await context.read<PasswordProvider>().addPassword(savedPassword);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('密码已保存'), behavior: SnackBarBehavior.floating),
+          const SnackBar(
+              content: Text('密码已保存'), behavior: SnackBarBehavior.floating),
         );
       }
     }
@@ -238,34 +300,39 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
 
   Future<void> _exportBatchToCsv() async {
     if (_batchPasswords.isEmpty) return;
-    
+
     final buffer = StringBuffer();
     buffer.writeln('序号,密码,强度');
     for (int i = 0; i < _batchPasswords.length; i++) {
       final strength = _calculatePasswordStrength(_batchPasswords[i]);
-      final strengthLabel = strength < 40 ? '弱' : strength < 70 ? '中等' : '强';
+      final strengthLabel = strength < 40
+          ? '弱'
+          : strength < 70
+              ? '中等'
+              : '强';
       buffer.writeln('${i + 1},"${_batchPasswords[i]}","$strengthLabel"');
     }
-    
+
     try {
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: '导出批量密码',
-        fileName: 'passwords_${DateTime.now().millisecondsSinceEpoch}.csv',
-      );
-      
-      if (path != null) {
-        final file = File(path);
-        await file.writeAsString(buffer.toString());
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('导出成功'), behavior: SnackBarBehavior.floating),
-          );
-        }
-      }
-    } catch (e) {
+      final fileName = 'passwords_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final path = await _getSafeSavePath(fileName);
+
+      final file = File(path);
+      await file.writeAsString(buffer.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e'), behavior: SnackBarBehavior.floating),
+          SnackBar(
+            content: Text('导出成功: $path'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted && e != '取消保存') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('导出失败: $e'), behavior: SnackBarBehavior.floating),
         );
       }
     }
@@ -274,26 +341,28 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
   Future<void> _exportSavedPasswords() async {
     final provider = context.read<PasswordProvider>();
     final csv = provider.exportToCsv();
-    
+
     try {
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: '导出保存的密码',
-        fileName: 'saved_passwords_${DateTime.now().millisecondsSinceEpoch}.csv',
-      );
-      
-      if (path != null) {
-        final file = File(path);
-        await file.writeAsString(csv);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('导出成功'), behavior: SnackBarBehavior.floating),
-          );
-        }
-      }
-    } catch (e) {
+      final fileName =
+          'saved_passwords_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final path = await _getSafeSavePath(fileName);
+
+      final file = File(path);
+      await file.writeAsString(csv);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导出失败: $e'), behavior: SnackBarBehavior.floating),
+          SnackBar(
+            content: Text('导出成功: $path'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted && e != '取消保存') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('导出失败: $e'), behavior: SnackBarBehavior.floating),
         );
       }
     }
@@ -302,26 +371,28 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage> with Sing
   Future<void> _createBackup() async {
     final provider = context.read<PasswordProvider>();
     final backup = await provider.createBackup();
-    
+
     try {
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: '创建备份',
-        fileName: 'password_backup_${DateTime.now().millisecondsSinceEpoch}.json',
-      );
-      
-      if (path != null) {
-        final file = File(path);
-        await file.writeAsString(backup);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('备份创建成功'), behavior: SnackBarBehavior.floating),
-          );
-        }
-      }
-    } catch (e) {
+      final fileName =
+          'password_backup_${DateTime.now().millisecondsSinceEpoch}.json';
+      final path = await _getSafeSavePath(fileName);
+
+      final file = File(path);
+      await file.writeAsString(backup);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('备份失败: $e'), behavior: SnackBarBehavior.floating),
+          SnackBar(
+            content: Text('备份创建成功: $path'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted && e != '取消保存') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('备份失败: $e'), behavior: SnackBarBehavior.floating),
         );
       }
     }

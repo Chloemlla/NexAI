@@ -1,7 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
@@ -86,6 +92,42 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     _editorScroll.dispose();
     _previewScroll.dispose();
     super.dispose();
+  }
+
+  Future<bool> _requestStoragePermission() async {
+    if (Platform.isAndroid) {
+      final deviceInfo = await DeviceInfoPlugin().androidInfo;
+      final sdkInt = deviceInfo.version.sdkInt;
+      if (sdkInt >= 30) {
+        final status = await Permission.manageExternalStorage.request();
+        return status.isGranted;
+      } else {
+        final status = await Permission.storage.request();
+        return status.isGranted;
+      }
+    }
+    return true;
+  }
+
+  Future<String> _getSafeSavePath(String fileName) async {
+    if (Platform.isAndroid) {
+      final hasPermission = await _requestStoragePermission();
+      if (!hasPermission) {
+        throw '需要存储权限才能保存文件';
+      }
+      final dir = Directory('/storage/emulated/0/Download/NexAI');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      return p.join(dir.path, fileName);
+    } else {
+      final path = await FilePicker.platform.saveFile(
+        dialogTitle: '导出笔记',
+        fileName: fileName,
+      );
+      if (path == null) throw '取消导出';
+      return path;
+    }
   }
 
   void _onContentChanged() {
@@ -658,15 +700,36 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     );
   }
 
-  void _exportAsMarkdown() {
-    // This is a placeholder - actual file export would require platform-specific implementation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('导出功能即将推出'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+  Future<void> _exportAsMarkdown() async {
+    try {
+      final fileName = '${_titleController.text.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')}.md';
+      final path = await _getSafeSavePath(fileName);
+      
+      final file = File(path);
+      await file.writeAsString(_contentController.text);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ 导出成功: $path'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted && e != '取消导出') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('导出失败: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.redAccent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
   }
 
   void _showStatsDialog() {

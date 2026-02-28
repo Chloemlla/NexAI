@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
 import 'main.dart' show isDesktop;
 import 'providers/settings_provider.dart';
@@ -140,6 +141,8 @@ class NexAIApp extends StatelessWidget {
         ),
       ),
       home: const HomePage(),
+      builder: FlutterSmartDialog.init(),
+      navigatorObservers: [FlutterSmartDialog.observer],
     );
   }
 }

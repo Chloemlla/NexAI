@@ -4,6 +4,7 @@ import 'video_to_audio_page.dart';
 import 'date_time_converter_page.dart';
 import 'base64_converter_page.dart';
 import 'password_generator_page.dart';
+import 'short_url_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -187,7 +188,7 @@ class ToolsPage extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 40),
+            padding: EdgeInsets.symmetric(horizontal: hPad),
             sliver: SliverGrid(
               gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: isNarrow ? 180 : 200,
@@ -207,6 +208,43 @@ class ToolsPage extends StatelessWidget {
                   ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const PasswordGeneratorPage()),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+
+          // ── Section: 网络工具 ──
+          SliverToBoxAdapter(
+            child: _SectionHeader(
+              cs: cs,
+              icon: Icons.language_rounded,
+              title: '网络工具',
+              subtitle: '网络辅助与转换',
+              padding: EdgeInsets.fromLTRB(hPad, 32, hPad, 12),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 40),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: isNarrow ? 180 : 200,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.92,
+              ),
+              delegate: SliverChildListDelegate([
+                _ToolCard(
+                  icon: Icons.link_rounded,
+                  title: '短链接生成',
+                  description: '快速缩短 URL',
+                  gradient: LinearGradient(
+                    colors: [cs.secondaryContainer, cs.primaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ShortUrlPage()),
                   ),
                 ),
               ]),

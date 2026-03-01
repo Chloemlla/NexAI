@@ -5,6 +5,7 @@ import 'date_time_converter_page.dart';
 import 'base64_converter_page.dart';
 import 'password_generator_page.dart';
 import 'short_url_page.dart';
+import 'translation_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -225,7 +226,7 @@ class ToolsPage extends StatelessWidget {
             ),
           ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 40),
+            padding: EdgeInsets.symmetric(horizontal: hPad),
             sliver: SliverGrid(
               gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: isNarrow ? 180 : 200,
@@ -245,6 +246,43 @@ class ToolsPage extends StatelessWidget {
                   ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ShortUrlPage()),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+
+          // ── Section: AI 工具 ──
+          SliverToBoxAdapter(
+            child: _SectionHeader(
+              cs: cs,
+              icon: Icons.auto_awesome_rounded,
+              title: 'AI 工具',
+              subtitle: '人工智能辅助',
+              padding: EdgeInsets.fromLTRB(hPad, 32, hPad, 12),
+            ),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 40),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: isNarrow ? 180 : 200,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.92,
+              ),
+              delegate: SliverChildListDelegate([
+                _ToolCard(
+                  icon: Icons.translate_rounded,
+                  title: 'AI 翻译',
+                  description: 'Vertex AI 翻译',
+                  gradient: LinearGradient(
+                    colors: [cs.primaryContainer, cs.secondaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TranslationPage()),
                   ),
                 ),
               ]),

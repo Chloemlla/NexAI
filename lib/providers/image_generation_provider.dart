@@ -127,7 +127,7 @@ class ImageGenerationProvider extends ChangeNotifier {
           // Extract all http(s) URLs from response; UI will attempt to render each
           final urls = <String>[];
           if (content is String) {
-            final urlPattern = RegExp(r'https?://[^\s\)\]\'"]+');
+            final urlPattern = RegExp(r'https?://[^\s\)\]"' + r"']+");
             for (final match in urlPattern.allMatches(content)) {
               final url = match.group(0);
               if (url != null) urls.add(url);

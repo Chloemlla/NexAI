@@ -20,6 +20,8 @@ String _newId() {
   return '${h.substring(0, 8)}-${h.substring(8, 12)}-'
       '${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }
+
+class ChatProvider extends ChangeNotifier {
   final List<Conversation> _conversations = [];
   int _currentIndex = -1;
   bool _isLoading = false;

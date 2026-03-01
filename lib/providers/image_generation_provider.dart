@@ -124,17 +124,13 @@ class ImageGenerationProvider extends ChangeNotifier {
         final content = data['choices']?[0]?['message']?['content'];
         
         if (content != null) {
-          // Extract image URLs from response (support multiple images)
+          // Extract all http(s) URLs from response; UI will attempt to render each
           final urls = <String>[];
           if (content is String) {
-            // Try to find all URLs in markdown format or plain text
-            final urlPattern = RegExp(r'https?://[^\s\)\]]+');
-            final matches = urlPattern.allMatches(content);
-            for (final match in matches) {
+            final urlPattern = RegExp(r'https?://[^\s\)\]\'"]+');
+            for (final match in urlPattern.allMatches(content)) {
               final url = match.group(0);
-              if (url != null && (url.contains('.jpg') || url.contains('.png') || url.contains('.jpeg') || url.contains('image'))) {
-                urls.add(url);
-              }
+              if (url != null) urls.add(url);
             }
           }
 

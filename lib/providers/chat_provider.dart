@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/message.dart';
+import '../models/search_result.dart';
 
 /// Generates a random UUID v4 without external dependencies.
 String _newId() {
@@ -19,22 +20,6 @@ String _newId() {
   return '${h.substring(0, 8)}-${h.substring(8, 12)}-'
       '${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
 }
-
-class SearchResult {
-  final int conversationIndex;
-  final Conversation conversation;
-  final Message message;
-  final int messageIndex;
-
-  SearchResult({
-    required this.conversationIndex,
-    required this.conversation,
-    required this.message,
-    required this.messageIndex,
-  });
-}
-
-class ChatProvider extends ChangeNotifier {
   final List<Conversation> _conversations = [];
   int _currentIndex = -1;
   bool _isLoading = false;

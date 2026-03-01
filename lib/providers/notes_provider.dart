@@ -259,6 +259,7 @@ class NotesProvider extends ChangeNotifier {
     final note = _notes[idx];
     note.content = note.content.isEmpty ? text : '${note.content}\n\n---\n\n$text';
     note.updatedAt = DateTime.now();
+    _rebuildBacklinks();
     notifyListeners();
     _save();
   }
@@ -409,33 +410,12 @@ class NotesProvider extends ChangeNotifier {
   }
 
   bool _evaluateQuery(String query, String text) {
-    final lower = text.toLowerCase();
-    final q = query.trim();
-
-    // Handle NOT
-    if (q.toLowerCase().startsWith('not ')) {
-      return !_evaluateQuery(q.substring(4), text);
+    try {
+      return _QueryParser(query, text).parse();
+    } catch (_) {
+      // Malformed query — fall back to simple contains
+      return text.toLowerCase().contains(query.trim().toLowerCase());
     }
-
-    // Handle OR
-    final orParts = q.split(RegExp(r'\s+or\s+', caseSensitive: false));
-    if (orParts.length > 1) {
-      return orParts.any((part) => _evaluateQuery(part.trim(), text));
-    }
-
-    // Handle AND (default for space-separated terms)
-    final andParts = q.split(RegExp(r'\s+and\s+', caseSensitive: false));
-    if (andParts.length > 1) {
-      return andParts.every((part) => _evaluateQuery(part.trim(), text));
-    }
-
-    // Handle quoted exact match
-    if (q.startsWith('"') && q.endsWith('"') && q.length > 2) {
-      return lower.contains(q.substring(1, q.length - 1).toLowerCase());
-    }
-
-    // Simple contains
-    return lower.contains(q.toLowerCase());
   }
 
   List<String> _extractTerms(String query) {
@@ -509,4 +489,103 @@ class GraphData {
   final List<GraphNode> nodes;
   final List<GraphEdge> edges;
   GraphData({required this.nodes, required this.edges});
+}
+
+// ─── Boolean query parser ───
+// Grammar (lowest to highest precedence):
+//   expr   := or_expr
+//   or_expr  := and_expr  ( 'OR'  and_expr  )*
+//   and_expr := not_expr  ( 'AND' not_expr  )*   |  not_expr not_expr*  (implicit AND)
+//   not_expr := 'NOT' not_expr  |  atom
+//   atom     := '(' expr ')'  |  '"' phrase '"'  |  word
+
+class _QueryParser {
+  final String _text;
+  final String _lower; // normalised haystack
+  final List<String> _tokens;
+  int _pos = 0;
+
+  _QueryParser(String query, String text)
+      : _text = text,
+        _lower = text.toLowerCase(),
+        _tokens = _tokenise(query);
+
+  // Split query into tokens: words, quoted strings, parens, operators
+  static List<String> _tokenise(String q) {
+    final tokens = <String>[];
+    final re = RegExp(r'"[^"]*"|\(|\)|[^\s()]+');
+    for (final m in re.allMatches(q.trim())) {
+      tokens.add(m.group(0)!);
+    }
+    return tokens;
+  }
+
+  bool parse() {
+    if (_tokens.isEmpty) return false;
+    final result = _parseOr();
+    return result;
+  }
+
+  bool _parseOr() {
+    var left = _parseAnd();
+    while (_peek()?.toUpperCase() == 'OR') {
+      _consume();
+      final right = _parseAnd();
+      left = left || right;
+    }
+    return left;
+  }
+
+  bool _parseAnd() {
+    var left = _parseNot();
+    while (_pos < _tokens.length) {
+      final next = _peek()?.toUpperCase();
+      // Explicit AND or implicit AND (next token is not OR / closing paren)
+      if (next == 'AND') {
+        _consume();
+        final right = _parseNot();
+        left = left && right;
+      } else if (next != null && next != 'OR' && next != ')') {
+        final right = _parseNot();
+        left = left && right;
+      } else {
+        break;
+      }
+    }
+    return left;
+  }
+
+  bool _parseNot() {
+    if (_peek()?.toUpperCase() == 'NOT') {
+      _consume();
+      return !_parseNot();
+    }
+    return _parseAtom();
+  }
+
+  bool _parseAtom() {
+    final token = _peek();
+    if (token == null) return false;
+
+    if (token == '(') {
+      _consume(); // consume '('
+      final result = _parseOr();
+      if (_peek() == ')') _consume(); // consume ')'
+      return result;
+    }
+
+    _consume();
+
+    // Quoted phrase: exact match
+    if (token.startsWith('"') && token.endsWith('"') && token.length >= 2) {
+      final phrase = token.substring(1, token.length - 1).toLowerCase();
+      return phrase.isEmpty ? false : _lower.contains(phrase);
+    }
+
+    // Plain word: case-insensitive contains
+    return _lower.contains(token.toLowerCase());
+  }
+
+  String? _peek() => _pos < _tokens.length ? _tokens[_pos] : null;
+  void _consume() { if (_pos < _tokens.length) _pos++; }
 }

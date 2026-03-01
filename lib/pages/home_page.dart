@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../main.dart' show isDesktop, isAndroid;
+import '../models/search_result.dart';
 import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';

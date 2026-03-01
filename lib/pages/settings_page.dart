@@ -136,7 +136,7 @@ class _SettingsPageState extends State<SettingsPage> {
             surfaceTintColor: cs.surfaceTint,
             title: Text('设置', style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w600)),
             actions: [
-              if (!_isDirty)
+              if (_isDirty)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: TextButton.icon(

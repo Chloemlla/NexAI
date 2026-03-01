@@ -64,15 +64,20 @@ class UpdateChecker {
     }
   }
 
-  /// Compare version strings (simple comparison)
+  /// Compare version strings (semantic versioning)
   static bool _isVersionUpToDate(String current, String latest) {
     if (latest.isEmpty) return true;
 
     // Extract version numbers (e.g., "1.0.7-02eb84086" -> "1.0.7")
-    final currentParts = current.split('-')[0].split('.');
-    final latestParts = latest.split('-')[0].split('.');
+    final currentParts = current.split('-')[0].split('+')[0].split('.');
+    final latestParts = latest.split('-')[0].split('+')[0].split('.');
 
-    for (int i = 0; i < 3; i++) {
+    // Compare up to the maximum number of parts in either version
+    final maxParts = currentParts.length > latestParts.length
+        ? currentParts.length
+        : latestParts.length;
+
+    for (int i = 0; i < maxParts; i++) {
       final currentNum = i < currentParts.length ? int.tryParse(currentParts[i]) ?? 0 : 0;
       final latestNum = i < latestParts.length ? int.tryParse(latestParts[i]) ?? 0 : 0;
 
@@ -148,25 +153,42 @@ class UpdateChecker {
   ) async {
     try {
       final androidInfo = await DeviceInfoPlugin().androidInfo;
-      final abi = androidInfo.supportedAbis.first;
+      final supportedAbis = androidInfo.supportedAbis;
 
       final assets = data['assets'] as List<dynamic>? ?? [];
       String? downloadUrl;
+      String? universalApkUrl;
 
       // Find matching APK for device architecture
       for (final asset in assets) {
-        final name = asset['name'] as String? ?? '';
-        if (name.contains(abi) && name.endsWith('.apk')) {
-          downloadUrl = asset['browser_download_url'] as String?;
-          break;
+        final name = (asset['name'] as String? ?? '').toLowerCase();
+        if (!name.endsWith('.apk')) continue;
+
+        // Check for universal APK as fallback
+        if (name.contains('universal') || name.contains('all')) {
+          universalApkUrl = asset['browser_download_url'] as String?;
         }
+
+        // Try to match device ABI (check all supported ABIs in order)
+        for (final abi in supportedAbis) {
+          final abiLower = abi.toLowerCase().replaceAll('_', '-');
+          if (name.contains(abiLower)) {
+            downloadUrl = asset['browser_download_url'] as String?;
+            break;
+          }
+        }
+
+        if (downloadUrl != null) break;
       }
+
+      // Use universal APK if no specific match found
+      downloadUrl ??= universalApkUrl;
 
       if (downloadUrl == null) {
         if (context.mounted) {
           _showErrorDialog(
             context,
-            'No compatible APK found for your device ($abi)',
+            'No compatible APK found for your device (${supportedAbis.join(', ')})',
           );
         }
         return;

@@ -505,7 +505,7 @@ class NotesProvider extends ChangeNotifier {
           if (generatedTitle != null && generatedTitle.trim().isNotEmpty) {
             // Clean up the title (remove quotes, trim, limit length)
             var cleanTitle = generatedTitle.trim()
-                .replaceAll(RegExp(r'^["\']|["\']$'), '')
+                .replaceAll(RegExp(r'^["\x27]|["\x27]$'), '')
                 .trim();
 
             if (cleanTitle.length > 60) {

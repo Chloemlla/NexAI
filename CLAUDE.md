@@ -42,7 +42,7 @@ The project uses GitHub Actions for automated builds. Trigger via:
 
 Required secrets for release builds:
 - `USER_PAT`: GitHub Personal Access Token
-- `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD` (Android signing)
+- `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, `KEYSTORE_PASSWORD` (Android signing)
 
 ## Architecture
 

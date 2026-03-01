@@ -34,7 +34,7 @@ if (nexaiFile.exists()) {
     nexaiCode = "${nexaiJson['nexai.code'] ?: nexaiCode}"
     nexaiShort = nexaiJson['nexai.short'] ?: nexaiShort
     flutterVersionCode = nexaiCode
-    flutterVersionName = "${nexaiName}-${nexaiShort}"
+    flutterVersionName = nexaiName
 } else {
     // Fallback: append git short SHA
     try {

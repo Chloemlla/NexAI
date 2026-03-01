@@ -31,6 +31,7 @@ android/.gradle/
 android/app/build/
 android/local.properties
 android/key.properties
+android/gradle.properties
 *.jks
 *.keystore
 *.jks.bak

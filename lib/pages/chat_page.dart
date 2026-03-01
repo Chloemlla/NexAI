@@ -131,12 +131,15 @@ class _ChatPageState extends State<ChatPage> {
     try {
       await chat.sendMessage(
         content: text,
+        apiMode: settings.apiMode,
         baseUrl: settings.baseUrl,
         apiKey: settings.apiKey,
         model: settings.selectedModel,
         temperature: settings.temperature,
         maxTokens: settings.maxTokens,
         systemPrompt: settings.systemPrompt,
+        vertexProjectId: settings.vertexProjectId,
+        vertexLocation: settings.vertexLocation,
       );
     } catch (e) {
       // Error is already handled inside ChatProvider

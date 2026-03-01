@@ -57,6 +57,15 @@ class SettingsProvider extends ChangeNotifier {
 
   String get vertexApiKey => _vertexApiKey;
 
+  // API Mode
+  String _apiMode = 'OpenAI'; // 'OpenAI' or 'Vertex'
+  String _vertexProjectId = '';
+  String _vertexLocation = 'global';
+
+  String get apiMode => _apiMode;
+  String get vertexProjectId => _vertexProjectId;
+  String get vertexLocation => _vertexLocation;
+
   // Notes auto-save setting
   bool _notesAutoSave = true;
   bool get notesAutoSave => _notesAutoSave;
@@ -93,6 +102,10 @@ class SettingsProvider extends ChangeNotifier {
     _upstashToken = prefs.getString('upstashToken') ?? '';
 
     _vertexApiKey = prefs.getString('vertexApiKey') ?? '';
+
+    _apiMode = prefs.getString('apiMode') ?? 'OpenAI';
+    _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
+    _vertexLocation = prefs.getString('vertexLocation') ?? 'global';
 
     final accentVal = prefs.getInt('accentColorValue');
     _accentColorValue = accentVal;
@@ -144,6 +157,10 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setString('upstashToken', _upstashToken);
 
     await prefs.setString('vertexApiKey', _vertexApiKey);
+
+    await prefs.setString('apiMode', _apiMode);
+    await prefs.setString('vertexProjectId', _vertexProjectId);
+    await prefs.setString('vertexLocation', _vertexLocation);
 
     if (_accentColorValue != null) {
       await prefs.setInt('accentColorValue', _accentColorValue!);
@@ -297,6 +314,24 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setVertexApiKey(String value) async {
     _vertexApiKey = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setApiMode(String mode) async {
+    _apiMode = mode;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setVertexProjectId(String projectId) async {
+    _vertexProjectId = projectId;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setVertexLocation(String location) async {
+    _vertexLocation = location;
     notifyListeners();
     await _save();
   }

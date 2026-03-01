@@ -25,7 +25,14 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _webdavPasswordController;
   late TextEditingController _upstashUrlController;
   late TextEditingController _upstashTokenController;
+  late TextEditingController _upstashTokenController;
   late TextEditingController _vertexApiKeyController;
+  
+  // New API Mode Controllers
+  late String _currentApiMode;
+  late TextEditingController _vertexProjectIdController;
+  late TextEditingController _vertexLocationController;
+  
   bool _showApiKey = false;
   bool _isDirty = false;
   String _version = '';
@@ -44,8 +51,14 @@ class _SettingsPageState extends State<SettingsPage> {
     _upstashUrlController = TextEditingController(text: settings.upstashUrl);
     _upstashTokenController = TextEditingController(text: settings.upstashToken);
     _vertexApiKeyController = TextEditingController(text: settings.vertexApiKey);
+    
+    _currentApiMode = settings.apiMode;
+    _vertexProjectIdController = TextEditingController(text: settings.vertexProjectId);
+    _vertexLocationController = TextEditingController(text: settings.vertexLocation);
+
     for (final c in [
       _baseUrlController, _apiKeyController, _modelsController, _systemPromptController,
+      _vertexProjectIdController, _vertexLocationController,
     ]) {
       c.addListener(() => setState(() => _isDirty = true));
     }
@@ -70,6 +83,8 @@ class _SettingsPageState extends State<SettingsPage> {
     _upstashUrlController.dispose();
     _upstashTokenController.dispose();
     _vertexApiKeyController.dispose();
+    _vertexProjectIdController.dispose();
+    _vertexLocationController.dispose();
     super.dispose();
   }
 
@@ -87,10 +102,13 @@ class _SettingsPageState extends State<SettingsPage> {
 
     Future<void> saveAll() async {
       try {
+        await settings.setApiMode(_currentApiMode);
         await settings.setBaseUrl(_baseUrlController.text);
         await settings.setApiKey(_apiKeyController.text);
         await settings.setModels(_modelsController.text);
         await settings.setSystemPrompt(_systemPromptController.text);
+        await settings.setVertexProjectId(_vertexProjectIdController.text);
+        await settings.setVertexLocation(_vertexLocationController.text);
         setState(() => _isDirty = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -168,23 +186,70 @@ class _SettingsPageState extends State<SettingsPage> {
                 _SectionHeader(icon: Icons.cloud_outlined, label: 'API 配置', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
-                  TextField(
-                    controller: _baseUrlController,
-                    decoration: InputDecoration(
-                      labelText: '基础 URL',
-                      hintText: 'https://api.openai.com/v1',
-                      prefixIcon: const Icon(Icons.link_rounded, size: 20),
-                      helperText: 'OpenAI 兼容端点',
+                  DropdownButtonFormField<String>(
+                    value: _currentApiMode,
+                    decoration: const InputDecoration(
+                      labelText: 'API 模式',
+                      prefixIcon: Icon(Icons.hub_outlined, size: 20),
                     ),
+                    borderRadius: BorderRadius.circular(16),
+                    items: const [
+                      DropdownMenuItem(value: 'OpenAI', child: Text('OpenAI 兼容')),
+                      DropdownMenuItem(value: 'Vertex', child: Text('Google Vertex AI')),
+                    ],
+                    onChanged: (v) { 
+                      if (v != null) {
+                        setState(() {
+                          _currentApiMode = v;
+                          _isDirty = true;
+                        });
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
+                  
+                  if (_currentApiMode == 'OpenAI') ...[
+                    TextField(
+                      controller: _baseUrlController,
+                      decoration: InputDecoration(
+                        labelText: '基础 URL',
+                        hintText: 'https://api.openai.com/v1',
+                        prefixIcon: const Icon(Icons.link_rounded, size: 20),
+                        helperText: 'OpenAI 兼容端点',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    TextField(
+                      controller: _vertexProjectIdController,
+                      decoration: const InputDecoration(
+                        labelText: 'Project ID',
+                        hintText: 'your-google-cloud-project-id',
+                        prefixIcon: Icon(Icons.badge_outlined, size: 20),
+                        helperText: '标准模式必填。若留空则使用 Express 模式',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _vertexLocationController,
+                      decoration: const InputDecoration(
+                        labelText: 'Location',
+                        hintText: 'us-central1',
+                        prefixIcon: Icon(Icons.location_on_outlined, size: 20),
+                        helperText: '标准模式必填。若使用 Express 模式，请输入 global',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   TextField(
                     controller: _apiKeyController,
                     obscureText: !_showApiKey,
                     decoration: InputDecoration(
-                      labelText: 'API 密钥',
-                      hintText: 'sk-...',
+                      labelText: _currentApiMode == 'OpenAI' ? 'API 密钥' : 'Access Token / API Key',
+                      hintText: _currentApiMode == 'OpenAI' ? 'sk-...' : 'ya29...或AIza...',
                       prefixIcon: const Icon(Icons.key_rounded, size: 20),
+                      helperText: _currentApiMode == 'Vertex' ? '标准模式(Project ID不为空): 输入 gcloud print-access-token\nExpress模式(Project ID为空): 输入 AI Studio/Google Cloud API Key' : null,
                       suffixIcon: IconButton(
                         icon: Icon(
                           _showApiKey ? Icons.visibility_off_rounded : Icons.visibility_rounded,
@@ -682,10 +747,13 @@ class _SettingsPageState extends State<SettingsPage> {
               child: const Row(children: [Icon(fluent.FluentIcons.save, size: 14), SizedBox(width: 8), Text('Save All')]),
               onPressed: () async {
                 try {
+                  await settings.setApiMode(_currentApiMode);
                   await settings.setBaseUrl(_baseUrlController.text);
                   await settings.setApiKey(_apiKeyController.text);
                   await settings.setModels(_modelsController.text);
                   await settings.setSystemPrompt(_systemPromptController.text);
+                  await settings.setVertexProjectId(_vertexProjectIdController.text);
+                  await settings.setVertexLocation(_vertexLocationController.text);
                   if (mounted) {
                     fluent.displayInfoBar(context, builder: (ctx, close) {
                       return fluent.InfoBar(title: const Text('Settings saved'), severity: fluent.InfoBarSeverity.success, action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close));
@@ -705,12 +773,34 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       children: [
         _fluentCard(theme, 'API Configuration', fluent.FluentIcons.cloud, [
-          fluent.InfoLabel(label: 'Base URL', child: fluent.TextBox(controller: _baseUrlController, placeholder: 'https://api.openai.com/v1')),
-          const SizedBox(height: 16),
           fluent.InfoLabel(
-            label: 'API Key',
+            label: 'API Mode',
+            child: fluent.ComboBox<String>(
+              value: _currentApiMode,
+              items: const [
+                fluent.ComboBoxItem(value: 'OpenAI', child: Text('OpenAI Compatible')),
+                fluent.ComboBoxItem(value: 'Vertex', child: Text('Google Vertex AI')),
+              ],
+              onChanged: (v) {
+                if (v != null) setState(() => _currentApiMode = v);
+              },
+              isExpanded: true,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (_currentApiMode == 'OpenAI') ...[
+            fluent.InfoLabel(label: 'Base URL', child: fluent.TextBox(controller: _baseUrlController, placeholder: 'https://api.openai.com/v1')),
+            const SizedBox(height: 16),
+          ] else ...[
+            fluent.InfoLabel(label: 'Project ID (Empty for Express Mode)', child: fluent.TextBox(controller: _vertexProjectIdController, placeholder: 'your-google-cloud-project-id')),
+            const SizedBox(height: 16),
+            fluent.InfoLabel(label: 'Location (e.g. us-central1 or global)', child: fluent.TextBox(controller: _vertexLocationController, placeholder: 'us-central1')),
+            const SizedBox(height: 16),
+          ],
+          fluent.InfoLabel(
+            label: _currentApiMode == 'OpenAI' ? 'API Key' : 'Access Token / API Key',
             child: Row(children: [
-              Expanded(child: fluent.TextBox(controller: _apiKeyController, placeholder: 'sk-...', obscureText: !_showApiKey)),
+              Expanded(child: fluent.TextBox(controller: _apiKeyController, placeholder: _currentApiMode == 'OpenAI' ? 'sk-...' : 'ya29... or AIza...', obscureText: !_showApiKey)),
               const SizedBox(width: 8),
               fluent.IconButton(icon: Icon(_showApiKey ? fluent.FluentIcons.hide3 : fluent.FluentIcons.view, size: 16), onPressed: () => setState(() => _showApiKey = !_showApiKey)),
             ]),

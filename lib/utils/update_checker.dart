@@ -9,7 +9,7 @@ import 'build_config.dart';
 
 class UpdateChecker {
   static const String _githubApiUrl =
-      'https://api.github.com/repos/chloemlla/nexai/releases/latest';
+      'https://api.github.com/repos/Chloemlla/NexAI/releases/latest';
   static const String _autoUpdateKey = 'auto_update';
 
   /// Check for updates automatically on app start

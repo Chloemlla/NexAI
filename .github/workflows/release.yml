@@ -158,8 +158,45 @@ jobs:
           path: build/web/
           retention-days: 7
 
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Cache Flutter pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\Pub\Cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Compress Windows Build
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath NexAI-Windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Windows
+          path: NexAI-Windows.zip
+          retention-days: 7
+
   release:
-    needs: [build-android, build-web]
+    needs: [build-android, build-web, build-windows]
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
@@ -174,6 +211,11 @@ jobs:
         with:
           name: NexAI-Web
           path: web-build
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: NexAI-Windows
+          path: windows-build
 
       - uses: actions/download-artifact@v4
         with:
@@ -193,6 +235,9 @@ jobs:
           # Package web build
           cd web-build && zip -r ../release-assets/NexAI-Web-${{ github.ref_name }}.zip . && cd ..
           
+          # Package windows build
+          cp windows-build/NexAI-Windows.zip release-assets/NexAI-Windows-${{ github.ref_name }}.zip
+          
           # Package all android outputs for debugging
           zip -r release-assets/android-outputs-${{ github.ref_name }}.zip android-outputs
 
@@ -203,6 +248,7 @@ jobs:
           echo "### Downloads" >> RELEASE_NOTES.md
           echo "- **Android APK** (multiple architectures available)" >> RELEASE_NOTES.md
           echo "- **Web**: \`NexAI-Web-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
+          echo "- **Windows**: \`NexAI-Windows-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "### APK Architecture Guide" >> RELEASE_NOTES.md
           echo "- \`arm64-v8a\`: Modern 64-bit ARM devices (recommended for most users)" >> RELEASE_NOTES.md
@@ -231,4 +277,5 @@ jobs:
           files: |
             release-assets/NexAI_android_*.apk
             release-assets/NexAI-Web-${{ github.ref_name }}.zip
+            release-assets/NexAI-Windows-${{ github.ref_name }}.zip
             release-assets/android-outputs-${{ github.ref_name }}.zip

@@ -17,12 +17,15 @@ final _mathPattern = RegExp(r'(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|\\ce\{[^}]+\})');
 final _cePattern = RegExp(r'\\ce\{([^}]+)\}');
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
 final _chargePattern = RegExp(r'(\d*[+-])(?!\})');
-final _mermaidBlockPattern = RegExp(r'```mermaid\s*\n([\s\S]*?)```', multiLine: true);
+final _mermaidBlockPattern = RegExp(
+  r'```mermaid\s*\n([\s\S]*?)```',
+  multiLine: true,
+);
 
 /// Renders message content with Markdown, LaTeX/chemical formulas, and Mermaid flowcharts.
 /// Links are clickable and open in the system browser.
 /// Wiki-links [[note]] are rendered as clickable internal links.
-/// 
+///
 /// Performance optimizations:
 /// - Uses ListView.builder for large content to enable lazy loading
 /// - Wraps complex widgets in RepaintBoundary to reduce repaints
@@ -31,7 +34,11 @@ class RichContentView extends StatefulWidget {
   final String content;
   final bool enableWikiLinks;
 
-  const RichContentView({super.key, required this.content, this.enableWikiLinks = false});
+  const RichContentView({
+    super.key,
+    required this.content,
+    this.enableWikiLinks = false,
+  });
 
   @override
   State<RichContentView> createState() => _RichContentViewState();
@@ -52,7 +59,8 @@ class _RichContentViewState extends State<RichContentView> {
   void didUpdateWidget(RichContentView oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Only re-parse if content actually changed
-    if (oldWidget.content != widget.content && _cachedContent != widget.content) {
+    if (oldWidget.content != widget.content &&
+        _cachedContent != widget.content) {
       _cachedContent = widget.content;
       _segments = _parseContent(widget.content);
     }
@@ -63,7 +71,7 @@ class _RichContentViewState extends State<RichContentView> {
     if (_segments.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     // For large content (>10 segments), use ListView.builder for better performance
     if (_segments.length > 10) {
       return ListView.builder(
@@ -73,7 +81,7 @@ class _RichContentViewState extends State<RichContentView> {
         itemBuilder: (context, index) => _buildSegment(_segments[index]),
       );
     }
-    
+
     // For smaller content, use Column for simplicity
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +89,7 @@ class _RichContentViewState extends State<RichContentView> {
       children: _segments.map(_buildSegment).toList(),
     );
   }
-  
+
   Widget _buildSegment(_Segment seg) {
     switch (seg.type) {
       case _SegmentType.mermaid:
@@ -100,13 +108,9 @@ class _RichContentViewState extends State<RichContentView> {
         );
       case _SegmentType.markdown:
         if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
-          return RepaintBoundary(
-            child: _WikiLinkMarkdown(data: seg.content),
-          );
+          return RepaintBoundary(child: _WikiLinkMarkdown(data: seg.content));
         }
-        return RepaintBoundary(
-          child: _MarkdownWidget(data: seg.content),
-        );
+        return RepaintBoundary(child: _MarkdownWidget(data: seg.content));
     }
   }
 }
@@ -149,7 +153,9 @@ class _MathWidget extends StatelessWidget {
           processed,
           textStyle: TextStyle(
             fontSize: display ? settings.fontSize * 1.28 : settings.fontSize,
-            fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+            fontFamily: settings.fontFamily == 'System'
+                ? null
+                : settings.fontFamily,
             color: textColor,
           ),
           onErrorFallback: (err) {
@@ -169,7 +175,10 @@ class _MathWidget extends StatelessWidget {
 
   static String _convertChemical(String formula) {
     var result = formula;
-    result = result.replaceAllMapped(_subscriptPattern, (m) => '${m.group(1)}_{${m.group(2)}}');
+    result = result.replaceAllMapped(
+      _subscriptPattern,
+      (m) => '${m.group(1)}_{${m.group(2)}}',
+    );
     result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
     // Replace <-> before -> to avoid partial match
     result = result.replaceAll('<->', '\\rightleftharpoons ');
@@ -203,14 +212,17 @@ class _MarkdownWidget extends StatelessWidget {
           data,
           style: TextStyle(
             fontSize: settings.fontSize,
-            fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+            fontFamily: settings.fontFamily == 'System'
+                ? null
+                : settings.fontFamily,
             color: cs.onSurface,
             height: 1.6,
           ),
           onLinkTap: (url, title) {
             if (url.isNotEmpty) {
               final uri = Uri.tryParse(url);
-              if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+              if (uri != null)
+                launchUrl(uri, mode: LaunchMode.externalApplication);
             }
           },
         ),
@@ -230,14 +242,17 @@ class _MarkdownWidget extends StatelessWidget {
           data,
           style: TextStyle(
             fontSize: settings.fontSize,
-            fontFamily: settings.fontFamily == 'System' ? null : settings.fontFamily,
+            fontFamily: settings.fontFamily == 'System'
+                ? null
+                : settings.fontFamily,
             color: theme.typography.body?.color,
             height: 1.6,
           ),
           onLinkTap: (url, title) {
             if (url.isNotEmpty) {
               final uri = Uri.tryParse(url);
-              if (uri != null) launchUrl(uri, mode: LaunchMode.externalApplication);
+              if (uri != null)
+                launchUrl(uri, mode: LaunchMode.externalApplication);
             }
           },
         ),
@@ -309,13 +324,17 @@ class _WikiLinkChip extends StatelessWidget {
           if (exists) {
             provider.markViewed(targetNote.id);
             Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: targetNote.id)),
+              MaterialPageRoute(
+                builder: (_) => NoteDetailPage(noteId: targetNote.id),
+              ),
             );
           } else {
             // Create the note and navigate
             final newNote = provider.createNote(title: link.target);
             Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: newNote.id)),
+              MaterialPageRoute(
+                builder: (_) => NoteDetailPage(noteId: newNote.id),
+              ),
             );
           }
         },
@@ -351,12 +370,16 @@ class _WikiLinkChip extends StatelessWidget {
                 ),
               ),
               if (link.heading != null) ...[
-                Text(' › ${link.heading}',
-                    style: TextStyle(fontSize: 11, color: cs.outline)),
+                Text(
+                  ' › ${link.heading}',
+                  style: TextStyle(fontSize: 11, color: cs.outline),
+                ),
               ],
               if (link.blockId != null) ...[
-                Text(' › ^${link.blockId}',
-                    style: TextStyle(fontSize: 11, color: cs.outline)),
+                Text(
+                  ' › ^${link.blockId}',
+                  style: TextStyle(fontSize: 11, color: cs.outline),
+                ),
               ],
             ],
           ),
@@ -400,14 +423,23 @@ List<_Segment> _parseContent(String text) {
     for (final match in _mathPattern.allMatches(subText)) {
       if (match.start > subLastEnd) {
         final mdText = subText.substring(subLastEnd, match.start).trim();
-        if (mdText.isNotEmpty) segments.add(_Segment(_SegmentType.markdown, mdText));
+        if (mdText.isNotEmpty)
+          segments.add(_Segment(_SegmentType.markdown, mdText));
       }
 
       final matched = match.group(0)!;
       if (matched.startsWith('\$\$')) {
-        segments.add(_Segment(_SegmentType.math, matched.substring(2, matched.length - 2), isDisplay: true));
+        segments.add(
+          _Segment(
+            _SegmentType.math,
+            matched.substring(2, matched.length - 2),
+            isDisplay: true,
+          ),
+        );
       } else if (matched.startsWith('\$')) {
-        segments.add(_Segment(_SegmentType.math, matched.substring(1, matched.length - 1)));
+        segments.add(
+          _Segment(_SegmentType.math, matched.substring(1, matched.length - 1)),
+        );
       } else if (matched.startsWith('\\ce{')) {
         segments.add(_Segment(_SegmentType.math, matched));
       }
@@ -417,7 +449,8 @@ List<_Segment> _parseContent(String text) {
 
     if (subLastEnd < subText.length) {
       final remaining = subText.substring(subLastEnd).trim();
-      if (remaining.isNotEmpty) segments.add(_Segment(_SegmentType.markdown, remaining));
+      if (remaining.isNotEmpty)
+        segments.add(_Segment(_SegmentType.markdown, remaining));
     }
   }
 

@@ -38,7 +38,10 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
         String encoded = base64.encode(bytes);
 
         if (_encodeUrlSafe) {
-          encoded = encoded.replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+          encoded = encoded
+              .replaceAll('+', '-')
+              .replaceAll('/', '_')
+              .replaceAll('=', '');
         }
 
         _base64Controller.text = encoded;
@@ -79,7 +82,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
 
   void _copyToClipboard(String value, String label) {
     if (value.isEmpty) return;
-    
+
     Clipboard.setData(ClipboardData(text: value));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -102,10 +105,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Base64 编码/解码'),
-        centerTitle: false,
-      ),
+      appBar: AppBar(title: const Text('Base64 编码/解码'), centerTitle: false),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -128,7 +128,11 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                         color: cs.primaryContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.arrow_downward, size: 20, color: cs.primary),
+                      child: Icon(
+                        Icons.arrow_downward,
+                        size: 20,
+                        color: cs.primary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -200,7 +204,10 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                     suffixIcon: _base64Controller.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.copy),
-                            onPressed: () => _copyToClipboard(_base64Controller.text, 'Base64'),
+                            onPressed: () => _copyToClipboard(
+                              _base64Controller.text,
+                              'Base64',
+                            ),
                             tooltip: '复制',
                           )
                         : null,
@@ -232,7 +239,11 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                         color: cs.secondaryContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.arrow_upward, size: 20, color: cs.secondary),
+                      child: Icon(
+                        Icons.arrow_upward,
+                        size: 20,
+                        color: cs.secondary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -297,7 +308,10 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                     suffixIcon: _stringController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.copy),
-                            onPressed: () => _copyToClipboard(_stringController.text, '解码结果'),
+                            onPressed: () => _copyToClipboard(
+                              _stringController.text,
+                              '解码结果',
+                            ),
                             tooltip: '复制',
                           )
                         : null,

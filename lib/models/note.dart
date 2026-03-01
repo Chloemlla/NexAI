@@ -2,7 +2,9 @@ import 'dart:convert';
 
 /// Regex to extract #tags (including nested like #category/subcategory)
 /// Avoids matching inside code blocks or frontmatter
-final tagPattern = RegExp(r'(?<!\w)#([\w\u4e00-\u9fff][\w\u4e00-\u9fff/]*)(?!\w)');
+final tagPattern = RegExp(
+  r'(?<!\w)#([\w\u4e00-\u9fff][\w\u4e00-\u9fff/]*)(?!\w)',
+);
 
 /// Regex to extract wiki-links: [[note]], [[note|alias]], [[note#heading]], [[note#^blockId]]
 final wikiLinkPattern = RegExp(r'\[\[([^\]]+)\]\]');
@@ -94,26 +96,26 @@ class Note {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'content': content,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'lastViewedAt': lastViewedAt?.toIso8601String(),
-        'isStarred': isStarred,
-      };
+    'id': id,
+    'title': title,
+    'content': content,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+    'lastViewedAt': lastViewedAt?.toIso8601String(),
+    'isStarred': isStarred,
+  };
 
   factory Note.fromJson(Map<String, dynamic> json) => Note(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        content: json['content'] as String,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        lastViewedAt: json['lastViewedAt'] != null
-            ? DateTime.parse(json['lastViewedAt'] as String)
-            : null,
-        isStarred: json['isStarred'] as bool? ?? false,
-      );
+    id: json['id'] as String,
+    title: json['title'] as String,
+    content: json['content'] as String,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    lastViewedAt: json['lastViewedAt'] != null
+        ? DateTime.parse(json['lastViewedAt'] as String)
+        : null,
+    isStarred: json['isStarred'] as bool? ?? false,
+  );
 
   static String encodeList(List<Note> notes) =>
       jsonEncode(notes.map((n) => n.toJson()).toList());
@@ -126,10 +128,10 @@ class Note {
 
 /// Parsed wiki-link: [[target]], [[target|alias]], [[target#heading]], [[target#^blockId]]
 class WikiLink {
-  final String target;    // note name
-  final String? alias;    // display text (after |)
-  final String? heading;  // heading anchor (after #, not starting with ^)
-  final String? blockId;  // block id (after #^)
+  final String target; // note name
+  final String? alias; // display text (after |)
+  final String? heading; // heading anchor (after #, not starting with ^)
+  final String? blockId; // block id (after #^)
 
   WikiLink({required this.target, this.alias, this.heading, this.blockId});
 

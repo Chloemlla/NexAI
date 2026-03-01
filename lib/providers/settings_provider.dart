@@ -4,14 +4,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsProvider extends ChangeNotifier {
   String _baseUrl = 'https://api.openai.com/v1';
   String _apiKey = '';
-  List<String> _models = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'];
+  List<String> _models = [
+    'gpt-4o',
+    'gpt-4o-mini',
+    'gpt-4-turbo',
+    'gpt-3.5-turbo',
+  ];
   String _selectedModel = 'gpt-4o';
   ThemeMode _themeMode = ThemeMode.system;
   double _temperature = 0.7;
   int _maxTokens = 4096;
-  String _systemPrompt = 'You are a helpful assistant. When responding with mathematical or chemical formulas, use LaTeX notation.';
+  String _systemPrompt =
+      'You are a helpful assistant. When responding with mathematical or chemical formulas, use LaTeX notation.';
   int? _accentColorValue;
-  
+
   // Appearance
   double _fontSize = 14.0;
   String _fontFamily = 'System';
@@ -40,7 +46,7 @@ class SettingsProvider extends ChangeNotifier {
   int get maxTokens => _maxTokens;
   String get systemPrompt => _systemPrompt;
   int? get accentColorValue => _accentColorValue;
-  
+
   double get fontSize => _fontSize;
   String get fontFamily => _fontFamily;
   bool get borderlessMode => _borderlessMode;
@@ -85,7 +91,8 @@ class SettingsProvider extends ChangeNotifier {
     _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
     _systemPrompt = prefs.getString('systemPrompt') ?? _systemPrompt;
     _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
-    _aiTitleGeneration = prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
+    _aiTitleGeneration =
+        prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
 
     _fontSize = prefs.getDouble('fontSize') ?? 14.0;
     _fontFamily = prefs.getString('fontFamily') ?? 'System';
@@ -112,7 +119,11 @@ class SettingsProvider extends ChangeNotifier {
 
     final modelsStr = prefs.getString('models');
     if (modelsStr != null && modelsStr.isNotEmpty) {
-      _models = modelsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      _models = modelsStr
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
     }
 
     // Ensure selectedModel exists in the models list
@@ -200,7 +211,9 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setBaseUrl(String url) async {
-    _baseUrl = url.trimRight().endsWith('/') ? url.trimRight().substring(0, url.trimRight().length - 1) : url.trim();
+    _baseUrl = url.trimRight().endsWith('/')
+        ? url.trimRight().substring(0, url.trimRight().length - 1)
+        : url.trim();
     notifyListeners();
     await _save();
   }
@@ -212,7 +225,11 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setModels(String modelsStr) async {
-    final parsed = modelsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final parsed = modelsStr
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
     if (parsed.isEmpty) return; // Don't allow empty models list
     _models = parsed;
     if (!_models.contains(_selectedModel)) {

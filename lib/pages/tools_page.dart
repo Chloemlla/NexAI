@@ -47,7 +47,11 @@ class ToolsPage extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: Icon(Icons.build_circle_rounded, size: 24, color: cs.onPrimary),
+                        child: Icon(
+                          Icons.build_circle_rounded,
+                          size: 24,
+                          color: cs.onPrimary,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Column(
@@ -108,7 +112,9 @@ class ToolsPage extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const VideoCompressorPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const VideoCompressorPage(),
+                    ),
                   ),
                 ),
                 _ToolCard(
@@ -158,7 +164,9 @@ class ToolsPage extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const DateTimeConverterPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const DateTimeConverterPage(),
+                    ),
                   ),
                 ),
                 _ToolCard(
@@ -171,7 +179,9 @@ class ToolsPage extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const Base64ConverterPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const Base64ConverterPage(),
+                    ),
                   ),
                 ),
               ]),
@@ -208,7 +218,9 @@ class ToolsPage extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                   onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PasswordGeneratorPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const PasswordGeneratorPage(),
+                    ),
                   ),
                 ),
               ]),
@@ -377,9 +389,7 @@ class _ToolCard extends StatelessWidget {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),

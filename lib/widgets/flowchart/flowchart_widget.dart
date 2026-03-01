@@ -43,7 +43,11 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       _layout = FlowchartLayout(graph: _graph);
       _parseError = null;
     } catch (e) {
-      _graph = MermaidGraph(nodes: [], edges: [], direction: MermaidDirection.topDown);
+      _graph = MermaidGraph(
+        nodes: [],
+        edges: [],
+        direction: MermaidDirection.topDown,
+      );
       _layout = FlowchartLayout(graph: _graph);
       _parseError = e.toString();
     }
@@ -67,11 +71,17 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       );
     }
 
-    final nodeColor = isDark ? const Color(0xFF2A2A3A) : const Color(0xFFFFFFFF);
+    final nodeColor = isDark
+        ? const Color(0xFF2A2A3A)
+        : const Color(0xFFFFFFFF);
     final nodeBorder = cs.primary;
     final textColor = cs.onSurface;
-    final edgeColor = isDark ? const Color(0xFF8899AA) : const Color(0xFF667788);
-    final labelColor = isDark ? const Color(0xFFAABBCC) : const Color(0xFF556677);
+    final edgeColor = isDark
+        ? const Color(0xFF8899AA)
+        : const Color(0xFF667788);
+    final labelColor = isDark
+        ? const Color(0xFFAABBCC)
+        : const Color(0xFF556677);
 
     return _chartContainer(
       isDark: isDark,
@@ -93,15 +103,24 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       return _fallbackBlock(
         isDark: isDark,
         accentColor: theme.accentColor,
-        textColor: theme.typography.body?.color ?? (isDark ? Colors.white : Colors.black),
+        textColor:
+            theme.typography.body?.color ??
+            (isDark ? Colors.white : Colors.black),
       );
     }
 
-    final nodeColor = isDark ? const Color(0xFF2A2A3A) : const Color(0xFFFFFFFF);
+    final nodeColor = isDark
+        ? const Color(0xFF2A2A3A)
+        : const Color(0xFFFFFFFF);
     final nodeBorder = theme.accentColor;
-    final textColor = theme.typography.body?.color ?? (isDark ? Colors.white : Colors.black);
-    final edgeColor = isDark ? const Color(0xFF8899AA) : const Color(0xFF667788);
-    final labelColor = isDark ? const Color(0xFFAABBCC) : const Color(0xFF556677);
+    final textColor =
+        theme.typography.body?.color ?? (isDark ? Colors.white : Colors.black);
+    final edgeColor = isDark
+        ? const Color(0xFF8899AA)
+        : const Color(0xFF667788);
+    final labelColor = isDark
+        ? const Color(0xFFAABBCC)
+        : const Color(0xFF556677);
 
     return _chartContainer(
       isDark: isDark,
@@ -126,7 +145,9 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8F8F8),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF3D3D3D) : const Color(0xFFE0E0E0),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,13 +156,24 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
             children: [
               Icon(Icons.account_tree_rounded, size: 14, color: accentColor),
               const SizedBox(width: 6),
-              Text('Flowchart', style: TextStyle(fontSize: 12, color: accentColor, fontWeight: FontWeight.w600)),
+              Text(
+                'Flowchart',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: accentColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           SelectableText(
             widget.mermaidSource,
-            style: TextStyle(fontSize: 12, fontFamily: 'Consolas', color: textColor),
+            style: TextStyle(
+              fontSize: 12,
+              fontFamily: 'Consolas',
+              color: textColor,
+            ),
           ),
         ],
       ),
@@ -163,7 +195,9 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A1A2A) : const Color(0xFFF5F7FA),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isDark ? const Color(0xFF333355) : const Color(0xFFDDE0E6)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF333355) : const Color(0xFFDDE0E6),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +208,14 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
               children: [
                 Icon(Icons.account_tree_rounded, size: 14, color: accentColor),
                 const SizedBox(width: 6),
-                Text('Flowchart', style: TextStyle(fontSize: 12, color: accentColor, fontWeight: FontWeight.w600)),
+                Text(
+                  'Flowchart',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: accentColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const Spacer(),
                 Text(
                   '${_graph.nodes.length} nodes · ${_graph.edges.length} edges',

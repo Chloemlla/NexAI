@@ -12,28 +12,32 @@ import 'providers/image_generation_provider.dart';
 import 'providers/password_provider.dart';
 import 'app.dart';
 
-bool get isDesktop => !kIsWeb &&
+bool get isDesktop =>
+    !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.windows ||
-     defaultTargetPlatform == TargetPlatform.linux ||
-     defaultTargetPlatform == TargetPlatform.macOS);
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS);
 
-bool get isAndroid => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+bool get isAndroid =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize media_kit for video playback
   MediaKit.ensureInitialized();
 
   if (isAndroid) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Color(0x00000000),
-      systemNavigationBarColor: Color(0x00000000),
-      systemNavigationBarDividerColor: Color(0x00000000),
-      statusBarIconBrightness: Brightness.dark,
-      systemNavigationBarIconBrightness: Brightness.dark,
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0x00000000),
+        systemNavigationBarColor: Color(0x00000000),
+        systemNavigationBarDividerColor: Color(0x00000000),
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
   }
 
   if (isDesktop) {

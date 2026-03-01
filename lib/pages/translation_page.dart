@@ -53,7 +53,8 @@ class _TranslationPageState extends State<TranslationPage> {
     try {
       final dio = Dio();
       final modelId = 'gemini-2.0-flash-001';
-      final endpoint = 'https://aiplatform.googleapis.com/v1/publishers/google/models/$modelId:generateContent';
+      final endpoint =
+          'https://aiplatform.googleapis.com/v1/publishers/google/models/$modelId:generateContent';
 
       // Get language names for better translation
       final sourceLang = _languages[_sourceLanguage] ?? _sourceLanguage;
@@ -61,26 +62,20 @@ class _TranslationPageState extends State<TranslationPage> {
 
       final response = await dio.post(
         '$endpoint?key=${settings.vertexApiKey}',
-        options: Options(
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        ),
+        options: Options(headers: {'Content-Type': 'application/json'}),
         data: {
           'contents': {
             'role': 'user',
             'parts': [
               {
-                'text': 'Translate the following text from $sourceLang to $targetLang. '
+                'text':
+                    'Translate the following text from $sourceLang to $targetLang. '
                     'Only return the translated text without any explanation or additional content.\n\n'
-                    'Text to translate:\n$text'
-              }
-            ]
+                    'Text to translate:\n$text',
+              },
+            ],
           },
-          'generationConfig': {
-            'temperature': 0.3,
-            'maxOutputTokens': 2048,
-          }
+          'generationConfig': {'temperature': 0.3, 'maxOutputTokens': 2048},
         },
       );
 
@@ -110,9 +105,9 @@ class _TranslationPageState extends State<TranslationPage> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _swapLanguages() {
@@ -186,7 +181,10 @@ class _TranslationPageState extends State<TranslationPage> {
                   ? SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: cs.onPrimary,
+                      ),
                     )
                   : const Icon(Icons.translate_rounded),
               label: Text(_isTranslating ? '翻译中...' : '翻译'),
@@ -205,9 +203,9 @@ class _TranslationPageState extends State<TranslationPage> {
               readOnly: true,
               onCopy: () {
                 Clipboard.setData(ClipboardData(text: _targetController.text));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('已复制到剪贴板')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
               },
             ),
           ],

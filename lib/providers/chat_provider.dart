@@ -27,11 +27,13 @@ class ChatProvider extends ChangeNotifier {
   bool _isLoading = false;
 
   // Reuse Dio instance for connection pooling
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 120),
-    sendTimeout: const Duration(seconds: 30),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 120),
+      sendTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   List<Conversation> get conversations => _conversations;
   int get currentIndex => _currentIndex;
@@ -39,8 +41,8 @@ class ChatProvider extends ChangeNotifier {
 
   Conversation? get currentConversation =>
       _currentIndex >= 0 && _currentIndex < _conversations.length
-          ? _conversations[_currentIndex]
-          : null;
+      ? _conversations[_currentIndex]
+      : null;
 
   List<Message> get messages => currentConversation?.messages ?? [];
 
@@ -89,12 +91,14 @@ class ChatProvider extends ChangeNotifier {
       for (int j = 0; j < conv.messages.length; j++) {
         final msg = conv.messages[j];
         if (msg.content.toLowerCase().contains(q)) {
-          results.add(SearchResult(
-            conversationIndex: i,
-            conversation: conv,
-            message: msg,
-            messageIndex: j,
-          ));
+          results.add(
+            SearchResult(
+              conversationIndex: i,
+              conversation: conv,
+              message: msg,
+              messageIndex: j,
+            ),
+          );
         }
       }
     }
@@ -107,12 +111,15 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void newConversation() {
-    _conversations.insert(0, Conversation(
-      id: _newId(),
-      title: 'New Chat',
-      messages: [],
-      createdAt: DateTime.now(),
-    ));
+    _conversations.insert(
+      0,
+      Conversation(
+        id: _newId(),
+        title: 'New Chat',
+        messages: [],
+        createdAt: DateTime.now(),
+      ),
+    );
     _currentIndex = 0;
     notifyListeners();
     _save();
@@ -161,11 +168,17 @@ class ChatProvider extends ChangeNotifier {
 
     final conversation = currentConversation!;
 
-    final userMessage = Message(role: 'user', content: content, timestamp: DateTime.now());
+    final userMessage = Message(
+      role: 'user',
+      content: content,
+      timestamp: DateTime.now(),
+    );
     conversation.messages.add(userMessage);
 
     if (conversation.messages.where((m) => m.role == 'user').length == 1) {
-      conversation.title = content.length > 30 ? '${content.substring(0, 30)}...' : content;
+      conversation.title = content.length > 30
+          ? '${content.substring(0, 30)}...'
+          : content;
     }
 
     await _performApiCall(
@@ -197,14 +210,19 @@ class ChatProvider extends ChangeNotifier {
   }) async {
     if (_isLoading) return;
     final conversation = currentConversation;
-    if (conversation == null || messageIndex < 0 || messageIndex >= conversation.messages.length) {
+    if (conversation == null ||
+        messageIndex < 0 ||
+        messageIndex >= conversation.messages.length) {
       return;
     }
 
     final message = conversation.messages[messageIndex];
     if (message.role != 'user') return;
 
-    conversation.messages.removeRange(messageIndex + 1, conversation.messages.length);
+    conversation.messages.removeRange(
+      messageIndex + 1,
+      conversation.messages.length,
+    );
     notifyListeners();
 
     await _performApiCall(
@@ -237,7 +255,9 @@ class ChatProvider extends ChangeNotifier {
   }) async {
     if (_isLoading) return;
     final conversation = currentConversation;
-    if (conversation == null || messageIndex < 0 || messageIndex >= conversation.messages.length) {
+    if (conversation == null ||
+        messageIndex < 0 ||
+        messageIndex >= conversation.messages.length) {
       return;
     }
 
@@ -245,7 +265,10 @@ class ChatProvider extends ChangeNotifier {
     if (message.role != 'user') return;
 
     message.updateContent(newContent);
-    conversation.messages.removeRange(messageIndex + 1, conversation.messages.length);
+    conversation.messages.removeRange(
+      messageIndex + 1,
+      conversation.messages.length,
+    );
     notifyListeners();
 
     await _performApiCall(
@@ -281,10 +304,25 @@ class ChatProvider extends ChangeNotifier {
     try {
       if (apiMode == 'Vertex') {
         await _performVertexCall(
-            conversation, apiKey, model, temperature, maxTokens, systemPrompt, vertexProjectId, vertexLocation);
+          conversation,
+          apiKey,
+          model,
+          temperature,
+          maxTokens,
+          systemPrompt,
+          vertexProjectId,
+          vertexLocation,
+        );
       } else {
         await _performOpenAiCall(
-            conversation, baseUrl, apiKey, model, temperature, maxTokens, systemPrompt);
+          conversation,
+          baseUrl,
+          apiKey,
+          model,
+          temperature,
+          maxTokens,
+          systemPrompt,
+        );
       }
     } on DioException catch (e) {
       String errorMsg;
@@ -292,7 +330,9 @@ class ChatProvider extends ChangeNotifier {
         try {
           final errorData = e.response!.data;
           if (errorData is Map) {
-            errorMsg = errorData['error']?['message'] ?? 'HTTP ${e.response!.statusCode}';
+            errorMsg =
+                errorData['error']?['message'] ??
+                'HTTP ${e.response!.statusCode}';
           } else {
             errorMsg = 'HTTP ${e.response!.statusCode}';
           }
@@ -327,13 +367,14 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _performOpenAiCall(
-      Conversation conversation,
-      String baseUrl,
-      String apiKey,
-      String model,
-      double temperature,
-      int maxTokens,
-      String systemPrompt) async {
+    Conversation conversation,
+    String baseUrl,
+    String apiKey,
+    String model,
+    double temperature,
+    int maxTokens,
+    String systemPrompt,
+  ) async {
     final messagesPayload = <Map<String, String>>[];
     if (systemPrompt.isNotEmpty) {
       messagesPayload.add({'role': 'system', 'content': systemPrompt});
@@ -374,7 +415,8 @@ class ChatProvider extends ChangeNotifier {
       String lineBuf = '';
       bool done = false;
 
-      await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
+      await for (final chunk
+          in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
         if (done) break;
         lineBuf += chunk;
         final lines = lineBuf.split('\n');
@@ -420,14 +462,15 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _performVertexCall(
-      Conversation conversation,
-      String apiKey,
-      String model,
-      double temperature,
-      int maxTokens,
-      String systemPrompt,
-      String vertexProjectId,
-      String vertexLocation) async {
+    Conversation conversation,
+    String apiKey,
+    String model,
+    double temperature,
+    int maxTokens,
+    String systemPrompt,
+    String vertexProjectId,
+    String vertexLocation,
+  ) async {
     final contentsPayload = <Map<String, dynamic>>[];
     for (final msg in conversation.messages) {
       if (msg.isError) continue;
@@ -436,8 +479,8 @@ class ChatProvider extends ChangeNotifier {
       contentsPayload.add({
         'role': role,
         'parts': [
-          {'text': msg.content}
-        ]
+          {'text': msg.content},
+        ],
       });
     }
 
@@ -446,14 +489,14 @@ class ChatProvider extends ChangeNotifier {
       'generationConfig': {
         'temperature': temperature,
         'maxOutputTokens': maxTokens,
-      }
+      },
     };
 
     if (systemPrompt.isNotEmpty) {
       payload['systemInstruction'] = {
         'parts': [
-          {'text': systemPrompt}
-        ]
+          {'text': systemPrompt},
+        ],
       };
     }
 
@@ -475,10 +518,7 @@ class ChatProvider extends ChangeNotifier {
     final response = await _dio.post<ResponseBody>(
       url,
       data: payload,
-      options: Options(
-        headers: headers,
-        responseType: ResponseType.stream,
-      ),
+      options: Options(headers: headers, responseType: ResponseType.stream),
     );
 
     if (response.statusCode == 200) {
@@ -493,7 +533,8 @@ class ChatProvider extends ChangeNotifier {
       final buffer = StringBuffer();
       String lineBuf = '';
 
-      await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
+      await for (final chunk
+          in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
         lineBuf += chunk;
         final lines = lineBuf.split('\n');
         lineBuf = lines.removeLast();
@@ -507,7 +548,8 @@ class ChatProvider extends ChangeNotifier {
             final json = jsonDecode(data) as Map<String, dynamic>;
             final candidates = json['candidates'] as List<dynamic>?;
             if (candidates != null && candidates.isNotEmpty) {
-              final parts = candidates[0]['content']?['parts'] as List<dynamic>?;
+              final parts =
+                  candidates[0]['content']?['parts'] as List<dynamic>?;
               if (parts != null && parts.isNotEmpty) {
                 final text = parts[0]['text'] as String?;
                 if (text != null) {

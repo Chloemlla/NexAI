@@ -25,7 +25,9 @@ class PasswordProvider extends ChangeNotifier {
       if (legacy != null) {
         await _storage.write(key: _key, value: legacy);
         await prefs.remove('saved_passwords');
-        debugPrint('NexAI: migrated passwords from SharedPreferences → secure storage');
+        debugPrint(
+          'NexAI: migrated passwords from SharedPreferences → secure storage',
+        );
       }
 
       final data = await _storage.read(key: _key);
@@ -41,7 +43,9 @@ class PasswordProvider extends ChangeNotifier {
   }
 
   Future<void> _saveToStorage() async {
-    final passwordsJson = jsonEncode(_passwords.map((e) => e.toJson()).toList());
+    final passwordsJson = jsonEncode(
+      _passwords.map((e) => e.toJson()).toList(),
+    );
     await _storage.write(key: _key, value: passwordsJson);
   }
 
@@ -71,7 +75,11 @@ class PasswordProvider extends ChangeNotifier {
     final buffer = StringBuffer();
     buffer.writeln('用途,密码,强度,备注,创建时间');
     for (final password in _passwords) {
-      final strength = password.strength < 40 ? '弱' : password.strength < 70 ? '中等' : '强';
+      final strength = password.strength < 40
+          ? '弱'
+          : password.strength < 70
+          ? '中等'
+          : '强';
       buffer.writeln(
         '"${password.category}","${password.password}","$strength","${password.note}","${password.createdAt}"',
       );
@@ -108,7 +116,9 @@ class PasswordProvider extends ChangeNotifier {
       final backup = jsonDecode(backupString);
       final checksum = backup['checksum'] as String;
       final passwordsJson = jsonEncode(backup['passwords']);
-      final calculatedChecksum = sha256.convert(utf8.encode(passwordsJson)).toString();
+      final calculatedChecksum = sha256
+          .convert(utf8.encode(passwordsJson))
+          .toString();
       if (checksum != calculatedChecksum) {
         debugPrint('NexAI: backup checksum mismatch');
         return false;
@@ -126,7 +136,9 @@ class PasswordProvider extends ChangeNotifier {
   }
 
   String _generateChecksum() {
-    final passwordsJson = jsonEncode(_passwords.map((e) => e.toJson()).toList());
+    final passwordsJson = jsonEncode(
+      _passwords.map((e) => e.toJson()).toList(),
+    );
     return sha256.convert(utf8.encode(passwordsJson)).toString();
   }
 

@@ -11,7 +11,8 @@ class ShortUrlPage extends StatefulWidget {
   State<ShortUrlPage> createState() => _ShortUrlPageState();
 }
 
-class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderStateMixin {
+class _ShortUrlPageState extends State<ShortUrlPage>
+    with SingleTickerProviderStateMixin {
   final _targetController = TextEditingController();
   String? _resultUrl;
   bool _isLoading = false;
@@ -42,26 +43,29 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
     SmartDialog.showLoading(msg: '正在生成专属链接...');
 
     try {
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-      ));
+      final dio = Dio(
+        BaseOptions(
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
       final response = await dio.get(
         _apiUrl,
-        queryParameters: {
-          'longurl': target,
-        },
+        queryParameters: {'longurl': target},
       );
 
       if (!mounted) return;
 
-      if (response.data is Map<String, dynamic> && response.data['status'] == 200) {
+      if (response.data is Map<String, dynamic> &&
+          response.data['status'] == 200) {
         setState(() {
           _resultUrl = response.data['shorturl'];
         });
         SmartDialog.showToast('🎉 短链接生成成功！');
       } else {
-        final msg = response.data is Map<String, dynamic> ? response.data['msg'] : '生成失败，请重试';
+        final msg = response.data is Map<String, dynamic>
+            ? response.data['msg']
+            : '生成失败，请重试';
         SmartDialog.showToast(msg?.toString() ?? '生成失败，请重试');
       }
     } on DioException catch (e) {
@@ -110,7 +114,10 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('短链接生成', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text(
+          '短链接生成',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -123,7 +130,12 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
           SliverToBoxAdapter(
             child: Container(
               width: double.infinity,
-              padding: EdgeInsets.fromLTRB(24, mq.padding.top + kToolbarHeight + 20, 24, 40),
+              padding: EdgeInsets.fromLTRB(
+                24,
+                mq.padding.top + kToolbarHeight + 20,
+                24,
+                40,
+              ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -156,7 +168,11 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
                         ),
                       ],
                     ),
-                    child: Icon(Icons.link_rounded, size: 36, color: cs.onPrimary),
+                    child: Icon(
+                      Icons.link_rounded,
+                      size: 36,
+                      color: cs.onPrimary,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -226,10 +242,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(
-          color: cs.outlineVariant.withAlpha(50),
-          width: 1,
-        ),
+        border: Border.all(color: cs.outlineVariant.withAlpha(50), width: 1),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -237,7 +250,11 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
         children: [
           Row(
             children: [
-              Icon(Icons.dashboard_customize_rounded, size: 20, color: cs.primary),
+              Icon(
+                Icons.dashboard_customize_rounded,
+                size: 20,
+                color: cs.primary,
+              ),
               const SizedBox(width: 10),
               Text(
                 '参数配置',
@@ -309,10 +326,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
       decoration: BoxDecoration(
         color: cs.secondaryContainer.withAlpha(80),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: cs.secondary.withAlpha(50),
-          width: 1,
-        ),
+        border: Border.all(color: cs.secondary.withAlpha(50), width: 1),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -326,7 +340,11 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
                   color: cs.secondaryContainer,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.check_circle_rounded, size: 20, color: cs.secondary),
+                child: Icon(
+                  Icons.check_circle_rounded,
+                  size: 20,
+                  color: cs.secondary,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -373,10 +391,15 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
                 child: FilledButton.tonalIcon(
                   onPressed: () => _copyToClipboard(_resultUrl!),
                   icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('复制链接', style: TextStyle(fontWeight: FontWeight.w600)),
+                  label: const Text(
+                    '复制链接',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
@@ -385,10 +408,15 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
                 child: FilledButton.icon(
                   onPressed: () => _launchUrl(_resultUrl!),
                   icon: const Icon(Icons.open_in_browser_rounded, size: 18),
-                  label: const Text('立即访问', style: TextStyle(fontWeight: FontWeight.w600)),
+                  label: const Text(
+                    '立即访问',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
               ),
@@ -438,7 +466,10 @@ class _ShortUrlPageState extends State<ShortUrlPage> with SingleTickerProviderSt
           borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: cs.primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
       ),
     );
   }

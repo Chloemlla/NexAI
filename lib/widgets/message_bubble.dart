@@ -444,12 +444,15 @@ class _M3Footer extends StatelessWidget {
 
     await chatProvider.resendMessage(
       messageIndex: messageIndex,
+      apiMode: settings.apiMode,
       baseUrl: settings.baseUrl,
       apiKey: settings.apiKey,
       model: settings.selectedModel,
       temperature: settings.temperature,
       maxTokens: settings.maxTokens,
       systemPrompt: settings.systemPrompt,
+      vertexProjectId: settings.vertexProjectId,
+      vertexLocation: settings.vertexLocation,
     );
   }
 
@@ -460,12 +463,15 @@ class _M3Footer extends StatelessWidget {
     await chatProvider.editAndResendMessage(
       messageIndex: messageIndex,
       newContent: newContent,
+      apiMode: settings.apiMode,
       baseUrl: settings.baseUrl,
       apiKey: settings.apiKey,
       model: settings.selectedModel,
       temperature: settings.temperature,
       maxTokens: settings.maxTokens,
       systemPrompt: settings.systemPrompt,
+      vertexProjectId: settings.vertexProjectId,
+      vertexLocation: settings.vertexLocation,
     );
   }
 
@@ -724,12 +730,15 @@ class _FluentFooter extends StatelessWidget {
 
     await chatProvider.resendMessage(
       messageIndex: messageIndex,
+      apiMode: settings.apiMode,
       baseUrl: settings.baseUrl,
       apiKey: settings.apiKey,
       model: settings.selectedModel,
       temperature: settings.temperature,
       maxTokens: settings.maxTokens,
       systemPrompt: settings.systemPrompt,
+      vertexProjectId: settings.vertexProjectId,
+      vertexLocation: settings.vertexLocation,
     );
   }
 
@@ -740,12 +749,15 @@ class _FluentFooter extends StatelessWidget {
     await chatProvider.editAndResendMessage(
       messageIndex: messageIndex,
       newContent: newContent,
+      apiMode: settings.apiMode,
       baseUrl: settings.baseUrl,
       apiKey: settings.apiKey,
       model: settings.selectedModel,
       temperature: settings.temperature,
       maxTokens: settings.maxTokens,
       systemPrompt: settings.systemPrompt,
+      vertexProjectId: settings.vertexProjectId,
+      vertexLocation: settings.vertexLocation,
     );
   }
 }

@@ -25,7 +25,6 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _webdavPasswordController;
   late TextEditingController _upstashUrlController;
   late TextEditingController _upstashTokenController;
-  late TextEditingController _upstashTokenController;
   late TextEditingController _vertexApiKeyController;
   
   // New API Mode Controllers

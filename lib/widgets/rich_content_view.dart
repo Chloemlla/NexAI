@@ -72,22 +72,25 @@ class _RichContentViewState extends State<RichContentView> {
       return const SizedBox.shrink();
     }
 
+    Widget content;
     // For large content (>10 segments), use ListView.builder for better performance
     if (_segments.length > 10) {
-      return ListView.builder(
+      content = ListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: _segments.length,
         itemBuilder: (context, index) => _buildSegment(_segments[index]),
       );
+    } else {
+      // For smaller content, use Column for simplicity
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: _segments.map(_buildSegment).toList(),
+      );
     }
 
-    // For smaller content, use Column for simplicity
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: _segments.map(_buildSegment).toList(),
-    );
+    return SelectionArea(child: content);
   }
 
   Widget _buildSegment(_Segment seg) {

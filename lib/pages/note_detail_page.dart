@@ -165,6 +165,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   void _saveNote() {
     final provider = context.read<NotesProvider>();
+    final settings = context.read<SettingsProvider>();
+
     provider.updateNote(
       widget.noteId,
       title: _titleController.text.trim().isEmpty
@@ -172,6 +174,27 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           : _titleController.text.trim(),
       content: _contentController.text,
     );
+
+    // Auto-generate title if it's "Untitled Note" and API is configured
+    if (_titleController.text.trim().isEmpty &&
+        _contentController.text.trim().isNotEmpty &&
+        settings.isConfigured &&
+        settings.aiTitleGeneration) {
+      provider.generateTitleIfNeeded(
+        noteId: widget.noteId,
+        baseUrl: settings.baseUrl,
+        apiKey: settings.apiKey,
+        model: settings.selectedModel,
+      ).then((_) {
+        // Update title controller if title was generated
+        final note = provider.notes.where((n) => n.id == widget.noteId).firstOrNull;
+        if (note != null && note.title != 'Untitled Note' && mounted) {
+          setState(() {
+            _titleController.text = note.title;
+          });
+        }
+      });
+    }
   }
 
   // ─── Toolbar formatting helpers ───

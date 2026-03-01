@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:math';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:dio/dio.dart';
 
 import '../models/note.dart';
 
@@ -22,6 +24,13 @@ class NotesProvider extends ChangeNotifier {
   List<Note> _notes = [];
   // Backlink index: targetNoteId -> set of sourceNoteIds
   Map<String, Set<String>> _backlinks = {};
+
+  // Dio instance for AI title generation
+  final Dio _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 15),
+    receiveTimeout: const Duration(seconds: 30),
+    sendTimeout: const Duration(seconds: 15),
+  ));
 
   List<Note> get notes => _notes;
 
@@ -434,6 +443,89 @@ class NotesProvider extends ChangeNotifier {
       terms.addAll(remaining.split(RegExp(r'\s+')).where((t) => t.isNotEmpty));
     }
     return terms;
+  }
+
+  // ─── AI Title Generation ───
+
+  /// Generate a title for a note using AI if it's untitled
+  Future<void> generateTitleIfNeeded({
+    required String noteId,
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+  }) async {
+    final idx = _notes.indexWhere((n) => n.id == noteId);
+    if (idx == -1) return;
+
+    final note = _notes[idx];
+
+    // Only generate title if it's "Untitled Note" and has content
+    if (note.title != 'Untitled Note' || note.content.trim().isEmpty) {
+      return;
+    }
+
+    try {
+      // Extract first 500 characters of content for title generation
+      final contentPreview = note.bodyContent.length > 500
+          ? note.bodyContent.substring(0, 500)
+          : note.bodyContent;
+
+      final response = await _dio.post(
+        '$baseUrl/chat/completions',
+        data: {
+          'model': model,
+          'messages': [
+            {
+              'role': 'system',
+              'content': 'You are a helpful assistant that generates concise, descriptive titles for notes. Generate a title that is 3-8 words long, capturing the main topic. Respond with ONLY the title, no quotes or extra text.',
+            },
+            {
+              'role': 'user',
+              'content': 'Generate a concise title for this note:\n\n$contentPreview',
+            },
+          ],
+          'temperature': 0.7,
+          'max_tokens': 50,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $apiKey',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final choices = data['choices'] as List?;
+        if (choices != null && choices.isNotEmpty) {
+          final message = choices[0]['message'] as Map<String, dynamic>?;
+          final generatedTitle = message?['content'] as String?;
+
+          if (generatedTitle != null && generatedTitle.trim().isNotEmpty) {
+            // Clean up the title (remove quotes, trim, limit length)
+            var cleanTitle = generatedTitle.trim()
+                .replaceAll(RegExp(r'^["\']|["\']$'), '')
+                .trim();
+
+            if (cleanTitle.length > 60) {
+              cleanTitle = cleanTitle.substring(0, 60);
+            }
+
+            if (cleanTitle.isNotEmpty) {
+              _notes[idx].title = cleanTitle;
+              _notes[idx].updatedAt = DateTime.now();
+              notifyListeners();
+              _save();
+              debugPrint('NexAI: Generated title for note: $cleanTitle');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('NexAI: Failed to generate title: $e');
+      // Silently fail - keep "Untitled Note" if generation fails
+    }
   }
 }
 

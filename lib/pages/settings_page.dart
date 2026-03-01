@@ -468,6 +468,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   const SizedBox(height: 8),
+                  SwitchListTile(
+                    value: settings.aiTitleGeneration,
+                    onChanged: (value) => settings.setAiTitleGeneration(value),
+                    title: Text('AI 标题生成', style: tt.bodyMedium),
+                    subtitle: Text(
+                      '自动为无标题笔记生成标题',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -721,6 +733,32 @@ class _SettingsPageState extends State<SettingsPage> {
               _fluentColorBtn(context, settings, 0xFF00B7C3, 'Teal', theme),
               _fluentColorBtn(context, settings, 0xFFE3008C, 'Pink', theme),
             ]),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        _fluentCard(theme, 'Notes', fluent.FluentIcons.edit_note, [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Auto-save notes', style: theme.typography.body),
+              ),
+              fluent.ToggleSwitch(
+                checked: settings.notesAutoSave,
+                onChanged: (value) => settings.setNotesAutoSave(value),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text('AI title generation', style: theme.typography.body),
+              ),
+              fluent.ToggleSwitch(
+                checked: settings.aiTitleGeneration,
+                onChanged: (value) => settings.setAiTitleGeneration(value),
+              ),
+            ],
           ),
         ]),
         const SizedBox(height: 24),

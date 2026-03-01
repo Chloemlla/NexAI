@@ -56,6 +56,10 @@ class SettingsProvider extends ChangeNotifier {
   bool _notesAutoSave = true;
   bool get notesAutoSave => _notesAutoSave;
 
+  // AI title generation setting
+  bool _aiTitleGeneration = true;
+  bool get aiTitleGeneration => _aiTitleGeneration;
+
   bool get isConfigured => _apiKey.isNotEmpty;
 
   Future<void> loadSettings() async {
@@ -67,7 +71,8 @@ class SettingsProvider extends ChangeNotifier {
     _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
     _systemPrompt = prefs.getString('systemPrompt') ?? _systemPrompt;
     _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
-    
+    _aiTitleGeneration = prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
+
     _fontSize = prefs.getDouble('fontSize') ?? 14.0;
     _fontFamily = prefs.getString('fontFamily') ?? 'System';
     _borderlessMode = prefs.getBool('borderlessMode') ?? false;
@@ -115,7 +120,8 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setInt('maxTokens', _maxTokens);
     await prefs.setString('systemPrompt', _systemPrompt);
     await prefs.setBool('notesAutoSave', _notesAutoSave);
-    
+    await prefs.setBool('aiTitleGeneration', _aiTitleGeneration);
+
     await prefs.setDouble('fontSize', _fontSize);
     await prefs.setString('fontFamily', _fontFamily);
     await prefs.setBool('borderlessMode', _borderlessMode);
@@ -228,6 +234,12 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setNotesAutoSave(bool value) async {
     _notesAutoSave = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setAiTitleGeneration(bool value) async {
+    _aiTitleGeneration = value;
     notifyListeners();
     await _save();
   }

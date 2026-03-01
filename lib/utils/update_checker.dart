@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'build_config.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class UpdateChecker {
   static const String _githubApiUrl =
@@ -28,6 +28,7 @@ class UpdateChecker {
     bool isAuto = false,
   }) async {
     try {
+      final packageInfo = await PackageInfo.fromPlatform();
       final response = await http.get(Uri.parse(_githubApiUrl));
 
       if (response.statusCode != 200) {
@@ -38,20 +39,23 @@ class UpdateChecker {
       }
 
       final data = json.decode(response.body) as Map<String, dynamic>;
-      final createdAt = DateTime.parse(data['created_at'] as String);
-      final latestBuildTime = createdAt.millisecondsSinceEpoch ~/ 1000;
+      final tagName = data['tag_name'] as String? ?? '';
+      final currentVersion = packageInfo.version;
 
-      if (BuildConfig.buildTime >= latestBuildTime) {
+      // Compare versions: remove 'v' prefix if present
+      final latestVersion = tagName.startsWith('v') ? tagName.substring(1) : tagName;
+
+      if (_isVersionUpToDate(currentVersion, latestVersion)) {
         // Already up to date
         if (!isAuto && context.mounted) {
-          _showUpToDateDialog(context);
+          _showUpToDateDialog(context, currentVersion);
         }
         return;
       }
 
       // New version available
       if (context.mounted) {
-        _showUpdateDialog(context, data);
+        _showUpdateDialog(context, data, currentVersion);
       }
     } catch (e) {
       if (!isAuto && context.mounted) {
@@ -60,10 +64,30 @@ class UpdateChecker {
     }
   }
 
+  /// Compare version strings (simple comparison)
+  static bool _isVersionUpToDate(String current, String latest) {
+    if (latest.isEmpty) return true;
+
+    // Extract version numbers (e.g., "1.1.6-02eb84086" -> "1.1.6")
+    final currentParts = current.split('-')[0].split('.');
+    final latestParts = latest.split('-')[0].split('.');
+
+    for (int i = 0; i < 3; i++) {
+      final currentNum = i < currentParts.length ? int.tryParse(currentParts[i]) ?? 0 : 0;
+      final latestNum = i < latestParts.length ? int.tryParse(latestParts[i]) ?? 0 : 0;
+
+      if (currentNum > latestNum) return true;
+      if (currentNum < latestNum) return false;
+    }
+
+    return true; // Versions are equal
+  }
+
   /// Show update available dialog
   static void _showUpdateDialog(
     BuildContext context,
     Map<String, dynamic> data,
+    String currentVersion,
   ) {
     final tagName = data['tag_name'] as String? ?? 'Unknown';
     final body = data['body'] as String? ?? 'No release notes available';
@@ -80,7 +104,7 @@ class UpdateChecker {
             children: [
               Text('New version: $tagName'),
               const SizedBox(height: 8),
-              Text('Current version: ${BuildConfig.fullVersion}'),
+              Text('Current version: $currentVersion'),
               const SizedBox(height: 16),
               const Text(
                 'Release Notes:',
@@ -173,13 +197,13 @@ class UpdateChecker {
   }
 
   /// Show up-to-date dialog
-  static void _showUpToDateDialog(BuildContext context) {
+  static void _showUpToDateDialog(BuildContext context, String currentVersion) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Up to Date'),
         content: Text(
-          'You are running the latest version (${BuildConfig.fullVersion})',
+          'You are running the latest version ($currentVersion)',
         ),
         actions: [
           FilledButton(

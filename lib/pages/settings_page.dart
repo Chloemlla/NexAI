@@ -1,11 +1,11 @@
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../main.dart' show isAndroid;
 import '../providers/settings_provider.dart';
 import '../utils/update_checker.dart';
-import '../utils/build_config.dart';
 import 'about_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -27,6 +27,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _upstashTokenController;
   bool _showApiKey = false;
   bool _isDirty = false;
+  String _version = '';
 
   @override
   void initState() {
@@ -46,6 +47,13 @@ class _SettingsPageState extends State<SettingsPage> {
     ]) {
       c.addListener(() => setState(() => _isDirty = true));
     }
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    if (!mounted) return;
+    setState(() => _version = info.version);
   }
 
   @override
@@ -521,7 +529,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        BuildConfig.fullVersion,
+                        _version.isNotEmpty ? _version : '...',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cs.primary),
                       ),
                     ),

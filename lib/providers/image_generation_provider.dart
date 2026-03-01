@@ -25,6 +25,8 @@ class GeneratedImage {
 }
 
 class ImageGenerationProvider extends ChangeNotifier {
+  static const int _maxImages = 50;
+
   final List<GeneratedImage> _images = [];
   bool _isLoading = false;
   String? _error;
@@ -37,6 +39,13 @@ class ImageGenerationProvider extends ChangeNotifier {
   List<GeneratedImage> get images => _images;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  void _addImage(GeneratedImage image) {
+    _images.insert(0, image);
+    if (_images.length > _maxImages) {
+      _images.removeRange(_maxImages, _images.length);
+    }
+  }
 
   /// Chat-based image generation (v1/chat/completions)
   /// Supports text-to-image and image-to-image
@@ -131,7 +140,7 @@ class ImageGenerationProvider extends ChangeNotifier {
 
           if (urls.isNotEmpty) {
             for (final url in urls) {
-              _images.insert(0, GeneratedImage(
+              _addImage(GeneratedImage(
                 url: url,
                 prompt: prompt,
                 timestamp: DateTime.now(),
@@ -215,7 +224,7 @@ class ImageGenerationProvider extends ChangeNotifier {
         
         if (imageDataList != null && imageDataList.isNotEmpty) {
           for (final imageData in imageDataList) {
-            _images.insert(0, GeneratedImage(
+            _addImage(GeneratedImage(
               url: imageData['url'] ?? '',
               b64Json: imageData['b64_json'],
               prompt: prompt,
@@ -281,7 +290,7 @@ class ImageGenerationProvider extends ChangeNotifier {
         final imageData = data['data']?[0];
         
         if (imageData != null) {
-          _images.insert(0, GeneratedImage(
+          _addImage(GeneratedImage(
             url: imageData['url'] ?? '',
             b64Json: imageData['b64_json'],
             prompt: prompt,

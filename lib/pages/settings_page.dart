@@ -20,6 +20,11 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _apiKeyController;
   late TextEditingController _modelsController;
   late TextEditingController _systemPromptController;
+  late TextEditingController _webdavServerController;
+  late TextEditingController _webdavUserController;
+  late TextEditingController _webdavPasswordController;
+  late TextEditingController _upstashUrlController;
+  late TextEditingController _upstashTokenController;
   bool _showApiKey = false;
   bool _isDirty = false;
 
@@ -31,7 +36,14 @@ class _SettingsPageState extends State<SettingsPage> {
     _apiKeyController = TextEditingController(text: settings.apiKey);
     _modelsController = TextEditingController(text: settings.models.join(', '));
     _systemPromptController = TextEditingController(text: settings.systemPrompt);
-    for (final c in [_baseUrlController, _apiKeyController, _modelsController, _systemPromptController]) {
+    _webdavServerController = TextEditingController(text: settings.webdavServer);
+    _webdavUserController = TextEditingController(text: settings.webdavUser);
+    _webdavPasswordController = TextEditingController(text: settings.webdavPassword);
+    _upstashUrlController = TextEditingController(text: settings.upstashUrl);
+    _upstashTokenController = TextEditingController(text: settings.upstashToken);
+    for (final c in [
+      _baseUrlController, _apiKeyController, _modelsController, _systemPromptController,
+    ]) {
       c.addListener(() => setState(() => _isDirty = true));
     }
   }
@@ -42,6 +54,11 @@ class _SettingsPageState extends State<SettingsPage> {
     _apiKeyController.dispose();
     _modelsController.dispose();
     _systemPromptController.dispose();
+    _webdavServerController.dispose();
+    _webdavUserController.dispose();
+    _webdavPasswordController.dispose();
+    _upstashUrlController.dispose();
+    _upstashTokenController.dispose();
     super.dispose();
   }
 
@@ -400,32 +417,32 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 16),
                     if (settings.syncMethod == 'WebDAV') ...[
                       TextField(
-                        controller: TextEditingController(text: settings.webdavServer),
+                        controller: _webdavServerController,
                         decoration: const InputDecoration(labelText: '服务器地址', hintText: 'https://dav.example.com'),
                         onChanged: (v) => settings.setWebdavServer(v),
                       ),
                       const SizedBox(height: 12),
                       TextField(
-                        controller: TextEditingController(text: settings.webdavUser),
+                        controller: _webdavUserController,
                         decoration: const InputDecoration(labelText: '用户名'),
                         onChanged: (v) => settings.setWebdavUser(v),
                       ),
                       const SizedBox(height: 12),
                       TextField(
-                        controller: TextEditingController(text: settings.webdavPassword),
+                        controller: _webdavPasswordController,
                         decoration: const InputDecoration(labelText: '密码 / 令牌'),
                         obscureText: true,
                         onChanged: (v) => settings.setWebdavPassword(v),
                       ),
                     ] else ...[
                       TextField(
-                        controller: TextEditingController(text: settings.upstashUrl),
+                        controller: _upstashUrlController,
                         decoration: const InputDecoration(labelText: 'REST URL'),
                         onChanged: (v) => settings.setUpstashUrl(v),
                       ),
                       const SizedBox(height: 12),
                       TextField(
-                        controller: TextEditingController(text: settings.upstashToken),
+                        controller: _upstashTokenController,
                         decoration: const InputDecoration(labelText: 'REST Token'),
                         obscureText: true,
                         onChanged: (v) => settings.setUpstashToken(v),

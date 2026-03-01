@@ -253,23 +253,21 @@ class _WikiLinkMarkdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Split text by wiki-link pattern and build mixed inline content
-    final parts = <InlineSpan>[];
+    final parts = <_WikiSpan>[];
     int lastEnd = 0;
 
     for (final match in wikiLinkPattern.allMatches(data)) {
       if (match.start > lastEnd) {
-        parts.add(InlineSpan(text: data.substring(lastEnd, match.start)));
+        parts.add(_WikiSpan(text: data.substring(lastEnd, match.start)));
       }
       final link = WikiLink.parse(match.group(1)!);
-      parts.add(InlineSpan(wikiLink: link));
+      parts.add(_WikiSpan(wikiLink: link));
       lastEnd = match.end;
     }
     if (lastEnd < data.length) {
-      parts.add(InlineSpan(text: data.substring(lastEnd)));
+      parts.add(_WikiSpan(text: data.substring(lastEnd)));
     }
 
-    // If no wiki-links found, fall back to regular markdown
     if (parts.every((p) => p.wikiLink == null)) {
       return _MarkdownWidget(data: data);
     }
@@ -280,17 +278,16 @@ class _WikiLinkMarkdown extends StatelessWidget {
         if (p.wikiLink != null) {
           return _WikiLinkChip(link: p.wikiLink!);
         }
-        // Render text parts as markdown
         return _MarkdownWidget(data: p.text!);
       }).toList(),
     );
   }
 }
 
-class InlineSpan {
+class _WikiSpan {
   final String? text;
   final WikiLink? wikiLink;
-  InlineSpan({this.text, this.wikiLink});
+  _WikiSpan({this.text, this.wikiLink});
 }
 
 class _WikiLinkChip extends StatelessWidget {

@@ -57,6 +57,9 @@ void main() async {
   final notesProvider = NotesProvider();
   await notesProvider.loadNotes();
 
+  final chatProvider = ChatProvider();
+  await chatProvider.loadConversations();
+
   final passwordProvider = PasswordProvider();
   await passwordProvider.loadPasswords();
 
@@ -64,7 +67,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: settingsProvider),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider.value(value: chatProvider),
         ChangeNotifierProvider.value(value: notesProvider),
         ChangeNotifierProvider(create: (_) => ImageGenerationProvider()),
         ChangeNotifierProvider.value(value: passwordProvider),

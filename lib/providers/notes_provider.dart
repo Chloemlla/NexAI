@@ -1,7 +1,22 @@
+import 'dart:io';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/note.dart';
+
+/// Generates a random UUID v4 without external dependencies.
+String _newId() {
+  final rng = Random.secure();
+  final b = List<int>.generate(16, (_) => rng.nextInt(256));
+  b[6] = (b[6] & 0x0f) | 0x40; // version 4
+  b[8] = (b[8] & 0x3f) | 0x80; // variant bits
+  final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+  return '${h.substring(0, 8)}-${h.substring(8, 12)}-'
+      '${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
+}
 
 class NotesProvider extends ChangeNotifier {
   List<Note> _notes = [];
@@ -161,26 +176,54 @@ class NotesProvider extends ChangeNotifier {
     return GraphData(nodes: nodes, edges: edges);
   }
 
+  Future<File> _getFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/nexai_notes.json');
+  }
+
   Future<void> loadNotes() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString('notes');
-    if (data != null && data.isNotEmpty) {
-      _notes = Note.decodeList(data);
+    try {
+      final file = await _getFile();
+
+      if (await file.exists()) {
+        // Normal load from file
+        final jsonStr = await file.readAsString();
+        if (jsonStr.isNotEmpty) {
+          _notes = Note.decodeList(jsonStr);
+        }
+      } else {
+        // One-time migration from SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        final legacy = prefs.getString('notes');
+        if (legacy != null && legacy.isNotEmpty) {
+          _notes = Note.decodeList(legacy);
+          await _save(); // write to file
+          await prefs.remove('notes'); // remove old key
+          debugPrint('NexAI: migrated ${_notes.length} notes from SharedPreferences → file');
+        }
+      }
+
       _notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    } catch (e) {
+      debugPrint('NexAI: error loading notes: $e');
     }
     _rebuildBacklinks();
     notifyListeners();
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('notes', Note.encodeList(_notes));
+    try {
+      final file = await _getFile();
+      await file.writeAsString(Note.encodeList(_notes));
+    } catch (e) {
+      debugPrint('NexAI: error saving notes: $e');
+    }
   }
 
   Note createNote({String title = '', String content = ''}) {
     final now = DateTime.now();
     final note = Note(
-      id: now.millisecondsSinceEpoch.toString(),
+      id: _newId(),
       title: title.isEmpty ? 'Untitled Note' : title,
       content: content,
       createdAt: now,

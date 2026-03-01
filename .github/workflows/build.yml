@@ -205,37 +205,37 @@ jobs:
           path: build/web/
           retention-days: 30
 
-  # build-windows:
-  #   if: false  # Disabled - Windows build not needed
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v5
-  #       with:
-  #         token: ${{ secrets.USER_PAT }}
+  build-windows:
+    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'windows' || github.event.inputs.build_target == 'all' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.USER_PAT }}
 
-  #     - uses: subosito/flutter-action@v2
-  #       with:
-  #         flutter-version: '3.41.0'
-  #         channel: 'stable'
-  #         cache: true
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.0'
+          channel: 'stable'
+          cache: true
 
-  #     - name: Cache Flutter pub dependencies
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: |
-  #           ~\AppData\Local\Pub\Cache
-  #         key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-pub-
+      - name: Cache Flutter pub dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\Pub\Cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
 
-  #     - name: Install dependencies
-  #       run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-  #     - name: Build Windows
-  #       run: flutter build windows --release
+      - name: Build Windows
+        run: flutter build windows --release
 
-  #     - uses: actions/upload-artifact@v4
-  #       with:
-  #         name: NexAI-Windows
-  #         path: build/windows/x64/runner/Release/
-  #         retention-days: 30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexAI-Windows
+          path: build/windows/x64/runner/Release/
+          retention-days: 30

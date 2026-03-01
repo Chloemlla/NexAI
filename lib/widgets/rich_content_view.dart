@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
-import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
@@ -10,7 +10,6 @@ import '../pages/note_detail_page.dart';
 import 'flowchart/flowchart_widget.dart';
 
 // Pre-compiled regex — avoids recompilation per build
-final _mathPattern = RegExp(r'(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$|\\ce\{[^}]+\})');
 final _cePattern = RegExp(r'\\ce\{([^}]+)\}');
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
 final _chargePattern = RegExp(r'(\d*[+-])(?!\})');
@@ -23,10 +22,16 @@ final _mermaidBlockPattern = RegExp(
 /// Links are clickable and open in the system browser.
 /// Wiki-links [[note]] are rendered as clickable internal links.
 ///
-/// Performance optimizations:
-/// - Uses ListView.builder for large content to enable lazy loading
-/// - Wraps complex widgets in RepaintBoundary to reduce repaints
-/// - Caches parsed segments to avoid re-parsing on rebuilds
+/// Rendering pipeline:
+/// 1. Extract mermaid code blocks → render as FlowchartWidget
+/// 2. Pre-process \ce{...} chemical formulas → standard LaTeX
+/// 3. Pass all remaining content (incl. math) to GptMarkdown
+///
+/// GptMarkdown natively handles:
+///   - Inline math: $...$
+///   - Display math: $$...$$
+///   - Code blocks with syntax highlighting
+///   - Standard markdown (headings, lists, tables, etc.)
 class RichContentView extends StatefulWidget {
   final String content;
   final bool enableWikiLinks;
@@ -69,6 +74,13 @@ class _RichContentViewState extends State<RichContentView> {
       return const SizedBox.shrink();
     }
 
+    // If there is only one markdown segment (the common case), render directly
+    if (_segments.length == 1 && _segments[0].type == _SegmentType.markdown) {
+      return SelectionArea(
+        child: RepaintBoundary(child: _buildMarkdown(_segments[0].content)),
+      );
+    }
+
     Widget content;
     // For large content (>10 segments), use ListView.builder for better performance
     if (_segments.length > 10) {
@@ -99,84 +111,17 @@ class _RichContentViewState extends State<RichContentView> {
             child: FlowchartWidget(mermaidSource: seg.content),
           ),
         );
-      case _SegmentType.math:
-        return RepaintBoundary(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: _MathWidget(tex: seg.content, display: seg.isDisplay),
-          ),
-        );
       case _SegmentType.markdown:
-        if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
-          return RepaintBoundary(child: _WikiLinkMarkdown(data: seg.content));
-        }
-        return RepaintBoundary(child: _MarkdownWidget(data: seg.content));
+        return RepaintBoundary(child: _buildMarkdown(seg.content));
     }
   }
-}
 
-class _MathWidget extends StatelessWidget {
-  final String tex;
-  final bool display;
-
-  const _MathWidget({required this.tex, this.display = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final textColor = cs.onSurface;
-    final accentColor = cs.primary;
-    final settings = context.watch<SettingsProvider>();
-
-    var processed = tex.trim();
-    processed = processed.replaceAllMapped(
-      _cePattern,
-      (m) => _convertChemical(m.group(1)!),
-    );
-
-    return Container(
-      width: display ? double.infinity : null,
-      padding: display ? const EdgeInsets.symmetric(vertical: 8) : null,
-      alignment: display ? Alignment.center : null,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Math.tex(
-          processed,
-          textStyle: TextStyle(
-            fontSize: display ? settings.fontSize * 1.28 : settings.fontSize,
-            fontFamily: settings.fontFamily == 'System'
-                ? null
-                : settings.fontFamily,
-            color: textColor,
-          ),
-          onErrorFallback: (err) {
-            return SelectableText(
-              tex,
-              style: TextStyle(
-                fontSize: settings.fontSize - 1,
-                fontFamily: 'Consolas',
-                color: accentColor,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  static String _convertChemical(String formula) {
-    var result = formula;
-    result = result.replaceAllMapped(
-      _subscriptPattern,
-      (m) => '${m.group(1)}_{${m.group(2)}}',
-    );
-    result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
-    // Replace <-> before -> to avoid partial match
-    result = result.replaceAll('<->', '\\rightleftharpoons ');
-    result = result.replaceAll('->', '\\rightarrow ');
-    // Only replace standalone ^ (gas evolution symbol), not ^{ from charge notation
-    result = result.replaceAllMapped(RegExp(r'\^(?!\{)'), (m) => '\\uparrow ');
-    return '\\text{} $result';
+  /// Builds the appropriate markdown widget, with wiki-link support if enabled.
+  Widget _buildMarkdown(String data) {
+    if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(data)) {
+      return _WikiLinkMarkdown(data: data);
+    }
+    return _MarkdownWidget(data: data);
   }
 }
 
@@ -190,12 +135,15 @@ class _MarkdownWidget extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
 
+    // Pre-process \ce{...} chemical formulas into standard LaTeX
+    final processed = _preprocessChemical(data);
+
     return Material(
       color: Colors.transparent,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720),
         child: GptMarkdown(
-          data,
+          processed,
           style: TextStyle(
             fontSize: settings.fontSize,
             fontFamily: settings.fontFamily == 'System'
@@ -215,6 +163,30 @@ class _MarkdownWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Convert \ce{...} chemical notation into standard LaTeX that GptMarkdown
+  /// can render. Wraps the result in $...$ for inline rendering.
+  static String _preprocessChemical(String text) {
+    return text.replaceAllMapped(_cePattern, (m) {
+      final converted = _convertChemical(m.group(1)!);
+      return '\$\\text{} $converted\$';
+    });
+  }
+
+  static String _convertChemical(String formula) {
+    var result = formula;
+    result = result.replaceAllMapped(
+      _subscriptPattern,
+      (m) => '${m.group(1)}_{${m.group(2)}}',
+    );
+    result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
+    // Replace <-> before -> to avoid partial match
+    result = result.replaceAll('<->', '\\rightleftharpoons ');
+    result = result.replaceAll('->', '\\rightarrow ');
+    // Only replace standalone ^ (gas evolution symbol), not ^{ from charge notation
+    result = result.replaceAllMapped(RegExp(r'\^(?!\{)'), (m) => '\\uparrow ');
+    return result;
   }
 }
 
@@ -346,89 +318,46 @@ class _WikiLinkChip extends StatelessWidget {
   }
 }
 
-/// Parses content into segments: mermaid blocks first, then math, then markdown.
+/// Parses content into segments: only mermaid blocks are extracted separately.
+/// Everything else (including math) is passed as markdown to GptMarkdown.
 List<_Segment> _parseContent(String text) {
   final segments = <_Segment>[];
 
-  // Phase 1: Extract mermaid blocks
-  final parts = <_RawPart>[];
+  // Extract mermaid blocks — GptMarkdown can't render these
   int lastEnd = 0;
   for (final match in _mermaidBlockPattern.allMatches(text)) {
+    // Add any text before this mermaid block as markdown
     if (match.start > lastEnd) {
-      parts.add(_RawPart(text.substring(lastEnd, match.start), false));
+      final before = text.substring(lastEnd, match.start).trim();
+      if (before.isNotEmpty) {
+        segments.add(_Segment(_SegmentType.markdown, before));
+      }
     }
-    parts.add(_RawPart(match.group(1)!.trim(), true));
+    // Add the mermaid content
+    segments.add(_Segment(_SegmentType.mermaid, match.group(1)!.trim()));
     lastEnd = match.end;
   }
+
+  // Add any remaining text after the last mermaid block
   if (lastEnd < text.length) {
-    parts.add(_RawPart(text.substring(lastEnd), false));
-  }
-  if (parts.isEmpty) {
-    parts.add(_RawPart(text, false));
-  }
-
-  // Phase 2: For non-mermaid parts, extract math segments
-  for (final part in parts) {
-    if (part.isMermaid) {
-      segments.add(_Segment(_SegmentType.mermaid, part.text));
-      continue;
-    }
-
-    final subText = part.text;
-    int subLastEnd = 0;
-
-    for (final match in _mathPattern.allMatches(subText)) {
-      if (match.start > subLastEnd) {
-        final mdText = subText.substring(subLastEnd, match.start).trim();
-        if (mdText.isNotEmpty) {
-          segments.add(_Segment(_SegmentType.markdown, mdText));
-        }
-      }
-
-      final matched = match.group(0)!;
-      if (matched.startsWith('\$\$')) {
-        segments.add(
-          _Segment(
-            _SegmentType.math,
-            matched.substring(2, matched.length - 2),
-            isDisplay: true,
-          ),
-        );
-      } else if (matched.startsWith('\$')) {
-        segments.add(
-          _Segment(_SegmentType.math, matched.substring(1, matched.length - 1)),
-        );
-      } else if (matched.startsWith('\\ce{')) {
-        segments.add(_Segment(_SegmentType.math, matched));
-      }
-
-      subLastEnd = match.end;
-    }
-
-    if (subLastEnd < subText.length) {
-      final remaining = subText.substring(subLastEnd).trim();
-      if (remaining.isNotEmpty) {
-        segments.add(_Segment(_SegmentType.markdown, remaining));
-      }
+    final remaining = text.substring(lastEnd).trim();
+    if (remaining.isNotEmpty) {
+      segments.add(_Segment(_SegmentType.markdown, remaining));
     }
   }
 
-  if (segments.isEmpty) segments.add(_Segment(_SegmentType.markdown, text));
+  // If no segments were created (no mermaid blocks), treat entire text as markdown
+  if (segments.isEmpty) {
+    segments.add(_Segment(_SegmentType.markdown, text));
+  }
 
   return segments;
 }
 
-class _RawPart {
-  final String text;
-  final bool isMermaid;
-  _RawPart(this.text, this.isMermaid);
-}
-
-enum _SegmentType { markdown, math, mermaid }
+enum _SegmentType { markdown, mermaid }
 
 class _Segment {
   final _SegmentType type;
   final String content;
-  final bool isDisplay;
-  _Segment(this.type, this.content, {this.isDisplay = false});
+  _Segment(this.type, this.content);
 }

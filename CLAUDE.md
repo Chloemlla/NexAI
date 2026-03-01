@@ -171,12 +171,6 @@ When adding platform-specific features:
 - Commit message format: `type: brief description` (e.g., `fix:`, `feat:`, `refactor:`, `chore:`)
 - If fixing GitHub issues/alerts, reference them in commit message (e.g., `fix: resolve memory leak #460 #461`)
 
-### Code Quality
-
-- Run `flutter analyze` before committing to catch issues
-- Ensure no breaking changes to existing API contracts
-- Test on both Windows and Android when possible (or at least verify no platform-specific regressions)
-
 ## Common Tasks
 
 ### Adding a New Chat Feature

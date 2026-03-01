@@ -175,8 +175,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       content: _contentController.text,
     );
 
-    // Auto-generate title if it's "Untitled Note" and API is configured
-    if (_titleController.text.trim().isEmpty &&
+    // Auto-generate title if it's "Untitled Note" or empty and API is configured
+    if ((_titleController.text.trim().isEmpty || _titleController.text.trim() == 'Untitled Note') &&
         _contentController.text.trim().isNotEmpty &&
         settings.isConfigured &&
         settings.aiTitleGeneration) {

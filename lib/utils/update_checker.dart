@@ -68,7 +68,7 @@ class UpdateChecker {
   static bool _isVersionUpToDate(String current, String latest) {
     if (latest.isEmpty) return true;
 
-    // Extract version numbers (e.g., "1.1.6-02eb84086" -> "1.1.6")
+    // Extract version numbers (e.g., "1.0.7-02eb84086" -> "1.0.7")
     final currentParts = current.split('-')[0].split('.');
     final latestParts = latest.split('-')[0].split('.');
 

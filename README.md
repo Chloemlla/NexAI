@@ -3,13 +3,14 @@
 An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on Windows (Fluent UI) and Android (Material 3).
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.41-blue?logo=flutter)
-![Version](https://img.shields.io/badge/Version-1.1.6-orange)
+![Version](https://img.shields.io/badge/Version-1.0.7-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Platforms](https://img.shields.io/badge/Platforms-Windows%20%7C%20Android%20%7C%20Web-blueviolet)
 
 ## Features
 
 ### Chat
+
 - **OpenAI-compatible API** — Works with any endpoint: OpenAI, Claude, DeepSeek, local models, etc.
 - **Streaming responses** — Real-time token-by-token output
 - **Multiple conversations** — Unlimited sessions with per-session history
@@ -22,6 +23,7 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 - **Image generation** — Text-to-image and image-to-image via compatible APIs (e.g. Flux, DALL·E)
 
 ### Notes
+
 - **Markdown editor** — Full Markdown with live preview
 - **Tags** — `#tag` extraction from note body and YAML frontmatter
 - **Wiki-links** — `[[note]]`, `[[note|alias]]`, `[[note#heading]]` cross-linking
@@ -30,6 +32,7 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 - **Save from chat** — Save any AI message directly to a new or existing note
 
 ### Tools
+
 - **Video compressor** — Compress video files with configurable quality
 - **Video to audio** — Extract audio from video (MP3/AAC)
 - **Date/time converter** — Unix timestamp ↔ human-readable conversion
@@ -38,6 +41,7 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 - **Short URL** — URL shortening via compatible APIs
 
 ### Appearance & UX
+
 - **Dual UI** — Fluent UI (Windows/Desktop), Material 3 (Android)
 - **Dynamic color** — Follows system accent color on Android 12+
 - **Custom accent color** — Override with any color
@@ -48,6 +52,7 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 - **Export to PNG** — Save any message bubble as an image
 
 ### Sync & Settings
+
 - **Cloud sync** — WebDAV or Upstash Redis for conversation backup
 - **Auto-update checker** — Checks GitHub Releases on startup
 - **Persistent settings** — All preferences saved via `SharedPreferences`
@@ -63,6 +68,7 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 5. Download the artifact when the build completes
 
 For Android release signing, also add:
+
 - `KEYSTORE_BASE64` — Base64-encoded `.jks` keystore
 - `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD`
 
@@ -81,27 +87,27 @@ Requirements: Flutter 3.41+, Dart SDK 3.11+
 
 Open **Settings** in the app:
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| Base URL | API endpoint | `https://api.openai.com/v1` |
-| API Key | Your API key | — |
-| Models | Comma-separated model list | `gpt-4o, gpt-4o-mini, ...` |
-| Temperature | Creativity (0–2) | `0.7` |
-| Max Tokens | Response length limit | `4096` |
-| System Prompt | Default assistant instruction | LaTeX-aware prompt |
-| Font / Size | Chat message typography | System / 14px |
-| Borderless Mode | Remove chat bubbles | Off |
-| Smart Auto-scroll | Follow streaming output | On |
-| Cloud Sync | WebDAV or Upstash | Off |
+| Setting           | Description                   | Default                     |
+| ----------------- | ----------------------------- | --------------------------- |
+| Base URL          | API endpoint                  | `https://api.openai.com/v1` |
+| API Key           | Your API key                  | —                           |
+| Models            | Comma-separated model list    | `gpt-4o, gpt-4o-mini, ...`  |
+| Temperature       | Creativity (0–2)              | `0.7`                       |
+| Max Tokens        | Response length limit         | `4096`                      |
+| System Prompt     | Default assistant instruction | LaTeX-aware prompt          |
+| Font / Size       | Chat message typography       | System / 14px               |
+| Borderless Mode   | Remove chat bubbles           | Off                         |
+| Smart Auto-scroll | Follow streaming output       | On                          |
+| Cloud Sync        | WebDAV or Upstash             | Off                         |
 
 ## Rendering Examples
 
-```
+````
 Inline math:   $E = mc^2$
 Display math:  $$\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$$
 Chemistry:     $\ce{H2O}$   $\ce{2H2 + O2 -> 2H2O}$
 Flowchart:     ```mermaid\ngraph TD; A-->B; B-->C;\n```
-```
+````
 
 ## Project Structure
 

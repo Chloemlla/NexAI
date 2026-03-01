@@ -3,13 +3,13 @@ name: Build NexAI
 on:
   push:
     branches:
-      - '**'
+      - "**"
   workflow_dispatch:
     inputs:
       build_target:
-        description: 'Build target platform'
+        description: "Build target platform"
         required: true
-        default: 'all'
+        default: "all"
         type: choice
         options:
           - windows
@@ -31,13 +31,13 @@ jobs:
 
       - uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
-          java-version: '21'
+          distribution: "zulu"
+          java-version: "21"
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.0'
-          channel: 'stable'
+          flutter-version: "3.41.0"
+          channel: "stable"
           cache: true
 
       - name: Cache Gradle dependencies
@@ -110,7 +110,7 @@ jobs:
           echo "Version: $VERSION"
           echo "=== Original APK files ==="
           ls -lh build/app/outputs/flutter-apk/
-          
+
           for file in build/app/outputs/flutter-apk/app-*-release.apk; do
             if [ -f "$file" ]; then
               abi=$(echo "$file" | sed -E 's|.*app-(.*)-release\.apk|\1|')
@@ -118,10 +118,24 @@ jobs:
               cp "$file" "build/app/outputs/flutter-apk/NexAI_android_${VERSION}_${abi}.apk"
             fi
           done
-          
+
           echo "=== Renamed APK files ==="
           ls -lh build/app/outputs/flutter-apk/NexAI_android_*.apk
-          
+
+          - name: Automatic release
+        if: success()
+        uses: softprops/action-gh-release@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
+          generate_release_notes: true
+          tag_name: "v${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
+          prerelease: false
+          name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
+          files: |
+            build/app/outputs/flutter-apk/NexAI_android_*.apk
+
       # - name: Rename AAB output
       #   run: |
       #     VERSION="${{ env.version }}"
@@ -130,7 +144,7 @@ jobs:
       #       echo "Renaming AAB: $AAB_FILE -> NexAI_android_${VERSION}.aab"
       #       cp "$AAB_FILE" "build/app/outputs/bundle/release/NexAI_android_${VERSION}.aab"
       #     fi
-      #     
+      #
       #     echo "=== AAB files ==="
       #     ls -lh build/app/outputs/bundle/release/
 
@@ -155,87 +169,73 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.USER_PAT }}
 
-      - name: Automatic release
-        if: success()
-        uses: softprops/action-gh-release@master
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          make_latest: true
-          generate_release_notes: true
-          tag_name: "v${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
-          prerelease: false
-          name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
-          files: |
-            build/app/outputs/flutter-apk/NexAI_android_*.apk
+  # build-web:
+  #   # if: false  # Disabled - Web build not needed
+  #   if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'web' || github.event.inputs.build_target == 'all' }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #       with:
+  #         token: ${{ secrets.USER_PAT }}
 
-  build-web:
-    # if: false  # Disabled - Web build not needed
-    if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'web' || github.event.inputs.build_target == 'all' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
+  #     - uses: subosito/flutter-action@main
+  #       with:
+  #         flutter-version: '3.41.0'
+  #         channel: 'stable'
+  #         cache: true
 
-      - uses: subosito/flutter-action@main
-        with:
-          flutter-version: '3.41.0'
-          channel: 'stable'
-          cache: true
+  #     - name: Cache Flutter pub dependencies
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           ~/.pub-cache
+  #         key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-pub-
 
-      - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+  #     - name: Install dependencies
+  #       run: flutter pub get
 
-      - name: Install dependencies
-        run: flutter pub get
+  #     - name: Build Web
+  #       run: flutter build web --release
 
-      - name: Build Web
-        run: flutter build web --release
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: NexAI-Web
+  #         path: build/web/
+  #         retention-days: 30
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: NexAI-Web
-          path: build/web/
-          retention-days: 30
+  # build-windows:
+  #   if: false  # Disabled - Windows build not needed
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v5
+  #       with:
+  #         token: ${{ secrets.USER_PAT }}
 
-  build-windows:
-    if: false  # Disabled - Windows build not needed
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
+  #     - uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: '3.41.0'
+  #         channel: 'stable'
+  #         cache: true
 
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.41.0'
-          channel: 'stable'
-          cache: true
+  #     - name: Cache Flutter pub dependencies
+  #       uses: actions/cache@v4
+  #       with:
+  #         path: |
+  #           ~\AppData\Local\Pub\Cache
+  #         key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-pub-
 
-      - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~\AppData\Local\Pub\Cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+  #     - name: Install dependencies
+  #       run: flutter pub get
 
-      - name: Install dependencies
-        run: flutter pub get
+  #     - name: Build Windows
+  #       run: flutter build windows --release
 
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: NexAI-Windows
-          path: build/windows/x64/runner/Release/
-          retention-days: 30
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: NexAI-Windows
+  #         path: build/windows/x64/runner/Release/
+  #         retention-days: 30

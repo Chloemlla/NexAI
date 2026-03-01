@@ -8,6 +8,10 @@ environment:
   flutter: '>=3.41.0'
 
 dependencies:
+  
+  # Google Cloud
+  gcloud: ^0.9.0
+
   # 网络
   dio: ^5.9.1
   cookie_jar: ^4.0.8

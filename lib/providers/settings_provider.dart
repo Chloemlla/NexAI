@@ -28,9 +28,7 @@ class SettingsProvider extends ChangeNotifier {
   String _upstashUrl = '';
   String _upstashToken = '';
 
-  // Vertex AI Translation
-  String _vertexProjectId = '';
-  String _vertexLocation = 'us-central1';
+  // Gemini AI Translation
   String _vertexApiKey = '';
 
   String get baseUrl => _baseUrl;
@@ -57,8 +55,6 @@ class SettingsProvider extends ChangeNotifier {
   String get upstashUrl => _upstashUrl;
   String get upstashToken => _upstashToken;
 
-  String get vertexProjectId => _vertexProjectId;
-  String get vertexLocation => _vertexLocation;
   String get vertexApiKey => _vertexApiKey;
 
   // Notes auto-save setting
@@ -96,8 +92,6 @@ class SettingsProvider extends ChangeNotifier {
     _upstashUrl = prefs.getString('upstashUrl') ?? '';
     _upstashToken = prefs.getString('upstashToken') ?? '';
 
-    _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
-    _vertexLocation = prefs.getString('vertexLocation') ?? 'us-central1';
     _vertexApiKey = prefs.getString('vertexApiKey') ?? '';
 
     final accentVal = prefs.getInt('accentColorValue');
@@ -149,8 +143,6 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setString('upstashUrl', _upstashUrl);
     await prefs.setString('upstashToken', _upstashToken);
 
-    await prefs.setString('vertexProjectId', _vertexProjectId);
-    await prefs.setString('vertexLocation', _vertexLocation);
     await prefs.setString('vertexApiKey', _vertexApiKey);
 
     if (_accentColorValue != null) {
@@ -299,18 +291,6 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setUpstashToken(String value) async {
     _upstashToken = value;
-    notifyListeners();
-    await _save();
-  }
-
-  Future<void> setVertexProjectId(String value) async {
-    _vertexProjectId = value;
-    notifyListeners();
-    await _save();
-  }
-
-  Future<void> setVertexLocation(String value) async {
-    _vertexLocation = value;
     notifyListeners();
     await _save();
   }

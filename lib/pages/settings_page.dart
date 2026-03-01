@@ -25,8 +25,6 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _webdavPasswordController;
   late TextEditingController _upstashUrlController;
   late TextEditingController _upstashTokenController;
-  late TextEditingController _vertexProjectIdController;
-  late TextEditingController _vertexLocationController;
   late TextEditingController _vertexApiKeyController;
   bool _showApiKey = false;
   bool _isDirty = false;
@@ -45,8 +43,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _webdavPasswordController = TextEditingController(text: settings.webdavPassword);
     _upstashUrlController = TextEditingController(text: settings.upstashUrl);
     _upstashTokenController = TextEditingController(text: settings.upstashToken);
-    _vertexProjectIdController = TextEditingController(text: settings.vertexProjectId);
-    _vertexLocationController = TextEditingController(text: settings.vertexLocation);
     _vertexApiKeyController = TextEditingController(text: settings.vertexApiKey);
     for (final c in [
       _baseUrlController, _apiKeyController, _modelsController, _systemPromptController,
@@ -73,8 +69,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _webdavPasswordController.dispose();
     _upstashUrlController.dispose();
     _upstashTokenController.dispose();
-    _vertexProjectIdController.dispose();
-    _vertexLocationController.dispose();
     _vertexApiKeyController.dispose();
     super.dispose();
   }
@@ -577,39 +571,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 ]),
                 const SizedBox(height: 20),
 
-                // ── Vertex AI Translation ──
-                _SectionHeader(icon: Icons.translate_rounded, label: 'Vertex AI 翻译', cs: cs, tt: tt),
+                // ── Gemini AI Translation ──
+                _SectionHeader(icon: Icons.translate_rounded, label: 'Gemini AI 翻译', cs: cs, tt: tt),
                 const SizedBox(height: 10),
                 _SettingsCard(cs: cs, children: [
                   TextField(
-                    controller: _vertexProjectIdController,
-                    decoration: InputDecoration(
-                      labelText: 'Project ID',
-                      hintText: 'your-project-id',
-                      prefixIcon: Icon(Icons.cloud_rounded, color: cs.primary),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onChanged: (v) => context.read<SettingsProvider>().setVertexProjectId(v),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _vertexLocationController,
-                    decoration: InputDecoration(
-                      labelText: 'Location',
-                      hintText: 'us-central1',
-                      prefixIcon: Icon(Icons.location_on_rounded, color: cs.primary),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onChanged: (v) => context.read<SettingsProvider>().setVertexLocation(v),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
                     controller: _vertexApiKeyController,
                     decoration: InputDecoration(
-                      labelText: 'API Key',
-                      hintText: 'your-api-key',
+                      labelText: 'Gemini API Key',
+                      hintText: 'your-gemini-api-key',
                       prefixIcon: Icon(Icons.key_rounded, color: cs.primary),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      helperText: '在 https://aistudio.google.com/apikey 获取',
+                      helperMaxLines: 2,
                     ),
                     obscureText: true,
                     onChanged: (v) => context.read<SettingsProvider>().setVertexApiKey(v),

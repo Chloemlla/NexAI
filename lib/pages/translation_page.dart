@@ -43,8 +43,8 @@ class _TranslationPageState extends State<TranslationPage> {
     if (text.isEmpty) return;
 
     final settings = context.read<SettingsProvider>();
-    if (settings.vertexProjectId.isEmpty) {
-      _showError('请先在设置中配置 Vertex AI 项目 ID');
+    if (settings.vertexApiKey.isEmpty) {
+      _showError('请先在设置中配置 Vertex AI API Key');
       return;
     }
 
@@ -52,32 +52,52 @@ class _TranslationPageState extends State<TranslationPage> {
 
     try {
       final dio = Dio();
-      final endpoint = 'https://${settings.vertexLocation}-aiplatform.googleapis.com/v1/'
-          'projects/${settings.vertexProjectId}/locations/${settings.vertexLocation}/'
-          'publishers/google/models/cloud-translate-text:predict';
+      final modelId = 'gemini-2.0-flash-001';
+      final endpoint = 'https://aiplatform.googleapis.com/v1/publishers/google/models/$modelId:generateContent';
+
+      // Get language names for better translation
+      final sourceLang = _languages[_sourceLanguage] ?? _sourceLanguage;
+      final targetLang = _languages[_targetLanguage] ?? _targetLanguage;
 
       final response = await dio.post(
-        endpoint,
+        '$endpoint?key=${settings.vertexApiKey}',
         options: Options(
           headers: {
-            'Authorization': 'Bearer ${settings.vertexApiKey}',
             'Content-Type': 'application/json',
           },
         ),
         data: {
-          'instances': [
-            {
-              'source_language_code': _sourceLanguage,
-              'target_language_code': _targetLanguage,
-              'contents': [text],
-            }
-          ],
+          'contents': {
+            'role': 'user',
+            'parts': [
+              {
+                'text': 'Translate the following text from $sourceLang to $targetLang. '
+                    'Only return the translated text without any explanation or additional content.\n\n'
+                    'Text to translate:\n$text'
+              }
+            ]
+          },
+          'generationConfig': {
+            'temperature': 0.3,
+            'maxOutputTokens': 2048,
+          }
         },
       );
 
       if (response.statusCode == 200) {
-        final result = response.data['predictions'][0]['translations'][0];
-        setState(() => _targetController.text = result);
+        final candidates = response.data['candidates'] as List?;
+        if (candidates != null && candidates.isNotEmpty) {
+          final content = candidates[0]['content'];
+          final parts = content['parts'] as List?;
+          if (parts != null && parts.isNotEmpty) {
+            final translatedText = parts[0]['text'] as String?;
+            if (translatedText != null) {
+              setState(() => _targetController.text = translatedText.trim());
+              return;
+            }
+          }
+        }
+        _showError('翻译失败: 无法解析响应');
       } else {
         _showError('翻译失败: ${response.statusMessage}');
       }

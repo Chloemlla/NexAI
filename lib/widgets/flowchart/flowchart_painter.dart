@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'mermaid_parser.dart';
 import 'flowchart_layout.dart';
@@ -68,15 +67,28 @@ class FlowchartPainter extends CustomPainter {
       const Radius.circular(8),
     );
 
-    canvas.drawRRect(rect, Paint()..color = nodeBorderColor.withAlpha((0.08 * 255).round()));
-    canvas.drawRRect(rect, Paint()
-      ..color = nodeBorderColor.withAlpha((0.3 * 255).round())
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1);
+    canvas.drawRRect(
+      rect,
+      Paint()..color = nodeBorderColor.withAlpha((0.08 * 255).round()),
+    );
+    canvas.drawRRect(
+      rect,
+      Paint()
+        ..color = nodeBorderColor.withAlpha((0.3 * 255).round())
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
 
     // Subgraph label
     final tp = TextPainter(
-      text: TextSpan(text: sg.label, style: TextStyle(fontSize: 11, color: labelColor, fontWeight: FontWeight.w600)),
+      text: TextSpan(
+        text: sg.label,
+        style: TextStyle(
+          fontSize: 11,
+          color: labelColor,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     tp.paint(canvas, Offset(minX - pad + 8, minY - pad - 16));
@@ -87,7 +99,10 @@ class FlowchartPainter extends CustomPainter {
     final to = layout.positions[edge.toId];
     if (from == null || to == null) return;
 
-    final fromCenter = Offset(from.dx + nodeWidth / 2, from.dy + nodeHeight / 2);
+    final fromCenter = Offset(
+      from.dx + nodeWidth / 2,
+      from.dy + nodeHeight / 2,
+    );
     final toCenter = Offset(to.dx + nodeWidth / 2, to.dy + nodeHeight / 2);
 
     // Clip to node boundary
@@ -114,11 +129,19 @@ class FlowchartPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: edge.label,
-          style: TextStyle(fontSize: 11, color: labelColor, backgroundColor: nodeColor.withAlpha((0.9 * 255).round())),
+          style: TextStyle(
+            fontSize: 11,
+            color: labelColor,
+            backgroundColor: nodeColor.withAlpha((0.9 * 255).round()),
+          ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      final bgRect = Rect.fromCenter(center: mid, width: tp.width + 8, height: tp.height + 4);
+      final bgRect = Rect.fromCenter(
+        center: mid,
+        width: tp.width + 8,
+        height: tp.height + 4,
+      );
       canvas.drawRRect(
         RRect.fromRectAndRadius(bgRect, const Radius.circular(4)),
         Paint()..color = nodeColor.withAlpha((0.95 * 255).round()),
@@ -206,7 +229,10 @@ class FlowchartPainter extends CustomPainter {
         break;
       case MermaidNodeShape.rounded:
       case MermaidNodeShape.stadium:
-        final rr = RRect.fromRectAndRadius(rect, Radius.circular(nodeHeight / 2));
+        final rr = RRect.fromRectAndRadius(
+          rect,
+          Radius.circular(nodeHeight / 2),
+        );
         canvas.drawRRect(rr, paint);
         canvas.drawRRect(rr, borderPaint);
         break;
@@ -245,7 +271,11 @@ class FlowchartPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: node.label,
-        style: TextStyle(fontSize: 12, color: textColor, fontWeight: FontWeight.w500),
+        style: TextStyle(
+          fontSize: 12,
+          color: textColor,
+          fontWeight: FontWeight.w500,
+        ),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.center,
@@ -253,10 +283,10 @@ class FlowchartPainter extends CustomPainter {
       ellipsis: '…',
     )..layout(maxWidth: nodeWidth - 12);
 
-    tp.paint(canvas, Offset(
-      rect.center.dx - tp.width / 2,
-      rect.center.dy - tp.height / 2,
-    ));
+    tp.paint(
+      canvas,
+      Offset(rect.center.dx - tp.width / 2, rect.center.dy - tp.height / 2),
+    );
   }
 
   @override

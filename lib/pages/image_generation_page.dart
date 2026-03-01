@@ -17,10 +17,10 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
   final _promptController = TextEditingController();
   final _imageUrlController = TextEditingController();
   final _modelController = TextEditingController(text: 'flux.1-kontext-dev');
-  
+
   ImageGenerationMode _mode = ImageGenerationMode.chat;
   String _size = '1024x1024';
-  String _responseFormat = 'url';
+  final String _responseFormat = 'url';
 
   @override
   void dispose() {
@@ -100,20 +100,25 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
             ],
           ),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } else {
-      fluent.displayInfoBar(context, builder: (ctx, close) {
-        return fluent.InfoBar(
-          title: Text(message),
-          severity: fluent.InfoBarSeverity.error,
-          action: fluent.IconButton(
-            icon: const Icon(fluent.FluentIcons.clear),
-            onPressed: close,
-          ),
-        );
-      });
+      fluent.displayInfoBar(
+        context,
+        builder: (ctx, close) {
+          return fluent.InfoBar(
+            title: Text(message),
+            severity: fluent.InfoBarSeverity.error,
+            action: fluent.IconButton(
+              icon: const Icon(fluent.FluentIcons.clear),
+              onPressed: close,
+            ),
+          );
+        },
+      );
     }
   }
 
@@ -164,7 +169,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                 },
               ),
               const SizedBox(height: 12),
-              
+
               // Model input
               if (_mode != ImageGenerationMode.chat)
                 Padding(
@@ -175,22 +180,29 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                       labelText: '模型',
                       hintText: 'flux.1-kontext-dev',
                       prefixIcon: const Icon(Icons.memory, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
 
               // Image URL input (for edit and image-to-image)
-              if (_mode == ImageGenerationMode.edit || _mode == ImageGenerationMode.chat)
+              if (_mode == ImageGenerationMode.edit ||
+                  _mode == ImageGenerationMode.chat)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: TextField(
                     controller: _imageUrlController,
                     decoration: InputDecoration(
-                      labelText: _mode == ImageGenerationMode.edit ? '图片 URL *' : '图片 URL (可选)',
+                      labelText: _mode == ImageGenerationMode.edit
+                          ? '图片 URL *'
+                          : '图片 URL (可选)',
                       hintText: 'https://...',
                       prefixIcon: const Icon(Icons.link, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -200,11 +212,13 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: DropdownButtonFormField<String>(
-                    value: _size,
+                    initialValue: _size,
                     decoration: InputDecoration(
                       labelText: '尺寸',
                       prefixIcon: const Icon(Icons.aspect_ratio, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     items: ['1024x1024', '1024x1792', '1792x1024', '512x512']
                         .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -223,7 +237,9 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                       ? '帮我画一只宇航猫在月球漫步[1024:1024]'
                       : 'a cat on the moon',
                   prefixIcon: const Icon(Icons.edit_note, size: 20),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -310,9 +326,13 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     );
   }
 
-  Widget _buildImageCard(BuildContext context, GeneratedImage image, int index) {
+  Widget _buildImageCard(
+    BuildContext context,
+    GeneratedImage image,
+    int index,
+  ) {
     final cs = Theme.of(context).colorScheme;
-    
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -322,7 +342,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
             child: Image.network(
               image.url,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
+              errorBuilder: (context, error, stackTrace) => Container(
                 color: cs.surfaceContainerHighest,
                 child: Icon(Icons.broken_image, color: cs.outline),
               ),
@@ -347,8 +367,8 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                       image.mode == ImageGenerationMode.chat
                           ? Icons.chat_outlined
                           : image.mode == ImageGenerationMode.generation
-                              ? Icons.image_outlined
-                              : Icons.edit_outlined,
+                          ? Icons.image_outlined
+                          : Icons.edit_outlined,
                       size: 12,
                       color: cs.primary,
                     ),
@@ -356,7 +376,9 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                     IconButton(
                       icon: const Icon(Icons.delete_outline, size: 16),
                       onPressed: () {
-                        context.read<ImageGenerationProvider>().deleteImage(index);
+                        context.read<ImageGenerationProvider>().deleteImage(
+                          index,
+                        );
                       },
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -383,50 +405,75 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
           child: Container(
             decoration: BoxDecoration(
               color: theme.micaBackgroundColor,
-              border: Border(right: BorderSide(color: theme.resources.dividerStrokeColorDefault)),
+              border: Border(
+                right: BorderSide(
+                  color: theme.resources.dividerStrokeColorDefault,
+                ),
+              ),
             ),
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('图片生成', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  '图片生成',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 20),
-                
+
                 // Mode selector
                 fluent.ComboBox<ImageGenerationMode>(
                   value: _mode,
                   items: const [
-                    fluent.ComboBoxItem(value: ImageGenerationMode.chat, child: Text('对话模式')),
-                    fluent.ComboBoxItem(value: ImageGenerationMode.generation, child: Text('生成模式')),
-                    fluent.ComboBoxItem(value: ImageGenerationMode.edit, child: Text('编辑模式')),
+                    fluent.ComboBoxItem(
+                      value: ImageGenerationMode.chat,
+                      child: Text('对话模式'),
+                    ),
+                    fluent.ComboBoxItem(
+                      value: ImageGenerationMode.generation,
+                      child: Text('生成模式'),
+                    ),
+                    fluent.ComboBoxItem(
+                      value: ImageGenerationMode.edit,
+                      child: Text('编辑模式'),
+                    ),
                   ],
                   onChanged: (value) => setState(() => _mode = value!),
                 ),
                 const SizedBox(height: 16),
 
                 if (_mode != ImageGenerationMode.chat) ...[
-                  fluent.TextBox(
-                    controller: _modelController,
-                    placeholder: '模型',
-                    header: '模型',
+                  fluent.InfoLabel(
+                    label: '模型',
+                    child: fluent.TextBox(
+                      controller: _modelController,
+                      placeholder: '模型',
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                if (_mode == ImageGenerationMode.edit || _mode == ImageGenerationMode.chat) ...[
-                  fluent.TextBox(
-                    controller: _imageUrlController,
-                    placeholder: '图片 URL',
-                    header: _mode == ImageGenerationMode.edit ? '图片 URL *' : '图片 URL (可选)',
+                if (_mode == ImageGenerationMode.edit ||
+                    _mode == ImageGenerationMode.chat) ...[
+                  fluent.InfoLabel(
+                    label: _mode == ImageGenerationMode.edit
+                        ? '图片 URL *'
+                        : '图片 URL (可选)',
+                    child: fluent.TextBox(
+                      controller: _imageUrlController,
+                      placeholder: '图片 URL',
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                fluent.TextBox(
-                  controller: _promptController,
-                  placeholder: '提示词',
-                  header: '提示词',
-                  maxLines: 4,
+                fluent.InfoLabel(
+                  label: '提示词',
+                  child: fluent.TextBox(
+                    controller: _promptController,
+                    placeholder: '提示词',
+                    maxLines: 4,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -468,10 +515,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(
-                            child: Image.network(
-                              image.url,
-                              fit: BoxFit.cover,
-                            ),
+                            child: Image.network(image.url, fit: BoxFit.cover),
                           ),
                           Padding(
                             padding: const EdgeInsets.all(12),

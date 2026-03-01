@@ -12,15 +12,17 @@ class GraphPage extends StatefulWidget {
   State<GraphPage> createState() => _GraphPageState();
 }
 
-class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMixin {
+class _GraphPageState extends State<GraphPage>
+    with SingleTickerProviderStateMixin {
   String? _tagFilter;
   bool _starredOnly = false;
-  String _searchQuery = '';
+
   String? _highlightedNodeId;
   String _colorBy = 'links'; // links, starred, tags
 
   // Transform for pan/zoom
-  final TransformationController _transformController = TransformationController();
+  final TransformationController _transformController =
+      TransformationController();
 
   // Force-directed layout state
   late GraphData _graphData;
@@ -92,7 +94,7 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
         final b = nodes.firstWhere((n) => n.id == e.targetId);
         var dx = b.x - a.x;
         var dy = b.y - a.y;
-        final dist = math.sqrt(dx * dx + dy * dy).clamp(1.0, double.infinity);
+
         dx = dx * attraction * temp;
         dy = dy * attraction * temp;
         velocities[a.id] = velocities[a.id]! + Offset(dx, dy);
@@ -147,25 +149,41 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
           children: [
             Icon(Icons.hub_rounded, size: 22, color: cs.primary),
             const SizedBox(width: 10),
-            const Text('知识图谱', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
+            const Text(
+              '知识图谱',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+            ),
             const Spacer(),
-            Text('${_graphData.nodes.length} 个节点 · ${_graphData.edges.length} 条链接',
-                style: TextStyle(fontSize: 12, color: cs.outline)),
+            Text(
+              '${_graphData.nodes.length} 个节点 · ${_graphData.edges.length} 条链接',
+              style: TextStyle(fontSize: 12, color: cs.outline),
+            ),
           ],
         ),
         actions: [
           // Search
           IconButton(
-            icon: Icon(Icons.search_rounded, size: 20, color: cs.onSurfaceVariant),
+            icon: Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: cs.onSurfaceVariant,
+            ),
             onPressed: () => _showSearchDialog(cs, provider),
             tooltip: '搜索节点',
           ),
           // Filter
           PopupMenuButton<String>(
-            icon: Icon(Icons.filter_list_rounded, size: 20, color: cs.onSurfaceVariant),
+            icon: Icon(
+              Icons.filter_list_rounded,
+              size: 20,
+              color: cs.onSurfaceVariant,
+            ),
             onSelected: (v) {
               if (v == 'clear') {
-                setState(() { _tagFilter = null; _starredOnly = false; });
+                setState(() {
+                  _tagFilter = null;
+                  _starredOnly = false;
+                });
               } else if (v == 'starred') {
                 setState(() => _starredOnly = !_starredOnly);
               } else if (v.startsWith('tag:')) {
@@ -180,24 +198,44 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
                 const PopupMenuItem(value: 'clear', child: Text('清除筛选')),
                 PopupMenuItem(
                   value: 'starred',
-                  child: Row(children: [
-                    Icon(_starredOnly ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded, size: 18),
-                    const SizedBox(width: 8),
-                    const Text('仅显示星标'),
-                  ]),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _starredOnly
+                            ? Icons.check_box_rounded
+                            : Icons.check_box_outline_blank_rounded,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('仅显示星标'),
+                    ],
+                  ),
                 ),
                 const PopupMenuDivider(),
                 const PopupMenuItem(enabled: false, child: Text('按以下方式着色')),
-                PopupMenuItem(value: 'color:links', child: Text(_colorBy == 'links' ? '● 链接数' : '○ 链接数')),
-                PopupMenuItem(value: 'color:starred', child: Text(_colorBy == 'starred' ? '● 星标' : '○ 星标')),
-                PopupMenuItem(value: 'color:tags', child: Text(_colorBy == 'tags' ? '● 标签' : '○ 标签')),
+                PopupMenuItem(
+                  value: 'color:links',
+                  child: Text(_colorBy == 'links' ? '● 链接数' : '○ 链接数'),
+                ),
+                PopupMenuItem(
+                  value: 'color:starred',
+                  child: Text(_colorBy == 'starred' ? '● 星标' : '○ 星标'),
+                ),
+                PopupMenuItem(
+                  value: 'color:tags',
+                  child: Text(_colorBy == 'tags' ? '● 标签' : '○ 标签'),
+                ),
                 if (tags.isNotEmpty) ...[
                   const PopupMenuDivider(),
                   const PopupMenuItem(enabled: false, child: Text('按标签筛选')),
-                  ...tags.map((t) => PopupMenuItem(
-                    value: 'tag:${t.name}',
-                    child: Text('#${t.name}${_tagFilter == t.name ? ' ✓' : ''}'),
-                  )),
+                  ...tags.map(
+                    (t) => PopupMenuItem(
+                      value: 'tag:${t.name}',
+                      child: Text(
+                        '#${t.name}${_tagFilter == t.name ? ' ✓' : ''}',
+                      ),
+                    ),
+                  ),
                 ],
               ];
             },
@@ -206,64 +244,73 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
       ),
       body: _graphData.nodes.isEmpty
           ? _buildEmptyState(cs)
-          : LayoutBuilder(builder: (context, constraints) {
-              final size = Size(
-                math.max(constraints.maxWidth, 800),
-                math.max(constraints.maxHeight, 600),
-              );
-              if (!_layoutDone) _runLayout(size);
-              return InteractiveViewer(
-                transformationController: _transformController,
-                boundaryMargin: const EdgeInsets.all(500),
-                minScale: 0.1,
-                maxScale: 4.0,
-                child: SizedBox(
-                  width: size.width * 2,
-                  height: size.height * 2,
-                  child: CustomPaint(
-                    painter: _GraphPainter(
-                      graphData: _graphData,
-                      highlightedNodeId: _highlightedNodeId,
-                      colorBy: _colorBy,
-                      colorScheme: cs,
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: _graphData.nodes.map((node) {
-                        final radius = _nodeRadius(node);
-                        final isHighlighted = _highlightedNodeId == node.id;
-                        final labelWidth = math.max((radius + 20) * 2, 80.0);
-                        return Positioned(
-                          left: node.x - labelWidth / 2,
-                          top: node.y + radius + 4,
-                          child: GestureDetector(
-                            onTap: () => _onNodeTap(node),
-                            onLongPress: () => setState(() {
-                              _highlightedNodeId = _highlightedNodeId == node.id ? null : node.id;
-                            }),
-                            child: SizedBox(
-                              width: labelWidth,
-                              child: Text(
-                                node.title,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: isHighlighted ? 12 : 10,
-                                  fontWeight: isHighlighted ? FontWeight.w700 : FontWeight.w500,
-                                  color: isHighlighted ? cs.primary : cs.onSurfaceVariant,
-                                  height: 1.3,
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final size = Size(
+                  math.max(constraints.maxWidth, 800),
+                  math.max(constraints.maxHeight, 600),
+                );
+                if (!_layoutDone) _runLayout(size);
+                return InteractiveViewer(
+                  transformationController: _transformController,
+                  boundaryMargin: const EdgeInsets.all(500),
+                  minScale: 0.1,
+                  maxScale: 4.0,
+                  child: SizedBox(
+                    width: size.width * 2,
+                    height: size.height * 2,
+                    child: CustomPaint(
+                      painter: _GraphPainter(
+                        graphData: _graphData,
+                        highlightedNodeId: _highlightedNodeId,
+                        colorBy: _colorBy,
+                        colorScheme: cs,
+                      ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: _graphData.nodes.map((node) {
+                          final radius = _nodeRadius(node);
+                          final isHighlighted = _highlightedNodeId == node.id;
+                          final labelWidth = math.max((radius + 20) * 2, 80.0);
+                          return Positioned(
+                            left: node.x - labelWidth / 2,
+                            top: node.y + radius + 4,
+                            child: GestureDetector(
+                              onTap: () => _onNodeTap(node),
+                              onLongPress: () => setState(() {
+                                _highlightedNodeId =
+                                    _highlightedNodeId == node.id
+                                    ? null
+                                    : node.id;
+                              }),
+                              child: SizedBox(
+                                width: labelWidth,
+                                child: Text(
+                                  node.title,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: isHighlighted ? 12 : 10,
+                                    fontWeight: isHighlighted
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                    color: isHighlighted
+                                        ? cs.primary
+                                        : cs.onSurfaceVariant,
+                                    height: 1.3,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
-                ),
-              );
-            }),
+                );
+              },
+            ),
     );
   }
 
@@ -272,9 +319,9 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
   }
 
   void _onNodeTap(GraphNode node) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: node.id)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: node.id)));
   }
 
   void _showSearchDialog(ColorScheme cs, NotesProvider provider) {
@@ -282,64 +329,90 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
       context: context,
       builder: (ctx) {
         String query = '';
-        return StatefulBuilder(builder: (ctx, setDialogState) {
-          final matches = query.isEmpty
-              ? <GraphNode>[]
-              : _graphData.nodes
-                  .where((n) => n.title.toLowerCase().contains(query.toLowerCase()))
-                  .take(10)
-                  .toList();
-          return AlertDialog(
-            title: const Text('搜索节点'),
-            content: SizedBox(
-              width: 300,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    autofocus: true,
-                    onChanged: (v) => setDialogState(() => query = v),
-                    decoration: InputDecoration(
-                      hintText: '笔记标题...',
-                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                      isDense: true,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  if (matches.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 200),
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: matches.length,
-                        itemBuilder: (_, idx) {
-                          final n = matches[idx];
-                          return ListTile(
-                            dense: true,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            title: Text(n.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text('${n.linkCount} 条链接', style: TextStyle(fontSize: 11, color: cs.outline)),
-                            onTap: () {
-                              Navigator.of(ctx).pop();
-                              setState(() => _highlightedNodeId = n.id);
-                              // Pan to node
-                              _transformController.value = Matrix4.identity()
-                                ..translate(-n.x + 200, -n.y + 300);
-                            },
-                          );
-                        },
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final matches = query.isEmpty
+                ? <GraphNode>[]
+                : _graphData.nodes
+                      .where(
+                        (n) =>
+                            n.title.toLowerCase().contains(query.toLowerCase()),
+                      )
+                      .take(10)
+                      .toList();
+            return AlertDialog(
+              title: const Text('搜索节点'),
+              content: SizedBox(
+                width: 300,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      autofocus: true,
+                      onChanged: (v) => setDialogState(() => query = v),
+                      decoration: InputDecoration(
+                        hintText: '笔记标题...',
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
+                    if (matches.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: matches.length,
+                          itemBuilder: (_, idx) {
+                            final n = matches[idx];
+                            return ListTile(
+                              dense: true,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              title: Text(
+                                n.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                '${n.linkCount} 条链接',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: cs.outline,
+                                ),
+                              ),
+                              onTap: () {
+                                Navigator.of(ctx).pop();
+                                setState(() => _highlightedNodeId = n.id);
+                                // Pan to node
+                                _transformController.value =
+                                    Matrix4.translationValues(
+                                      -n.x + 200,
+                                      -n.y + 300,
+                                      0,
+                                    );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭')),
-            ],
-          );
-        });
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('关闭'),
+                ),
+              ],
+            );
+          },
+        );
       },
     );
   }
@@ -351,10 +424,19 @@ class _GraphPageState extends State<GraphPage> with SingleTickerProviderStateMix
         children: [
           Icon(Icons.hub_outlined, size: 64, color: cs.outlineVariant),
           const SizedBox(height: 16),
-          Text('还没有连接', style: TextStyle(color: cs.outline, fontSize: 16, fontWeight: FontWeight.w500)),
+          Text(
+            '还没有连接',
+            style: TextStyle(
+              color: cs.outline,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('在笔记中使用 [[笔记名称]] 来创建链接',
-              style: TextStyle(color: cs.outlineVariant, fontSize: 13)),
+          Text(
+            '在笔记中使用 [[笔记名称]] 来创建链接',
+            style: TextStyle(color: cs.outlineVariant, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -394,17 +476,25 @@ class _GraphPainter extends CustomPainter {
       final target = nodeMap[edge.targetId];
       if (source == null || target == null) continue;
 
-      final isConnected = highlightedNodeId == null ||
-          connectedIds.contains(edge.sourceId) && connectedIds.contains(edge.targetId);
+      final isConnected =
+          highlightedNodeId == null ||
+          connectedIds.contains(edge.sourceId) &&
+              connectedIds.contains(edge.targetId);
 
       final paint = Paint()
         ..color = isConnected
-            ? colorScheme.primary.withAlpha(highlightedNodeId != null ? 180 : 80)
+            ? colorScheme.primary.withAlpha(
+                highlightedNodeId != null ? 180 : 80,
+              )
             : colorScheme.outlineVariant.withAlpha(30)
         ..strokeWidth = isConnected && highlightedNodeId != null ? 2.0 : 1.0
         ..style = PaintingStyle.stroke;
 
-      canvas.drawLine(Offset(source.x, source.y), Offset(target.x, target.y), paint);
+      canvas.drawLine(
+        Offset(source.x, source.y),
+        Offset(target.x, target.y),
+        paint,
+      );
 
       // Draw arrow
       if (isConnected) {
@@ -416,7 +506,8 @@ class _GraphPainter extends CustomPainter {
     for (final node in graphData.nodes) {
       final radius = (8.0 + node.linkCount * 3.0).clamp(8.0, 28.0);
       final isHighlighted = node.id == highlightedNodeId;
-      final isConnected = highlightedNodeId == null || connectedIds.contains(node.id);
+      final isConnected =
+          highlightedNodeId == null || connectedIds.contains(node.id);
       final alpha = isConnected ? 255 : 60;
 
       Color nodeColor;
@@ -427,7 +518,12 @@ class _GraphPainter extends CustomPainter {
         case 'tags':
           nodeColor = node.tags.isEmpty
               ? colorScheme.outline
-              : HSLColor.fromAHSL(1.0, (node.tags.first.hashCode % 360).toDouble(), 0.6, 0.5).toColor();
+              : HSLColor.fromAHSL(
+                  1.0,
+                  (node.tags.first.hashCode % 360).toDouble(),
+                  0.6,
+                  0.5,
+                ).toColor();
           break;
         default: // links
           final hue = (node.linkCount * 30.0).clamp(0.0, 270.0);
@@ -455,14 +551,21 @@ class _GraphPainter extends CustomPainter {
         Offset(node.x, node.y),
         radius,
         Paint()
-          ..color = isHighlighted ? colorScheme.primary : nodeColor.withAlpha((alpha * 0.6).round())
+          ..color = isHighlighted
+              ? colorScheme.primary
+              : nodeColor.withAlpha((alpha * 0.6).round())
           ..style = PaintingStyle.stroke
           ..strokeWidth = isHighlighted ? 3.0 : 1.5,
       );
     }
   }
 
-  void _drawArrow(Canvas canvas, GraphNode source, GraphNode target, Paint paint) {
+  void _drawArrow(
+    Canvas canvas,
+    GraphNode source,
+    GraphNode target,
+    Paint paint,
+  ) {
     final dx = target.x - source.x;
     final dy = target.y - source.y;
     final dist = math.sqrt(dx * dx + dy * dy);
@@ -475,8 +578,14 @@ class _GraphPainter extends CustomPainter {
     const arrowSize = 8.0;
     final path = Path()
       ..moveTo(tipX, tipY)
-      ..lineTo(tipX - arrowSize * ux + arrowSize * 0.4 * uy, tipY - arrowSize * uy - arrowSize * 0.4 * ux)
-      ..lineTo(tipX - arrowSize * ux - arrowSize * 0.4 * uy, tipY - arrowSize * uy + arrowSize * 0.4 * ux)
+      ..lineTo(
+        tipX - arrowSize * ux + arrowSize * 0.4 * uy,
+        tipY - arrowSize * uy - arrowSize * 0.4 * ux,
+      )
+      ..lineTo(
+        tipX - arrowSize * ux - arrowSize * 0.4 * uy,
+        tipY - arrowSize * uy + arrowSize * 0.4 * ux,
+      )
       ..close();
     canvas.drawPath(path, Paint()..color = paint.color);
   }

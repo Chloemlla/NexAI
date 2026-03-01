@@ -126,24 +126,31 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       for (final file in result.files) {
         if (file.path == null) continue;
         final baseName = p.basenameWithoutExtension(file.name);
-        final outputPath = p.join(outputDir, '$baseName.${_selectedFormat.extension}');
-        newTasks.add(VideoToAudioTask(
-          inputPath: file.path!,
-          fileName: file.name,
-          outputPath: outputPath,
-        ));
+        final outputPath = p.join(
+          outputDir,
+          '$baseName.${_selectedFormat.extension}',
+        );
+        newTasks.add(
+          VideoToAudioTask(
+            inputPath: file.path!,
+            fileName: file.name,
+            outputPath: outputPath,
+          ),
+        );
       }
 
       // Probe duration for each file
       for (final task in newTasks) {
         try {
           final session = await FFprobeKit.getMediaInformation(task.inputPath);
-          final info = await session.getMediaInformation();
+          final info = session.getMediaInformation();
           if (info != null) {
             final durationStr = info.getDuration();
             if (durationStr != null) {
               task.durationMs = (double.parse(durationStr) * 1000).toInt();
-              task.durationStr = _formatDuration(Duration(milliseconds: task.durationMs));
+              task.durationStr = _formatDuration(
+                Duration(milliseconds: task.durationMs),
+              );
             }
           }
         } catch (_) {}
@@ -152,9 +159,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       setState(() => _tasks.addAll(newTasks));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择文件失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('选择文件失败: $e')));
       }
     }
   }
@@ -213,7 +220,8 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       await outputFile.delete();
     }
 
-    final command = '-i "${task.inputPath}" -vn ${_selectedFormat.codecArgs} -y "${task.outputPath}"';
+    final command =
+        '-i "${task.inputPath}" -vn ${_selectedFormat.codecArgs} -y "${task.outputPath}"';
 
     try {
       final session = await FFmpegKit.executeAsync(
@@ -295,7 +303,12 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
 
   void _clearCompleted() {
     setState(() {
-      _tasks.removeWhere((t) => t.status == TaskStatus.success || t.status == TaskStatus.failed || t.status == TaskStatus.cancelled);
+      _tasks.removeWhere(
+        (t) =>
+            t.status == TaskStatus.success ||
+            t.status == TaskStatus.failed ||
+            t.status == TaskStatus.cancelled,
+      );
     });
   }
 
@@ -308,7 +321,10 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('需要存储权限才能保存文件'),
-                action: SnackBarAction(label: '去设置', onPressed: () => openAppSettings()),
+                action: SnackBarAction(
+                  label: '去设置',
+                  onPressed: () => openAppSettings(),
+                ),
               ),
             );
           }
@@ -321,14 +337,11 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
           ? Directory('/storage/emulated/0/Music/NexAI')
           : await getApplicationDocumentsDirectory();
 
-      if (saveDir is Directory && !await saveDir.exists()) {
+      if (!await saveDir.exists()) {
         await saveDir.create(recursive: true);
       }
 
-      final savePath = p.join(
-        saveDir is Directory ? saveDir.path : (saveDir as Directory).path,
-        p.basename(task.outputPath),
-      );
+      final savePath = p.join(saveDir.path, p.basename(task.outputPath));
       await File(task.outputPath).copy(savePath);
 
       if (mounted) {
@@ -341,9 +354,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -425,7 +438,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                   child: FilledButton.icon(
                     onPressed: _isProcessing ? null : _startBatchConversion,
                     icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text('开始转换 (${_tasks.where((t) => t.status != TaskStatus.success).length})'),
+                    label: Text(
+                      '开始转换 (${_tasks.where((t) => t.status != TaskStatus.success).length})',
+                    ),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       backgroundColor: cs.primary,
@@ -459,7 +474,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
               ),
             ),
             const SizedBox(height: 12),
-            ..._tasks.asMap().entries.map((entry) => _buildTaskCard(cs, entry.key, entry.value)),
+            ..._tasks.asMap().entries.map(
+              (entry) => _buildTaskCard(cs, entry.key, entry.value),
+            ),
           ],
         ],
       ),
@@ -487,7 +504,11 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                     color: cs.primaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.audio_file_rounded, color: cs.onPrimaryContainer, size: 20),
+                  child: Icon(
+                    Icons.audio_file_rounded,
+                    color: cs.onPrimaryContainer,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -509,9 +530,11 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                 return ChoiceChip(
                   label: Text(fmt.label),
                   selected: selected,
-                  onSelected: _isProcessing ? null : (v) {
-                    if (v) setState(() => _selectedFormat = fmt);
-                  },
+                  onSelected: _isProcessing
+                      ? null
+                      : (v) {
+                          if (v) setState(() => _selectedFormat = fmt);
+                        },
                 );
               }).toList(),
             ),
@@ -567,15 +590,31 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
 
   Widget _buildTaskCard(ColorScheme cs, int index, VideoToAudioTask task) {
     final statusIcon = switch (task.status) {
-      TaskStatus.pending => Icon(Icons.hourglass_empty_rounded, color: cs.outline, size: 20),
+      TaskStatus.pending => Icon(
+        Icons.hourglass_empty_rounded,
+        color: cs.outline,
+        size: 20,
+      ),
       TaskStatus.running => SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2.5, color: cs.primary),
-        ),
-      TaskStatus.success => const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
-      TaskStatus.failed => const Icon(Icons.error_rounded, color: Colors.red, size: 20),
-      TaskStatus.cancelled => Icon(Icons.cancel_rounded, color: cs.outline, size: 20),
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2.5, color: cs.primary),
+      ),
+      TaskStatus.success => const Icon(
+        Icons.check_circle_rounded,
+        color: Colors.green,
+        size: 20,
+      ),
+      TaskStatus.failed => const Icon(
+        Icons.error_rounded,
+        color: Colors.red,
+        size: 20,
+      ),
+      TaskStatus.cancelled => Icon(
+        Icons.cancel_rounded,
+        color: cs.outline,
+        size: 20,
+      ),
     };
 
     return Card(
@@ -611,7 +650,10 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                       if (task.durationStr != null)
                         Text(
                           '时长: ${task.durationStr}',
-                          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: cs.onSurfaceVariant,
+                          ),
                         ),
                     ],
                   ),
@@ -624,7 +666,11 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                   ),
                 if (!_isProcessing || task.status != TaskStatus.running)
                   IconButton(
-                    icon: Icon(Icons.close_rounded, size: 20, color: cs.outline),
+                    icon: Icon(
+                      Icons.close_rounded,
+                      size: 20,
+                      color: cs.outline,
+                    ),
                     tooltip: '移除',
                     onPressed: () => _removeTask(index),
                   ),

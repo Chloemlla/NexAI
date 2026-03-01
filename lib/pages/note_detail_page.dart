@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
@@ -18,7 +17,10 @@ import '../widgets/rich_content_view.dart';
 final _headingRegex = RegExp(r'^(#{1,6})\s+(.+)$', multiLine: true);
 
 /// Regex to find task list items
-final _taskItemRegex = RegExp(r'^(\s*)-\s+\[([ xX])\]\s+(.+)$', multiLine: true);
+final _taskItemRegex = RegExp(
+  r'^(\s*)-\s+\[([ xX])\]\s+(.+)$',
+  multiLine: true,
+);
 
 class NoteDetailPage extends StatefulWidget {
   final String noteId;
@@ -63,8 +65,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initialized) {
-      final note = context.read<NotesProvider>().notes
-          .where((n) => n.id == widget.noteId).firstOrNull;
+      final note = context
+          .read<NotesProvider>()
+          .notes
+          .where((n) => n.id == widget.noteId)
+          .firstOrNull;
       if (note != null) {
         _titleController.text = note.title;
         _contentController.text = note.content;
@@ -134,9 +139,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     // Debounce stats update to avoid excessive rebuilds during typing
     _debounceStatsUpdate();
   }
-  
+
   Timer? _statsDebounceTimer;
-  
+
   void _debounceStatsUpdate() {
     _statsDebounceTimer?.cancel();
     _statsDebounceTimer = Timer(const Duration(milliseconds: 300), () {
@@ -151,9 +156,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     final chars = text.length;
     final tasks = _taskItemRegex.allMatches(text);
     final total = tasks.length;
-    final done = tasks.where((m) => m.group(2)!.trim().toLowerCase() == 'x').length;
+    final done = tasks
+        .where((m) => m.group(2)!.trim().toLowerCase() == 'x')
+        .length;
 
-    if (words != _wordCount || chars != _charCount || total != _taskTotal || done != _taskDone) {
+    if (words != _wordCount ||
+        chars != _charCount ||
+        total != _taskTotal ||
+        done != _taskDone) {
       setState(() {
         _wordCount = words;
         _charCount = chars;
@@ -176,24 +186,29 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     );
 
     // Auto-generate title if it's "Untitled Note" or empty and API is configured
-    if ((_titleController.text.trim().isEmpty || _titleController.text.trim() == 'Untitled Note') &&
+    if ((_titleController.text.trim().isEmpty ||
+            _titleController.text.trim() == 'Untitled Note') &&
         _contentController.text.trim().isNotEmpty &&
         settings.isConfigured &&
         settings.aiTitleGeneration) {
-      provider.generateTitleIfNeeded(
-        noteId: widget.noteId,
-        baseUrl: settings.baseUrl,
-        apiKey: settings.apiKey,
-        model: settings.selectedModel,
-      ).then((_) {
-        // Update title controller if title was generated
-        final note = provider.notes.where((n) => n.id == widget.noteId).firstOrNull;
-        if (note != null && note.title != 'Untitled Note' && mounted) {
-          setState(() {
-            _titleController.text = note.title;
+      provider
+          .generateTitleIfNeeded(
+            noteId: widget.noteId,
+            baseUrl: settings.baseUrl,
+            apiKey: settings.apiKey,
+            model: settings.selectedModel,
+          )
+          .then((_) {
+            // Update title controller if title was generated
+            final note = provider.notes
+                .where((n) => n.id == widget.noteId)
+                .firstOrNull;
+            if (note != null && note.title != 'Untitled Note' && mounted) {
+              setState(() {
+                _titleController.text = note.title;
+              });
+            }
           });
-        }
-      });
     }
   }
 
@@ -240,7 +255,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
     _contentController.value = TextEditingValue(
       text: text.replaceRange(lineStart, lineStart, prefix),
-      selection: TextSelection.collapsed(offset: sel.baseOffset + prefix.length),
+      selection: TextSelection.collapsed(
+        offset: sel.baseOffset + prefix.length,
+      ),
     );
     _editorFocus.requestFocus();
   }
@@ -283,7 +300,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     for (final match in _headingRegex.allMatches(text)) {
       final level = match.group(1)!.length;
       final title = match.group(2)!.trim();
-      entries.add(_HeadingEntry(level: level, title: title, offset: match.start));
+      entries.add(
+        _HeadingEntry(level: level, title: title, offset: match.start),
+      );
     }
     return entries;
   }
@@ -302,9 +321,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         if (totalLen > 0) {
           final ratio = offset / totalLen;
           final target = _editorScroll.position.maxScrollExtent * ratio;
-          _editorScroll.animateTo(target,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic);
+          _editorScroll.animateTo(
+            target,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+          );
         }
       }
     });
@@ -327,11 +348,18 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.segment_rounded, size: 36, color: cs.outlineVariant),
+                    Icon(
+                      Icons.segment_rounded,
+                      size: 36,
+                      color: cs.outlineVariant,
+                    ),
                     const SizedBox(height: 12),
                     Text('未找到标题', style: TextStyle(color: cs.outline)),
                     const SizedBox(height: 4),
-                    Text('使用 # 创建标题', style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
+                    Text(
+                      '使用 # 创建标题',
+                      style: TextStyle(color: cs.outlineVariant, fontSize: 12),
+                    ),
                   ],
                 ),
               ),
@@ -344,14 +372,25 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 child: Row(
                   children: [
                     Icon(Icons.segment_rounded, size: 20, color: cs.primary),
                     const SizedBox(width: 10),
-                    Text('大纲', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    Text(
+                      '大纲',
+                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     const Spacer(),
-                    Text('${outline.length} 个标题', style: TextStyle(fontSize: 12, color: cs.outline)),
+                    Text(
+                      '${outline.length} 个标题',
+                      style: TextStyle(fontSize: 12, color: cs.outline),
+                    ),
                   ],
                 ),
               ),
@@ -361,27 +400,53 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 constraints: const BoxConstraints(maxHeight: 360),
                 child: ListView.builder(
                   shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   itemCount: outline.length,
                   itemBuilder: (_, idx) {
                     final h = outline[idx];
                     return ListTile(
                       dense: true,
-                      contentPadding: EdgeInsets.only(left: 16.0 + (h.level - 1) * 16.0, right: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      contentPadding: EdgeInsets.only(
+                        left: 16.0 + (h.level - 1) * 16.0,
+                        right: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       leading: Container(
-                        width: 24, height: 24,
+                        width: 24,
+                        height: 24,
                         decoration: BoxDecoration(
-                          color: cs.primaryContainer.withAlpha(h.level <= 2 ? 255 : 140),
+                          color: cs.primaryContainer.withAlpha(
+                            h.level <= 2 ? 255 : 140,
+                          ),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Center(
-                          child: Text('H${h.level}',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: cs.onPrimaryContainer)),
+                          child: Text(
+                            'H${h.level}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: cs.onPrimaryContainer,
+                            ),
+                          ),
                         ),
                       ),
-                      title: Text(h.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: h.level <= 2 ? 14 : 13, fontWeight: h.level <= 2 ? FontWeight.w600 : FontWeight.w400)),
+                      title: Text(
+                        h.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: h.level <= 2 ? 14 : 13,
+                          fontWeight: h.level <= 2
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
                       onTap: () {
                         Navigator.of(ctx).pop();
                         _jumpToOffset(h.offset);
@@ -401,8 +466,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final note = context.watch<NotesProvider>().notes
-        .where((n) => n.id == widget.noteId).firstOrNull;
+    final note = context
+        .watch<NotesProvider>()
+        .notes
+        .where((n) => n.id == widget.noteId)
+        .firstOrNull;
     if (note == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('笔记')),
@@ -411,7 +479,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     }
 
     // Sync content if changed externally while in preview mode
-    if (_viewMode == _ViewMode.preview && _contentController.text != note.content) {
+    if (_viewMode == _ViewMode.preview &&
+        _contentController.text != note.content) {
       _contentController.text = note.content;
     }
 
@@ -423,213 +492,270 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
     return Shortcuts(
       shortcuts: <ShortcutActivator, Intent>{
-        const SingleActivator(LogicalKeyboardKey.keyB, control: true): const _FormatIntent('bold'),
-        const SingleActivator(LogicalKeyboardKey.keyI, control: true): const _FormatIntent('italic'),
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true): const _FormatIntent('link'),
-        const SingleActivator(LogicalKeyboardKey.keyE, control: true): const _FormatIntent('code'),
-        const SingleActivator(LogicalKeyboardKey.keyS, control: true): const _FormatIntent('save'),
-        const SingleActivator(LogicalKeyboardKey.keyP, control: true): const _FormatIntent('preview'),
-        const SingleActivator(LogicalKeyboardKey.keyD, control: true, shift: true): const _FormatIntent('strikethrough'),
+        const SingleActivator(LogicalKeyboardKey.keyB, control: true):
+            const _FormatIntent('bold'),
+        const SingleActivator(LogicalKeyboardKey.keyI, control: true):
+            const _FormatIntent('italic'),
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            const _FormatIntent('link'),
+        const SingleActivator(LogicalKeyboardKey.keyE, control: true):
+            const _FormatIntent('code'),
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+            const _FormatIntent('save'),
+        const SingleActivator(LogicalKeyboardKey.keyP, control: true):
+            const _FormatIntent('preview'),
+        const SingleActivator(
+          LogicalKeyboardKey.keyD,
+          control: true,
+          shift: true,
+        ): const _FormatIntent(
+          'strikethrough',
+        ),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
-          _FormatIntent: CallbackAction<_FormatIntent>(onInvoke: (intent) {
-            switch (intent.type) {
-              case 'bold': _wrapSelection('**', '**'); break;
-              case 'italic': _wrapSelection('*', '*'); break;
-              case 'link': _wrapSelection('[', '](url)'); break;
-              case 'code': _wrapSelection('`', '`'); break;
-              case 'strikethrough': _wrapSelection('~~', '~~'); break;
-              case 'save': _saveNote(); break;
-              case 'preview':
-                if (_viewMode != _ViewMode.preview) _saveNote();
-                setState(() => _viewMode = _viewMode == _ViewMode.preview ? _ViewMode.edit : _ViewMode.preview);
-                break;
-            }
-            return null;
-          }),
+          _FormatIntent: CallbackAction<_FormatIntent>(
+            onInvoke: (intent) {
+              switch (intent.type) {
+                case 'bold':
+                  _wrapSelection('**', '**');
+                  break;
+                case 'italic':
+                  _wrapSelection('*', '*');
+                  break;
+                case 'link':
+                  _wrapSelection('[', '](url)');
+                  break;
+                case 'code':
+                  _wrapSelection('`', '`');
+                  break;
+                case 'strikethrough':
+                  _wrapSelection('~~', '~~');
+                  break;
+                case 'save':
+                  _saveNote();
+                  break;
+                case 'preview':
+                  if (_viewMode != _ViewMode.preview) _saveNote();
+                  setState(
+                    () => _viewMode = _viewMode == _ViewMode.preview
+                        ? _ViewMode.edit
+                        : _ViewMode.preview,
+                  );
+                  break;
+              }
+              return null;
+            },
+          ),
         },
         child: Focus(
           autofocus: true,
           child: Scaffold(
-      appBar: AppBar(
-        surfaceTintColor: cs.surfaceTint,
-        elevation: 0,
-        titleSpacing: 0,
-        backgroundColor: cs.surface,
-        title: _viewMode == _ViewMode.edit || _viewMode == _ViewMode.split
-            ? TextField(
-                controller: _titleController,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                  color: cs.onSurface,
-                  letterSpacing: 0.15,
+            appBar: AppBar(
+              surfaceTintColor: cs.surfaceTint,
+              elevation: 0,
+              titleSpacing: 0,
+              backgroundColor: cs.surface,
+              title: _viewMode == _ViewMode.edit || _viewMode == _ViewMode.split
+                  ? TextField(
+                      controller: _titleController,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                        color: cs.onSurface,
+                        letterSpacing: 0.15,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: '笔记标题...',
+                        hintStyle: TextStyle(
+                          color: cs.onSurfaceVariant.withAlpha(140),
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: InputBorder.none,
+                        filled: false,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
+                      ),
+                    )
+                  : Text(
+                      note.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 18,
+                        color: cs.onSurface,
+                        letterSpacing: 0.15,
+                      ),
+                    ),
+              actions: [
+                // Save button (manual save)
+                IconButton(
+                  icon: Icon(Icons.save_rounded, size: 22, color: cs.primary),
+                  onPressed: () {
+                    _saveNote();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Row(
+                          children: [
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            SizedBox(width: 10),
+                            Text('笔记已保存'),
+                          ],
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        duration: const Duration(seconds: 1),
+                      ),
+                    );
+                  },
+                  visualDensity: VisualDensity.comfortable,
+                  tooltip: '保存笔记 (Ctrl+S)',
                 ),
-                decoration: InputDecoration(
-                  hintText: '笔记标题...',
-                  hintStyle: TextStyle(
-                    color: cs.onSurfaceVariant.withAlpha(140),
-                    fontWeight: FontWeight.w500,
+                // Star button with animation
+                IconButton(
+                  icon: Icon(
+                    note.isStarred
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    size: 24,
+                    color: note.isStarred
+                        ? Colors.amber.shade600
+                        : cs.onSurfaceVariant,
                   ),
-                  border: InputBorder.none,
-                  filled: false,
-                  contentPadding: EdgeInsets.zero,
-                  isDense: true,
+                  onPressed: () =>
+                      context.read<NotesProvider>().toggleStar(widget.noteId),
+                  visualDensity: VisualDensity.comfortable,
+                  tooltip: note.isStarred ? '取消星标' : '星标',
                 ),
-              )
-            : Text(
-                note.title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18,
-                  color: cs.onSurface,
-                  letterSpacing: 0.15,
-                ),
-              ),
-        actions: [
-          // Save button (manual save)
-          IconButton(
-            icon: Icon(Icons.save_rounded, size: 22, color: cs.primary),
-            onPressed: () {
-              _saveNote();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Row(
-                    children: [
-                      Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                      SizedBox(width: 10),
-                      Text('笔记已保存'),
+                const SizedBox(width: 4),
+                // View mode toggle with better styling
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SegmentedButton<_ViewMode>(
+                    segments: [
+                      ButtonSegment(
+                        value: _ViewMode.edit,
+                        icon: Icon(Icons.edit_rounded, size: 18),
+                        tooltip: '编辑',
+                      ),
+                      ButtonSegment(
+                        value: _ViewMode.split,
+                        icon: Icon(Icons.vertical_split_rounded, size: 18),
+                        tooltip: '分割视图',
+                      ),
+                      ButtonSegment(
+                        value: _ViewMode.preview,
+                        icon: Icon(Icons.visibility_rounded, size: 18),
+                        tooltip: '预览',
+                      ),
                     ],
+                    selected: {_viewMode},
+                    onSelectionChanged: (s) {
+                      if (_viewMode != _ViewMode.preview &&
+                          s.first == _ViewMode.preview) {
+                        _saveNote();
+                      }
+                      setState(() => _viewMode = s.first);
+                    },
+                    showSelectedIcon: false,
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: WidgetStatePropertyAll(
+                        const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
                   ),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  duration: const Duration(seconds: 1),
                 ),
-              );
-            },
-            visualDensity: VisualDensity.comfortable,
-            tooltip: '保存笔记 (Ctrl+S)',
-          ),
-          // Star button with animation
-          IconButton(
-            icon: Icon(
-              note.isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
-              size: 24,
-              color: note.isStarred ? Colors.amber.shade600 : cs.onSurfaceVariant,
-            ),
-            onPressed: () => context.read<NotesProvider>().toggleStar(widget.noteId),
-            visualDensity: VisualDensity.comfortable,
-            tooltip: note.isStarred ? '取消星标' : '星标',
-          ),
-          const SizedBox(width: 4),
-          // View mode toggle with better styling
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: SegmentedButton<_ViewMode>(
-              segments: [
-                ButtonSegment(
-                  value: _ViewMode.edit,
-                  icon: Icon(Icons.edit_rounded, size: 18),
-                  tooltip: '编辑',
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    size: 22,
+                    color: cs.onSurfaceVariant,
+                  ),
+                  onSelected: _onMenuAction,
+                  tooltip: '更多选项',
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
+                      value: 'outline',
+                      child: _menuRow(Icons.segment_rounded, '大纲'),
+                    ),
+                    PopupMenuItem(
+                      value: 'backlinks',
+                      child: _menuRow(Icons.link_rounded, '链接和反向链接'),
+                    ),
+                    PopupMenuItem(
+                      value: 'frontmatter',
+                      child: _menuRow(Icons.data_object_rounded, '插入前置元数据'),
+                    ),
+                    PopupMenuItem(
+                      value: 'tags',
+                      child: _menuRow(Icons.local_offer_rounded, '管理标签'),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'focus',
+                      child: _menuRow(Icons.fullscreen_rounded, '专注模式'),
+                    ),
+                    PopupMenuItem(
+                      value: 'stats',
+                      child: _menuRow(Icons.analytics_outlined, '统计信息'),
+                    ),
+                    PopupMenuItem(
+                      value: 'export',
+                      child: _menuRow(Icons.download_rounded, '导出'),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: _menuRow(
+                        Icons.delete_outline_rounded,
+                        '删除',
+                        isDestructive: true,
+                      ),
+                    ),
+                  ],
                 ),
-                ButtonSegment(
-                  value: _ViewMode.split,
-                  icon: Icon(Icons.vertical_split_rounded, size: 18),
-                  tooltip: '分割视图',
-                ),
-                ButtonSegment(
-                  value: _ViewMode.preview,
-                  icon: Icon(Icons.visibility_rounded, size: 18),
-                  tooltip: '预览',
-                ),
+                const SizedBox(width: 4),
               ],
-              selected: {_viewMode},
-              onSelectionChanged: (s) {
-                if (_viewMode != _ViewMode.preview && s.first == _ViewMode.preview) _saveNote();
-                setState(() => _viewMode = s.first);
-              },
-              showSelectedIcon: false,
-              style: ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: WidgetStatePropertyAll(const EdgeInsets.symmetric(horizontal: 8)),
-              ),
+            ),
+            body: Column(
+              children: [
+                // Task progress bar
+                if (_taskTotal > 0) _buildTaskProgress(cs),
+                // Tags bar
+                if (note.tags.isNotEmpty) _buildTagsBar(cs, note.tags),
+                // Toolbar
+                if (_showToolbar && _viewMode != _ViewMode.preview)
+                  _buildToolbar(cs),
+                // Content area
+                Expanded(
+                  child: _viewMode == _ViewMode.split
+                      ? (isLandscape
+                            ? _buildSplitHorizontal(cs)
+                            : _buildSplitVertical(cs))
+                      : _viewMode == _ViewMode.edit
+                      ? _buildEditor(cs)
+                      : _buildPreview(cs, note.content),
+                ),
+                // Bottom stats bar
+                _buildBottomBar(cs),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert_rounded, size: 22, color: cs.onSurfaceVariant),
-            onSelected: _onMenuAction,
-            tooltip: '更多选项',
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'outline',
-                child: _menuRow(Icons.segment_rounded, '大纲'),
-              ),
-              PopupMenuItem(
-                value: 'backlinks',
-                child: _menuRow(Icons.link_rounded, '链接和反向链接'),
-              ),
-              PopupMenuItem(
-                value: 'frontmatter',
-                child: _menuRow(Icons.data_object_rounded, '插入前置元数据'),
-              ),
-              PopupMenuItem(
-                value: 'tags',
-                child: _menuRow(Icons.local_offer_rounded, '管理标签'),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'focus',
-                child: _menuRow(Icons.fullscreen_rounded, '专注模式'),
-              ),
-              PopupMenuItem(
-                value: 'stats',
-                child: _menuRow(Icons.analytics_outlined, '统计信息'),
-              ),
-              PopupMenuItem(
-                value: 'export',
-                child: _menuRow(Icons.download_rounded, '导出'),
-              ),
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                value: 'delete',
-                child: _menuRow(Icons.delete_outline_rounded, '删除', isDestructive: true),
-              ),
-            ],
-          ),
-          const SizedBox(width: 4),
-        ],
+        ),
       ),
-      body: Column(
-        children: [
-          // Task progress bar
-          if (_taskTotal > 0) _buildTaskProgress(cs),
-          // Tags bar
-          if (note.tags.isNotEmpty) _buildTagsBar(cs, note.tags),
-          // Toolbar
-          if (_showToolbar && _viewMode != _ViewMode.preview) _buildToolbar(cs),
-          // Content area
-          Expanded(
-            child: _viewMode == _ViewMode.split
-                ? (isLandscape ? _buildSplitHorizontal(cs) : _buildSplitVertical(cs))
-                : _viewMode == _ViewMode.edit
-                    ? _buildEditor(cs)
-                    : _buildPreview(cs, note.content),
-          ),
-          // Bottom stats bar
-          _buildBottomBar(cs),
-        ],
-      ),
-    ),
-    ),
-    ),
     );
   }
 
@@ -706,7 +832,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   SnackBar(
                     content: const Text('已复制到剪贴板'),
                     behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
               },
@@ -725,19 +853,22 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Future<void> _exportAsMarkdown() async {
     try {
-      final fileName = '${_titleController.text.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')}.md';
+      final fileName =
+          '${_titleController.text.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')}.md';
       final path = await _getSafeSavePath(fileName);
-      
+
       final file = File(path);
       await file.writeAsString(_contentController.text);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ 导出成功: $path'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -748,7 +879,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             content: Text('导出失败: $e'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.redAccent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -758,8 +891,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   void _showStatsDialog() {
     final lines = _contentController.text.split('\n').length;
     final headings = _extractOutline(_contentController.text).length;
-    final note = context.read<NotesProvider>().notes
-        .where((n) => n.id == widget.noteId).firstOrNull;
+    final note = context
+        .read<NotesProvider>()
+        .notes
+        .where((n) => n.id == widget.noteId)
+        .firstOrNull;
     final tagCount = note?.tags.length ?? 0;
     final hasFm = _contentController.text.trimLeft().startsWith('---');
 
@@ -776,12 +912,19 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             _statRow(Icons.segment_rounded, '标题', '$headings'),
             _statRow(Icons.tag_rounded, '标签', '$tagCount'),
             if (_taskTotal > 0)
-              _statRow(Icons.check_box_outlined, '任务', '$_taskDone / $_taskTotal'),
+              _statRow(
+                Icons.check_box_outlined,
+                '任务',
+                '$_taskDone / $_taskTotal',
+              ),
             _statRow(Icons.data_object_rounded, '前置元数据', hasFm ? '是' : '否'),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('关闭')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('关闭'),
+          ),
         ],
       ),
     );
@@ -797,7 +940,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           const SizedBox(width: 12),
           Text(label, style: const TextStyle(fontSize: 14)),
           const Spacer(),
-          Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.primary)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: cs.primary,
+            ),
+          ),
         ],
       ),
     );
@@ -813,15 +963,20 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         SnackBar(
           content: const Text('前置元数据已存在'),
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
     }
 
     final now = DateTime.now();
-    final dateStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    final title = _titleController.text.trim().isEmpty ? '无标题' : _titleController.text.trim();
+    final dateStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final title = _titleController.text.trim().isEmpty
+        ? '无标题'
+        : _titleController.text.trim();
     final fm = '---\ntitle: $title\ntags: \ndate: $dateStr\nauthor: \n---\n\n';
 
     _contentController.value = TextEditingValue(
@@ -838,8 +993,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   void _showTagsSheet() {
     final cs = Theme.of(context).colorScheme;
-    final note = context.read<NotesProvider>().notes
-        .where((n) => n.id == widget.noteId).firstOrNull;
+    final note = context
+        .read<NotesProvider>()
+        .notes
+        .where((n) => n.id == widget.noteId)
+        .firstOrNull;
     if (note == null) return;
 
     final tags = note.tags;
@@ -857,14 +1015,25 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 4,
+                    ),
                     child: Row(
                       children: [
                         Icon(Icons.tag_rounded, size: 20, color: cs.primary),
                         const SizedBox(width: 10),
-                        Text('标签', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(
+                          '标签',
+                          style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const Spacer(),
-                        Text('${tags.length} 个标签', style: TextStyle(fontSize: 12, color: cs.outline)),
+                        Text(
+                          '${tags.length} 个标签',
+                          style: TextStyle(fontSize: 12, color: cs.outline),
+                        ),
                       ],
                     ),
                   ),
@@ -881,10 +1050,18 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                               hintText: '添加标签（例如 project/web）',
                               prefixText: '#',
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
+                              ),
                               filled: true,
-                              fillColor: cs.surfaceContainerHighest.withAlpha(140),
+                              fillColor: cs.surfaceContainerHighest.withAlpha(
+                                140,
+                              ),
                             ),
                             style: const TextStyle(fontSize: 14),
                           ),
@@ -910,29 +1087,50 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   if (tags.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Text('此笔记中没有标签', style: TextStyle(color: cs.outline)),
+                      child: Text(
+                        '此笔记中没有标签',
+                        style: TextStyle(color: cs.outline),
+                      ),
                     )
                   else
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 200),
                       child: ListView.builder(
                         shrinkWrap: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         itemCount: tags.length,
                         itemBuilder: (_, idx) {
                           final tag = tags[idx];
                           return ListTile(
                             dense: true,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                             leading: Container(
-                              width: 28, height: 28,
+                              width: 28,
+                              height: 28,
                               decoration: BoxDecoration(
                                 color: cs.secondaryContainer,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Center(child: Icon(Icons.tag_rounded, size: 14, color: cs.onSecondaryContainer)),
+                              child: Center(
+                                child: Icon(
+                                  Icons.tag_rounded,
+                                  size: 14,
+                                  color: cs.onSecondaryContainer,
+                                ),
+                              ),
                             ),
-                            title: Text('#$tag', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                            title: Text(
+                              '#$tag',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           );
                         },
                       ),
@@ -971,12 +1169,20 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 4,
+                  ),
                   child: Row(
                     children: [
                       Icon(Icons.link_rounded, size: 20, color: cs.primary),
                       const SizedBox(width: 10),
-                      Text('链接', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                      Text(
+                        '链接',
+                        style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -985,24 +1191,42 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 Expanded(
                   child: ListView(
                     controller: scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     children: [
                       // Backlinks section
-                      _linkSectionHeader(cs, Icons.arrow_back_rounded, '反向链接', backlinks.length),
+                      _linkSectionHeader(
+                        cs,
+                        Icons.arrow_back_rounded,
+                        '反向链接',
+                        backlinks.length,
+                      ),
                       if (backlinks.isEmpty)
                         _emptyLinkHint(cs, '没有笔记链接到此笔记')
                       else
                         ...backlinks.map((n) => _linkTile(cs, n)),
                       const SizedBox(height: 12),
                       // Outgoing links
-                      _linkSectionHeader(cs, Icons.arrow_forward_rounded, '传出链接', outgoing.length),
+                      _linkSectionHeader(
+                        cs,
+                        Icons.arrow_forward_rounded,
+                        '传出链接',
+                        outgoing.length,
+                      ),
                       if (outgoing.isEmpty)
                         _emptyLinkHint(cs, '此笔记没有 wiki 链接')
                       else
                         ...outgoing.map((n) => _linkTile(cs, n)),
                       const SizedBox(height: 12),
                       // Unlinked mentions
-                      _linkSectionHeader(cs, Icons.link_off_rounded, '未链接的提及', unlinked.length),
+                      _linkSectionHeader(
+                        cs,
+                        Icons.link_off_rounded,
+                        '未链接的提及',
+                        unlinked.length,
+                      ),
                       if (unlinked.isEmpty)
                         _emptyLinkHint(cs, '未找到未链接的提及')
                       else
@@ -1018,19 +1242,41 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     );
   }
 
-  Widget _linkSectionHeader(ColorScheme cs, IconData icon, String label, int count) {
+  Widget _linkSectionHeader(
+    ColorScheme cs,
+    IconData icon,
+    String label,
+    int count,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 4, left: 4),
       child: Row(
         children: [
           Icon(icon, size: 16, color: cs.primary),
           const SizedBox(width: 8),
-          Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-            decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(8)),
-            child: Text('$count', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.onPrimaryContainer)),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: cs.onPrimaryContainer,
+              ),
+            ),
           ),
         ],
       ),
@@ -1049,14 +1295,32 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       dense: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       leading: Container(
-        width: 28, height: 28,
-        decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(8)),
-        child: Center(child: Icon(Icons.description_outlined, size: 14, color: cs.onPrimaryContainer)),
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.description_outlined,
+            size: 14,
+            color: cs.onPrimaryContainer,
+          ),
+        ),
       ),
-      title: Text(note.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+      title: Text(
+        note.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 14),
+      ),
       subtitle: Text(
-        note.content.length > 60 ? '${note.content.substring(0, 60)}...' : note.content,
-        maxLines: 1, overflow: TextOverflow.ellipsis,
+        note.content.length > 60
+            ? '${note.content.substring(0, 60)}...'
+            : note.content,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(fontSize: 11, color: cs.outline),
       ),
       onTap: () {
@@ -1073,16 +1337,33 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       dense: true,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       leading: Container(
-        width: 28, height: 28,
-        decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(8)),
-        child: Center(child: Icon(Icons.link_off_rounded, size: 14, color: cs.onTertiaryContainer)),
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: cs.tertiaryContainer,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.link_off_rounded,
+            size: 14,
+            color: cs.onTertiaryContainer,
+          ),
+        ),
       ),
-      title: Text(note.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+      title: Text(
+        note.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 14),
+      ),
       trailing: FilledButton.tonal(
         onPressed: () {
           provider.addLinkToNote(widget.noteId, note.title);
           // Refresh the content controller
-          final updatedNote = provider.notes.where((n) => n.id == widget.noteId).firstOrNull;
+          final updatedNote = provider.notes
+              .where((n) => n.id == widget.noteId)
+              .firstOrNull;
           if (updatedNote != null) {
             _contentController.text = updatedNote.content;
           }
@@ -1111,27 +1392,40 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withAlpha(60),
-        border: Border(bottom: BorderSide(color: cs.outlineVariant.withAlpha(40))),
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant.withAlpha(40)),
+        ),
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
           Center(child: Icon(Icons.tag_rounded, size: 14, color: cs.outline)),
           const SizedBox(width: 6),
-          ...tags.map((t) => Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: cs.secondaryContainer.withAlpha(160),
-                  borderRadius: BorderRadius.circular(8),
+          ...tags.map(
+            (t) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer.withAlpha(160),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '#$t',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: cs.onSecondaryContainer,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-                child: Text('#$t',
-                    style: TextStyle(fontSize: 11, color: cs.onSecondaryContainer, fontWeight: FontWeight.w500)),
               ),
             ),
-          )),
+          ),
         ],
       ),
     );
@@ -1142,20 +1436,25 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   Widget _buildTaskProgress(ColorScheme cs) {
     final progress = _taskTotal > 0 ? _taskDone / _taskTotal : 0.0;
     final isComplete = progress >= 1.0;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isComplete
               ? [Colors.green.shade50, Colors.green.shade100]
-              : [cs.primaryContainer.withAlpha(60), cs.secondaryContainer.withAlpha(60)],
+              : [
+                  cs.primaryContainer.withAlpha(60),
+                  cs.secondaryContainer.withAlpha(60),
+                ],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
         border: Border(
           bottom: BorderSide(
-            color: isComplete ? Colors.green.withAlpha(100) : cs.outlineVariant.withAlpha(60),
+            color: isComplete
+                ? Colors.green.withAlpha(100)
+                : cs.outlineVariant.withAlpha(60),
             width: 1,
           ),
         ),
@@ -1186,7 +1485,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: isComplete ? Colors.green.shade700 : cs.onSurface,
+                        color: isComplete
+                            ? Colors.green.shade700
+                            : cs.onSurface,
                         letterSpacing: 0.1,
                       ),
                     ),
@@ -1241,29 +1542,83 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
-          _toolBtn(Icons.format_bold_rounded, '粗体 (Ctrl+B)', () => _wrapSelection('**', '**')),
-          _toolBtn(Icons.format_italic_rounded, '斜体 (Ctrl+I)', () => _wrapSelection('*', '*')),
-          _toolBtn(Icons.strikethrough_s_rounded, '删除线', () => _wrapSelection('~~', '~~')),
+          _toolBtn(
+            Icons.format_bold_rounded,
+            '粗体 (Ctrl+B)',
+            () => _wrapSelection('**', '**'),
+          ),
+          _toolBtn(
+            Icons.format_italic_rounded,
+            '斜体 (Ctrl+I)',
+            () => _wrapSelection('*', '*'),
+          ),
+          _toolBtn(
+            Icons.strikethrough_s_rounded,
+            '删除线',
+            () => _wrapSelection('~~', '~~'),
+          ),
           _toolDivider(cs),
           _toolBtn(Icons.title_rounded, '标题', () => _prependLine('## ')),
           _toolBtn(Icons.format_quote_rounded, '引用', () => _prependLine('> ')),
           _toolBtn(Icons.code_rounded, '行内代码', () => _wrapSelection('`', '`')),
-          _toolBtn(Icons.data_object_rounded, '代码块', () => _wrapSelection('```\n', '\n```')),
+          _toolBtn(
+            Icons.data_object_rounded,
+            '代码块',
+            () => _wrapSelection('```\n', '\n```'),
+          ),
           _toolDivider(cs),
-          _toolBtn(Icons.format_list_bulleted_rounded, '项目符号列表', () => _prependLine('- ')),
-          _toolBtn(Icons.format_list_numbered_rounded, '编号列表', () => _prependLine('1. ')),
+          _toolBtn(
+            Icons.format_list_bulleted_rounded,
+            '项目符号列表',
+            () => _prependLine('- '),
+          ),
+          _toolBtn(
+            Icons.format_list_numbered_rounded,
+            '编号列表',
+            () => _prependLine('1. '),
+          ),
           _toolBtn(Icons.check_box_outlined, '任务项', _toggleTaskItem),
           _toolDivider(cs),
-          _toolBtn(Icons.horizontal_rule_rounded, '分隔线', () => _insertAtCursor('\n---\n')),
-          _toolBtn(Icons.link_rounded, '链接', () => _wrapSelection('[', '](url)')),
-          _toolBtn(Icons.image_outlined, '图片', () => _insertAtCursor('![alt](url)')),
-          _toolBtn(Icons.table_chart_outlined, '表格', () => _insertAtCursor('\n| 标题 | 标题 |\n|--------|--------|\n| 单元格   | 单元格   |\n')),
+          _toolBtn(
+            Icons.horizontal_rule_rounded,
+            '分隔线',
+            () => _insertAtCursor('\n---\n'),
+          ),
+          _toolBtn(
+            Icons.link_rounded,
+            '链接',
+            () => _wrapSelection('[', '](url)'),
+          ),
+          _toolBtn(
+            Icons.image_outlined,
+            '图片',
+            () => _insertAtCursor('![alt](url)'),
+          ),
+          _toolBtn(
+            Icons.table_chart_outlined,
+            '表格',
+            () => _insertAtCursor(
+              '\n| 标题 | 标题 |\n|--------|--------|\n| 单元格   | 单元格   |\n',
+            ),
+          ),
           _toolDivider(cs),
-          _toolBtn(Icons.functions_rounded, '行内数学', () => _wrapSelection(r'$', r'$')),
-          _toolBtn(Icons.calculate_outlined, '块数学', () => _wrapSelection('\$\$\n', '\n\$\$')),
+          _toolBtn(
+            Icons.functions_rounded,
+            '行内数学',
+            () => _wrapSelection(r'$', r'$'),
+          ),
+          _toolBtn(
+            Icons.calculate_outlined,
+            '块数学',
+            () => _wrapSelection('\$\$\n', '\n\$\$'),
+          ),
           _toolDivider(cs),
           _toolBtn(Icons.local_offer_rounded, '标签', () => _insertAtCursor('#')),
-          _toolBtn(Icons.add_link_rounded, 'Wiki 链接', () => _insertAtCursor('[[')),
+          _toolBtn(
+            Icons.add_link_rounded,
+            'Wiki 链接',
+            () => _insertAtCursor('[['),
+          ),
         ],
       ),
     );
@@ -1321,10 +1676,19 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         maxLines: null,
         expands: true,
         textAlignVertical: TextAlignVertical.top,
-        style: TextStyle(fontSize: 14, color: cs.onSurface, height: 1.7, fontFamily: 'monospace'),
+        style: TextStyle(
+          fontSize: 14,
+          color: cs.onSurface,
+          height: 1.7,
+          fontFamily: 'monospace',
+        ),
         decoration: InputDecoration(
-          hintText: '在此处写 markdown...\n\n支持：\n- **粗体**、*斜体*、~~删除线~~\n- \$E=mc^2\$ (行内数学)\n- \$\$\\\\int_0^1 f(x)dx\$\$ (块数学)\n- - [ ] 任务列表\n- 代码块、表格、链接...',
-          hintStyle: TextStyle(color: cs.onSurfaceVariant.withAlpha(100), fontSize: 13),
+          hintText:
+              '在此处写 markdown...\n\n支持：\n- **粗体**、*斜体*、~~删除线~~\n- \$E=mc^2\$ (行内数学)\n- \$\$\\\\int_0^1 f(x)dx\$\$ (块数学)\n- - [ ] 任务列表\n- 代码块、表格、链接...',
+          hintStyle: TextStyle(
+            color: cs.onSurfaceVariant.withAlpha(100),
+            fontSize: 13,
+          ),
           border: InputBorder.none,
           filled: false,
           contentPadding: const EdgeInsets.symmetric(vertical: 10),
@@ -1441,7 +1805,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     ),
                     const SizedBox(width: 4),
                     Icon(
-                      _showToolbar ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      _showToolbar
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
                       size: 18,
                       color: cs.primary,
                     ),
@@ -1455,17 +1821,19 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     );
   }
 
-  Widget _statChip(ColorScheme cs, IconData icon, String label, {Color? color}) {
+  Widget _statChip(
+    ColorScheme cs,
+    IconData icon,
+    String label, {
+    Color? color,
+  }) {
     final chipColor = color ?? cs.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withAlpha(100),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: cs.outlineVariant.withAlpha(60),
-          width: 1,
-        ),
+        border: Border.all(color: cs.outlineVariant.withAlpha(60), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1506,15 +1874,28 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     tooltip: '退出专注模式',
                   ),
                   const Spacer(),
-                  Text('$_wordCount 个单词', style: TextStyle(fontSize: 12, color: cs.outline)),
+                  Text(
+                    '$_wordCount 个单词',
+                    style: TextStyle(fontSize: 12, color: cs.outline),
+                  ),
                   const SizedBox(width: 12),
                   // Toggle between edit and preview in focus mode
                   SegmentedButton<_ViewMode>(
                     segments: const [
-                      ButtonSegment(value: _ViewMode.edit, icon: Icon(Icons.edit_rounded, size: 14)),
-                      ButtonSegment(value: _ViewMode.preview, icon: Icon(Icons.visibility_rounded, size: 14)),
+                      ButtonSegment(
+                        value: _ViewMode.edit,
+                        icon: Icon(Icons.edit_rounded, size: 14),
+                      ),
+                      ButtonSegment(
+                        value: _ViewMode.preview,
+                        icon: Icon(Icons.visibility_rounded, size: 14),
+                      ),
                     ],
-                    selected: {_viewMode == _ViewMode.preview ? _ViewMode.preview : _ViewMode.edit},
+                    selected: {
+                      _viewMode == _ViewMode.preview
+                          ? _ViewMode.preview
+                          : _ViewMode.edit,
+                    },
                     onSelectionChanged: (s) {
                       if (s.first == _ViewMode.preview) _saveNote();
                       setState(() => _viewMode = s.first);
@@ -1523,7 +1904,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     style: ButtonStyle(
                       visualDensity: VisualDensity.compact,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: WidgetStatePropertyAll(const EdgeInsets.symmetric(horizontal: 6)),
+                      padding: WidgetStatePropertyAll(
+                        const EdgeInsets.symmetric(horizontal: 6),
+                      ),
                     ),
                   ),
                 ],
@@ -1568,7 +1951,11 @@ class _HeadingEntry {
   final int level;
   final String title;
   final int offset;
-  _HeadingEntry({required this.level, required this.title, required this.offset});
+  _HeadingEntry({
+    required this.level,
+    required this.title,
+    required this.offset,
+  });
 }
 
 class _FormatIntent extends Intent {

@@ -94,7 +94,11 @@ class _AboutPageState extends State<AboutPage> {
                           ],
                         ),
                         child: Center(
-                          child: Icon(Icons.smart_toy_rounded, size: 38, color: cs.onPrimary),
+                          child: Icon(
+                            Icons.smart_toy_rounded,
+                            size: 38,
+                            color: cs.onPrimary,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -109,11 +113,23 @@ class _AboutPageState extends State<AboutPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _Badge(label: _version.isNotEmpty ? 'v$_version' : '...', bg: cs.secondaryContainer, fg: cs.onSecondaryContainer),
+                          _Badge(
+                            label: _version.isNotEmpty ? 'v$_version' : '...',
+                            bg: cs.secondaryContainer,
+                            fg: cs.onSecondaryContainer,
+                          ),
                           const SizedBox(width: 8),
-                          _Badge(label: 'MIT', bg: cs.tertiaryContainer, fg: cs.onTertiaryContainer),
+                          _Badge(
+                            label: 'MIT',
+                            bg: cs.tertiaryContainer,
+                            fg: cs.onTertiaryContainer,
+                          ),
                           const SizedBox(width: 8),
-                          _Badge(label: 'Flutter', bg: cs.primaryContainer, fg: cs.onPrimaryContainer),
+                          _Badge(
+                            label: 'Flutter',
+                            bg: cs.primaryContainer,
+                            fg: cs.onPrimaryContainer,
+                          ),
                         ],
                       ),
                     ],
@@ -127,45 +143,49 @@ class _AboutPageState extends State<AboutPage> {
             padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 40),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-
                 // ── Quick action row ──
-                Row(children: [
-                  Expanded(
-                    child: _ActionCard(
-                      cs: cs,
-                      icon: Icons.code_rounded,
-                      label: 'GitHub',
-                      sublabel: '查看源代码',
-                      color: cs.primaryContainer,
-                      iconColor: cs.onPrimaryContainer,
-                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionCard(
+                        cs: cs,
+                        icon: Icons.code_rounded,
+                        label: 'GitHub',
+                        sublabel: '查看源代码',
+                        color: cs.primaryContainer,
+                        iconColor: cs.onPrimaryContainer,
+                        onTap: () =>
+                            _openUrl('https://github.com/Chloemlla/NexAI'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ActionCard(
-                      cs: cs,
-                      icon: Icons.bug_report_rounded,
-                      label: '问题',
-                      sublabel: '报告错误',
-                      color: cs.errorContainer,
-                      iconColor: cs.onErrorContainer,
-                      onTap: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ActionCard(
+                        cs: cs,
+                        icon: Icons.bug_report_rounded,
+                        label: '问题',
+                        sublabel: '报告错误',
+                        color: cs.errorContainer,
+                        iconColor: cs.onErrorContainer,
+                        onTap: () => _openUrl(
+                          'https://github.com/Chloemlla/NexAI/issues',
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ActionCard(
-                      cs: cs,
-                      icon: Icons.person_rounded,
-                      label: '作者',
-                      sublabel: 'Chloemlla',
-                      color: cs.tertiaryContainer,
-                      iconColor: cs.onTertiaryContainer,
-                      onTap: () => _openUrl('https://github.com/Chloemlla'),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _ActionCard(
+                        cs: cs,
+                        icon: Icons.person_rounded,
+                        label: '作者',
+                        sublabel: 'Chloemlla',
+                        color: cs.tertiaryContainer,
+                        iconColor: cs.onTertiaryContainer,
+                        onTap: () => _openUrl('https://github.com/Chloemlla'),
+                      ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
                 const SizedBox(height: 24),
 
                 // ── App Info section ──
@@ -180,11 +200,19 @@ class _AboutPageState extends State<AboutPage> {
 
                 // ── Features section ──
                 _m3Section(cs, tt, Icons.auto_awesome_rounded, '功能', [
-                  _m3Feature(cs, Icons.chat_rounded, 'OpenAI 兼容 API，支持自定义基础 URL'),
+                  _m3Feature(
+                    cs,
+                    Icons.chat_rounded,
+                    'OpenAI 兼容 API，支持自定义基础 URL',
+                  ),
                   const SizedBox(height: 8),
                   _m3Feature(cs, Icons.functions_rounded, 'LaTeX 数学和化学公式渲染'),
                   const SizedBox(height: 8),
-                  _m3Feature(cs, Icons.color_lens_rounded, 'Material You 动态颜色（Android）'),
+                  _m3Feature(
+                    cs,
+                    Icons.color_lens_rounded,
+                    'Material You 动态颜色（Android）',
+                  ),
                   const SizedBox(height: 8),
                   _m3Feature(cs, Icons.code_rounded, '支持语法高亮的 Markdown 代码'),
                   const SizedBox(height: 8),
@@ -194,10 +222,21 @@ class _AboutPageState extends State<AboutPage> {
 
                 // ── Tech Stack section ──
                 _m3Section(cs, tt, Icons.layers_rounded, '技术栈', [
-                  Wrap(spacing: 8, runSpacing: 8, children: [
-                    for (final label in ['Flutter', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences'])
-                      _m3Chip(cs, label),
-                  ]),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final label in [
+                        'Flutter',
+                        'Provider',
+                        'flutter_math_fork',
+                        'flutter_markdown',
+                        'dynamic_color',
+                        'shared_preferences',
+                      ])
+                        _m3Chip(cs, label),
+                    ],
+                  ),
                 ]),
               ]),
             ),
@@ -207,30 +246,47 @@ class _AboutPageState extends State<AboutPage> {
     );
   }
 
-  Widget _m3Section(ColorScheme cs, TextTheme tt, IconData icon, String title, List<Widget> children) {
+  Widget _m3Section(
+    ColorScheme cs,
+    TextTheme tt,
+    IconData icon,
+    String title,
+    List<Widget> children,
+  ) {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withAlpha(150),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Center(child: Icon(icon, size: 18, color: cs.primary)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer.withAlpha(150),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(child: Icon(icon, size: 18, color: cs.primary)),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: tt.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Text(title, style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2)),
-          ]),
-          const SizedBox(height: 18),
-          ...children,
-        ]),
+            const SizedBox(height: 18),
+            ...children,
+          ],
+        ),
       ),
     );
   }
@@ -242,31 +298,47 @@ class _AboutPageState extends State<AboutPage> {
         color: cs.primaryContainer.withAlpha(100),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(label, style: TextStyle(fontSize: 12, color: cs.onPrimaryContainer)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 12, color: cs.onPrimaryContainer),
+      ),
     );
   }
 
   Widget _m3InfoRow(ColorScheme cs, String label, String value) {
-    return Row(children: [
-      SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 13, color: cs.outline))),
-      Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
-    ]);
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(label, style: TextStyle(fontSize: 13, color: cs.outline)),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _m3Feature(ColorScheme cs, IconData icon, String text) {
-    return Row(children: [
-      Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: cs.primaryContainer.withAlpha(100),
-          borderRadius: BorderRadius.circular(8),
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: cs.primaryContainer.withAlpha(100),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(child: Icon(icon, size: 14, color: cs.primary)),
         ),
-        child: Center(child: Icon(icon, size: 14, color: cs.primary)),
-      ),
-      const SizedBox(width: 12),
-      Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
-    ]);
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+      ],
+    );
   }
 
   // ─── Desktop: Fluent UI ───
@@ -286,31 +358,65 @@ class _AboutPageState extends State<AboutPage> {
               borderRadius: BorderRadius.circular(6),
               gradient: LinearGradient(
                 colors: [
-                  Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, isDark ? 0.35 : 0.15),
-                  Color.fromRGBO(theme.accentColor.lighter.value >> 16 & 0xFF, theme.accentColor.lighter.value >> 8 & 0xFF, theme.accentColor.lighter.value & 0xFF, isDark ? 0.15 : 0.05),
+                  theme.accentColor.withValues(alpha: isDark ? 0.35 : 0.15),
+                  theme.accentColor.lighter.withValues(
+                    alpha: isDark ? 0.15 : 0.05,
+                  ),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
             ),
             padding: const EdgeInsets.all(32),
-            child: Column(children: [
-              Container(
-                width: 88, height: 88,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [theme.accentColor, theme.accentColor.lighter], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [BoxShadow(color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.35), blurRadius: 24, offset: const Offset(0, 8))],
+            child: Column(
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [theme.accentColor, theme.accentColor.lighter],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.accentColor.withValues(alpha: 0.35),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      fluent.FluentIcons.robot,
+                      size: 40,
+                      color: fluent.Colors.white,
+                    ),
+                  ),
                 ),
-                child: const Center(child: Icon(fluent.FluentIcons.robot, size: 40, color: fluent.Colors.white)),
-              ),
-              const SizedBox(height: 20),
-              Text('NexAI', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: theme.typography.body?.color)),
-              const SizedBox(height: 6),
-              Text(_version.isNotEmpty ? 'v$_version' : '', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
-              const SizedBox(height: 8),
-              Text('一个美观的 AI 聊天客户端，采用 Fluent Design', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
-            ]),
+                const SizedBox(height: 20),
+                Text(
+                  'NexAI',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: theme.typography.body?.color,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _version.isNotEmpty ? 'v$_version' : '',
+                  style: TextStyle(fontSize: 14, color: theme.inactiveColor),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '一个美观的 AI 聊天客户端，采用 Fluent Design',
+                  style: TextStyle(fontSize: 14, color: theme.inactiveColor),
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -321,12 +427,21 @@ class _AboutPageState extends State<AboutPage> {
           const SizedBox(height: 12),
           _fluentInfoRow(theme, 'GitHub', 'github.com/Chloemlla'),
           const SizedBox(height: 16),
-          Row(children: [
-            fluent.FilledButton(
-              onPressed: () => _openUrl('https://github.com/Chloemlla'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.open_in_new_tab, size: 14), SizedBox(width: 8), Text('作者资料')]),
-            ),
-          ]),
+          Row(
+            children: [
+              fluent.FilledButton(
+                onPressed: () => _openUrl('https://github.com/Chloemlla'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(fluent.FluentIcons.open_in_new_tab, size: 14),
+                    SizedBox(width: 8),
+                    Text('作者资料'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ]),
         const SizedBox(height: 12),
 
@@ -338,30 +453,65 @@ class _AboutPageState extends State<AboutPage> {
           const SizedBox(height: 12),
           _fluentInfoRow(theme, '框架', 'Flutter + Fluent UI'),
           const SizedBox(height: 16),
-          Wrap(spacing: 10, runSpacing: 8, children: [
-            fluent.FilledButton(
-              onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.open_in_new_tab, size: 14), SizedBox(width: 8), Text('在 GitHub 上查看')]),
-            ),
-            fluent.Button(
-              onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI/issues'),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [Icon(fluent.FluentIcons.bug, size: 14), SizedBox(width: 8), Text('报告问题')]),
-            ),
-          ]),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              fluent.FilledButton(
+                onPressed: () => _openUrl('https://github.com/Chloemlla/NexAI'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(fluent.FluentIcons.open_in_new_tab, size: 14),
+                    SizedBox(width: 8),
+                    Text('在 GitHub 上查看'),
+                  ],
+                ),
+              ),
+              fluent.Button(
+                onPressed: () =>
+                    _openUrl('https://github.com/Chloemlla/NexAI/issues'),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(fluent.FluentIcons.bug, size: 14),
+                    SizedBox(width: 8),
+                    Text('报告问题'),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ]),
         const SizedBox(height: 12),
 
         // Features
         _fluentInfoCard(theme, fluent.FluentIcons.sunny, '功能', [
-          _fluentFeature(theme, fluent.FluentIcons.chat, 'OpenAI 兼容 API，支持自定义基础 URL'),
+          _fluentFeature(
+            theme,
+            fluent.FluentIcons.chat,
+            'OpenAI 兼容 API，支持自定义基础 URL',
+          ),
           const SizedBox(height: 10),
-          _fluentFeature(theme, fluent.FluentIcons.variable2, 'LaTeX 数学和化学公式渲染'),
+          _fluentFeature(
+            theme,
+            fluent.FluentIcons.variable2,
+            'LaTeX 数学和化学公式渲染',
+          ),
           const SizedBox(height: 10),
-          _fluentFeature(theme, fluent.FluentIcons.color, 'Material You 动态颜色（Android）'),
+          _fluentFeature(
+            theme,
+            fluent.FluentIcons.color,
+            'Material You 动态颜色（Android）',
+          ),
           const SizedBox(height: 10),
           _fluentFeature(theme, fluent.FluentIcons.code, '支持语法高亮的 Markdown 代码'),
           const SizedBox(height: 10),
-          _fluentFeature(theme, fluent.FluentIcons.design, 'Fluent Design with Mica/Acrylic effects'),
+          _fluentFeature(
+            theme,
+            fluent.FluentIcons.design,
+            'Fluent Design with Mica/Acrylic effects',
+          ),
           const SizedBox(height: 10),
           _fluentFeature(theme, fluent.FluentIcons.settings, '可配置的模型、温度和令牌'),
         ]),
@@ -369,55 +519,111 @@ class _AboutPageState extends State<AboutPage> {
 
         // Tech stack
         _fluentInfoCard(theme, fluent.FluentIcons.developer_tools, '技术栈', [
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final label in ['Flutter', 'Fluent UI', 'Provider', 'flutter_math_fork', 'flutter_markdown', 'dynamic_color', 'shared_preferences', 'window_manager'])
-              _fluentChip(theme, label),
-          ]),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final label in [
+                'Flutter',
+                'Fluent UI',
+                'Provider',
+                'flutter_math_fork',
+                'flutter_markdown',
+                'dynamic_color',
+                'shared_preferences',
+                'window_manager',
+              ])
+                _fluentChip(theme, label),
+            ],
+          ),
         ]),
         const SizedBox(height: 24),
       ],
     );
   }
 
-  Widget _fluentInfoCard(fluent.FluentThemeData theme, IconData icon, String title, List<Widget> children) {
+  Widget _fluentInfoCard(
+    fluent.FluentThemeData theme,
+    IconData icon,
+    String title,
+    List<Widget> children,
+  ) {
     return fluent.Card(
       padding: const EdgeInsets.all(20),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Icon(icon, size: 18, color: theme.accentColor),
-          const SizedBox(width: 10),
-          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-        ]),
-        const SizedBox(height: 18),
-        ...children,
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: theme.accentColor),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          ...children,
+        ],
+      ),
     );
   }
 
-  Widget _fluentInfoRow(fluent.FluentThemeData theme, String label, String value) {
-    return Row(children: [
-      SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 13, color: theme.inactiveColor))),
-      Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
-    ]);
+  Widget _fluentInfoRow(
+    fluent.FluentThemeData theme,
+    String label,
+    String value,
+  ) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: TextStyle(fontSize: 13, color: theme.inactiveColor),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _fluentFeature(fluent.FluentThemeData theme, IconData icon, String text) {
-    return Row(children: [
-      Icon(icon, size: 14, color: theme.accentColor),
-      const SizedBox(width: 10),
-      Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
-    ]);
+  Widget _fluentFeature(
+    fluent.FluentThemeData theme,
+    IconData icon,
+    String text,
+  ) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: theme.accentColor),
+        const SizedBox(width: 10),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+      ],
+    );
   }
 
   Widget _fluentChip(fluent.FluentThemeData theme, String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.1),
+        color: theme.accentColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.3)),
+        border: Border.all(color: theme.accentColor.withValues(alpha: 0.3)),
       ),
-      child: Text(label, style: TextStyle(fontSize: 12, color: theme.accentColor)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 12, color: theme.accentColor),
+      ),
     );
   }
 
@@ -428,7 +634,6 @@ class _AboutPageState extends State<AboutPage> {
     }
   }
 }
-
 
 class _Badge extends StatelessWidget {
   final String label;
@@ -445,7 +650,10 @@ class _Badge extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+      ),
     );
   }
 }
@@ -480,21 +688,33 @@ class _ActionCard extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-          child: Column(children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withAlpha(150),
-                borderRadius: BorderRadius.circular(10),
+          child: Column(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(150),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(child: Icon(icon, size: 18, color: iconColor)),
               ),
-              child: Center(child: Icon(icon, size: 18, color: iconColor)),
-            ),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 2),
-            Text(sublabel, style: TextStyle(fontSize: 10, color: cs.outline), overflow: TextOverflow.ellipsis),
-          ]),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                sublabel,
+                style: TextStyle(fontSize: 10, color: cs.outline),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

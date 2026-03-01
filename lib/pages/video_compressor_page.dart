@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:v_video_compressor/v_video_compressor.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:gal/gal.dart';
@@ -33,30 +32,36 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   bool _useCustomResolution = false;
   final TextEditingController _widthController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
-  final TextEditingController _videoBitrateController = TextEditingController(text: '2000');
-  final TextEditingController _audioBitrateController = TextEditingController(text: '128');
+  final TextEditingController _videoBitrateController = TextEditingController(
+    text: '2000',
+  );
+  final TextEditingController _audioBitrateController = TextEditingController(
+    text: '128',
+  );
   double _frameRate = 30.0;
-  
+
   VVideoCodec _videoCodec = VVideoCodec.h264;
   VAudioCodec _audioCodec = VAudioCodec.aac;
   VEncodingSpeed _encodingSpeed = VEncodingSpeed.medium;
   int _crf = 23;
   bool _twoPassEncoding = false;
   bool _hardwareAcceleration = true;
-  
+
   int _audioSampleRate = 44100;
   int _audioChannels = 2;
   bool _removeAudio = false;
-  
+
   double _brightness = 0.0;
   double _contrast = 0.0;
   double _saturation = 0.0;
-  
+
   bool _enableTrim = false;
-  final TextEditingController _trimStartController = TextEditingController(text: '0');
+  final TextEditingController _trimStartController = TextEditingController(
+    text: '0',
+  );
   final TextEditingController _trimEndController = TextEditingController();
   int _rotation = 0;
-  
+
   bool _autoCorrectOrientation = true;
 
   // Video player
@@ -93,9 +98,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
   Future<void> _pickVideo() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.video);
 
       if (result == null || result.files.single.path == null) return;
 
@@ -109,9 +112,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       });
 
       final info = await _compressor.getVideoInfo(_videoPath!);
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _videoInfo = info;
         _isLoadingInfo = false;
@@ -125,9 +128,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingInfo = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('选择视频失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('选择视频失败: $e')));
       }
     }
   }
@@ -142,10 +145,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     });
 
     try {
-      final compressionId = 'compression_${DateTime.now().millisecondsSinceEpoch}';
-      
+      final compressionId =
+          'compression_${DateTime.now().millisecondsSinceEpoch}';
+
       final advancedConfig = _buildAdvancedConfig();
-      
+
       final result = await _compressor.compressVideo(
         _videoPath!,
         VVideoCompressionConfig(
@@ -174,9 +178,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ 压缩失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('❌ 压缩失败: $e')));
       }
     } finally {
       if (mounted) {
@@ -206,7 +210,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         return;
       }
 
-      await Gal.putVideo(_compressionResult!.compressedFilePath, album: 'NexAI');
+      await Gal.putVideo(
+        _compressionResult!.compressedFilePath,
+        album: 'NexAI',
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -218,9 +225,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
   }
@@ -281,16 +288,18 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     if (_enableTrim) {
       final trimStart = int.tryParse(_trimStartController.text);
       final trimEnd = int.tryParse(_trimEndController.text);
-      
+
       if (trimStart != null && trimStart >= 0) {
         trimStartMs = trimStart * 1000;
       }
       if (trimEnd != null && trimEnd > 0) {
         trimEndMs = trimEnd * 1000;
       }
-      
+
       // Ensure trim end is after trim start
-      if (trimStartMs != null && trimEndMs != null && trimEndMs <= trimStartMs) {
+      if (trimStartMs != null &&
+          trimEndMs != null &&
+          trimEndMs <= trimStartMs) {
         trimEndMs = null; // Invalid range, ignore trim end
       }
     }
@@ -299,8 +308,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       // Resolution & Quality
       customWidth: customWidth,
       customHeight: customHeight,
-      videoBitrate: videoBitrate != null && videoBitrate > 0 
-          ? videoBitrate * 1000 
+      videoBitrate: videoBitrate != null && videoBitrate > 0
+          ? videoBitrate * 1000
           : null,
       frameRate: _frameRate,
 
@@ -313,8 +322,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       hardwareAcceleration: _hardwareAcceleration,
 
       // Audio Settings
-      audioBitrate: audioBitrate != null && audioBitrate > 0 
-          ? audioBitrate * 1000 
+      audioBitrate: audioBitrate != null && audioBitrate > 0
+          ? audioBitrate * 1000
           : null,
       audioSampleRate: _audioSampleRate,
       audioChannels: _audioChannels,
@@ -340,9 +349,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('视频压缩'),
-      ),
+      appBar: AppBar(title: const Text('视频压缩')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -370,7 +377,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               icon: Icons.info_outline_rounded,
               children: [
                 _buildInfoRow('时长', _videoInfo!.durationFormatted),
-                _buildInfoRow('分辨率', '${_videoInfo!.width}x${_videoInfo!.height}'),
+                _buildInfoRow(
+                  '分辨率',
+                  '${_videoInfo!.width}x${_videoInfo!.height}',
+                ),
                 _buildInfoRow('文件大小', _videoInfo!.fileSizeFormatted),
               ],
             ),
@@ -417,7 +427,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               icon: Icons.check_circle_outline_rounded,
               children: [
                 _buildInfoRow('原大小', _compressionResult!.originalSizeFormatted),
-                _buildInfoRow('压缩后', _compressionResult!.compressedSizeFormatted),
+                _buildInfoRow(
+                  '压缩后',
+                  _compressionResult!.compressedSizeFormatted,
+                ),
                 _buildInfoRow('节省空间', _compressionResult!.spaceSavedFormatted),
               ],
             ),
@@ -503,10 +516,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 14,
-              color: cs.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
           ),
           Text(
             value,
@@ -568,10 +578,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             const SizedBox(height: 12),
             Text(
               _getQualityDescription(_selectedQuality),
-              style: TextStyle(
-                fontSize: 13,
-                color: cs.onSurfaceVariant,
-              ),
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
           ],
         ),
@@ -644,7 +651,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
       ),
       child: InkWell(
-        onTap: () => setState(() => _showAdvancedSettings = !_showAdvancedSettings),
+        onTap: () =>
+            setState(() => _showAdvancedSettings = !_showAdvancedSettings),
         borderRadius: BorderRadius.circular(20),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -758,9 +766,18 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             const SizedBox(height: 16),
             Row(
               children: [
-                Text('帧率: ${_frameRate.toInt()} FPS', style: TextStyle(color: cs.onSurface)),
+                Text(
+                  '帧率: ${_frameRate.toInt()} FPS',
+                  style: TextStyle(color: cs.onSurface),
+                ),
                 const Spacer(),
-                Text(_frameRate.toInt().toString(), style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold)),
+                Text(
+                  _frameRate.toInt().toString(),
+                  style: TextStyle(
+                    color: cs.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             Slider(
@@ -783,28 +800,40 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           icon: Icons.settings_suggest_rounded,
           children: [
             DropdownButtonFormField<VVideoCodec>(
-              value: _videoCodec,
+              initialValue: _videoCodec,
               decoration: const InputDecoration(
                 labelText: '视频编码器',
                 helperText: 'H.265 压缩率更高但编码慢',
               ),
               items: const [
-                DropdownMenuItem(value: VVideoCodec.h264, child: Text('H.264 (兼容性好)')),
-                DropdownMenuItem(value: VVideoCodec.h265, child: Text('H.265 (更小体积)')),
+                DropdownMenuItem(
+                  value: VVideoCodec.h264,
+                  child: Text('H.264 (兼容性好)'),
+                ),
+                DropdownMenuItem(
+                  value: VVideoCodec.h265,
+                  child: Text('H.265 (更小体积)'),
+                ),
               ],
               onChanged: (v) => setState(() => _videoCodec = v!),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<VEncodingSpeed>(
-              value: _encodingSpeed,
+              initialValue: _encodingSpeed,
               decoration: const InputDecoration(
                 labelText: '编码速度',
                 helperText: '慢速编码质量更好',
               ),
               items: const [
-                DropdownMenuItem(value: VEncodingSpeed.ultrafast, child: Text('极快')),
+                DropdownMenuItem(
+                  value: VEncodingSpeed.ultrafast,
+                  child: Text('极快'),
+                ),
                 DropdownMenuItem(value: VEncodingSpeed.fast, child: Text('快速')),
-                DropdownMenuItem(value: VEncodingSpeed.medium, child: Text('中等')),
+                DropdownMenuItem(
+                  value: VEncodingSpeed.medium,
+                  child: Text('中等'),
+                ),
                 DropdownMenuItem(value: VEncodingSpeed.slow, child: Text('慢速')),
               ],
               onChanged: (v) => setState(() => _encodingSpeed = v!),
@@ -814,10 +843,19 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               children: [
                 Text('CRF 质量: $_crf', style: TextStyle(color: cs.onSurface)),
                 const Spacer(),
-                Text('$_crf', style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold)),
+                Text(
+                  '$_crf',
+                  style: TextStyle(
+                    color: cs.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
-            Text('数值越小质量越好 (18-28)', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+            Text(
+              '数值越小质量越好 (18-28)',
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
             Slider(
               value: _crf.toDouble(),
               min: 18,
@@ -870,7 +908,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<VAudioCodec>(
-                value: _audioCodec,
+                initialValue: _audioCodec,
                 decoration: const InputDecoration(labelText: '音频编码器'),
                 items: const [
                   DropdownMenuItem(value: VAudioCodec.aac, child: Text('AAC')),
@@ -880,7 +918,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: _audioSampleRate,
+                initialValue: _audioSampleRate,
                 decoration: const InputDecoration(labelText: '采样率'),
                 items: const [
                   DropdownMenuItem(value: 44100, child: Text('44.1 kHz (标准)')),
@@ -890,7 +928,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<int>(
-                value: _audioChannels,
+                initialValue: _audioChannels,
                 decoration: const InputDecoration(labelText: '声道'),
                 items: const [
                   DropdownMenuItem(value: 1, child: Text('单声道')),
@@ -910,11 +948,26 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           title: '视频效果',
           icon: Icons.auto_fix_high_rounded,
           children: [
-            _buildEffectSlider(cs, '亮度', _brightness, (v) => setState(() => _brightness = v)),
+            _buildEffectSlider(
+              cs,
+              '亮度',
+              _brightness,
+              (v) => setState(() => _brightness = v),
+            ),
             const SizedBox(height: 8),
-            _buildEffectSlider(cs, '对比度', _contrast, (v) => setState(() => _contrast = v)),
+            _buildEffectSlider(
+              cs,
+              '对比度',
+              _contrast,
+              (v) => setState(() => _contrast = v),
+            ),
             const SizedBox(height: 8),
-            _buildEffectSlider(cs, '饱和度', _saturation, (v) => setState(() => _saturation = v)),
+            _buildEffectSlider(
+              cs,
+              '饱和度',
+              _saturation,
+              (v) => setState(() => _saturation = v),
+            ),
           ],
         ),
 
@@ -964,7 +1017,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             ],
             const SizedBox(height: 16),
             DropdownButtonFormField<int>(
-              value: _rotation,
+              initialValue: _rotation,
               decoration: const InputDecoration(
                 labelText: '旋转',
                 helperText: '顺时针旋转角度',
@@ -1115,10 +1168,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Video(
-                  controller: _videoController!,
-                  controls: NoVideoControls,
-                ),
+                Video(controller: _videoController!, controls: NoVideoControls),
                 Positioned.fill(
                   child: Material(
                     color: Colors.transparent,
@@ -1145,7 +1195,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
-                              _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                              _isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
                               color: Colors.white,
                               size: 40,
                             ),
@@ -1172,7 +1224,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                 ),
                 IconButton.filled(
                   onPressed: _togglePlayPause,
-                  icon: Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                  icon: Icon(
+                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  ),
                   tooltip: _isPlaying ? '暂停' : '播放',
                 ),
                 StreamBuilder<Duration>(

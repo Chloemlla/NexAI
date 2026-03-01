@@ -47,7 +47,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
   void initState() {
     super.initState();
     if (isDesktop) windowManager.addListener(this);
-    
+
     // Check for updates on app start
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UpdateChecker.checkUpdateOnStart(context);
@@ -85,8 +85,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
     final fullScreen = settings.fullScreenMode && isChat;
 
     return Scaffold(
-      appBar: fullScreen 
-          ? null 
+      appBar: fullScreen
+          ? null
           : AppBar(
               surfaceTintColor: cs.surfaceTint,
               title: Row(
@@ -117,10 +117,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                           _androidNavIndex == 0
                               ? Icons.smart_toy_rounded
                               : _androidNavIndex == 1
-                                  ? Icons.note_alt_rounded
-                                  : _androidNavIndex == 2
-                                      ? Icons.build_rounded
-                                      : Icons.settings_rounded,
+                              ? Icons.note_alt_rounded
+                              : _androidNavIndex == 2
+                              ? Icons.build_rounded
+                              : Icons.settings_rounded,
                           size: 18,
                           color: cs.onPrimary,
                         ),
@@ -174,7 +174,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                     isLabelVisible: chat.conversations.length > 1,
                     label: Text('${chat.conversations.length}'),
                     child: IconButton(
-                      icon: Icon(Icons.history_rounded, color: cs.onSurfaceVariant),
+                      icon: Icon(
+                        Icons.history_rounded,
+                        color: cs.onSurfaceVariant,
+                      ),
                       onPressed: () => _showConversationSheet(context),
                       tooltip: '对话历史',
                     ),
@@ -212,13 +215,16 @@ class _HomePageState extends State<HomePage> with WindowListener {
               return FadeTransition(
                 opacity: animation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.05, 0),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeOutCubic,
-                  )),
+                  position:
+                      Tween<Offset>(
+                        begin: const Offset(0.05, 0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
                   child: child,
                 ),
               );
@@ -235,9 +241,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
               child: FloatingActionButton.small(
                 heroTag: 'exit_full_screen',
                 onPressed: () => settings.setFullScreenMode(false),
-                child: const Icon(Icons.fullscreen_exit_rounded),
                 backgroundColor: cs.surfaceContainerHighest.withAlpha(150),
                 elevation: 2,
+                child: const Icon(Icons.fullscreen_exit_rounded),
               ),
             ),
           if (fullScreen)
@@ -247,18 +253,19 @@ class _HomePageState extends State<HomePage> with WindowListener {
               child: FloatingActionButton.small(
                 heroTag: 'history_full_screen',
                 onPressed: () => _showConversationSheet(context),
-                child: const Icon(Icons.history_rounded),
                 backgroundColor: cs.surfaceContainerHighest.withAlpha(150),
                 elevation: 2,
+                child: const Icon(Icons.history_rounded),
               ),
             ),
         ],
       ),
-      bottomNavigationBar: fullScreen 
-          ? null 
+      bottomNavigationBar: fullScreen
+          ? null
           : NavigationBar(
               selectedIndex: _androidNavIndex,
-              onDestinationSelected: (i) => setState(() => _androidNavIndex = i),
+              onDestinationSelected: (i) =>
+                  setState(() => _androidNavIndex = i),
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               animationDuration: const Duration(milliseconds: 400),
               elevation: 3,
@@ -307,14 +314,16 @@ class _HomePageState extends State<HomePage> with WindowListener {
           builder: (_, scrollController) {
             return StatefulBuilder(
               builder: (context, setSheetState) {
-                final searchController = TextEditingController();
                 String searchQuery = '';
                 List<SearchResult> searchResults = [];
 
                 return Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 4,
+                      ),
                       child: Row(
                         children: [
                           Container(
@@ -322,7 +331,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                             height: 36,
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: [cs.primaryContainer, cs.secondaryContainer],
+                                colors: [
+                                  cs.primaryContainer,
+                                  cs.secondaryContainer,
+                                ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                               ),
@@ -339,14 +351,18 @@ class _HomePageState extends State<HomePage> with WindowListener {
                           const SizedBox(width: 12),
                           Text(
                             '对话',
-                            style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                            style: Theme.of(ctx).textTheme.titleMedium
+                                ?.copyWith(
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: -0.2,
                                 ),
                           ),
                           const Spacer(),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: cs.primaryContainer.withAlpha(120),
                               borderRadius: BorderRadius.circular(10),
@@ -370,10 +386,16 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       child: TextField(
                         decoration: InputDecoration(
                           hintText: '搜索消息...',
-                          prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            size: 20,
+                          ),
                           filled: true,
                           fillColor: cs.surfaceContainerHighest.withAlpha(150),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(14),
                             borderSide: BorderSide.none,
@@ -391,8 +413,20 @@ class _HomePageState extends State<HomePage> with WindowListener {
                     Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
                     Expanded(
                       child: searchQuery.isEmpty
-                          ? _buildConversationList(chat, cs, scrollController, ctx)
-                          : _buildSearchResultsList(searchResults, searchQuery, cs, scrollController, chat, ctx),
+                          ? _buildConversationList(
+                              chat,
+                              cs,
+                              scrollController,
+                              ctx,
+                            )
+                          : _buildSearchResultsList(
+                              searchResults,
+                              searchQuery,
+                              cs,
+                              scrollController,
+                              chat,
+                              ctx,
+                            ),
                     ),
                   ],
                 );
@@ -404,7 +438,12 @@ class _HomePageState extends State<HomePage> with WindowListener {
     );
   }
 
-  Widget _buildConversationList(ChatProvider chat, ColorScheme cs, ScrollController scrollController, BuildContext ctx) {
+  Widget _buildConversationList(
+    ChatProvider chat,
+    ColorScheme cs,
+    ScrollController scrollController,
+    BuildContext ctx,
+  ) {
     if (chat.conversations.isEmpty) {
       return Center(
         child: Padding(
@@ -413,20 +452,35 @@ class _HomePageState extends State<HomePage> with WindowListener {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 80, height: 80,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [cs.surfaceContainerHighest, cs.surfaceContainer]),
+                  gradient: LinearGradient(
+                    colors: [cs.surfaceContainerHighest, cs.surfaceContainer],
+                  ),
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: Center(child: Icon(Icons.chat_bubble_outline_rounded, size: 36, color: cs.outlineVariant)),
+                child: Center(
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    size: 36,
+                    color: cs.outlineVariant,
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
-              const Text('还没有对话', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+              const Text(
+                '还没有对话',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
               const SizedBox(height: 6),
               const Text('开始新的聊天', style: TextStyle(fontSize: 14)),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: () { chat.newConversation(); Navigator.of(ctx).pop(); },
+                onPressed: () {
+                  chat.newConversation();
+                  Navigator.of(ctx).pop();
+                },
                 icon: const Icon(Icons.add_rounded, size: 20),
                 label: const Text('新建对话'),
               ),
@@ -440,7 +494,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       controller: scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: chat.conversations.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (_, idx) {
         final conv = chat.conversations[idx];
         final isActive = idx == chat.currentIndex;
@@ -450,70 +504,130 @@ class _HomePageState extends State<HomePage> with WindowListener {
           background: Container(
             alignment: Alignment.centerRight,
             padding: const EdgeInsets.only(right: 20),
-            decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(16)),
+            decoration: BoxDecoration(
+              color: cs.errorContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Icon(Icons.delete_rounded, color: cs.onErrorContainer),
           ),
           confirmDismiss: (direction) async {
             return await showDialog<bool>(
-              context: ctx,
-              builder: (dialogCtx) => AlertDialog(
-                icon: Icon(Icons.delete_outline_rounded, color: cs.error),
-                title: const Text('删除对话'),
-                content: Text('删除 "${conv.title}"?'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.of(dialogCtx).pop(false), child: const Text('取消')),
-                  FilledButton(
-                    onPressed: () => Navigator.of(dialogCtx).pop(true),
-                    style: FilledButton.styleFrom(backgroundColor: cs.error),
-                    child: const Text('删除'),
+                  context: ctx,
+                  builder: (dialogCtx) => AlertDialog(
+                    icon: Icon(Icons.delete_outline_rounded, color: cs.error),
+                    title: const Text('删除对话'),
+                    content: Text('删除 "${conv.title}"?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(false),
+                        child: const Text('取消'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(dialogCtx).pop(true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: cs.error,
+                        ),
+                        child: const Text('删除'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ) ?? false;
+                ) ??
+                false;
           },
           onDismissed: (_) {
             chat.deleteConversation(idx);
             if (chat.conversations.isEmpty) Navigator.of(ctx).pop();
           },
           child: ListTile(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             selected: isActive,
             selectedTileColor: cs.secondaryContainer.withAlpha(180),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
             leading: Container(
-              width: 40, height: 40,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                gradient: isActive ? LinearGradient(colors: [cs.primary, cs.tertiary]) : null,
+                gradient: isActive
+                    ? LinearGradient(colors: [cs.primary, cs.tertiary])
+                    : null,
                 color: isActive ? null : cs.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Center(child: Icon(isActive ? Icons.chat_rounded : Icons.chat_outlined, color: isActive ? cs.onPrimary : cs.onSurfaceVariant, size: 20)),
+              child: Center(
+                child: Icon(
+                  isActive ? Icons.chat_rounded : Icons.chat_outlined,
+                  color: isActive ? cs.onPrimary : cs.onSurfaceVariant,
+                  size: 20,
+                ),
+              ),
             ),
-            title: Text(conv.title, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: isActive ? FontWeight.w600 : FontWeight.w500, fontSize: 15)),
+            title: Text(
+              conv.title,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                fontSize: 15,
+              ),
+            ),
             subtitle: conv.messages.isNotEmpty
-                ? Text(conv.messages.last.content, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13))
+                ? Text(
+                    conv.messages.last.content,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 13),
+                  )
                 : null,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (conv.messages.isNotEmpty)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: isActive ? cs.primary.withAlpha(40) : cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
-                    child: Text('${conv.messages.length}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isActive ? cs.primary : cs.outline)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? cs.primary.withAlpha(40)
+                          : cs.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${conv.messages.length}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isActive ? cs.primary : cs.outline,
+                      ),
+                    ),
                   ),
                 const SizedBox(width: 8),
                 const Icon(Icons.chevron_right_rounded, size: 20),
               ],
             ),
-            onTap: () { chat.selectConversation(idx); Navigator.of(ctx).pop(); },
+            onTap: () {
+              chat.selectConversation(idx);
+              Navigator.of(ctx).pop();
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildSearchResultsList(List<SearchResult> results, String query, ColorScheme cs, ScrollController scrollController, ChatProvider chat, BuildContext ctx) {
+  Widget _buildSearchResultsList(
+    List<SearchResult> results,
+    String query,
+    ColorScheme cs,
+    ScrollController scrollController,
+    ChatProvider chat,
+    BuildContext ctx,
+  ) {
     if (results.isEmpty) {
       return Center(
         child: Column(
@@ -521,7 +635,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
           children: [
             Icon(Icons.search_off_rounded, size: 48, color: cs.outlineVariant),
             const SizedBox(height: 12),
-            const Text('未找到匹配的消息', style: TextStyle(fontWeight: FontWeight.w500)),
+            const Text(
+              '未找到匹配的消息',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
           ],
         ),
       );
@@ -531,13 +648,18 @@ class _HomePageState extends State<HomePage> with WindowListener {
       controller: scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (_, idx) {
         final result = results[idx];
         return ListTile(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           tileColor: cs.surfaceContainerHighest.withAlpha(100),
-          title: Text(result.conversation.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          title: Text(
+            result.conversation.title,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
           subtitle: Padding(
             padding: const EdgeInsets.only(top: 4),
             child: RichText(
@@ -565,16 +687,32 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
     while ((indexOf = lowerContent.indexOf(lowerQuery, start)) != -1) {
       if (indexOf > start) {
-        spans.add(TextSpan(text: content.substring(start, indexOf), style: TextStyle(color: cs.onSurfaceVariant)));
+        spans.add(
+          TextSpan(
+            text: content.substring(start, indexOf),
+            style: TextStyle(color: cs.onSurfaceVariant),
+          ),
+        );
       }
-      spans.add(TextSpan(
-        text: content.substring(indexOf, indexOf + query.length),
-        style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold, backgroundColor: cs.primaryContainer.withAlpha(100)),
-      ));
+      spans.add(
+        TextSpan(
+          text: content.substring(indexOf, indexOf + query.length),
+          style: TextStyle(
+            color: cs.primary,
+            fontWeight: FontWeight.bold,
+            backgroundColor: cs.primaryContainer.withAlpha(100),
+          ),
+        ),
+      );
       start = indexOf + query.length;
     }
     if (start < content.length) {
-      spans.add(TextSpan(text: content.substring(start), style: TextStyle(color: cs.onSurfaceVariant)));
+      spans.add(
+        TextSpan(
+          text: content.substring(start),
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
+      );
     }
     return TextSpan(children: spans);
   }
@@ -607,7 +745,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
         title: Text(conv.title, overflow: TextOverflow.ellipsis),
         body: const ChatPage(),
         trailing: fluent.IconButton(
-          icon: Icon(fluent.FluentIcons.delete, size: 12, color: theme.inactiveColor),
+          icon: Icon(
+            fluent.FluentIcons.delete,
+            size: 12,
+            color: theme.inactiveColor,
+          ),
           onPressed: () {
             chat.deleteConversation(idx);
             if (chat.conversations.isEmpty) {
@@ -635,7 +777,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
         children: [
           const Icon(fluent.FluentIcons.robot, size: 20),
           const SizedBox(width: 10),
-          const Text('NexAI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'NexAI',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
         ],
       ),
     );
@@ -655,10 +800,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
               setState(() => _currentPage = 'chat');
             },
           ),
-          if (isDesktop) ...[
-            const SizedBox(width: 4),
-            const WindowButtons(),
-          ],
+          if (isDesktop) ...[const SizedBox(width: 4), const WindowButtons()],
         ],
       ),
       pane: fluent.NavigationPane(
@@ -707,11 +849,19 @@ class WindowButtons extends StatelessWidget {
     return Row(
       children: [
         fluent.IconButton(
-          icon: Icon(fluent.FluentIcons.chrome_minimize, size: 12, color: theme.inactiveColor),
+          icon: Icon(
+            fluent.FluentIcons.chrome_minimize,
+            size: 12,
+            color: theme.inactiveColor,
+          ),
           onPressed: () => windowManager.minimize(),
         ),
         fluent.IconButton(
-          icon: Icon(fluent.FluentIcons.chrome_full_screen, size: 12, color: theme.inactiveColor),
+          icon: Icon(
+            fluent.FluentIcons.chrome_full_screen,
+            size: 12,
+            color: theme.inactiveColor,
+          ),
           onPressed: () async {
             if (await windowManager.isMaximized()) {
               windowManager.unmaximize();
@@ -721,7 +871,11 @@ class WindowButtons extends StatelessWidget {
           },
         ),
         fluent.IconButton(
-          icon: Icon(fluent.FluentIcons.chrome_close, size: 12, color: theme.inactiveColor),
+          icon: Icon(
+            fluent.FluentIcons.chrome_close,
+            size: 12,
+            color: theme.inactiveColor,
+          ),
           onPressed: () => windowManager.close(),
         ),
       ],

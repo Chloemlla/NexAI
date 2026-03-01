@@ -91,7 +91,8 @@ class FlowchartLayout {
       }
     }
 
-    final isHorizontal = graph.direction == MermaidDirection.leftRight ||
+    final isHorizontal =
+        graph.direction == MermaidDirection.leftRight ||
         graph.direction == MermaidDirection.rightLeft;
 
     // Compute positions
@@ -102,13 +103,26 @@ class FlowchartLayout {
       final layer = layers[i];
       for (int j = 0; j < layer.length; j++) {
         final id = layer[j];
-        double primary = i * (isHorizontal ? (nodeWidth + horizontalGap) : (nodeHeight + verticalGap));
-        double secondary = j * (isHorizontal ? (nodeHeight + verticalGap) : (nodeWidth + horizontalGap));
+        double primary =
+            i *
+            (isHorizontal
+                ? (nodeWidth + horizontalGap)
+                : (nodeHeight + verticalGap));
 
         // Center layers
         final layerSize = layer.length;
-        final totalSecondary = layerSize * (isHorizontal ? (nodeHeight + verticalGap) : (nodeWidth + horizontalGap)) - (isHorizontal ? verticalGap : horizontalGap);
-        final offset = -totalSecondary / 2 + j * (isHorizontal ? (nodeHeight + verticalGap) : (nodeWidth + horizontalGap));
+        final totalSecondary =
+            layerSize *
+                (isHorizontal
+                    ? (nodeHeight + verticalGap)
+                    : (nodeWidth + horizontalGap)) -
+            (isHorizontal ? verticalGap : horizontalGap);
+        final offset =
+            -totalSecondary / 2 +
+            j *
+                (isHorizontal
+                    ? (nodeHeight + verticalGap)
+                    : (nodeWidth + horizontalGap));
 
         if (isHorizontal) {
           positions[id] = Offset(primary, offset + 300); // 300 as center offset
@@ -116,8 +130,14 @@ class FlowchartLayout {
           positions[id] = Offset(offset + 400, primary); // 400 as center offset
         }
 
-        maxPrimary = math.max(maxPrimary, primary + (isHorizontal ? nodeWidth : nodeHeight));
-        maxSecondary = math.max(maxSecondary, (offset + 300).abs() + (isHorizontal ? nodeHeight : nodeWidth));
+        maxPrimary = math.max(
+          maxPrimary,
+          primary + (isHorizontal ? nodeWidth : nodeHeight),
+        );
+        maxSecondary = math.max(
+          maxSecondary,
+          (offset + 300).abs() + (isHorizontal ? nodeHeight : nodeWidth),
+        );
       }
     }
 
@@ -131,7 +151,10 @@ class FlowchartLayout {
     final normalized = <String, Offset>{};
     double maxX = 0, maxY = 0;
     for (final entry in positions.entries) {
-      final np = Offset(entry.value.dx - minX + padding, entry.value.dy - minY + padding);
+      final np = Offset(
+        entry.value.dx - minX + padding,
+        entry.value.dy - minY + padding,
+      );
       normalized[entry.key] = np;
       maxX = math.max(maxX, np.dx + nodeWidth);
       maxY = math.max(maxY, np.dy + nodeHeight);

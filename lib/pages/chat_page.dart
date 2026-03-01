@@ -29,7 +29,9 @@ class _ChatPageState extends State<ChatPage> {
   // Image generation controllers
   final _imagePromptController = TextEditingController();
   final _imageUrlController = TextEditingController();
-  final _imageModelController = TextEditingController(text: 'doubao-seedream-4-0-250828');
+  final _imageModelController = TextEditingController(
+    text: 'doubao-seedream-4-0-250828',
+  );
 
   @override
   void initState() {
@@ -70,7 +72,7 @@ class _ChatPageState extends State<ChatPage> {
   void _scrollToBottom() {
     final settings = context.read<SettingsProvider>();
     if (!settings.smartAutoScroll && !_forceScroll) return;
-    
+
     // If not at bottom and not forced, don't scroll
     if (!_isAtBottom && !_forceScroll) return;
 
@@ -101,31 +103,43 @@ class _ChatPageState extends State<ChatPage> {
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 SizedBox(width: 10),
                 Expanded(child: Text('请在设置中配置您的 API 密钥。')),
               ],
             ),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           ),
         );
       } else {
-        fluent.displayInfoBar(context, builder: (ctx, close) {
-          return fluent.InfoBar(
-            title: const Text('请在设置中配置您的 API 密钥。'),
-            severity: fluent.InfoBarSeverity.warning,
-            action: fluent.IconButton(icon: const Icon(fluent.FluentIcons.clear), onPressed: close),
-          );
-        });
+        fluent.displayInfoBar(
+          context,
+          builder: (ctx, close) {
+            return fluent.InfoBar(
+              title: const Text('请在设置中配置您的 API 密钥。'),
+              severity: fluent.InfoBarSeverity.warning,
+              action: fluent.IconButton(
+                icon: const Icon(fluent.FluentIcons.clear),
+                onPressed: close,
+              ),
+            );
+          },
+        );
       }
       return;
     }
 
     _controller.clear();
     final chat = context.read<ChatProvider>();
-    
+
     _forceScroll = true;
 
     try {
@@ -152,7 +166,7 @@ class _ChatPageState extends State<ChatPage> {
 
   void _showImageGenerationDialog(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -164,12 +178,16 @@ class _ChatPageState extends State<ChatPage> {
         minChildSize: 0.5,
         maxChildSize: 0.95,
         expand: false,
-        builder: (_, scrollController) => _buildImageGenerationSheet(ctx, scrollController),
+        builder: (_, scrollController) =>
+            _buildImageGenerationSheet(ctx, scrollController),
       ),
     );
   }
 
-  Widget _buildImageGenerationSheet(BuildContext context, ScrollController scrollController) {
+  Widget _buildImageGenerationSheet(
+    BuildContext context,
+    ScrollController scrollController,
+  ) {
     final cs = Theme.of(context).colorScheme;
     final provider = context.watch<ImageGenerationProvider>();
     final settings = context.watch<SettingsProvider>();
@@ -207,18 +225,25 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.image_rounded, size: 20, color: cs.onPrimary),
+                      child: Icon(
+                        Icons.image_rounded,
+                        size: 20,
+                        color: cs.onPrimary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Text(
                       '图片生成',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
               Divider(height: 1, color: cs.outlineVariant),
-              
+
               // Content
               Expanded(
                 child: ListView(
@@ -245,9 +270,10 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                       ],
                       selected: {mode},
-                      onSelectionChanged: (Set<ImageGenerationMode> newSelection) {
-                        setModalState(() => mode = newSelection.first);
-                      },
+                      onSelectionChanged:
+                          (Set<ImageGenerationMode> newSelection) {
+                            setModalState(() => mode = newSelection.first);
+                          },
                     ),
                     const SizedBox(height: 16),
 
@@ -259,8 +285,11 @@ class _ChatPageState extends State<ChatPage> {
                           labelText: '模型',
                           hintText: 'doubao-seedream-4-0-250828',
                           prefixIcon: const Icon(Icons.memory, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          helperText: '豆包模型: doubao-seedream-4-0-250828 或 doubao-seedream-3-0-t2i-250415',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          helperText:
+                              '豆包模型: doubao-seedream-4-0-250828 或 doubao-seedream-3-0-t2i-250415',
                           helperMaxLines: 2,
                         ),
                         onChanged: (_) => setModalState(() {}),
@@ -269,14 +298,19 @@ class _ChatPageState extends State<ChatPage> {
                     ],
 
                     // Image URL input (for edit and image-to-image)
-                    if (mode == ImageGenerationMode.edit || mode == ImageGenerationMode.chat) ...[
+                    if (mode == ImageGenerationMode.edit ||
+                        mode == ImageGenerationMode.chat) ...[
                       TextField(
                         controller: _imageUrlController,
                         decoration: InputDecoration(
-                          labelText: mode == ImageGenerationMode.edit ? '图片 URL *' : '图片 URL (可选)',
+                          labelText: mode == ImageGenerationMode.edit
+                              ? '图片 URL *'
+                              : '图片 URL (可选)',
                           hintText: 'https://...',
                           prefixIcon: const Icon(Icons.link, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -285,19 +319,45 @@ class _ChatPageState extends State<ChatPage> {
                     // Size selector (for generation and edit)
                     if (mode != ImageGenerationMode.chat) ...[
                       DropdownButtonFormField<String>(
-                        value: size,
+                        initialValue: size,
                         decoration: InputDecoration(
                           labelText: '尺寸',
                           prefixIcon: const Icon(Icons.aspect_ratio, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          helperText: isDoubao ? '支持: 1k/2k/4k, 1024x1024, 16:9等' : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          helperText: isDoubao
+                              ? '支持: 1k/2k/4k, 1024x1024, 16:9等'
+                              : null,
                         ),
-                        items: (isDoubao
-                                ? ['1k', '2k', '4k', '1024x1024', '1280x720', '2560x1440', '16:9', '4:3', '3:2']
-                                : ['1024x1024', '1024x1792', '1792x1024', '512x512'])
-                            .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-                            .toList(),
-                        onChanged: (value) => setModalState(() => size = value!),
+                        items:
+                            (isDoubao
+                                    ? [
+                                        '1k',
+                                        '2k',
+                                        '4k',
+                                        '1024x1024',
+                                        '1280x720',
+                                        '2560x1440',
+                                        '16:9',
+                                        '4:3',
+                                        '3:2',
+                                      ]
+                                    : [
+                                        '1024x1024',
+                                        '1024x1792',
+                                        '1792x1024',
+                                        '512x512',
+                                      ])
+                                .map(
+                                  (s) => DropdownMenuItem(
+                                    value: s,
+                                    child: Text(s),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (value) =>
+                            setModalState(() => size = value!),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -310,12 +370,18 @@ class _ChatPageState extends State<ChatPage> {
                           Expanded(
                             child: Text(
                               '生成数量: $imageCount',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                           Text(
                             imageType == 'normal' ? '(最多4张)' : '(最多10张)',
-                            style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: cs.onSurfaceVariant,
+                            ),
                           ),
                         ],
                       ),
@@ -325,22 +391,31 @@ class _ChatPageState extends State<ChatPage> {
                         max: (imageType == 'normal' ? 4 : 10).toDouble(),
                         divisions: (imageType == 'normal' ? 3 : 9),
                         label: imageCount.toString(),
-                        onChanged: (value) => setModalState(() => imageCount = value.toInt()),
+                        onChanged: (value) =>
+                            setModalState(() => imageCount = value.toInt()),
                       ),
                       const SizedBox(height: 8),
 
                       // Image type
                       DropdownButtonFormField<String>(
-                        value: imageType,
+                        initialValue: imageType,
                         decoration: InputDecoration(
                           labelText: '生成类型',
                           prefixIcon: const Icon(Icons.category, size: 20),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           helperText: 'normal: 单次最多4张, group: 单次最多10张',
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'normal', child: Text('Normal (标准)')),
-                          DropdownMenuItem(value: 'group', child: Text('Group (批量)')),
+                          DropdownMenuItem(
+                            value: 'normal',
+                            child: Text('Normal (标准)'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'group',
+                            child: Text('Group (批量)'),
+                          ),
                         ],
                         onChanged: (value) {
                           setModalState(() {
@@ -367,10 +442,16 @@ class _ChatPageState extends State<ChatPage> {
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.lightbulb_outline, size: 16, color: cs.primary),
+                                Icon(
+                                  Icons.lightbulb_outline,
+                                  size: 16,
+                                  color: cs.primary,
+                                ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  imageType == 'normal' ? 'Normal 模式说明' : 'Group 模式说明',
+                                  imageType == 'normal'
+                                      ? 'Normal 模式说明'
+                                      : 'Group 模式说明',
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -400,7 +481,8 @@ class _ChatPageState extends State<ChatPage> {
                         title: const Text('添加水印'),
                         subtitle: const Text('在图片右下角显示 AI 生成标识'),
                         value: watermark,
-                        onChanged: (value) => setModalState(() => watermark = value),
+                        onChanged: (value) =>
+                            setModalState(() => watermark = value),
                         contentPadding: EdgeInsets.zero,
                       ),
                       const SizedBox(height: 8),
@@ -414,17 +496,19 @@ class _ChatPageState extends State<ChatPage> {
                         labelText: '提示词',
                         hintText: isDoubao
                             ? (imageType == 'normal'
-                                ? '画一只猫在树上玩耍'
-                                : '生成 6 张 3:4 比例的分镜图，Q 版治愈风...')
+                                  ? '画一只猫在树上玩耍'
+                                  : '生成 6 张 3:4 比例的分镜图，Q 版治愈风...')
                             : (mode == ImageGenerationMode.chat
-                                ? '帮我画一只宇航猫在月球漫步[1024:1024]'
-                                : 'a cat on the moon'),
+                                  ? '帮我画一只宇航猫在月球漫步[1024:1024]'
+                                  : 'a cat on the moon'),
                         prefixIcon: const Icon(Icons.edit_note, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         helperText: isDoubao
                             ? (imageType == 'normal'
-                                ? '提示词决定生成内容，每张图独立'
-                                : '详细描述整体风格和连贯故事，生成系列图片')
+                                  ? '提示词决定生成内容，每张图独立'
+                                  : '详细描述整体风格和连贯故事，生成系列图片')
                             : null,
                         helperMaxLines: 2,
                       ),
@@ -453,9 +537,13 @@ class _ChatPageState extends State<ChatPage> {
                                   await provider.generateImageViaChat(
                                     baseUrl: settings.baseUrl,
                                     apiKey: settings.apiKey,
-                                    model: model.isEmpty ? settings.selectedModel : model,
+                                    model: model.isEmpty
+                                        ? settings.selectedModel
+                                        : model,
                                     prompt: prompt,
-                                    imageUrl: imageUrl.isEmpty ? null : imageUrl,
+                                    imageUrl: imageUrl.isEmpty
+                                        ? null
+                                        : imageUrl,
                                     imageCount: isDoubao ? imageCount : 1,
                                     imageType: isDoubao ? imageType : null,
                                     watermark: isDoubao ? watermark : false,
@@ -521,7 +609,11 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: cs.error, size: 20),
+                            Icon(
+                              Icons.error_outline,
+                              color: cs.error,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -542,7 +634,10 @@ class _ChatPageState extends State<ChatPage> {
                         children: [
                           const Text(
                             '最近生成',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           TextButton.icon(
                             onPressed: () {
@@ -571,12 +666,16 @@ class _ChatPageState extends State<ChatPage> {
                                   width: 120,
                                   height: 120,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    width: 120,
-                                    height: 120,
-                                    color: cs.surfaceContainerHighest,
-                                    child: Icon(Icons.broken_image, color: cs.outline),
-                                  ),
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        width: 120,
+                                        height: 120,
+                                        color: cs.surfaceContainerHighest,
+                                        child: Icon(
+                                          Icons.broken_image,
+                                          color: cs.outline,
+                                        ),
+                                      ),
                                 ),
                               ),
                             );
@@ -627,16 +726,26 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.photo_library, size: 20, color: cs.onPrimary),
+                      child: Icon(
+                        Icons.photo_library,
+                        size: 20,
+                        color: cs.onPrimary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Text(
                       '图片画廊',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: cs.primaryContainer,
                         borderRadius: BorderRadius.circular(10),
@@ -660,7 +769,11 @@ class _ChatPageState extends State<ChatPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.image_outlined, size: 64, color: cs.outline),
+                            Icon(
+                              Icons.image_outlined,
+                              size: 64,
+                              color: cs.outline,
+                            ),
                             const SizedBox(height: 16),
                             Text(
                               '还没有生成图片',
@@ -672,12 +785,13 @@ class _ChatPageState extends State<ChatPage> {
                     : GridView.builder(
                         controller: scrollController,
                         padding: const EdgeInsets.all(16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.75,
-                        ),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.75,
+                            ),
                         itemCount: provider.images.length,
                         itemBuilder: (context, index) {
                           final image = provider.images[index];
@@ -690,17 +804,23 @@ class _ChatPageState extends State<ChatPage> {
                                   child: Image.network(
                                     image.url,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      color: cs.surfaceContainerHighest,
-                                      child: Icon(Icons.broken_image, color: cs.outline),
-                                    ),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                              color: cs.surfaceContainerHighest,
+                                              child: Icon(
+                                                Icons.broken_image,
+                                                color: cs.outline,
+                                              ),
+                                            ),
                                   ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   color: cs.surfaceContainerHighest,
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         image.prompt,
@@ -712,17 +832,23 @@ class _ChatPageState extends State<ChatPage> {
                                       Row(
                                         children: [
                                           Icon(
-                                            image.mode == ImageGenerationMode.chat
+                                            image.mode ==
+                                                    ImageGenerationMode.chat
                                                 ? Icons.chat_outlined
-                                                : image.mode == ImageGenerationMode.generation
-                                                    ? Icons.image_outlined
-                                                    : Icons.edit_outlined,
+                                                : image.mode ==
+                                                      ImageGenerationMode
+                                                          .generation
+                                                ? Icons.image_outlined
+                                                : Icons.edit_outlined,
                                             size: 12,
                                             color: cs.primary,
                                           ),
                                           const Spacer(),
                                           IconButton(
-                                            icon: const Icon(Icons.delete_outline, size: 16),
+                                            icon: const Icon(
+                                              Icons.delete_outline,
+                                              size: 16,
+                                            ),
                                             onPressed: () {
                                               provider.deleteImage(index);
                                             },
@@ -790,7 +916,7 @@ class _ChatPageState extends State<ChatPage> {
         // Quick settings bar (only show when not configured or when there are messages)
         if (!settings.isConfigured || messages.isNotEmpty)
           _buildQuickSettingsBar(cs, settings),
-        
+
         // ── Message list ──
         Expanded(
           child: messages.isEmpty
@@ -803,9 +929,13 @@ class _ChatPageState extends State<ChatPage> {
                     child: ListView.builder(
                       controller: _scrollController,
                       // Keyboard pushes content up via resizeToAvoidBottomInset
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: EdgeInsets.fromLTRB(
-                        horizontalPad, 10, horizontalPad, 10,
+                        horizontalPad,
+                        10,
+                        horizontalPad,
+                        10,
                       ),
                       itemCount: messages.length + (chat.isLoading ? 1 : 0),
                       itemBuilder: (context, index) {
@@ -816,7 +946,10 @@ class _ChatPageState extends State<ChatPage> {
                           key: ValueKey(
                             'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
                           ),
-                          child: MessageBubble(message: messages[index], messageIndex: index),
+                          child: MessageBubble(
+                            message: messages[index],
+                            messageIndex: index,
+                          ),
                         );
                       },
                     ),
@@ -825,8 +958,7 @@ class _ChatPageState extends State<ChatPage> {
         ),
 
         // ── Preview bubble ──
-        if (_hasText)
-          _buildPreviewBubble(cs),
+        if (_hasText) _buildPreviewBubble(cs),
 
         // ── Input bar ──
         // AnimatedPadding so the bar slides up smoothly with the keyboard
@@ -853,7 +985,11 @@ class _ChatPageState extends State<ChatPage> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2, right: 8),
                     child: IconButton(
-                      icon: Icon(Icons.image_outlined, color: cs.primary, size: 24),
+                      icon: Icon(
+                        Icons.image_outlined,
+                        color: cs.primary,
+                        size: 24,
+                      ),
                       onPressed: () => _showImageGenerationDialog(context),
                       tooltip: '生成图片',
                       style: IconButton.styleFrom(
@@ -986,7 +1122,10 @@ class _ChatPageState extends State<ChatPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [cs.errorContainer.withAlpha(200), cs.errorContainer.withAlpha(100)],
+            colors: [
+              cs.errorContainer.withAlpha(200),
+              cs.errorContainer.withAlpha(100),
+            ],
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
           ),
@@ -1143,7 +1282,9 @@ class _ChatPageState extends State<ChatPage> {
                       Icons.arrow_upward_rounded,
                       key: const ValueKey('send'),
                       size: 22,
-                      color: canSend ? cs.onPrimary : cs.onSurfaceVariant.withAlpha(100),
+                      color: canSend
+                          ? cs.onPrimary
+                          : cs.onSurfaceVariant.withAlpha(100),
                     ),
             ),
           ),
@@ -1170,7 +1311,11 @@ class _ChatPageState extends State<ChatPage> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: Icon(Icons.smart_toy_rounded, size: 14, color: cs.onPrimary),
+              child: Icon(
+                Icons.smart_toy_rounded,
+                size: 14,
+                color: cs.onPrimary,
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -1224,7 +1369,10 @@ class _ChatPageState extends State<ChatPage> {
               ? const WelcomeView()
               : ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   addAutomaticKeepAlives: true,
                   itemCount: messages.length + (chat.isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
@@ -1242,8 +1390,13 @@ class _ChatPageState extends State<ChatPage> {
                       );
                     }
                     return RepaintBoundary(
-                      key: ValueKey('msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index'),
-                      child: MessageBubble(message: messages[index], messageIndex: index),
+                      key: ValueKey(
+                        'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
+                      ),
+                      child: MessageBubble(
+                        message: messages[index],
+                        messageIndex: index,
+                      ),
                     );
                   },
                 ),
@@ -1251,7 +1404,9 @@ class _ChatPageState extends State<ChatPage> {
         Container(
           decoration: BoxDecoration(
             color: theme.micaBackgroundColor.withAlpha((0.8 * 255).round()),
-            border: Border(top: BorderSide(color: theme.resources.dividerStrokeColorDefault)),
+            border: Border(
+              top: BorderSide(color: theme.resources.dividerStrokeColorDefault),
+            ),
           ),
           padding: EdgeInsets.fromLTRB(24, 12, 24, 12 + bottomPadding),
           child: Row(
@@ -1266,10 +1421,14 @@ class _ChatPageState extends State<ChatPage> {
                   minLines: 1,
                   onSubmitted: (_) => _send(),
                   style: const TextStyle(fontSize: 14),
-                  decoration: WidgetStatePropertyAll(BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: theme.resources.dividerStrokeColorDefault),
-                  )),
+                  decoration: WidgetStatePropertyAll(
+                    BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: theme.resources.dividerStrokeColorDefault,
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1290,7 +1449,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 }
-
 
 // ─── Animated thinking dots ───
 class _ThinkingDots extends StatefulWidget {
@@ -1324,7 +1482,7 @@ class _ThinkingDotsState extends State<_ThinkingDots>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _ctrl,
-      builder: (_, __) {
+      builder: (context, child) {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(3, (i) {

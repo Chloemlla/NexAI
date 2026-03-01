@@ -16,9 +16,8 @@ class NotesPage extends StatefulWidget {
   State<NotesPage> createState() => _NotesPageState();
 }
 
-enum _NotesTab { all, starred, recent, tags }
-
-class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMixin {
+class _NotesPageState extends State<NotesPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
   String? _selectedTag;
@@ -52,8 +51,11 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
 
     return Shortcuts(
       shortcuts: {
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true, shift: true):
-            const _ToggleSearchIntent(),
+        const SingleActivator(
+          LogicalKeyboardKey.keyF,
+          control: true,
+          shift: true,
+        ): const _ToggleSearchIntent(),
       },
       child: Actions(
         actions: {
@@ -62,7 +64,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               setState(() {
                 _showSearch = !_showSearch;
                 if (_showSearch) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _searchFocus.requestFocus());
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => _searchFocus.requestFocus(),
+                  );
                 }
               });
               return null;
@@ -78,13 +82,20 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                 children: [
                   Icon(Icons.note_alt_rounded, size: 22, color: cs.primary),
                   const SizedBox(width: 10),
-                  const Text('笔记', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
+                  const Text(
+                    '笔记',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+                  ),
                 ],
               ),
               actions: [
                 // 知识图谱按钮
                 IconButton(
-                  icon: Icon(Icons.hub_rounded, size: 22, color: cs.onSurfaceVariant),
+                  icon: Icon(
+                    Icons.hub_rounded,
+                    size: 22,
+                    color: cs.onSurfaceVariant,
+                  ),
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const GraphPage()),
@@ -106,8 +117,8 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             ),
             floatingActionButton: FloatingActionButton(
               onPressed: () => _createAndOpen(context, notesProvider),
-              child: const Icon(Icons.add_rounded),
               tooltip: '创建新笔记',
+              child: const Icon(Icons.add_rounded),
             ),
           ),
         ),
@@ -136,11 +147,19 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         hintStyle: WidgetStatePropertyAll(
           TextStyle(fontSize: 14, color: cs.onSurfaceVariant.withAlpha(160)),
         ),
-        leading: Icon(Icons.search_rounded, size: 22, color: cs.onSurfaceVariant),
+        leading: Icon(
+          Icons.search_rounded,
+          size: 22,
+          color: cs.onSurfaceVariant,
+        ),
         trailing: [
           if (_searchQuery.isNotEmpty)
             IconButton(
-              icon: Icon(Icons.clear_rounded, size: 20, color: cs.onSurfaceVariant),
+              icon: Icon(
+                Icons.clear_rounded,
+                size: 20,
+                color: cs.onSurfaceVariant,
+              ),
               onPressed: () {
                 _searchController.clear();
                 setState(() => _searchQuery = '');
@@ -148,12 +167,20 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               tooltip: '清除',
             ),
           IconButton(
-            icon: Icon(Icons.tune_rounded, size: 20, color: cs.onSurfaceVariant),
+            icon: Icon(
+              Icons.tune_rounded,
+              size: 20,
+              color: cs.onSurfaceVariant,
+            ),
             onPressed: _showSearchHelp,
             tooltip: '搜索提示',
           ),
           IconButton(
-            icon: Icon(Icons.close_rounded, size: 20, color: cs.onSurfaceVariant),
+            icon: Icon(
+              Icons.close_rounded,
+              size: 20,
+              color: cs.onSurfaceVariant,
+            ),
             onPressed: () {
               _searchController.clear();
               setState(() {
@@ -166,7 +193,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         ],
         elevation: WidgetStatePropertyAll(0),
         backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerLow),
-        padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 8),
+        ),
       ),
     );
   }
@@ -251,15 +280,17 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
       ),
       child: TabBar(
         controller: _tabController,
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.1),
+        labelStyle: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.1,
+        ),
         unselectedLabelStyle: const TextStyle(fontSize: 13, letterSpacing: 0.1),
         labelColor: cs.primary,
         unselectedLabelColor: cs.onSurfaceVariant,
         indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: cs.primary, width: 3),
-          ),
+          border: Border(bottom: BorderSide(color: cs.primary, width: 3)),
         ),
         dividerHeight: 0,
         tabs: const [
@@ -298,10 +329,15 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
           children: [
             Icon(Icons.search_off_rounded, size: 48, color: cs.outlineVariant),
             const SizedBox(height: 12),
-            Text('未找到 "$_searchQuery" 的结果', style: TextStyle(color: cs.outline)),
+            Text(
+              '未找到 "$_searchQuery" 的结果',
+              style: TextStyle(color: cs.outline),
+            ),
             const SizedBox(height: 4),
-            Text('尝试："精确匹配"、tag:名称、is:starred、/正则表达式/',
-                style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
+            Text(
+              '尝试："精确匹配"、tag:名称、is:starred、/正则表达式/',
+              style: TextStyle(color: cs.outlineVariant, fontSize: 12),
+            ),
           ],
         ),
       );
@@ -310,7 +346,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (_, idx) {
         final r = results[idx];
         return _NoteCard(
@@ -324,7 +360,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
   List<String> _extractHighlightTerms(String query) {
     final terms = <String>[];
     final cleaned = query
-        .replaceAll(RegExp(r'\b(and|or|not|tag:\S+|is:\S+)\b', caseSensitive: false), '')
+        .replaceAll(
+          RegExp(r'\b(and|or|not|tag:\S+|is:\S+)\b', caseSensitive: false),
+          '',
+        )
         .replaceAll(RegExp(r'[/"]'), '')
         .trim();
     if (cleaned.isNotEmpty) {
@@ -336,11 +375,11 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
   Widget _buildAllNotes(ColorScheme cs, NotesProvider provider) {
     final notes = provider.notes;
     if (notes.isEmpty) return _buildEmptyState(cs, provider);
-    
+
     // 如果有笔记且有链接，显示知识图谱提示卡片
     final graphData = provider.getGraphData();
     final showGraphHint = notes.length >= 3 && graphData.edges.isNotEmpty;
-    
+
     if (showGraphHint) {
       return Column(
         children: [
@@ -357,15 +396,19 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
                 onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const GraphPage()),
-                  );
+                  Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const GraphPage()));
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(14),
                   child: Row(
                     children: [
-                      Icon(Icons.hub_rounded, size: 20, color: cs.onTertiaryContainer),
+                      Icon(
+                        Icons.hub_rounded,
+                        size: 20,
+                        color: cs.onTertiaryContainer,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -377,7 +420,11 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                           ),
                         ),
                       ),
-                      Icon(Icons.arrow_forward_rounded, color: cs.tertiary, size: 18),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        color: cs.tertiary,
+                        size: 18,
+                      ),
                     ],
                   ),
                 ),
@@ -388,7 +435,7 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         ],
       );
     }
-    
+
     return _buildNotesList(notes);
   }
 
@@ -399,12 +446,18 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.star_outline_rounded, size: 48, color: cs.outlineVariant),
+            Icon(
+              Icons.star_outline_rounded,
+              size: 48,
+              color: cs.outlineVariant,
+            ),
             const SizedBox(height: 12),
             Text('没有星标笔记', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('为重要笔记加星标以便快速访问',
-                style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
+            Text(
+              '为重要笔记加星标以便快速访问',
+              style: TextStyle(color: cs.outlineVariant, fontSize: 12),
+            ),
           ],
         ),
       );
@@ -423,8 +476,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             const SizedBox(height: 12),
             Text('没有最近的笔记', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('您打开的笔记将显示在此处',
-                style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
+            Text(
+              '您打开的笔记将显示在此处',
+              style: TextStyle(color: cs.outlineVariant, fontSize: 12),
+            ),
           ],
         ),
       );
@@ -452,9 +507,20 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.arrow_back_rounded, size: 16, color: cs.primary),
+                        Icon(
+                          Icons.arrow_back_rounded,
+                          size: 16,
+                          color: cs.primary,
+                        ),
                         const SizedBox(width: 4),
-                        Text('标签', style: TextStyle(fontSize: 13, color: cs.primary, fontWeight: FontWeight.w500)),
+                        Text(
+                          '标签',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -463,16 +529,28 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                 Icon(Icons.chevron_right_rounded, size: 16, color: cs.outline),
                 const SizedBox(width: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: cs.primaryContainer,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text('#$_selectedTag',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onPrimaryContainer)),
+                  child: Text(
+                    '#$_selectedTag',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
                 ),
                 const Spacer(),
-                Text('${notes.length}', style: TextStyle(fontSize: 12, color: cs.outline)),
+                Text(
+                  '${notes.length}',
+                  style: TextStyle(fontSize: 12, color: cs.outline),
+                ),
               ],
             ),
           ),
@@ -490,8 +568,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             const SizedBox(height: 12),
             Text('还没有标签', style: TextStyle(color: cs.outline)),
             const SizedBox(height: 4),
-            Text('在笔记中使用 #tag 来组织它们',
-                style: TextStyle(color: cs.outlineVariant, fontSize: 12)),
+            Text(
+              '在笔记中使用 #tag 来组织它们',
+              style: TextStyle(color: cs.outlineVariant, fontSize: 12),
+            ),
           ],
         ),
       );
@@ -512,9 +592,9 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const GraphPage()),
-                );
+                Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const GraphPage()));
               },
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -538,7 +618,11 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                           ),
                         ],
                       ),
-                      child: Icon(Icons.hub_rounded, size: 24, color: cs.onPrimary),
+                      child: Icon(
+                        Icons.hub_rounded,
+                        size: 24,
+                        color: cs.onPrimary,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -565,7 +649,11 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
                         ],
                       ),
                     ),
-                    Icon(Icons.arrow_forward_rounded, color: cs.primary, size: 20),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      color: cs.primary,
+                      size: 20,
+                    ),
                   ],
                 ),
               ),
@@ -605,8 +693,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('所有 #$oldTag 的出现都将被替换。',
-                style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+            Text(
+              '所有 #$oldTag 的出现都将被替换。',
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
@@ -614,13 +704,18 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               decoration: InputDecoration(
                 labelText: '新标签名称',
                 prefixText: '#',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () {
               final newTag = controller.text.trim();
@@ -644,7 +739,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
         title: const Text('删除标签'),
         content: Text('从所有笔记中删除 #$tag?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () {
               context.read<NotesProvider>().deleteTag(tag);
@@ -718,7 +816,10 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
               icon: const Icon(Icons.add_rounded, size: 20),
               label: const Text('创建笔记'),
               style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -731,16 +832,16 @@ class _NotesPageState extends State<NotesPage> with SingleTickerProviderStateMix
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       itemCount: notes.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (_, index) => _NoteCard(note: notes[index]),
     );
   }
 
   void _createAndOpen(BuildContext context, NotesProvider provider) {
     final note = provider.createNote();
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)));
   }
 }
 
@@ -781,7 +882,8 @@ class _TagTile extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 32, height: 32,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
                   color: cs.primaryContainer,
                   borderRadius: BorderRadius.circular(8),
@@ -789,7 +891,8 @@ class _TagTile extends StatelessWidget {
                 child: Center(
                   child: Icon(
                     isNested ? Icons.folder_outlined : Icons.tag_rounded,
-                    size: 16, color: cs.onPrimaryContainer,
+                    size: 16,
+                    color: cs.onPrimaryContainer,
                   ),
                 ),
               ),
@@ -802,26 +905,49 @@ class _TagTile extends StatelessWidget {
                       Row(
                         children: [
                           for (int i = 0; i < parts.length; i++) ...[
-                            if (i > 0) Icon(Icons.chevron_right_rounded, size: 14, color: cs.outline),
-                            Text(parts[i],
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: i == parts.length - 1 ? FontWeight.w600 : FontWeight.w400,
-                                  color: i == parts.length - 1 ? cs.onSurface : cs.onSurfaceVariant,
-                                )),
+                            if (i > 0)
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 14,
+                                color: cs.outline,
+                              ),
+                            Text(
+                              parts[i],
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: i == parts.length - 1
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: i == parts.length - 1
+                                    ? cs.onSurface
+                                    : cs.onSurfaceVariant,
+                              ),
+                            ),
                           ],
                         ],
                       )
                     else
-                      Text('#${tag.name}',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: cs.onSurface)),
-                    Text('${tag.count} 条笔记${tag.count != 1 ? 's' : ''}',
-                        style: TextStyle(fontSize: 11, color: cs.outline)),
+                      Text(
+                        '#${tag.name}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                    Text(
+                      '${tag.count} 条笔记${tag.count != 1 ? 's' : ''}',
+                      style: TextStyle(fontSize: 11, color: cs.outline),
+                    ),
                   ],
                 ),
               ),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded, size: 18, color: cs.outline),
+                icon: Icon(
+                  Icons.more_vert_rounded,
+                  size: 18,
+                  color: cs.outline,
+                ),
                 onSelected: (v) {
                   if (v == 'rename') onRename();
                   if (v == 'delete') onDelete();
@@ -856,7 +982,9 @@ class _NoteCard extends StatelessWidget {
 
     final tasks = _taskItemRegex.allMatches(note.content);
     final taskTotal = tasks.length;
-    final taskDone = tasks.where((m) => m.group(1)!.trim().toLowerCase() == 'x').length;
+    final taskDone = tasks
+        .where((m) => m.group(1)!.trim().toLowerCase() == 'x')
+        .length;
 
     return Card(
       elevation: 0,
@@ -894,7 +1022,8 @@ class _NoteCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: (taskTotal > 0 ? cs.tertiary : cs.primary).withAlpha(30),
+                          color: (taskTotal > 0 ? cs.tertiary : cs.primary)
+                              .withAlpha(30),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -902,9 +1031,13 @@ class _NoteCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Icon(
-                        taskTotal > 0 ? Icons.checklist_rounded : Icons.description_rounded,
+                        taskTotal > 0
+                            ? Icons.checklist_rounded
+                            : Icons.description_rounded,
                         size: 20,
-                        color: taskTotal > 0 ? cs.onTertiaryContainer : cs.onPrimaryContainer,
+                        color: taskTotal > 0
+                            ? cs.onTertiaryContainer
+                            : cs.onPrimaryContainer,
                       ),
                     ),
                   ),
@@ -937,16 +1070,25 @@ class _NoteCard extends StatelessWidget {
                   // Star button
                   IconButton(
                     icon: Icon(
-                      note.isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+                      note.isStarred
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
                       size: 22,
-                      color: note.isStarred ? Colors.amber.shade600 : cs.onSurfaceVariant,
+                      color: note.isStarred
+                          ? Colors.amber.shade600
+                          : cs.onSurfaceVariant,
                     ),
-                    onPressed: () => context.read<NotesProvider>().toggleStar(note.id),
+                    onPressed: () =>
+                        context.read<NotesProvider>().toggleStar(note.id),
                     visualDensity: VisualDensity.compact,
                     tooltip: note.isStarred ? '取消星标' : '星标',
                   ),
                   PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert_rounded, size: 20, color: cs.onSurfaceVariant),
+                    icon: Icon(
+                      Icons.more_vert_rounded,
+                      size: 20,
+                      color: cs.onSurfaceVariant,
+                    ),
                     onSelected: (value) {
                       if (value == 'delete') {
                         _confirmDelete(context);
@@ -957,7 +1099,11 @@ class _NoteCard extends StatelessWidget {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
+                            Icon(
+                              Icons.delete_outline_rounded,
+                              size: 18,
+                              color: cs.error,
+                            ),
                             const SizedBox(width: 12),
                             Text('删除', style: TextStyle(color: cs.error)),
                           ],
@@ -1002,7 +1148,10 @@ class _NoteCard extends StatelessWidget {
                   runSpacing: 6,
                   children: tags.take(5).map((t) {
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: cs.secondaryContainer,
                         borderRadius: BorderRadius.circular(10),
@@ -1053,7 +1202,10 @@ class _NoteCard extends StatelessWidget {
                   if (taskTotal > 0) ...[
                     const SizedBox(width: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: taskDone == taskTotal
                             ? Colors.green.withAlpha(40)
@@ -1121,7 +1273,10 @@ class _NoteCard extends StatelessWidget {
         title: const Text('删除笔记'),
         content: Text('删除 "${note.title}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
           FilledButton(
             onPressed: () {
               context.read<NotesProvider>().deleteNote(note.id);
@@ -1165,7 +1320,12 @@ class _HighlightText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (terms.isEmpty) {
-      return Text(text, style: style, maxLines: maxLines, overflow: maxLines != null ? TextOverflow.ellipsis : null);
+      return Text(
+        text,
+        style: style,
+        maxLines: maxLines,
+        overflow: maxLines != null ? TextOverflow.ellipsis : null,
+      );
     }
 
     final spans = <TextSpan>[];
@@ -1191,10 +1351,15 @@ class _HighlightText extends StatelessWidget {
       if (earliest > pos) {
         spans.add(TextSpan(text: text.substring(pos, earliest)));
       }
-      spans.add(TextSpan(
-        text: text.substring(earliest, earliest + matchedTerm.length),
-        style: TextStyle(backgroundColor: highlightColor, fontWeight: FontWeight.w600),
-      ));
+      spans.add(
+        TextSpan(
+          text: text.substring(earliest, earliest + matchedTerm.length),
+          style: TextStyle(
+            backgroundColor: highlightColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
       pos = earliest + matchedTerm.length;
     }
 

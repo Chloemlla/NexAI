@@ -42,7 +42,13 @@ class WelcomeView extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Center(child: Icon(Icons.smart_toy_rounded, size: 40, color: cs.onPrimary)),
+              child: Center(
+                child: Icon(
+                  Icons.smart_toy_rounded,
+                  size: 40,
+                  color: cs.onPrimary,
+                ),
+              ),
             ),
             const SizedBox(height: 28),
             Text(
@@ -63,10 +69,34 @@ class WelcomeView extends StatelessWidget {
               runSpacing: 10,
               alignment: WrapAlignment.center,
               children: [
-                _m3Card(cs, Icons.chat_rounded, 'Chat', 'Ask anything', cardWidth),
-                _m3Card(cs, Icons.functions_rounded, 'Math', 'LaTeX formulas', cardWidth),
-                _m3Card(cs, Icons.science_rounded, 'Chemistry', 'Equations', cardWidth),
-                _m3Card(cs, Icons.code_rounded, 'Code', 'Syntax highlight', cardWidth),
+                _m3Card(
+                  cs,
+                  Icons.chat_rounded,
+                  'Chat',
+                  'Ask anything',
+                  cardWidth,
+                ),
+                _m3Card(
+                  cs,
+                  Icons.functions_rounded,
+                  'Math',
+                  'LaTeX formulas',
+                  cardWidth,
+                ),
+                _m3Card(
+                  cs,
+                  Icons.science_rounded,
+                  'Chemistry',
+                  'Equations',
+                  cardWidth,
+                ),
+                _m3Card(
+                  cs,
+                  Icons.code_rounded,
+                  'Code',
+                  'Syntax highlight',
+                  cardWidth,
+                ),
               ],
             ),
           ],
@@ -75,7 +105,13 @@ class WelcomeView extends StatelessWidget {
     );
   }
 
-  Widget _m3Card(ColorScheme cs, IconData icon, String title, String subtitle, double width) {
+  Widget _m3Card(
+    ColorScheme cs,
+    IconData icon,
+    String title,
+    String subtitle,
+    double width,
+  ) {
     return SizedBox(
       width: width,
       child: Card(
@@ -93,12 +129,24 @@ class WelcomeView extends StatelessWidget {
                   color: cs.primaryContainer,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Center(child: Icon(icon, size: 22, color: cs.onPrimaryContainer)),
+                child: Center(
+                  child: Icon(icon, size: 22, color: cs.onPrimaryContainer),
+                ),
               ),
               const SizedBox(height: 12),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 3),
-              Text(subtitle, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant), textAlign: TextAlign.center),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center,
+              ),
             ],
           ),
         ),
@@ -116,30 +164,80 @@ class WelcomeView extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 80, height: 80,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [
-                Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.8),
-                theme.accentColor.lighter,
-              ]),
+              gradient: LinearGradient(
+                colors: [
+                  theme.accentColor.withValues(alpha: 0.8),
+                  theme.accentColor.lighter,
+                ],
+              ),
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: Color.fromRGBO(theme.accentColor.value >> 16 & 0xFF, theme.accentColor.value >> 8 & 0xFF, theme.accentColor.value & 0xFF, 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+              boxShadow: [
+                BoxShadow(
+                  color: theme.accentColor.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: const Center(child: Icon(fluent.FluentIcons.robot, size: 36, color: fluent.Colors.white)),
+            child: const Center(
+              child: Icon(
+                fluent.FluentIcons.robot,
+                size: 36,
+                color: fluent.Colors.white,
+              ),
+            ),
           ),
           const SizedBox(height: 24),
-          Text('Welcome to NexAI', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: theme.typography.body?.color)),
+          Text(
+            'Welcome to NexAI',
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: theme.typography.body?.color,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text('Your intelligent AI assistant', style: TextStyle(fontSize: 14, color: theme.inactiveColor)),
+          Text(
+            'Your intelligent AI assistant',
+            style: TextStyle(fontSize: 14, color: theme.inactiveColor),
+          ),
           const SizedBox(height: 40),
           Wrap(
-            spacing: 12, runSpacing: 12,
+            spacing: 12,
+            runSpacing: 12,
             alignment: WrapAlignment.center,
             children: [
-              _fluentCard(theme, isDark, fluent.FluentIcons.chat, 'Chat', 'Ask anything you want'),
-              _fluentCard(theme, isDark, fluent.FluentIcons.variable2, 'Math', 'Render LaTeX formulas'),
-              _fluentCard(theme, isDark, fluent.FluentIcons.test_beaker, 'Chemistry', 'Chemical equations'),
-              _fluentCard(theme, isDark, fluent.FluentIcons.code, 'Code', 'Syntax highlighted code'),
+              _fluentCard(
+                theme,
+                isDark,
+                fluent.FluentIcons.chat,
+                'Chat',
+                'Ask anything you want',
+              ),
+              _fluentCard(
+                theme,
+                isDark,
+                fluent.FluentIcons.variable2,
+                'Math',
+                'Render LaTeX formulas',
+              ),
+              _fluentCard(
+                theme,
+                isDark,
+                fluent.FluentIcons.test_beaker,
+                'Chemistry',
+                'Chemical equations',
+              ),
+              _fluentCard(
+                theme,
+                isDark,
+                fluent.FluentIcons.code,
+                'Code',
+                'Syntax highlighted code',
+              ),
             ],
           ),
         ],
@@ -147,7 +245,13 @@ class WelcomeView extends StatelessWidget {
     );
   }
 
-  Widget _fluentCard(fluent.FluentThemeData theme, bool isDark, IconData icon, String title, String subtitle) {
+  Widget _fluentCard(
+    fluent.FluentThemeData theme,
+    bool isDark,
+    IconData icon,
+    String title,
+    String subtitle,
+  ) {
     return SizedBox(
       width: 180,
       child: fluent.Card(
@@ -156,9 +260,16 @@ class WelcomeView extends StatelessWidget {
           children: [
             Icon(icon, size: 24, color: theme.accentColor),
             const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
             const SizedBox(height: 4),
-            Text(subtitle, style: TextStyle(fontSize: 11, color: theme.inactiveColor), textAlign: TextAlign.center),
+            Text(
+              subtitle,
+              style: TextStyle(fontSize: 11, color: theme.inactiveColor),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

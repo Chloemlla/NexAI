@@ -97,7 +97,9 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
           final days = double.tryParse(input);
           if (days == null) return null;
           final excelEpoch = DateTime(1899, 12, 30);
-          return excelEpoch.add(Duration(milliseconds: (days * 86400000).round()));
+          return excelEpoch.add(
+            Duration(milliseconds: (days * 86400000).round()),
+          );
         default:
           return DateTime.tryParse(input);
       }
@@ -158,8 +160,11 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
     if (!mounted) return;
     setState(() {
       _selectedDate = DateTime(
-        date.year, date.month, date.day,
-        time?.hour ?? 0, time?.minute ?? 0,
+        date.year,
+        date.month,
+        date.day,
+        time?.hour ?? 0,
+        time?.minute ?? 0,
       );
       _errorMessage = null;
       _updateInputFromDate();
@@ -175,11 +180,17 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(children: [
-          const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-          const SizedBox(width: 10),
-          Text('已复制 $label'),
-        ]),
+        content: Row(
+          children: [
+            const Icon(
+              Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 10),
+            Text('已复制 $label'),
+          ],
+        ),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(milliseconds: 1200),
@@ -246,12 +257,18 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                             ),
                           ],
                         ),
-                        child: Icon(Icons.access_time_filled_rounded, size: 32, color: cs.onPrimary),
+                        child: Icon(
+                          Icons.access_time_filled_rounded,
+                          size: 32,
+                          color: cs.onPrimary,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       if (_selectedDate != null)
                         Text(
-                          DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedDate!),
+                          DateFormat(
+                            'yyyy-MM-dd HH:mm:ss',
+                          ).format(_selectedDate!),
                           style: tt.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
                             fontFamily: 'monospace',
@@ -270,46 +287,50 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 // ── Quick actions ──
-                Row(children: [
-                  Expanded(
-                    child: _QuickAction(
-                      cs: cs,
-                      icon: Icons.today_rounded,
-                      label: '当前时间',
-                      color: cs.primaryContainer,
-                      iconColor: cs.onPrimaryContainer,
-                      onTap: _setNow,
+                Row(
+                  children: [
+                    Expanded(
+                      child: _QuickAction(
+                        cs: cs,
+                        icon: Icons.today_rounded,
+                        label: '当前时间',
+                        color: cs.primaryContainer,
+                        iconColor: cs.onPrimaryContainer,
+                        onTap: _setNow,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _QuickAction(
-                      cs: cs,
-                      icon: Icons.calendar_month_rounded,
-                      label: '选择日期',
-                      color: cs.secondaryContainer,
-                      iconColor: cs.onSecondaryContainer,
-                      onTap: _pickDate,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _QuickAction(
+                        cs: cs,
+                        icon: Icons.calendar_month_rounded,
+                        label: '选择日期',
+                        color: cs.secondaryContainer,
+                        iconColor: cs.onSecondaryContainer,
+                        onTap: _pickDate,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _QuickAction(
-                      cs: cs,
-                      icon: Icons.content_paste_rounded,
-                      label: '从剪贴板',
-                      color: cs.tertiaryContainer,
-                      iconColor: cs.onTertiaryContainer,
-                      onTap: () async {
-                        final data = await Clipboard.getData(Clipboard.kTextPlain);
-                        if (data?.text != null && data!.text!.isNotEmpty) {
-                          _inputController.text = data.text!;
-                          _onInputChanged(data.text!);
-                        }
-                      },
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _QuickAction(
+                        cs: cs,
+                        icon: Icons.content_paste_rounded,
+                        label: '从剪贴板',
+                        color: cs.tertiaryContainer,
+                        iconColor: cs.onTertiaryContainer,
+                        onTap: () async {
+                          final data = await Clipboard.getData(
+                            Clipboard.kTextPlain,
+                          );
+                          if (data?.text != null && data!.text!.isNotEmpty) {
+                            _inputController.text = data.text!;
+                            _onInputChanged(data.text!);
+                          }
+                        },
+                      ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
                 const SizedBox(height: 20),
 
                 // ── Input card ──
@@ -317,24 +338,38 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                 const SizedBox(height: 20),
 
                 // ── Results section ──
-                Row(children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer.withAlpha(150),
-                      borderRadius: BorderRadius.circular(10),
+                Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: cs.primaryContainer.withAlpha(150),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.transform_rounded,
+                          size: 18,
+                          color: cs.primary,
+                        ),
+                      ),
                     ),
-                    child: Center(child: Icon(Icons.transform_rounded, size: 18, color: cs.primary)),
-                  ),
-                  const SizedBox(width: 12),
-                  Text('转换结果', style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2)),
-                  const Spacer(),
-                  Text(
-                    '${_formatEntries.length} 种格式',
-                    style: TextStyle(fontSize: 12, color: cs.outline),
-                  ),
-                ]),
+                    const SizedBox(width: 12),
+                    Text(
+                      '转换结果',
+                      style: tt.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_formatEntries.length} 种格式',
+                      style: TextStyle(fontSize: 12, color: cs.outline),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
 
                 if (_selectedDate != null)
@@ -342,7 +377,13 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                     final entry = _formatEntries[i];
                     final value = _formatDate(_selectedDate!, entry.name);
                     final isCopied = _copiedLabel == entry.name;
-                    return _buildResultTile(cs, entry, value, isNarrow, isCopied);
+                    return _buildResultTile(
+                      cs,
+                      entry,
+                      value,
+                      isNarrow,
+                      isCopied,
+                    );
                   }),
               ]),
             ),
@@ -362,37 +403,65 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: cs.secondaryContainer.withAlpha(150),
-                  borderRadius: BorderRadius.circular(10),
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer.withAlpha(150),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.edit_calendar_rounded,
+                      size: 18,
+                      color: cs.secondary,
+                    ),
+                  ),
                 ),
-                child: Center(child: Icon(Icons.edit_calendar_rounded, size: 18, color: cs.secondary)),
-              ),
-              const SizedBox(width: 12),
-              Text('输入', style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.2)),
-            ]),
+                const SizedBox(width: 12),
+                Text(
+                  '输入',
+                  style: tt.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             // Format selector
             DropdownButtonFormField<String>(
-              value: _selectedFormat,
+              initialValue: _selectedFormat,
               decoration: InputDecoration(
                 labelText: '输入格式',
-                prefixIcon: const Icon(Icons.format_list_bulleted_rounded, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                prefixIcon: const Icon(
+                  Icons.format_list_bulleted_rounded,
+                  size: 20,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
-              items: _formatEntries.map((e) => DropdownMenuItem(
-                value: e.name,
-                child: Row(children: [
-                  Icon(e.icon, size: 16, color: cs.primary),
-                  const SizedBox(width: 10),
-                  Text(e.name),
-                ]),
-              )).toList(),
+              items: _formatEntries
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e.name,
+                      child: Row(
+                        children: [
+                          Icon(e.icon, size: 16, color: cs.primary),
+                          const SizedBox(width: 10),
+                          Text(e.name),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
               onChanged: _onFormatChanged,
             ),
             const SizedBox(height: 12),
@@ -413,8 +482,13 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                         },
                       )
                     : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
               style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
               onChanged: _onInputChanged,
@@ -436,7 +510,9 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
       return Padding(
         padding: const EdgeInsets.only(bottom: 6),
         child: Material(
-          color: isCopied ? cs.primaryContainer.withAlpha(80) : cs.surfaceContainerLow,
+          color: isCopied
+              ? cs.primaryContainer.withAlpha(80)
+              : cs.surfaceContainerLow,
           borderRadius: BorderRadius.circular(14),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
@@ -465,21 +541,23 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(children: [
-                          Text(
-                            entry.name,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurface,
+                        Row(
+                          children: [
+                            Text(
+                              entry.name,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: cs.onSurface,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            entry.desc,
-                            style: TextStyle(fontSize: 10, color: cs.outline),
-                          ),
-                        ]),
+                            const SizedBox(width: 6),
+                            Text(
+                              entry.desc,
+                              style: TextStyle(fontSize: 10, color: cs.outline),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 3),
                         Text(
                           value,
@@ -497,7 +575,9 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
-                      isCopied ? Icons.check_circle_rounded : Icons.copy_rounded,
+                      isCopied
+                          ? Icons.check_circle_rounded
+                          : Icons.copy_rounded,
                       key: ValueKey(isCopied),
                       size: 18,
                       color: isCopied ? cs.primary : cs.outline,
@@ -515,7 +595,9 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: isCopied ? cs.primaryContainer.withAlpha(60) : cs.surfaceContainerLow,
+        color: isCopied
+            ? cs.primaryContainer.withAlpha(60)
+            : cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
@@ -625,23 +707,28 @@ class _QuickAction extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-          child: Column(children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withAlpha(150),
-                borderRadius: BorderRadius.circular(10),
+          child: Column(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withAlpha(150),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(child: Icon(icon, size: 18, color: iconColor)),
               ),
-              child: Center(child: Icon(icon, size: 18, color: iconColor)),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ]),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

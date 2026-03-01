@@ -1,11 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
-import 'main.dart' show isDesktop;
 import 'providers/settings_provider.dart';
 import 'pages/home_page.dart';
 
@@ -32,20 +30,27 @@ class NexAIApp extends StatelessWidget {
         ? Color(settings.accentColorValue!)
         : const Color(0xFF6750A4);
 
-    final lightScheme = lightDynamic ?? ColorScheme.fromSeed(
-      seedColor: seedColor,
-      brightness: Brightness.light,
-    );
-    final darkScheme = darkDynamic ?? ColorScheme.fromSeed(
-      seedColor: seedColor,
-      brightness: Brightness.dark,
-    );
+    final lightScheme =
+        lightDynamic ??
+        ColorScheme.fromSeed(
+          seedColor: seedColor,
+          brightness: Brightness.light,
+        );
+    final darkScheme =
+        darkDynamic ??
+        ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark);
 
     final effectiveLight = settings.accentColorValue != null
-        ? ColorScheme.fromSeed(seedColor: Color(settings.accentColorValue!), brightness: Brightness.light)
+        ? ColorScheme.fromSeed(
+            seedColor: Color(settings.accentColorValue!),
+            brightness: Brightness.light,
+          )
         : lightScheme;
     final effectiveDark = settings.accentColorValue != null
-        ? ColorScheme.fromSeed(seedColor: Color(settings.accentColorValue!), brightness: Brightness.dark)
+        ? ColorScheme.fromSeed(
+            seedColor: Color(settings.accentColorValue!),
+            brightness: Brightness.dark,
+          )
         : darkScheme;
 
     return MaterialApp(
@@ -71,7 +76,9 @@ class NexAIApp extends StatelessWidget {
         ),
         cardTheme: CardThemeData(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           clipBehavior: Clip.antiAlias,
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -89,11 +96,16 @@ class NexAIApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(color: effectiveLight.primary, width: 1.5),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       darkTheme: ThemeData(
@@ -115,7 +127,9 @@ class NexAIApp extends StatelessWidget {
         ),
         cardTheme: CardThemeData(
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           clipBehavior: Clip.antiAlias,
         ),
         inputDecorationTheme: InputDecorationTheme(
@@ -133,11 +147,16 @@ class NexAIApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(color: effectiveDark.primary, width: 1.5),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
         snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       home: const HomePage(),

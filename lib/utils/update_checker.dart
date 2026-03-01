@@ -18,7 +18,9 @@ class UpdateChecker {
     final autoUpdate = prefs.getBool(_autoUpdateKey) ?? true;
 
     if (autoUpdate) {
-      await checkUpdate(context, isAuto: true);
+      if (context.mounted) {
+        await checkUpdate(context, isAuto: true);
+      }
     }
   }
 
@@ -43,7 +45,9 @@ class UpdateChecker {
       final currentVersion = packageInfo.version;
 
       // Compare versions: remove 'v' prefix if present
-      final latestVersion = tagName.startsWith('v') ? tagName.substring(1) : tagName;
+      final latestVersion = tagName.startsWith('v')
+          ? tagName.substring(1)
+          : tagName;
 
       if (_isVersionUpToDate(currentVersion, latestVersion)) {
         // Already up to date
@@ -78,8 +82,12 @@ class UpdateChecker {
         : latestParts.length;
 
     for (int i = 0; i < maxParts; i++) {
-      final currentNum = i < currentParts.length ? int.tryParse(currentParts[i]) ?? 0 : 0;
-      final latestNum = i < latestParts.length ? int.tryParse(latestParts[i]) ?? 0 : 0;
+      final currentNum = i < currentParts.length
+          ? int.tryParse(currentParts[i]) ?? 0
+          : 0;
+      final latestNum = i < latestParts.length
+          ? int.tryParse(latestParts[i]) ?? 0
+          : 0;
 
       if (currentNum > latestNum) return true;
       if (currentNum < latestNum) return false;
@@ -224,9 +232,7 @@ class UpdateChecker {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Up to Date'),
-        content: Text(
-          'You are running the latest version ($currentVersion)',
-        ),
+        content: Text('You are running the latest version ($currentVersion)'),
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),

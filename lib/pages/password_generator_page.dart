@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/password_provider.dart';
@@ -39,7 +38,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
 
   // Memorable password settings
   int _wordCount = 4;
-  String _separator = '-';
+  final String _separator = '-';
   bool _capitalizeWords = true;
   bool _addNumbers = true;
 
@@ -139,8 +138,10 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     if (_includeNumbers) chars += '0123456789';
     if (_includeSymbols) chars += '!@#\$%^&*()_+-=[]{}|;:,.<>?';
     if (chars.isEmpty) chars = 'abcdefghijklmnopqrstuvwxyz';
-    return List.generate(_length, (_) => chars[_random.nextInt(chars.length)])
-        .join();
+    return List.generate(
+      _length,
+      (_) => chars[_random.nextInt(chars.length)],
+    ).join();
   }
 
   String _generateMemorablePassword() {
@@ -197,8 +198,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     if (RegExp(r'[a-z]').hasMatch(password)) strength += 15;
     if (RegExp(r'[A-Z]').hasMatch(password)) strength += 15;
     if (RegExp(r'[0-9]').hasMatch(password)) strength += 10;
-    if (RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]').hasMatch(password))
+    if (RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]').hasMatch(password)) {
       strength += 10;
+    }
     return strength.clamp(0, 100);
   }
 
@@ -243,8 +245,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
               decoration: InputDecoration(
                 labelText: '用途/分类',
                 hintText: '例如：微信、邮箱、淘宝',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 prefixIcon: const Icon(Icons.category_rounded),
               ),
             ),
@@ -253,8 +256,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
               controller: noteController,
               decoration: InputDecoration(
                 labelText: '备注（可选）',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 prefixIcon: const Icon(Icons.note_rounded),
               ),
               maxLines: 2,
@@ -270,7 +274,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('保存'),
           ),
@@ -292,7 +297,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('密码已保存'), behavior: SnackBarBehavior.floating),
+            content: Text('密码已保存'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -308,8 +315,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       final strengthLabel = strength < 40
           ? '弱'
           : strength < 70
-              ? '中等'
-              : '强';
+          ? '中等'
+          : '强';
       buffer.writeln('${i + 1},"${_batchPasswords[i]}","$strengthLabel"');
     }
 
@@ -332,7 +339,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       if (mounted && e != '取消保存') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('导出失败: $e'), behavior: SnackBarBehavior.floating),
+            content: Text('导出失败: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -362,7 +371,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       if (mounted && e != '取消保存') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('导出失败: $e'), behavior: SnackBarBehavior.floating),
+            content: Text('导出失败: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -392,7 +403,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       if (mounted && e != '取消保存') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('备份失败: $e'), behavior: SnackBarBehavior.floating),
+            content: Text('备份失败: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -403,23 +416,30 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       type: FileType.custom,
       allowedExtensions: ['json'],
     );
-    
+
     if (result != null && result.files.single.path != null) {
       try {
         final file = File(result.files.single.path!);
         final content = await file.readAsString();
+        if (!mounted) return;
         final provider = context.read<PasswordProvider>();
         final success = await provider.restoreFromBackup(content);
-        
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(success ? '恢复成功' : '恢复失败：备份文件损坏'), behavior: SnackBarBehavior.floating),
+            SnackBar(
+              content: Text(success ? '恢复成功' : '恢复失败：备份文件损坏'),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('恢复失败: $e'), behavior: SnackBarBehavior.floating),
+            SnackBar(
+              content: Text('恢复失败: $e'),
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       }
@@ -449,7 +469,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
             style: FilledButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('确定清空'),
           ),
@@ -461,7 +483,10 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       await context.read<PasswordProvider>().clearAllPasswords();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已清空所有密码'), behavior: SnackBarBehavior.floating),
+          const SnackBar(
+            content: Text('已清空所有密码'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     }
@@ -490,8 +515,18 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('密码强度', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-            Text(strengthLabel, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: strengthColor)),
+            Text(
+              '密码强度',
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+            Text(
+              strengthLabel,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: strengthColor,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -515,12 +550,17 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('密码生成器', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text(
+          '密码生成器',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         centerTitle: true,
         actions: [
           PopupMenuButton(
             icon: const Icon(Icons.more_vert),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'backup',
@@ -556,7 +596,11 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                 value: 'clear',
                 child: Row(
                   children: [
-                    Icon(Icons.delete_forever_rounded, size: 20, color: Colors.red),
+                    Icon(
+                      Icons.delete_forever_rounded,
+                      size: 20,
+                      color: Colors.red,
+                    ),
                     SizedBox(width: 12),
                     Text('清空所有', style: TextStyle(color: Colors.red)),
                   ],
@@ -588,7 +632,10 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           indicatorWeight: 3,
           tabs: const [
             Tab(text: '生成', icon: Icon(Icons.auto_awesome_rounded, size: 22)),
-            Tab(text: '批量', icon: Icon(Icons.format_list_bulleted_rounded, size: 22)),
+            Tab(
+              text: '批量',
+              icon: Icon(Icons.format_list_bulleted_rounded, size: 22),
+            ),
             Tab(text: '已保存', icon: Icon(Icons.bookmark_rounded, size: 22)),
           ],
         ),
@@ -634,26 +681,40 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                 children: [
                   Icon(Icons.shield_rounded, color: cs.primary, size: 24),
                   const SizedBox(width: 10),
-                  Text('生成的密码', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onPrimaryContainer)),
+                  Text(
+                    '生成的密码',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
               Center(
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    return ScaleTransition(scale: animation, child: FadeTransition(opacity: animation, child: child));
-                  },
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
+                        return ScaleTransition(
+                          scale: animation,
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
+                        );
+                      },
                   child: SelectableText(
                     _generatedPassword,
                     key: ValueKey<String>(_generatedPassword),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 26, 
-                      fontWeight: FontWeight.w700, 
-                      fontFamily: 'monospace', 
-                      color: cs.onPrimaryContainer, 
-                      letterSpacing: 1.8
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'monospace',
+                      color: cs.onPrimaryContainer,
+                      letterSpacing: 1.8,
                     ),
                   ),
                 ),
@@ -670,7 +731,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       label: const Text('复制'),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
                       ),
                     ),
                   ),
@@ -679,7 +742,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     onPressed: _generatePassword,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.all(16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: const Icon(Icons.refresh_rounded, size: 20),
                   ),
@@ -688,7 +753,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     onPressed: () => _savePassword(_generatedPassword),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.all(16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     child: const Icon(Icons.save_rounded, size: 20),
                   ),
@@ -698,13 +765,25 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           ),
         ),
         const SizedBox(height: 28),
-        
+
         // Settings segment
         SegmentedButton<PasswordType>(
           segments: const [
-            ButtonSegment(value: PasswordType.random, label: Text('随机'), icon: Icon(Icons.shuffle_rounded, size: 18)),
-            ButtonSegment(value: PasswordType.memorable, label: Text('易记'), icon: Icon(Icons.psychology_rounded, size: 18)),
-            ButtonSegment(value: PasswordType.pin, label: Text('PIN'), icon: Icon(Icons.pin_rounded, size: 18)),
+            ButtonSegment(
+              value: PasswordType.random,
+              label: Text('随机'),
+              icon: Icon(Icons.shuffle_rounded, size: 18),
+            ),
+            ButtonSegment(
+              value: PasswordType.memorable,
+              label: Text('易记'),
+              icon: Icon(Icons.psychology_rounded, size: 18),
+            ),
+            ButtonSegment(
+              value: PasswordType.pin,
+              label: Text('PIN'),
+              icon: Icon(Icons.pin_rounded, size: 18),
+            ),
           ],
           selected: {_selectedType},
           onSelectionChanged: (Set<PasswordType> newSelection) {
@@ -718,7 +797,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           ),
         ),
         const SizedBox(height: 20),
-        
+
         // Settings Card
         Card(
           elevation: 0,
@@ -740,7 +819,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
 
   Widget _buildSettingsContent(ColorScheme cs) {
     if (_selectedType == PasswordType.random) return _buildRandomSettings(cs);
-    if (_selectedType == PasswordType.memorable) return _buildMemorableSettings(cs);
+    if (_selectedType == PasswordType.memorable) {
+      return _buildMemorableSettings(cs);
+    }
     if (_selectedType == PasswordType.pin) return _buildPINSettings(cs);
     return const SizedBox.shrink();
   }
@@ -752,7 +833,14 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 8, top: 4, bottom: 12),
-          child: Text('密码设置', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: cs.primary)),
+          child: Text(
+            '密码设置',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: cs.primary,
+            ),
+          ),
         ),
         _buildSliderSetting(
           title: '密码长度',
@@ -773,30 +861,58 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
         SwitchListTile(
           title: const Text('大写字母 (A-Z)'),
           value: _includeUppercase,
-          onChanged: (value) { setState(() { _includeUppercase = value; _generatePassword(); }); },
+          onChanged: (value) {
+            setState(() {
+              _includeUppercase = value;
+              _generatePassword();
+            });
+          },
           secondary: Icon(Icons.font_download_rounded, color: cs.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         SwitchListTile(
           title: const Text('小写字母 (a-z)'),
           value: _includeLowercase,
-          onChanged: (value) { setState(() { _includeLowercase = value; _generatePassword(); }); },
+          onChanged: (value) {
+            setState(() {
+              _includeLowercase = value;
+              _generatePassword();
+            });
+          },
           secondary: Icon(Icons.text_fields_rounded, color: cs.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         SwitchListTile(
           title: const Text('数字 (0-9)'),
           value: _includeNumbers,
-          onChanged: (value) { setState(() { _includeNumbers = value; _generatePassword(); }); },
+          onChanged: (value) {
+            setState(() {
+              _includeNumbers = value;
+              _generatePassword();
+            });
+          },
           secondary: Icon(Icons.numbers_rounded, color: cs.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         SwitchListTile(
           title: const Text('特殊符号 (!@#\$%)'),
           value: _includeSymbols,
-          onChanged: (value) { setState(() { _includeSymbols = value; _generatePassword(); }); },
+          onChanged: (value) {
+            setState(() {
+              _includeSymbols = value;
+              _generatePassword();
+            });
+          },
           secondary: Icon(Icons.emoji_symbols_rounded, color: cs.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ],
     );
@@ -809,7 +925,14 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 8, top: 4, bottom: 12),
-          child: Text('易记密码设置', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: cs.primary)),
+          child: Text(
+            '易记密码设置',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: cs.primary,
+            ),
+          ),
         ),
         _buildSliderSetting(
           title: '单词数量',
@@ -830,16 +953,30 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
         SwitchListTile(
           title: const Text('首字母大写'),
           value: _capitalizeWords,
-          onChanged: (value) { setState(() { _capitalizeWords = value; _generatePassword(); }); },
+          onChanged: (value) {
+            setState(() {
+              _capitalizeWords = value;
+              _generatePassword();
+            });
+          },
           secondary: Icon(Icons.title_rounded, color: cs.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         SwitchListTile(
           title: const Text('末尾添加数字'),
           value: _addNumbers,
-          onChanged: (value) { setState(() { _addNumbers = value; _generatePassword(); }); },
+          onChanged: (value) {
+            setState(() {
+              _addNumbers = value;
+              _generatePassword();
+            });
+          },
           secondary: Icon(Icons.looks_one_rounded, color: cs.primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ],
     );
@@ -852,7 +989,14 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 8, top: 4, bottom: 12),
-          child: Text('PIN 码设置', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: cs.primary)),
+          child: Text(
+            'PIN 码设置',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: cs.primary,
+            ),
+          ),
         ),
         _buildSliderSetting(
           title: 'PIN 长度',
@@ -893,12 +1037,21 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
             children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: cs.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(label, style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.bold)),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: cs.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -951,7 +1104,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                         label: const Text('批量生成'),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -965,7 +1120,9 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                           label: const Text('导出'),
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                       ),
@@ -980,7 +1137,14 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text('已生成 ${_batchPasswords.length} 个密码', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: cs.primary)),
+            child: Text(
+              '已生成 ${_batchPasswords.length} 个密码',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: cs.primary,
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           ...List.generate(_batchPasswords.length, (index) {
@@ -993,22 +1157,47 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                 side: BorderSide(color: cs.outlineVariant.withAlpha(50)),
               ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 leading: CircleAvatar(
                   backgroundColor: cs.primaryContainer,
-                  child: Text('${index + 1}', style: TextStyle(color: cs.onPrimaryContainer, fontSize: 13, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      color: cs.onPrimaryContainer,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-                title: Text(password, style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.w600, letterSpacing: 1.2)),
+                title: Text(
+                  password,
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                  ),
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: Icon(Icons.copy_rounded, size: 20, color: cs.primary),
+                      icon: Icon(
+                        Icons.copy_rounded,
+                        size: 20,
+                        color: cs.primary,
+                      ),
                       onPressed: () => _copyToClipboard(password),
                       tooltip: '复制',
                     ),
                     IconButton(
-                      icon: Icon(Icons.save_rounded, size: 20, color: cs.secondary),
+                      icon: Icon(
+                        Icons.save_rounded,
+                        size: 20,
+                        color: cs.secondary,
+                      ),
                       onPressed: () => _savePassword(password),
                       tooltip: '保存',
                     ),
@@ -1037,12 +1226,27 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       color: cs.surfaceContainerHighest.withAlpha(100),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.lock_person_rounded, size: 80, color: cs.primary.withAlpha(150)),
+                    child: Icon(
+                      Icons.lock_person_rounded,
+                      size: 80,
+                      color: cs.primary.withAlpha(150),
+                    ),
                   ),
                   const SizedBox(height: 24),
-                  Text('还没有保存的密码', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  Text(
+                    '还没有保存的密码',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text('在生成或批量生成页面保存密码\n它们将安全地存储在这里', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant)),
+                  Text(
+                    '在生成或批量生成页面保存密码\n它们将安全地存储在这里',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: cs.onSurfaceVariant),
+                  ),
                   const SizedBox(height: 40),
                   Container(
                     padding: const EdgeInsets.all(20),
@@ -1054,11 +1258,30 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.privacy_tip_rounded, color: cs.tertiary, size: 36),
+                        Icon(
+                          Icons.privacy_tip_rounded,
+                          color: cs.tertiary,
+                          size: 36,
+                        ),
                         const SizedBox(height: 16),
-                        Text('隐私保护承诺', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: cs.onTertiaryContainer)),
+                        Text(
+                          '隐私保护承诺',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            color: cs.onTertiaryContainer,
+                          ),
+                        ),
                         const SizedBox(height: 12),
-                        Text('• 所有密码仅存储在本地设备\n• 不会上传或同步到任何服务器\n• 支持导出和加密备份\n• 您的数据完全由您掌控', style: TextStyle(fontSize: 13, color: cs.onTertiaryContainer, height: 1.6), textAlign: TextAlign.center),
+                        Text(
+                          '• 所有密码仅存储在本地设备\n• 不会上传或同步到任何服务器\n• 支持导出和加密备份\n• 您的数据完全由您掌控',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.onTertiaryContainer,
+                            height: 1.6,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
@@ -1080,15 +1303,22 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     physics: const BouncingScrollPhysics(),
                     child: Row(
                       children: categories.map((category) {
-                        final count = provider.getPasswordsByCategory(category).length;
+                        final count = provider
+                            .getPasswordsByCategory(category)
+                            .length;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Chip(
                             label: Text('$category ($count)'),
                             backgroundColor: cs.secondaryContainer,
-                            labelStyle: TextStyle(color: cs.onSecondaryContainer, fontWeight: FontWeight.w500),
+                            labelStyle: TextStyle(
+                              color: cs.onSecondaryContainer,
+                              fontWeight: FontWeight.w500,
+                            ),
                             side: BorderSide.none,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
                         );
                       }).toList(),
@@ -1099,116 +1329,190 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final password = provider.passwords[index];
-                    final strength = password.strength < 40 ? '弱' : password.strength < 70 ? '中等' : '强';
-                    final strengthColor = password.strength < 40 ? Colors.red : password.strength < 70 ? Colors.orange : Colors.green;
-                    
-                    return Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
-                      ),
-                      child: Theme(
-                        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                        child: ExpansionTile(
-                          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          leading: CircleAvatar(
-                            backgroundColor: cs.primaryContainer,
-                            child: Icon(Icons.lock_rounded, color: cs.primary, size: 20),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final password = provider.passwords[index];
+                  final strength = password.strength < 40
+                      ? '弱'
+                      : password.strength < 70
+                      ? '中等'
+                      : '强';
+                  final strengthColor = password.strength < 40
+                      ? Colors.red
+                      : password.strength < 70
+                      ? Colors.orange
+                      : Colors.green;
+
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    clipBehavior: Clip.antiAlias,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
+                    ),
+                    child: Theme(
+                      data: Theme.of(
+                        context,
+                      ).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: cs.primaryContainer,
+                          child: Icon(
+                            Icons.lock_rounded,
+                            color: cs.primary,
+                            size: 20,
                           ),
-                          title: Text(
-                            password.category.isEmpty ? '未分类' : password.category,
-                            style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        title: Text(
+                          password.category.isEmpty ? '未分类' : password.category,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            password.password,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              letterSpacing: 1.2,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              password.password,
-                              style: const TextStyle(fontFamily: 'monospace', letterSpacing: 1.2),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: strengthColor.withAlpha(20),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: strengthColor.withAlpha(50),
                             ),
                           ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          child: Text(
+                            strength,
+                            style: TextStyle(
+                              color: strengthColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: strengthColor.withAlpha(20),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: strengthColor.withAlpha(50)),
+                              color: cs.surfaceContainerHighest.withAlpha(50),
                             ),
-                            child: Text(strength, style: TextStyle(color: strengthColor, fontSize: 11, fontWeight: FontWeight.bold)),
-                          ),
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: cs.surfaceContainerHighest.withAlpha(50),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (password.note.isNotEmpty) ...[
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(Icons.notes_rounded, size: 18, color: cs.onSurfaceVariant),
-                                        const SizedBox(width: 8),
-                                        Expanded(child: Text(password.note, style: TextStyle(color: cs.onSurfaceVariant, height: 1.4))),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (password.note.isNotEmpty) ...[
                                   Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Icon(Icons.access_time_rounded, size: 18, color: cs.onSurfaceVariant),
+                                      Icon(
+                                        Icons.notes_rounded,
+                                        size: 18,
+                                        color: cs.onSurfaceVariant,
+                                      ),
                                       const SizedBox(width: 8),
-                                      Text('创建于: ${password.createdAt.toString().substring(0, 19)}', style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Row(
-                                    children: [
                                       Expanded(
-                                        child: FilledButton.tonalIcon(
-                                          onPressed: () => _copyToClipboard(password.password),
-                                          icon: const Icon(Icons.copy_rounded, size: 18),
-                                          label: const Text('复制密码'),
-                                          style: FilledButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(vertical: 12),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        child: Text(
+                                          password.note,
+                                          style: TextStyle(
+                                            color: cs.onSurfaceVariant,
+                                            height: 1.4,
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      FilledButton.icon(
-                                        onPressed: () => provider.deletePassword(password.id),
-                                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                                        label: const Text('删除'),
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: Colors.red.withAlpha(20),
-                                          foregroundColor: Colors.red,
-                                          padding: const EdgeInsets.symmetric(vertical: 12),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          elevation: 0,
-                                        ),
-                                      ),
                                     ],
                                   ),
+                                  const SizedBox(height: 16),
                                 ],
-                              ),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.access_time_rounded,
+                                      size: 18,
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '创建于: ${password.createdAt.toString().substring(0, 19)}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: FilledButton.tonalIcon(
+                                        onPressed: () =>
+                                            _copyToClipboard(password.password),
+                                        icon: const Icon(
+                                          Icons.copy_rounded,
+                                          size: 18,
+                                        ),
+                                        label: const Text('复制密码'),
+                                        style: FilledButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          ),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    FilledButton.icon(
+                                      onPressed: () =>
+                                          provider.deletePassword(password.id),
+                                      icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 18,
+                                      ),
+                                      label: const Text('删除'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.red.withAlpha(
+                                          20,
+                                        ),
+                                        foregroundColor: Colors.red,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        elevation: 0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  childCount: provider.passwords.length,
-                ),
+                    ),
+                  );
+                }, childCount: provider.passwords.length),
               ),
             ),
           ],

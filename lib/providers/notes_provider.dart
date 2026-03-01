@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,11 +25,13 @@ class NotesProvider extends ChangeNotifier {
   Map<String, Set<String>> _backlinks = {};
 
   // Dio instance for AI title generation
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 15),
-    receiveTimeout: const Duration(seconds: 30),
-    sendTimeout: const Duration(seconds: 15),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 15),
+    ),
+  );
 
   List<Note> get notes => _notes;
 
@@ -79,7 +80,9 @@ class NotesProvider extends ChangeNotifier {
   /// Find a note by title (case-insensitive)
   Note? _findNoteByTitle(String title) {
     final lower = title.toLowerCase().trim();
-    return _notes.where((n) => n.title.toLowerCase().trim() == lower).firstOrNull;
+    return _notes
+        .where((n) => n.title.toLowerCase().trim() == lower)
+        .firstOrNull;
   }
 
   /// Find a note by title (public)
@@ -114,7 +117,9 @@ class NotesProvider extends ChangeNotifier {
     final result = <Note>[];
     for (final other in _notes) {
       if (other.id == noteId) continue;
-      if (other.title.trim().isEmpty || other.title == 'Untitled Note') continue;
+      if (other.title.trim().isEmpty || other.title == 'Untitled Note') {
+        continue;
+      }
       final otherTitle = other.title.toLowerCase().trim();
       if (linkedNames.contains(otherTitle)) continue; // already linked
       if (body.contains(otherTitle)) {
@@ -137,7 +142,7 @@ class NotesProvider extends ChangeNotifier {
       final before = note.content.substring(0, match.start);
       final after = note.content.substring(match.end);
       if (!before.endsWith('[[') || !after.startsWith(']]')) {
-        note.content = '${before}[[$targetTitle]]$after';
+        note.content = '$before[[$targetTitle]]$after';
         note.updatedAt = DateTime.now();
         _rebuildBacklinks();
         notifyListeners();
@@ -165,14 +170,16 @@ class NotesProvider extends ChangeNotifier {
     for (final note in filtered) {
       final backlinkCount = _backlinks[note.id]?.length ?? 0;
       final outCount = note.wikiLinks.length;
-      nodes.add(GraphNode(
-        id: note.id,
-        title: note.title,
-        linkCount: backlinkCount + outCount,
-        tags: note.tags,
-        isStarred: note.isStarred,
-        updatedAt: note.updatedAt,
-      ));
+      nodes.add(
+        GraphNode(
+          id: note.id,
+          title: note.title,
+          linkCount: backlinkCount + outCount,
+          tags: note.tags,
+          isStarred: note.isStarred,
+          updatedAt: note.updatedAt,
+        ),
+      );
 
       for (final link in note.wikiLinks) {
         final target = _findNoteByTitle(link.target);
@@ -208,7 +215,9 @@ class NotesProvider extends ChangeNotifier {
           _notes = Note.decodeList(legacy);
           await _save(); // write to file
           await prefs.remove('notes'); // remove old key
-          debugPrint('NexAI: migrated ${_notes.length} notes from SharedPreferences → file');
+          debugPrint(
+            'NexAI: migrated ${_notes.length} notes from SharedPreferences → file',
+          );
         }
       }
 
@@ -266,7 +275,9 @@ class NotesProvider extends ChangeNotifier {
     final idx = _notes.indexWhere((n) => n.id == id);
     if (idx == -1) return;
     final note = _notes[idx];
-    note.content = note.content.isEmpty ? text : '${note.content}\n\n---\n\n$text';
+    note.content = note.content.isEmpty
+        ? text
+        : '${note.content}\n\n---\n\n$text';
     note.updatedAt = DateTime.now();
     _rebuildBacklinks();
     notifyListeners();
@@ -362,22 +373,34 @@ class NotesProvider extends ChangeNotifier {
     // Filter candidates
     var candidates = _notes.toList();
     if (tagFilter != null) {
-      candidates = candidates.where((n) => n.tags.any((t) =>
-          t.toLowerCase().contains(tagFilter!.toLowerCase()))).toList();
+      candidates = candidates
+          .where(
+            (n) => n.tags.any(
+              (t) => t.toLowerCase().contains(tagFilter!.toLowerCase()),
+            ),
+          )
+          .toList();
     }
     if (starFilter == true) {
       candidates = candidates.where((n) => n.isStarred).toList();
     }
 
     if (searchQuery.isEmpty) {
-      return candidates.map((n) => NoteSearchResult(note: n, matches: [])).toList();
+      return candidates
+          .map((n) => NoteSearchResult(note: n, matches: []))
+          .toList();
     }
 
     // Check if regex search (wrapped in /.../)
     RegExp? regexSearch;
-    if (searchQuery.startsWith('/') && searchQuery.endsWith('/') && searchQuery.length > 2) {
+    if (searchQuery.startsWith('/') &&
+        searchQuery.endsWith('/') &&
+        searchQuery.length > 2) {
       try {
-        regexSearch = RegExp(searchQuery.substring(1, searchQuery.length - 1), caseSensitive: false);
+        regexSearch = RegExp(
+          searchQuery.substring(1, searchQuery.length - 1),
+          caseSensitive: false,
+        );
       } catch (_) {
         // Invalid regex, fall through to text search
       }
@@ -389,7 +412,9 @@ class NotesProvider extends ChangeNotifier {
 
       if (regexSearch != null) {
         for (final m in regexSearch.allMatches(fullText)) {
-          matches.add(SearchMatch(start: m.start, end: m.end, text: m.group(0)!));
+          matches.add(
+            SearchMatch(start: m.start, end: m.end, text: m.group(0)!),
+          );
         }
       } else {
         // Parse AND/OR/NOT operators
@@ -403,14 +428,21 @@ class NotesProvider extends ChangeNotifier {
             while (true) {
               pos = lower.indexOf(term.toLowerCase(), pos);
               if (pos == -1) break;
-              matches.add(SearchMatch(start: pos, end: pos + term.length, text: fullText.substring(pos, pos + term.length)));
+              matches.add(
+                SearchMatch(
+                  start: pos,
+                  end: pos + term.length,
+                  text: fullText.substring(pos, pos + term.length),
+                ),
+              );
               pos += term.length;
             }
           }
         }
       }
 
-      if (matches.isNotEmpty || (regexSearch == null && _evaluateQuery(searchQuery, fullText))) {
+      if (matches.isNotEmpty ||
+          (regexSearch == null && _evaluateQuery(searchQuery, fullText))) {
         results.add(NoteSearchResult(note: note, matches: matches));
       }
     }
@@ -477,11 +509,13 @@ class NotesProvider extends ChangeNotifier {
           'messages': [
             {
               'role': 'system',
-              'content': 'You are a helpful assistant that generates concise, descriptive titles for notes. Generate a title that is 3-8 words long, capturing the main topic. Respond with ONLY the title, no quotes or extra text.',
+              'content':
+                  'You are a helpful assistant that generates concise, descriptive titles for notes. Generate a title that is 3-8 words long, capturing the main topic. Respond with ONLY the title, no quotes or extra text.',
             },
             {
               'role': 'user',
-              'content': 'Generate a concise title for this note:\n\n$contentPreview',
+              'content':
+                  'Generate a concise title for this note:\n\n$contentPreview',
             },
           ],
           'temperature': 0.7,
@@ -504,7 +538,8 @@ class NotesProvider extends ChangeNotifier {
 
           if (generatedTitle != null && generatedTitle.trim().isNotEmpty) {
             // Clean up the title (remove quotes, trim, limit length)
-            var cleanTitle = generatedTitle.trim()
+            var cleanTitle = generatedTitle
+                .trim()
                 .replaceAll(RegExp(r'^["\x27]|["\x27]$'), '')
                 .trim();
 
@@ -592,15 +627,13 @@ class GraphData {
 //   atom     := '(' expr ')'  |  '"' phrase '"'  |  word
 
 class _QueryParser {
-  final String _text;
   final String _lower; // normalised haystack
   final List<String> _tokens;
   int _pos = 0;
 
   _QueryParser(String query, String text)
-      : _text = text,
-        _lower = text.toLowerCase(),
-        _tokens = _tokenise(query);
+    : _lower = text.toLowerCase(),
+      _tokens = _tokenise(query);
 
   // Split query into tokens: words, quoted strings, parens, operators
   static List<String> _tokenise(String q) {
@@ -679,5 +712,7 @@ class _QueryParser {
   }
 
   String? _peek() => _pos < _tokens.length ? _tokens[_pos] : null;
-  void _consume() { if (_pos < _tokens.length) _pos++; }
+  void _consume() {
+    if (_pos < _tokens.length) _pos++;
+  }
 }

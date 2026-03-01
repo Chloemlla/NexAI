@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 
@@ -31,10 +30,12 @@ class ImageGenerationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  final Dio _dio = Dio(BaseOptions(
-    connectTimeout: const Duration(seconds: 60),
-    receiveTimeout: const Duration(seconds: 120),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 60),
+      receiveTimeout: const Duration(seconds: 120),
+    ),
+  );
 
   List<GeneratedImage> get images => _images;
   bool get isLoading => _isLoading;
@@ -67,7 +68,7 @@ class ImageGenerationProvider extends ChangeNotifier {
 
     try {
       final messages = <Map<String, dynamic>>[];
-      
+
       // Build prompt with Doubao parameters if it's a Doubao model
       String finalPrompt = prompt;
       if (model.contains('doubao') || model.contains('seedream')) {
@@ -79,12 +80,12 @@ class ImageGenerationProvider extends ChangeNotifier {
           params.add('-n=$imageCount');
         }
         params.add('-watermark=$watermark');
-        
+
         if (params.isNotEmpty) {
           finalPrompt = '$prompt ${params.join(' ')}';
         }
       }
-      
+
       if (imageUrl != null || imageBase64 != null) {
         // Image-to-image
         messages.add({
@@ -101,33 +102,27 @@ class ImageGenerationProvider extends ChangeNotifier {
         });
       } else {
         // Text-to-image
-        messages.add({
-          'role': 'user',
-          'content': finalPrompt,
-        });
+        messages.add({'role': 'user', 'content': finalPrompt});
       }
 
       final response = await _dio.post(
         '$baseUrl/chat/completions',
-        data: {
-          'model': model,
-          'messages': messages,
-          'stream': false,
-        },
-        options: Options(
-          headers: {'Authorization': 'Bearer $apiKey'},
-        ),
+        data: {'model': model, 'messages': messages, 'stream': false},
+        options: Options(headers: {'Authorization': 'Bearer $apiKey'}),
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
         final content = data['choices']?[0]?['message']?['content'];
-        
+
         if (content != null) {
           // Extract all http(s) URLs from response; UI will attempt to render each
           final urls = <String>[];
           if (content is String) {
-            final urlPattern = RegExp(r'https?://[^\s\)\]"' + r"']+");
+            final urlPattern = RegExp(
+              r'https?://[^\s\)\]"'
+              r"']+",
+            );
             for (final match in urlPattern.allMatches(content)) {
               final url = match.group(0);
               if (url != null) urls.add(url);
@@ -136,12 +131,14 @@ class ImageGenerationProvider extends ChangeNotifier {
 
           if (urls.isNotEmpty) {
             for (final url in urls) {
-              _addImage(GeneratedImage(
-                url: url,
-                prompt: prompt,
-                timestamp: DateTime.now(),
-                mode: ImageGenerationMode.chat,
-              ));
+              _addImage(
+                GeneratedImage(
+                  url: url,
+                  prompt: prompt,
+                  timestamp: DateTime.now(),
+                  mode: ImageGenerationMode.chat,
+                ),
+              );
             }
             _error = null;
           } else {
@@ -155,7 +152,9 @@ class ImageGenerationProvider extends ChangeNotifier {
       if (e.response != null) {
         try {
           final errorBody = e.response!.data;
-          _error = errorBody['error']?['message'] ?? 'HTTP ${e.response!.statusCode}';
+          _error =
+              errorBody['error']?['message'] ??
+              'HTTP ${e.response!.statusCode}';
         } catch (_) {
           _error = 'HTTP ${e.response!.statusCode}';
         }
@@ -209,24 +208,24 @@ class ImageGenerationProvider extends ChangeNotifier {
       final response = await _dio.post(
         '$baseUrl/images/generations',
         data: requestData,
-        options: Options(
-          headers: {'Authorization': 'Bearer $apiKey'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $apiKey'}),
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
         final imageDataList = data['data'] as List?;
-        
+
         if (imageDataList != null && imageDataList.isNotEmpty) {
           for (final imageData in imageDataList) {
-            _addImage(GeneratedImage(
-              url: imageData['url'] ?? '',
-              b64Json: imageData['b64_json'],
-              prompt: prompt,
-              timestamp: DateTime.now(),
-              mode: ImageGenerationMode.generation,
-            ));
+            _addImage(
+              GeneratedImage(
+                url: imageData['url'] ?? '',
+                b64Json: imageData['b64_json'],
+                prompt: prompt,
+                timestamp: DateTime.now(),
+                mode: ImageGenerationMode.generation,
+              ),
+            );
           }
           _error = null;
         }
@@ -237,7 +236,9 @@ class ImageGenerationProvider extends ChangeNotifier {
       if (e.response != null) {
         try {
           final errorBody = e.response!.data;
-          _error = errorBody['error']?['message'] ?? 'HTTP ${e.response!.statusCode}';
+          _error =
+              errorBody['error']?['message'] ??
+              'HTTP ${e.response!.statusCode}';
         } catch (_) {
           _error = 'HTTP ${e.response!.statusCode}';
         }
@@ -276,23 +277,23 @@ class ImageGenerationProvider extends ChangeNotifier {
           'size': size,
           'response_format': responseFormat,
         },
-        options: Options(
-          headers: {'Authorization': 'Bearer $apiKey'},
-        ),
+        options: Options(headers: {'Authorization': 'Bearer $apiKey'}),
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
         final imageData = data['data']?[0];
-        
+
         if (imageData != null) {
-          _addImage(GeneratedImage(
-            url: imageData['url'] ?? '',
-            b64Json: imageData['b64_json'],
-            prompt: prompt,
-            timestamp: DateTime.now(),
-            mode: ImageGenerationMode.edit,
-          ));
+          _addImage(
+            GeneratedImage(
+              url: imageData['url'] ?? '',
+              b64Json: imageData['b64_json'],
+              prompt: prompt,
+              timestamp: DateTime.now(),
+              mode: ImageGenerationMode.edit,
+            ),
+          );
           _error = null;
         }
       } else {
@@ -302,7 +303,9 @@ class ImageGenerationProvider extends ChangeNotifier {
       if (e.response != null) {
         try {
           final errorBody = e.response!.data;
-          _error = errorBody['error']?['message'] ?? 'HTTP ${e.response!.statusCode}';
+          _error =
+              errorBody['error']?['message'] ??
+              'HTTP ${e.response!.statusCode}';
         } catch (_) {
           _error = 'HTTP ${e.response!.statusCode}';
         }

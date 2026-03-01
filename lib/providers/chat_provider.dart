@@ -326,6 +326,25 @@ class ChatProvider extends ChangeNotifier {
       }
     } on DioException catch (e) {
       String errorMsg;
+      String requestDetails = '';
+
+      String safeEncode(dynamic data) {
+        if (data == null) return 'null';
+        try {
+          if (data is String) {
+            try {
+              final parsed = jsonDecode(data);
+              return const JsonEncoder.withIndent('  ').convert(parsed);
+            } catch (_) {
+              return '"$data"';
+            }
+          }
+          return const JsonEncoder.withIndent('  ').convert(data);
+        } catch (_) {
+          return '"${data.toString()}"';
+        }
+      }
+
       if (e.response != null) {
         try {
           final errorData = e.response!.data;
@@ -339,13 +358,41 @@ class ChatProvider extends ChangeNotifier {
         } catch (_) {
           errorMsg = 'HTTP ${e.response!.statusCode}';
         }
+
+        requestDetails =
+            '''\n
+**Request Details:**
+```json
+{
+  "url": "${e.requestOptions.uri}",
+  "method": "${e.requestOptions.method}",
+  "headers": ${safeEncode(e.requestOptions.headers)},
+  "data": ${safeEncode(e.requestOptions.data)}
+}
+```
+
+**Response Data:**
+```json
+${safeEncode(e.response!.data)}
+```''';
       } else {
         errorMsg = e.message ?? 'Connection error';
+        requestDetails =
+            '''\n
+**Request Details:**
+```json
+{
+  "url": "${e.requestOptions.uri}",
+  "method": "${e.requestOptions.method}",
+  "headers": ${safeEncode(e.requestOptions.headers)},
+  "data": ${safeEncode(e.requestOptions.data)}
+}
+```''';
       }
       conversation.messages.add(
         Message(
           role: 'assistant',
-          content: '⚠️ Error: $errorMsg',
+          content: '⚠️ Error: $errorMsg$requestDetails',
           timestamp: DateTime.now(),
           isError: true,
         ),

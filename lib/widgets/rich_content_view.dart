@@ -1,11 +1,8 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:gpt_markdown/gpt_markdown.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-import '../main.dart' show isAndroid;
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
@@ -126,19 +123,10 @@ class _MathWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color textColor;
-    Color accentColor;
+    final cs = Theme.of(context).colorScheme;
+    final textColor = cs.onSurface;
+    final accentColor = cs.primary;
     final settings = context.watch<SettingsProvider>();
-
-    if (isAndroid) {
-      final cs = Theme.of(context).colorScheme;
-      textColor = cs.onSurface;
-      accentColor = cs.primary;
-    } else {
-      final theme = fluent.FluentTheme.of(context);
-      textColor = theme.typography.body?.color ?? Colors.white;
-      accentColor = theme.accentColor;
-    }
 
     var processed = tex.trim();
     processed = processed.replaceAllMapped(
@@ -199,11 +187,6 @@ class _MarkdownWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isAndroid) return _buildM3Markdown(context);
-    return _buildFluentMarkdown(context);
-  }
-
-  Widget _buildM3Markdown(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
 
@@ -224,38 +207,9 @@ class _MarkdownWidget extends StatelessWidget {
           onLinkTap: (url, title) {
             if (url.isNotEmpty) {
               final uri = Uri.tryParse(url);
-              if (uri != null)
+              if (uri != null) {
                 launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFluentMarkdown(BuildContext context) {
-    final theme = fluent.FluentTheme.of(context);
-    final settings = context.watch<SettingsProvider>();
-
-    return Material(
-      color: Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: GptMarkdown(
-          data,
-          style: TextStyle(
-            fontSize: settings.fontSize,
-            fontFamily: settings.fontFamily == 'System'
-                ? null
-                : settings.fontFamily,
-            color: theme.typography.body?.color,
-            height: 1.6,
-          ),
-          onLinkTap: (url, title) {
-            if (url.isNotEmpty) {
-              final uri = Uri.tryParse(url);
-              if (uri != null)
-                launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
             }
           },
         ),
@@ -426,8 +380,9 @@ List<_Segment> _parseContent(String text) {
     for (final match in _mathPattern.allMatches(subText)) {
       if (match.start > subLastEnd) {
         final mdText = subText.substring(subLastEnd, match.start).trim();
-        if (mdText.isNotEmpty)
+        if (mdText.isNotEmpty) {
           segments.add(_Segment(_SegmentType.markdown, mdText));
+        }
       }
 
       final matched = match.group(0)!;
@@ -452,8 +407,9 @@ List<_Segment> _parseContent(String text) {
 
     if (subLastEnd < subText.length) {
       final remaining = subText.substring(subLastEnd).trim();
-      if (remaining.isNotEmpty)
+      if (remaining.isNotEmpty) {
         segments.add(_Segment(_SegmentType.markdown, remaining));
+      }
     }
   }
 

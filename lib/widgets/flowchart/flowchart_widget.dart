@@ -1,14 +1,10 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
-
-import '../../main.dart' show isAndroid;
 import 'mermaid_parser.dart';
 import 'flowchart_layout.dart';
 import 'flowchart_painter.dart';
 
 /// Renders a Mermaid flowchart as a native Flutter widget.
 /// Supports pan & zoom via InteractiveViewer.
-/// Works on both Android (Material) and Desktop (Fluent UI).
 class FlowchartWidget extends StatefulWidget {
   final String mermaidSource;
 
@@ -55,11 +51,6 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (isAndroid) return _buildAndroid(context);
-    return _buildDesktop(context);
-  }
-
-  Widget _buildAndroid(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -87,45 +78,6 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       isDark: isDark,
       accentColor: cs.primary,
       inactiveColor: cs.outline,
-      nodeColor: nodeColor,
-      nodeBorder: nodeBorder,
-      textColor: textColor,
-      edgeColor: edgeColor,
-      labelColor: labelColor,
-    );
-  }
-
-  Widget _buildDesktop(BuildContext context) {
-    final theme = fluent.FluentTheme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    if (_parseError != null || _graph.nodes.isEmpty) {
-      return _fallbackBlock(
-        isDark: isDark,
-        accentColor: theme.accentColor,
-        textColor:
-            theme.typography.body?.color ??
-            (isDark ? Colors.white : Colors.black),
-      );
-    }
-
-    final nodeColor = isDark
-        ? const Color(0xFF2A2A3A)
-        : const Color(0xFFFFFFFF);
-    final nodeBorder = theme.accentColor;
-    final textColor =
-        theme.typography.body?.color ?? (isDark ? Colors.white : Colors.black);
-    final edgeColor = isDark
-        ? const Color(0xFF8899AA)
-        : const Color(0xFF667788);
-    final labelColor = isDark
-        ? const Color(0xFFAABBCC)
-        : const Color(0xFF556677);
-
-    return _chartContainer(
-      isDark: isDark,
-      accentColor: theme.accentColor,
-      inactiveColor: theme.inactiveColor,
       nodeColor: nodeColor,
       nodeBorder: nodeBorder,
       textColor: textColor,

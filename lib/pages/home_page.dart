@@ -1,4 +1,3 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -160,7 +159,6 @@ class _HomePageState extends State<HomePage> with WindowListener {
                   FilledButton.tonalIcon(
                     onPressed: () {
                       chat.newConversation();
-                      // Haptic feedback would go here on mobile
                     },
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('新建'),
@@ -717,65 +715,50 @@ class _HomePageState extends State<HomePage> with WindowListener {
     return TextSpan(children: spans);
   }
 
-  // ─── Desktop: Fluent UI layout ───
-  int _resolveSelectedIndex(int convCount, int chatIndex) {
-    switch (_currentPage) {
-      case 'settings':
-        return convCount;
-      case 'about':
-        return convCount + 1;
-      default:
-        if (convCount == 0) {
-          _currentPage = 'settings';
-          return 0;
-        }
-        return chatIndex.clamp(0, convCount - 1);
-    }
-  }
-
+  // ─── Desktop: Material Design NavigationRail layout ───
   Widget _buildDesktopLayout(BuildContext context) {
     final chat = context.watch<ChatProvider>();
-    final theme = fluent.FluentTheme.of(context);
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final conversationItems = chat.conversations.asMap().entries.map((entry) {
-      final idx = entry.key;
-      final conv = entry.value;
-      return fluent.PaneItem(
-        icon: const Icon(fluent.FluentIcons.chat),
-        title: Text(conv.title, overflow: TextOverflow.ellipsis),
-        body: const ChatPage(),
-        trailing: fluent.IconButton(
-          icon: Icon(
-            fluent.FluentIcons.delete,
-            size: 12,
-            color: theme.inactiveColor,
-          ),
-          onPressed: () {
-            chat.deleteConversation(idx);
-            if (chat.conversations.isEmpty) {
-              setState(() => _currentPage = 'settings');
-            } else {
-              setState(() {});
-            }
-          },
-        ),
-      );
-    }).toList();
+    // Determine which page body to show
+    Widget body;
 
-    final convCount = conversationItems.length;
-
-    int selected;
-    if (convCount == 0 && _currentPage == 'chat') {
-      selected = 0;
-    } else {
-      selected = _resolveSelectedIndex(convCount, chat.currentIndex);
+    switch (_currentPage) {
+      case 'settings':
+        body = const SettingsPage();
+        break;
+      case 'about':
+        body = const AboutPage();
+        break;
+      default: // 'chat'
+        body = const ChatPage();
+        break;
     }
 
     Widget titleWidget = Align(
       alignment: AlignmentDirectional.centerStart,
       child: Row(
         children: [
-          const Icon(fluent.FluentIcons.robot, size: 20),
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [cs.primary, cs.tertiary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.smart_toy_rounded,
+                size: 16,
+                color: cs.onPrimary,
+              ),
+            ),
+          ),
           const SizedBox(width: 10),
           const Text(
             'NexAI',
@@ -789,50 +772,208 @@ class _HomePageState extends State<HomePage> with WindowListener {
       titleWidget = DragToMoveArea(child: titleWidget);
     }
 
-    return fluent.NavigationView(
-      titleBar: Row(
+    return Scaffold(
+      body: Column(
         children: [
-          Expanded(child: titleWidget),
-          fluent.IconButton(
-            icon: const Icon(fluent.FluentIcons.add, size: 14),
-            onPressed: () {
-              chat.newConversation();
-              setState(() => _currentPage = 'chat');
-            },
+          // Custom title bar
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              color: cs.surface,
+              border: Border(
+                bottom: BorderSide(color: cs.outlineVariant.withAlpha(60)),
+              ),
+            ),
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                Expanded(child: titleWidget),
+                // Conversation actions
+                if (_currentPage == 'chat') ...[
+                  IconButton(
+                    icon: Icon(
+                      Icons.add_rounded,
+                      size: 18,
+                      color: cs.onSurfaceVariant,
+                    ),
+                    onPressed: () {
+                      chat.newConversation();
+                      setState(() => _currentPage = 'chat');
+                    },
+                    tooltip: '新建对话',
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+                if (isDesktop) ...[
+                  const SizedBox(width: 4),
+                  const WindowButtons(),
+                ],
+              ],
+            ),
           ),
-          if (isDesktop) ...[const SizedBox(width: 4), const WindowButtons()],
-        ],
-      ),
-      pane: fluent.NavigationPane(
-        selected: selected,
-        onChanged: (index) {
-          setState(() {
-            if (index < convCount) {
-              _currentPage = 'chat';
-              chat.selectConversation(index);
-            } else if (index == convCount) {
-              _currentPage = 'settings';
-            } else {
-              _currentPage = 'about';
-            }
-          });
-        },
-        displayMode: fluent.PaneDisplayMode.compact,
-        items: [
-          fluent.PaneItemHeader(header: const Text('对话')),
-          ...conversationItems,
-        ],
-        footerItems: [
-          fluent.PaneItemSeparator(),
-          fluent.PaneItem(
-            icon: const Icon(fluent.FluentIcons.settings),
-            title: const Text('设置'),
-            body: const SettingsPage(),
-          ),
-          fluent.PaneItem(
-            icon: const Icon(fluent.FluentIcons.info),
-            title: const Text('关于'),
-            body: const AboutPage(),
+          // Main content
+          Expanded(
+            child: Row(
+              children: [
+                // NavigationRail + conversation list
+                Container(
+                  width: 260,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? cs.surfaceContainerLow
+                        : cs.surfaceContainerLowest,
+                    border: Border(
+                      right: BorderSide(color: cs.outlineVariant.withAlpha(60)),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Conversation list
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                left: 12,
+                                bottom: 8,
+                                top: 4,
+                              ),
+                              child: Text(
+                                '对话',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurfaceVariant,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            ...chat.conversations.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final conv = entry.value;
+                              final isActive =
+                                  _currentPage == 'chat' &&
+                                  idx == chat.currentIndex;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: ListTile(
+                                  dense: true,
+                                  visualDensity: VisualDensity.compact,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  selected: isActive,
+                                  selectedTileColor: cs.secondaryContainer
+                                      .withAlpha(180),
+                                  leading: Icon(
+                                    isActive
+                                        ? Icons.chat_rounded
+                                        : Icons.chat_outlined,
+                                    size: 18,
+                                    color: isActive
+                                        ? cs.primary
+                                        : cs.onSurfaceVariant,
+                                  ),
+                                  title: Text(
+                                    conv.title,
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: isActive
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
+                                  ),
+                                  trailing: IconButton(
+                                    icon: Icon(
+                                      Icons.close_rounded,
+                                      size: 14,
+                                      color: cs.onSurfaceVariant.withAlpha(120),
+                                    ),
+                                    onPressed: () {
+                                      chat.deleteConversation(idx);
+                                      if (chat.conversations.isEmpty) {
+                                        setState(
+                                          () => _currentPage = 'settings',
+                                        );
+                                      } else {
+                                        setState(() {});
+                                      }
+                                    },
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(
+                                      minWidth: 24,
+                                      minHeight: 24,
+                                    ),
+                                  ),
+                                  onTap: () {
+                                    setState(() {
+                                      _currentPage = 'chat';
+                                      chat.selectConversation(idx);
+                                    });
+                                  },
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                      // Footer nav items
+                      const Divider(height: 1),
+                      ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        selected: _currentPage == 'settings',
+                        selectedTileColor: cs.secondaryContainer.withAlpha(180),
+                        leading: Icon(
+                          _currentPage == 'settings'
+                              ? Icons.settings_rounded
+                              : Icons.settings_outlined,
+                          size: 20,
+                          color: _currentPage == 'settings'
+                              ? cs.primary
+                              : cs.onSurfaceVariant,
+                        ),
+                        title: const Text('设置', style: TextStyle(fontSize: 13)),
+                        onTap: () => setState(() => _currentPage = 'settings'),
+                      ),
+                      ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        selected: _currentPage == 'about',
+                        selectedTileColor: cs.secondaryContainer.withAlpha(180),
+                        leading: Icon(
+                          _currentPage == 'about'
+                              ? Icons.info_rounded
+                              : Icons.info_outline_rounded,
+                          size: 20,
+                          color: _currentPage == 'about'
+                              ? cs.primary
+                              : cs.onSurfaceVariant,
+                        ),
+                        title: const Text('关于', style: TextStyle(fontSize: 13)),
+                        onTap: () => setState(() => _currentPage = 'about'),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+                // Page body
+                Expanded(child: body),
+              ],
+            ),
           ),
         ],
       ),
@@ -845,22 +986,24 @@ class WindowButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = fluent.FluentTheme.of(context);
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
-        fluent.IconButton(
+        IconButton(
           icon: Icon(
-            fluent.FluentIcons.chrome_minimize,
-            size: 12,
-            color: theme.inactiveColor,
+            Icons.minimize_rounded,
+            size: 16,
+            color: cs.onSurfaceVariant,
           ),
           onPressed: () => windowManager.minimize(),
+          visualDensity: VisualDensity.compact,
+          tooltip: '最小化',
         ),
-        fluent.IconButton(
+        IconButton(
           icon: Icon(
-            fluent.FluentIcons.chrome_full_screen,
-            size: 12,
-            color: theme.inactiveColor,
+            Icons.crop_square_rounded,
+            size: 16,
+            color: cs.onSurfaceVariant,
           ),
           onPressed: () async {
             if (await windowManager.isMaximized()) {
@@ -869,14 +1012,14 @@ class WindowButtons extends StatelessWidget {
               windowManager.maximize();
             }
           },
+          visualDensity: VisualDensity.compact,
+          tooltip: '最大化',
         ),
-        fluent.IconButton(
-          icon: Icon(
-            fluent.FluentIcons.chrome_close,
-            size: 12,
-            color: theme.inactiveColor,
-          ),
+        IconButton(
+          icon: Icon(Icons.close_rounded, size: 16, color: cs.onSurfaceVariant),
           onPressed: () => windowManager.close(),
+          visualDensity: VisualDensity.compact,
+          tooltip: '关闭',
         ),
       ],
     );

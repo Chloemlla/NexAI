@@ -1,4 +1,3 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -98,42 +97,22 @@ class _ChatPageState extends State<ChatPage> {
     final settings = context.read<SettingsProvider>();
     if (!settings.isConfigured) {
       if (!mounted) return;
-      if (isAndroid) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-                SizedBox(width: 10),
-                Expanded(child: Text('请在设置中配置您的 API 密钥。')),
-              ],
-            ),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(child: Text('请在设置中配置您的 API 密钥。')),
+            ],
           ),
-        );
-      } else {
-        fluent.displayInfoBar(
-          context,
-          builder: (ctx, close) {
-            return fluent.InfoBar(
-              title: const Text('请在设置中配置您的 API 密钥。'),
-              severity: fluent.InfoBarSeverity.warning,
-              action: fluent.IconButton(
-                icon: const Icon(fluent.FluentIcons.clear),
-                onPressed: close,
-              ),
-            );
-          },
-        );
-      }
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        ),
+      );
       return;
     }
 
@@ -1353,10 +1332,10 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // ─── Desktop: Fluent UI ───
+  // ─── Desktop: Material Design ───
   Widget _buildDesktop(BuildContext context) {
     final chat = context.watch<ChatProvider>();
-    final theme = fluent.FluentTheme.of(context);
+    final cs = Theme.of(context).colorScheme;
     final messages = chat.messages;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
@@ -1377,14 +1356,24 @@ class _ChatPageState extends State<ChatPage> {
                   itemCount: messages.length + (chat.isLoading ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == messages.length && chat.isLoading) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         child: Row(
                           children: [
-                            SizedBox(width: 48),
-                            fluent.ProgressRing(strokeWidth: 2),
-                            SizedBox(width: 12),
-                            Text('思考中...'),
+                            const SizedBox(width: 48),
+                            SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: cs.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '思考中...',
+                              style: TextStyle(color: cs.onSurfaceVariant),
+                            ),
                           ],
                         ),
                       );
@@ -1403,9 +1392,9 @@ class _ChatPageState extends State<ChatPage> {
         ),
         Container(
           decoration: BoxDecoration(
-            color: theme.micaBackgroundColor.withAlpha((0.8 * 255).round()),
+            color: cs.surfaceContainerLow,
             border: Border(
-              top: BorderSide(color: theme.resources.dividerStrokeColorDefault),
+              top: BorderSide(color: cs.outlineVariant.withAlpha(80)),
             ),
           ),
           padding: EdgeInsets.fromLTRB(24, 12, 24, 12 + bottomPadding),
@@ -1413,33 +1402,56 @@ class _ChatPageState extends State<ChatPage> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Expanded(
-                child: fluent.TextBox(
+                child: TextField(
                   controller: _controller,
                   focusNode: _focusNode,
-                  placeholder: '输入您的消息...',
+                  decoration: InputDecoration(
+                    hintText: '输入您的消息...',
+                    filled: true,
+                    fillColor: cs.surfaceContainerHighest.withAlpha(200),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: cs.outlineVariant.withAlpha(80),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: cs.primary.withAlpha(100),
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
                   maxLines: 6,
                   minLines: 1,
                   onSubmitted: (_) => _send(),
                   style: const TextStyle(fontSize: 14),
-                  decoration: WidgetStatePropertyAll(
-                    BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.resources.dividerStrokeColorDefault,
-                      ),
-                    ),
-                  ),
                 ),
               ),
               const SizedBox(width: 8),
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
-                child: fluent.FilledButton(
+                child: FilledButton(
                   onPressed: chat.isLoading ? null : _send,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    child: Icon(fluent.FluentIcons.send, size: 16),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  child: const Icon(Icons.send_rounded, size: 18),
                 ),
               ),
             ],

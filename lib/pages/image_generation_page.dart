@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
 
-import '../main.dart' show isAndroid;
 import '../providers/image_generation_provider.dart';
 import '../providers/settings_provider.dart';
 
@@ -89,43 +87,26 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
   void _showError(String message) {
     if (!mounted) return;
-    if (isAndroid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white, size: 20),
-              const SizedBox(width: 10),
-              Expanded(child: Text(message)),
-            ],
-          ),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
         ),
-      );
-    } else {
-      fluent.displayInfoBar(
-        context,
-        builder: (ctx, close) {
-          return fluent.InfoBar(
-            title: Text(message),
-            severity: fluent.InfoBarSeverity.error,
-            action: fluent.IconButton(
-              icon: const Icon(fluent.FluentIcons.clear),
-              onPressed: close,
-            ),
-          );
-        },
-      );
-    }
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isAndroid) return _buildAndroid(context);
-    return _buildDesktop(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth > 800) return _buildDesktop(context);
+    return _buildAndroid(context);
   }
 
   Widget _buildAndroid(BuildContext context) {
@@ -395,7 +376,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
   Widget _buildDesktop(BuildContext context) {
     final provider = context.watch<ImageGenerationProvider>();
-    final theme = fluent.FluentTheme.of(context);
+    final cs = Theme.of(context).colorScheme;
 
     return Row(
       children: [
@@ -404,50 +385,57 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
           width: 350,
           child: Container(
             decoration: BoxDecoration(
-              color: theme.micaBackgroundColor,
+              color: cs.surfaceContainerLow,
               border: Border(
-                right: BorderSide(
-                  color: theme.resources.dividerStrokeColorDefault,
-                ),
+                right: BorderSide(color: cs.outlineVariant.withAlpha(80)),
               ),
             ),
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '图片生成',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 20),
 
                 // Mode selector
-                fluent.ComboBox<ImageGenerationMode>(
-                  value: _mode,
-                  items: const [
-                    fluent.ComboBoxItem(
+                SegmentedButton<ImageGenerationMode>(
+                  segments: const [
+                    ButtonSegment(
                       value: ImageGenerationMode.chat,
-                      child: Text('对话模式'),
+                      label: Text('对话'),
                     ),
-                    fluent.ComboBoxItem(
+                    ButtonSegment(
                       value: ImageGenerationMode.generation,
-                      child: Text('生成模式'),
+                      label: Text('生成'),
                     ),
-                    fluent.ComboBoxItem(
+                    ButtonSegment(
                       value: ImageGenerationMode.edit,
-                      child: Text('编辑模式'),
+                      label: Text('编辑'),
                     ),
                   ],
-                  onChanged: (value) => setState(() => _mode = value!),
+                  selected: {_mode},
+                  onSelectionChanged: (newSelection) {
+                    setState(() => _mode = newSelection.first);
+                  },
                 ),
                 const SizedBox(height: 16),
 
                 if (_mode != ImageGenerationMode.chat) ...[
-                  fluent.InfoLabel(
-                    label: '模型',
-                    child: fluent.TextBox(
-                      controller: _modelController,
-                      placeholder: '模型',
+                  TextField(
+                    controller: _modelController,
+                    decoration: InputDecoration(
+                      labelText: '模型',
+                      hintText: 'flux.1-kontext-dev',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -455,39 +443,78 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
                 if (_mode == ImageGenerationMode.edit ||
                     _mode == ImageGenerationMode.chat) ...[
-                  fluent.InfoLabel(
-                    label: _mode == ImageGenerationMode.edit
-                        ? '图片 URL *'
-                        : '图片 URL (可选)',
-                    child: fluent.TextBox(
-                      controller: _imageUrlController,
-                      placeholder: '图片 URL',
+                  TextField(
+                    controller: _imageUrlController,
+                    decoration: InputDecoration(
+                      labelText: _mode == ImageGenerationMode.edit
+                          ? '图片 URL *'
+                          : '图片 URL (可选)',
+                      hintText: 'https://...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                fluent.InfoLabel(
-                  label: '提示词',
-                  child: fluent.TextBox(
-                    controller: _promptController,
-                    placeholder: '提示词',
-                    maxLines: 4,
+                TextField(
+                  controller: _promptController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: '提示词',
+                    hintText: _mode == ImageGenerationMode.chat
+                        ? '帮我画一只宇航猫在月球漫步[1024:1024]'
+                        : 'a cat on the moon',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                fluent.FilledButton(
-                  onPressed: provider.isLoading ? null : _generate,
-                  child: Text(provider.isLoading ? '生成中...' : '生成图片'),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: provider.isLoading ? null : _generate,
+                    icon: provider.isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.auto_awesome),
+                    label: Text(provider.isLoading ? '生成中...' : '生成图片'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
                 ),
 
                 if (provider.error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
-                    child: fluent.InfoBar(
-                      title: Text(provider.error!),
-                      severity: fluent.InfoBarSeverity.error,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: cs.errorContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline, color: cs.error, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              provider.error!,
+                              style: TextStyle(color: cs.onErrorContainer),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],
@@ -498,7 +525,19 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         // Right panel - gallery
         Expanded(
           child: provider.images.isEmpty
-              ? const Center(child: Text('还没有生成图片'))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image_outlined, size: 64, color: cs.outline),
+                      const SizedBox(height: 16),
+                      Text(
+                        '还没有生成图片',
+                        style: TextStyle(color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                )
               : GridView.builder(
                   padding: const EdgeInsets.all(20),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -510,24 +549,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                   itemCount: provider.images.length,
                   itemBuilder: (context, index) {
                     final image = provider.images[index];
-                    return fluent.Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: Image.network(image.url, fit: BoxFit.cover),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Text(
-                              image.prompt,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
+                    return _buildImageCard(context, image, index);
                   },
                 ),
         ),

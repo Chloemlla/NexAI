@@ -122,7 +122,7 @@ jobs:
           echo "=== Renamed APK files ==="
           ls -lh build/app/outputs/flutter-apk/NexAI_android_*.apk
 
-          - name: Automatic release
+      - name: Automatic release
         if: success()
         uses: softprops/action-gh-release@master
         with:

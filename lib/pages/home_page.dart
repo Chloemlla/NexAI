@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import '../main.dart' show isDesktop, isAndroid;
 import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
+import '../providers/settings_provider.dart';
 import '../utils/update_checker.dart';
 import '../utils/navigation_helper.dart';
 import 'chat_page.dart';

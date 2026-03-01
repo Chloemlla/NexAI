@@ -270,7 +270,7 @@ class _M3Footer extends StatelessWidget {
         ],
         _footerIcon(Icons.ios_share_rounded, () => _showShareMenu(context, cs), cs),
         if (!isUser)
-          _footerIcon(Icons.note_add_outlined, () => _showNotesDialog(context), cs),
+          _footerIcon(Icons.note_add_outlined, () => _showSaveToNoteSheet(context), cs),
       ],
     );
   }
@@ -301,7 +301,7 @@ class _M3Footer extends StatelessWidget {
           _shareTile(Icons.image_outlined, '导出为图片 (PNG)', () => _exportImage(context)),
           const Divider(height: 1),
           _shareTile(Icons.share_outlined, '分享到 ShareGPT', () => _shareToShareGPT(context)),
-          _shareTile(Icons.artifact_outlined, '生成独立分享页面 (Artifacts)', () => _generateArtifact(context)),
+          _shareTile(Icons.open_in_new_rounded, '生成独立分享页面 (Artifacts)', () => _generateArtifact(context)),
           const SizedBox(height: 12),
         ],
       ),
@@ -399,44 +399,6 @@ class _M3Footer extends StatelessWidget {
   void _generateArtifact(BuildContext context) {
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Artifacts 页面已生成 (演示)')));
-  }
-                Clipboard.setData(ClipboardData(text: message.content));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Row(
-                      children: [
-                        Icon(Icons.check_circle_outline_rounded, size: 18, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text('Copied to clipboard'),
-                      ],
-                    ),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.copy_rounded, size: 14, color: cs.outline.withAlpha(180)),
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => _showSaveToNoteSheet(context),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(Icons.note_add_outlined, size: 14, color: cs.outline.withAlpha(180)),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
   }
 
   void _showEditDialog(BuildContext context) {

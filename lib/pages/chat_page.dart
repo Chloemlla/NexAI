@@ -8,6 +8,7 @@ import '../providers/settings_provider.dart';
 import '../providers/image_generation_provider.dart';
 import '../utils/navigation_helper.dart';
 import '../widgets/message_bubble.dart';
+import '../widgets/rich_content_view.dart';
 import '../widgets/welcome_view.dart';
 
 class ChatPage extends StatefulWidget {

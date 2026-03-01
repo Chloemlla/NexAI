@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../main.dart' show isAndroid;
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
+import '../providers/settings_provider.dart';
 import '../pages/note_detail_page.dart';
 import 'flowchart/flowchart_widget.dart';
 

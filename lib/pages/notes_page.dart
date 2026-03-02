@@ -1051,6 +1051,7 @@ class _NoteCard extends StatelessWidget {
                               fontSize: 16,
                               color: cs.onSurface,
                               letterSpacing: 0.15,
+                              height: 1.4,
                             ),
                           )
                         : _HighlightText(
@@ -1061,6 +1062,7 @@ class _NoteCard extends StatelessWidget {
                               fontSize: 16,
                               color: cs.onSurface,
                               letterSpacing: 0.15,
+                              height: 1.4,
                             ),
                             highlightColor: cs.primary.withAlpha(80),
                           ),

@@ -68,29 +68,40 @@ jobs:
 
       - name: Write signing config
         run: |
+          # Ensure gradle.properties has Unix line endings
+          if [ -f "android/gradle.properties" ]; then
+            sed -i 's/\r$//' android/gradle.properties
+            # Ensure file ends with newline
+            [ -n "$(tail -c1 android/gradle.properties)" ] && echo "" >> android/gradle.properties
+          fi
+
           if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "⚠️ Warning: KEYSTORE_BASE64 secret not set, using debug signing"
-            echo "NEXAI_USE_DEBUG_SIGNING=true" >> android/gradle.properties
+            printf 'NEXAI_USE_DEBUG_SIGNING=true\n' >> android/gradle.properties
           else
             echo "✓ Decoding keystore from secret..."
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks || {
               echo "❌ Error: Failed to decode KEYSTORE_BASE64, using debug signing"
-              echo "NEXAI_USE_DEBUG_SIGNING=true" >> android/gradle.properties
+              printf 'NEXAI_USE_DEBUG_SIGNING=true\n' >> android/gradle.properties
               exit 0
             }
             
             if [ -f "${{ github.workspace }}/nexai.jks" ]; then
               echo "✓ Keystore file created successfully"
-              echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> android/gradle.properties
-              echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
-              echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
-              echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+              printf 'NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks\n' >> android/gradle.properties
+              printf 'NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}\n' >> android/gradle.properties
+              printf 'NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}\n' >> android/gradle.properties
+              printf 'NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}\n' >> android/gradle.properties
               echo "✓ Release signing configured"
             else
               echo "❌ Error: Keystore file not created, using debug signing"
-              echo "NEXAI_USE_DEBUG_SIGNING=true" >> android/gradle.properties
+              printf 'NEXAI_USE_DEBUG_SIGNING=true\n' >> android/gradle.properties
             fi
           fi
+
+          echo "=== gradle.properties content (masked) ==="
+          grep -v "PASSWORD\|ALIAS" android/gradle.properties || true
+          echo "Has NEXAI_STORE_FILE: $(grep -c 'NEXAI_STORE_FILE' android/gradle.properties)"
 
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true

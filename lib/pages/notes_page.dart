@@ -1052,8 +1052,6 @@ class _NoteCard extends StatelessWidget {
                               color: cs.onSurface,
                               letterSpacing: 0.15,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           )
                         : _HighlightText(
                             text: note.title,

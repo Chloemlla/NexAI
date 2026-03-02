@@ -515,7 +515,7 @@ class NotesProvider extends ChangeNotifier {
             {
               'role': 'user',
               'content':
-                  'Generate a concise title for this note:\n\n$contentPreview',
+                  'Generate a concise title for this note:\n\n$contentPreview. Output only plain text, no more than 10 characters, without any markdown identifiers.',
             },
           ],
           'temperature': 0.7,

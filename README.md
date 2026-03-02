@@ -4,7 +4,7 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.41-blue?logo=flutter)
 ![Version](https://img.shields.io/badge/Version-1.0.7-orange)
-![License](https://img.shields.io/badge/License-MIT-green)
+![License](https://img.shields.io/badge/License-GPL3.0-green)
 ![Platforms](https://img.shields.io/badge/Platforms-Windows%20%7C%20Android%20%7C%20Web-blueviolet)
 
 ## Features
@@ -154,4 +154,4 @@ lib/
 
 ## License
 
-MIT
+GPL-3.0 license

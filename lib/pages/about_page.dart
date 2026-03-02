@@ -116,7 +116,7 @@ class _AboutPageState extends State<AboutPage> {
                           ),
                           const SizedBox(width: 8),
                           _Badge(
-                            label: 'MIT',
+                            label: 'GPL-3.0 license',
                             bg: cs.tertiaryContainer,
                             fg: cs.onTertiaryContainer,
                           ),
@@ -188,7 +188,7 @@ class _AboutPageState extends State<AboutPage> {
                 _m3Section(cs, tt, Icons.info_outline_rounded, '应用信息', [
                   _m3InfoRow(cs, '版本', _version.isNotEmpty ? _version : '...'),
                   const SizedBox(height: 8),
-                  _m3InfoRow(cs, '许可证', 'MIT'),
+                  _m3InfoRow(cs, '许可证', 'GPL-3.0 license'),
                   const SizedBox(height: 8),
                   _m3InfoRow(cs, '框架', 'Flutter'),
                 ]),

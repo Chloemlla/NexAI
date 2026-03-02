@@ -10,7 +10,7 @@ import '../pages/note_detail_page.dart';
 import 'flowchart/flowchart_widget.dart';
 
 // Pre-compiled regex — avoids recompilation per build
-final _cePattern = RegExp(r'\\ce\{([^}]+)\}');
+final _cePattern = RegExp(r'\$?\s*\\ce\{([^}]+)\}\s*\$?');
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
 final _chargePattern = RegExp(r'(\d*[+-])(?!\})');
 final _mermaidBlockPattern = RegExp(
@@ -144,6 +144,7 @@ class _MarkdownWidget extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 720),
         child: GptMarkdown(
           processed,
+          useDollarSignsForLatex: true,
           style: TextStyle(
             fontSize: settings.fontSize,
             fontFamily: settings.fontFamily == 'System'
@@ -170,7 +171,7 @@ class _MarkdownWidget extends StatelessWidget {
   static String _preprocessChemical(String text) {
     return text.replaceAllMapped(_cePattern, (m) {
       final converted = _convertChemical(m.group(1)!);
-      return '\$\\text{} $converted\$';
+      return '\$ $converted \$';
     });
   }
 

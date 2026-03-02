@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../providers/settings_provider.dart';
+import '../providers/auth_provider.dart';
 import '../utils/update_checker.dart';
 import 'about_page.dart';
+import 'login_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -208,6 +210,17 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                // ── Account ──
+                _SectionHeader(
+                  icon: Icons.account_circle_outlined,
+                  label: '账号',
+                  cs: cs,
+                  tt: tt,
+                ),
+                const SizedBox(height: 10),
+                _buildAccountCard(context, cs, tt),
+                const SizedBox(height: 20),
+
                 // ── API Configuration ──
                 _SectionHeader(
                   icon: Icons.cloud_outlined,
@@ -969,6 +982,245 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAccountCard(BuildContext context, ColorScheme cs, TextTheme tt) {
+    final auth = context.watch<AuthProvider>();
+
+    if (auth.isLoading && !auth.initialized) {
+      return _SettingsCard(
+        cs: cs,
+        children: [
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (auth.isLoggedIn && auth.currentUser != null) {
+      final user = auth.currentUser!;
+      return _SettingsCard(
+        cs: cs,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: cs.primaryContainer,
+                backgroundImage: user.avatarUrl != null
+                    ? NetworkImage(user.avatarUrl!)
+                    : null,
+                child: user.avatarUrl == null
+                    ? Text(
+                        (user.displayName.isNotEmpty
+                                ? user.displayName[0]
+                                : user.username[0])
+                            .toUpperCase(),
+                        style: TextStyle(
+                          color: cs.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.displayName,
+                      style: tt.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      user.email,
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              // Provider badges
+              if (user.hasGoogle)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Icon(
+                    Icons.g_mobiledata_rounded,
+                    size: 22,
+                    color: cs.primary,
+                  ),
+                ),
+              if (user.hasGithub)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Icon(Icons.code_rounded, size: 18, color: cs.primary),
+                ),
+            ],
+          ),
+          const Divider(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        icon: Icon(Icons.logout_rounded, color: cs.error),
+                        title: const Text('退出登录'),
+                        content: const Text('确定要退出登录吗？'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('取消'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: cs.error,
+                            ),
+                            child: const Text('退出'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true) {
+                      await auth.logout();
+                    }
+                  },
+                  icon: Icon(Icons.logout_rounded, size: 18, color: cs.error),
+                  label: Text('退出登录', style: TextStyle(color: cs.error)),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: cs.error.withAlpha(120)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    // Not logged in — show login prompt
+    return _SettingsCard(
+      cs: cs,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cs.primary, cs.tertiary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(Icons.person_rounded, color: cs.onPrimary, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '登录 NexAI',
+                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '同步数据，解锁更多功能',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const LoginPage()));
+          },
+          icon: const Icon(Icons.login_rounded, size: 18),
+          label: const Text('登录 / 注册'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(double.infinity, 48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        if (auth.googleEnabled) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            onPressed: auth.isLoading
+                ? null
+                : () async {
+                    final success = await auth.signInWithGoogle();
+                    if (success && context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('登录成功')));
+                    } else if (auth.error != null && context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(auth.error!)));
+                    }
+                  },
+            icon: Icon(
+              Icons.g_mobiledata_rounded,
+              size: 24,
+              color: auth.isLoading ? cs.outline : Colors.red,
+            ),
+            label: const Text('使用 Google 快速登录'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+              side: BorderSide(color: cs.outlineVariant),
+            ),
+          ),
+        ],
+        if (auth.error != null) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: cs.errorContainer.withAlpha(80),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, size: 16, color: cs.error),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    auth.error!,
+                    style: TextStyle(fontSize: 12, color: cs.error),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 

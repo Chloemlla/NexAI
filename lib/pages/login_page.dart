@@ -196,17 +196,16 @@ class _LoginPageState extends State<LoginPage>
                   ),
                   const SizedBox(height: 16),
 
-                  // OAuth buttons
-                  if (auth.googleEnabled)
-                    _buildOAuthButton(
-                      label: '使用 Google 登录',
-                      icon: Icons.g_mobiledata_rounded,
-                      iconColor: Colors.red,
-                      onPressed: auth.isLoading
-                          ? null
-                          : () => _handleGoogleSignIn(auth),
-                      colorScheme: colorScheme,
-                    ),
+                  // OAuth buttons — Google Sign-In 始终可用（Android SDK）
+                  _buildOAuthButton(
+                    label: '使用 Google 登录',
+                    icon: Icons.g_mobiledata_rounded,
+                    iconColor: Colors.red,
+                    onPressed: auth.isLoading
+                        ? null
+                        : () => _handleGoogleSignIn(auth),
+                    colorScheme: colorScheme,
+                  ),
                   const SizedBox(height: 32),
                 ],
               ),

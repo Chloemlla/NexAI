@@ -77,7 +77,6 @@ class _MessageBubbleState extends State<MessageBubble> {
                       'assets/icon.png',
                       width: isWide ? 18 : 14,
                       height: isWide ? 18 : 14,
-                      color: cs.onPrimary,
                     ),
                   ),
                 ),

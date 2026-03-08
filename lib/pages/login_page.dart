@@ -70,12 +70,7 @@ class _LoginPageState extends State<LoginPage>
                   const SizedBox(height: 32),
 
                   // Logo & Title
-                  Image.asset(
-                    'assets/icon.png',
-                    width: 64,
-                    height: 64,
-                    color: colorScheme.primary,
-                  ),
+                  Image.asset('assets/icon.png', width: 64, height: 64),
                   const SizedBox(height: 16),
                   Text(
                     'NexAI',

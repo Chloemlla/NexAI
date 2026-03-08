@@ -94,7 +94,6 @@ class _AboutPageState extends State<AboutPage> {
                             'assets/icon.png',
                             width: 38,
                             height: 38,
-                            color: cs.onPrimary,
                           ),
                         ),
                       ),

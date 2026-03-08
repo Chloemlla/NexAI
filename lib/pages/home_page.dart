@@ -117,7 +117,6 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                 'assets/icon.png',
                                 width: 18,
                                 height: 18,
-                                color: cs.onPrimary,
                               )
                             : Icon(
                                 _androidNavIndex == 1
@@ -757,12 +756,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
-              child: Image.asset(
-                'assets/icon.png',
-                width: 16,
-                height: 16,
-                color: cs.onPrimary,
-              ),
+              child: Image.asset('assets/icon.png', width: 16, height: 16),
             ),
           ),
           const SizedBox(width: 10),

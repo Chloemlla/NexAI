@@ -1390,7 +1390,6 @@ class _SettingsPageState extends State<SettingsPage> {
                             'assets/icon.png',
                             width: 20,
                             height: 20,
-                            color: cs.onPrimary,
                           ),
                         ),
                       ),

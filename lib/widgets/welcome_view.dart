@@ -39,12 +39,7 @@ class WelcomeView extends StatelessWidget {
                 ],
               ),
               child: Center(
-                child: Image.asset(
-                  'assets/icon.png',
-                  width: 40,
-                  height: 40,
-                  color: cs.onPrimary,
-                ),
+                child: Image.asset('assets/icon.png', width: 40, height: 40),
               ),
             ),
             const SizedBox(height: 28),

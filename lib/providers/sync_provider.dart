@@ -1,6 +1,7 @@
 /// NexAI Cloud Sync Provider
 /// Orchestrates syncing local data to/from the cloud backend
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/nexai_sync_service.dart';
 import 'auth_provider.dart';
@@ -64,6 +65,7 @@ class SyncProvider extends ChangeNotifier {
       if (success) {
         _status = SyncStatus.success;
         _lastSyncedAt = DateTime.now();
+        await _saveLastSyncedAt(_lastSyncedAt!.toIso8601String());
       } else {
         _status = SyncStatus.error;
         _errorMessage = '上传失败';
@@ -191,6 +193,332 @@ class SyncProvider extends ChangeNotifier {
     _status = SyncStatus.idle;
     _errorMessage = null;
     notifyListeners();
+  }
+
+  // ── 持久化 lastSyncedAt ──
+
+  static const _lastSyncKey = 'nexai_last_synced_at';
+
+  Future<String?> _getSavedLastSyncedAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastSyncKey);
+  }
+
+  Future<void> _saveLastSyncedAt(String isoTime) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastSyncKey, isoTime);
+    _lastSyncedAt = DateTime.parse(isoTime);
+  }
+
+  /// 加载本地保存的同步时间
+  Future<void> loadLastSyncedAt() async {
+    final saved = await _getSavedLastSyncedAt();
+    if (saved != null) {
+      _lastSyncedAt = DateTime.tryParse(saved);
+      notifyListeners();
+    }
+  }
+
+  // ── 增量同步 ──
+
+  /// 增量同步：只上传变更的条目，合并服务端变更
+  Future<bool> incrementalSync({
+    required AuthProvider authProvider,
+    required SettingsProvider settingsProvider,
+    required ChatProvider chatProvider,
+    required NotesProvider notesProvider,
+    required PasswordProvider passwordProvider,
+    required TranslationProvider translationProvider,
+    required ShortUrlProvider shortUrlProvider,
+  }) async {
+    if (authProvider.accessToken == null) {
+      _errorMessage = '请先登录';
+      _status = SyncStatus.error;
+      notifyListeners();
+      return false;
+    }
+
+    _status = SyncStatus.uploading;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final savedSince = await _getSavedLastSyncedAt();
+      // 如果从未同步过，退回到全量上传
+      if (savedSince == null) {
+        debugPrint(
+          'NexAI Sync: no lastSyncedAt found, falling back to full upload',
+        );
+        return await uploadAll(
+          authProvider: authProvider,
+          settingsProvider: settingsProvider,
+          chatProvider: chatProvider,
+          notesProvider: notesProvider,
+          passwordProvider: passwordProvider,
+          translationProvider: translationProvider,
+          shortUrlProvider: shortUrlProvider,
+        );
+      }
+
+      // 收集本地自 lastSyncedAt 以来变更的条目
+      final changedData = _collectChangedData(
+        since: savedSince,
+        settingsProvider: settingsProvider,
+        chatProvider: chatProvider,
+        notesProvider: notesProvider,
+        passwordProvider: passwordProvider,
+        translationProvider: translationProvider,
+        shortUrlProvider: shortUrlProvider,
+      );
+
+      // 发送到服务端，获取服务端变更
+      final serverChanges = await NexaiSyncApi.postIncrementalSync(
+        accessToken: authProvider.accessToken!,
+        lastSyncedAt: savedSince,
+        data: changedData,
+      );
+
+      if (serverChanges == null) {
+        _status = SyncStatus.error;
+        _errorMessage = '增量同步失败';
+        notifyListeners();
+        return false;
+      }
+
+      // 合并服务端返回的变更到本地
+      await _mergeServerChanges(
+        changes: serverChanges,
+        settingsProvider: settingsProvider,
+        chatProvider: chatProvider,
+        notesProvider: notesProvider,
+        passwordProvider: passwordProvider,
+        translationProvider: translationProvider,
+        shortUrlProvider: shortUrlProvider,
+      );
+
+      // 保存 serverTime 作为新的 lastSyncedAt
+      final serverTime = serverChanges['serverTime'] as String?;
+      if (serverTime != null) {
+        await _saveLastSyncedAt(serverTime);
+      }
+
+      _status = SyncStatus.success;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = SyncStatus.error;
+      _errorMessage = '增量同步失败: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ── 内部: 收集自 since 以来变更的数据 ──
+
+  Map<String, dynamic> _collectChangedData({
+    required String since,
+    required SettingsProvider settingsProvider,
+    required ChatProvider chatProvider,
+    required NotesProvider notesProvider,
+    required PasswordProvider passwordProvider,
+    required TranslationProvider translationProvider,
+    required ShortUrlProvider shortUrlProvider,
+  }) {
+    final result = <String, dynamic>{};
+
+    // 笔记：按 updatedAt 过滤
+    final changedNotes = notesProvider.notes
+        .where((n) => n.updatedAt.toIso8601String().compareTo(since) > 0)
+        .map((n) => n.toJson())
+        .toList();
+    if (changedNotes.isNotEmpty) result['notes'] = changedNotes;
+
+    // 对话：按最后消息时间过滤
+    final changedConvs = chatProvider.conversations
+        .where((c) {
+          final lastMsg = c.messages.isNotEmpty
+              ? c.messages.last.timestamp
+              : c.createdAt;
+          return lastMsg.toIso8601String().compareTo(since) > 0;
+        })
+        .map((c) {
+          final json = c.toJson();
+          // 确保 conversation 有 updatedAt
+          json['updatedAt'] = c.messages.isNotEmpty
+              ? c.messages.last.timestamp.toIso8601String()
+              : c.createdAt.toIso8601String();
+          return json;
+        })
+        .toList();
+    if (changedConvs.isNotEmpty) result['conversations'] = changedConvs;
+
+    // 翻译历史：按 createdAt 过滤（翻译记录创建后不变）
+    final changedTrans = translationProvider.history
+        .where((t) => t.createdAt.toIso8601String().compareTo(since) > 0)
+        .map((t) {
+          final json = t.toJson();
+          json['updatedAt'] = json['createdAt']; // 补充 updatedAt
+          return json;
+        })
+        .toList();
+    if (changedTrans.isNotEmpty) result['translationHistory'] = changedTrans;
+
+    // 保存的密码：按 createdAt 过滤
+    final changedPasswords = passwordProvider.passwords
+        .where((p) {
+          final json = p.toJson();
+          final ts = json['createdAt'] as String? ?? '';
+          return ts.compareTo(since) > 0;
+        })
+        .map((p) {
+          final json = p.toJson();
+          json['updatedAt'] = json['createdAt']; // 补充 updatedAt
+          return json;
+        })
+        .toList();
+    if (changedPasswords.isNotEmpty)
+      result['savedPasswords'] = changedPasswords;
+
+    // 短链接：按 createdAt 过滤
+    final changedUrls = shortUrlProvider.history
+        .where((u) => u.createdAt.toIso8601String().compareTo(since) > 0)
+        .map((u) {
+          final json = u.toJson();
+          json['updatedAt'] = json['createdAt']; // 补充 updatedAt
+          return json;
+        })
+        .toList();
+    if (changedUrls.isNotEmpty) result['shortUrls'] = changedUrls;
+
+    // Settings: 设置变更比较复杂，简单起见每次都带上
+    result['settings'] = _collectSettings(settingsProvider);
+    result['settingsUpdatedAt'] = DateTime.now().toIso8601String();
+
+    return result;
+  }
+
+  Map<String, dynamic> _collectSettings(SettingsProvider s) {
+    return {
+      'baseUrl': s.baseUrl,
+      'apiKey': s.apiKey,
+      'models': s.models.join(','),
+      'selectedModel': s.selectedModel,
+      'themeMode': s.themeMode.name,
+      'temperature': s.temperature,
+      'maxTokens': s.maxTokens,
+      'systemPrompt': s.systemPrompt,
+      'accentColorValue': s.accentColorValue,
+      'fontSize': s.fontSize,
+      'fontFamily': s.fontFamily,
+      'borderlessMode': s.borderlessMode,
+      'fullScreenMode': s.fullScreenMode,
+      'smartAutoScroll': s.smartAutoScroll,
+      'syncEnabled': s.syncEnabled,
+      'syncMethod': s.syncMethod,
+      'webdavServer': s.webdavServer,
+      'webdavUser': s.webdavUser,
+      'webdavPassword': s.webdavPassword,
+      'upstashUrl': s.upstashUrl,
+      'upstashToken': s.upstashToken,
+      'vertexApiKey': s.vertexApiKey,
+      'apiMode': s.apiMode,
+      'vertexProjectId': s.vertexProjectId,
+      'vertexLocation': s.vertexLocation,
+      'notesAutoSave': s.notesAutoSave,
+      'aiTitleGeneration': s.aiTitleGeneration,
+    };
+  }
+
+  // ── 内部: 合并服务端返回的变更 ──
+
+  Future<void> _mergeServerChanges({
+    required Map<String, dynamic> changes,
+    required SettingsProvider settingsProvider,
+    required ChatProvider chatProvider,
+    required NotesProvider notesProvider,
+    required PasswordProvider passwordProvider,
+    required TranslationProvider translationProvider,
+    required ShortUrlProvider shortUrlProvider,
+  }) async {
+    // 合并 settings
+    if (changes['settings'] is Map<String, dynamic>) {
+      await _restoreSettings(changes['settings'], settingsProvider);
+    }
+
+    // 合并笔记（服务端版本更新的条目）
+    if (changes['notes'] is List && (changes['notes'] as List).isNotEmpty) {
+      await notesProvider.mergeItems(changes['notes'] as List);
+    }
+
+    // 合并对话
+    if (changes['conversations'] is List &&
+        (changes['conversations'] as List).isNotEmpty) {
+      await chatProvider.mergeItems(changes['conversations'] as List);
+    }
+
+    // 合并翻译历史
+    if (changes['translationHistory'] is List &&
+        (changes['translationHistory'] as List).isNotEmpty) {
+      await translationProvider.mergeItems(
+        changes['translationHistory'] as List,
+      );
+    }
+
+    // 合并密码
+    if (changes['savedPasswords'] is List &&
+        (changes['savedPasswords'] as List).isNotEmpty) {
+      await passwordProvider.mergeItems(changes['savedPasswords'] as List);
+    }
+
+    // 合并短链接
+    if (changes['shortUrls'] is List &&
+        (changes['shortUrls'] as List).isNotEmpty) {
+      await shortUrlProvider.mergeItems(changes['shortUrls'] as List);
+    }
+  }
+
+  Future<void> _restoreSettings(
+    Map<String, dynamic> s,
+    SettingsProvider sp,
+  ) async {
+    if (s['baseUrl'] != null) await sp.setBaseUrl(s['baseUrl']);
+    if (s['apiKey'] != null) await sp.setApiKey(s['apiKey']);
+    if (s['models'] != null) await sp.setModels(s['models']);
+    if (s['selectedModel'] != null)
+      await sp.setSelectedModel(s['selectedModel']);
+    if (s['temperature'] != null)
+      await sp.setTemperature((s['temperature'] as num).toDouble());
+    if (s['maxTokens'] != null) await sp.setMaxTokens(s['maxTokens'] as int);
+    if (s['systemPrompt'] != null) await sp.setSystemPrompt(s['systemPrompt']);
+    if (s['fontSize'] != null)
+      await sp.setFontSize((s['fontSize'] as num).toDouble());
+    if (s['fontFamily'] != null) await sp.setFontFamily(s['fontFamily']);
+    if (s['borderlessMode'] != null)
+      await sp.setBorderlessMode(s['borderlessMode']);
+    if (s['fullScreenMode'] != null)
+      await sp.setFullScreenMode(s['fullScreenMode']);
+    if (s['smartAutoScroll'] != null)
+      await sp.setSmartAutoScroll(s['smartAutoScroll']);
+    if (s['vertexApiKey'] != null) await sp.setVertexApiKey(s['vertexApiKey']);
+    if (s['apiMode'] != null) await sp.setApiMode(s['apiMode']);
+    if (s['vertexProjectId'] != null)
+      await sp.setVertexProjectId(s['vertexProjectId']);
+    if (s['vertexLocation'] != null)
+      await sp.setVertexLocation(s['vertexLocation']);
+    if (s['notesAutoSave'] != null)
+      await sp.setNotesAutoSave(s['notesAutoSave']);
+    if (s['aiTitleGeneration'] != null)
+      await sp.setAiTitleGeneration(s['aiTitleGeneration']);
+    if (s.containsKey('accentColorValue'))
+      await sp.setAccentColor(s['accentColorValue'] as int?);
+    if (s['syncEnabled'] != null) await sp.setSyncEnabled(s['syncEnabled']);
+    if (s['syncMethod'] != null) await sp.setSyncMethod(s['syncMethod']);
+    if (s['webdavServer'] != null) await sp.setWebdavServer(s['webdavServer']);
+    if (s['webdavUser'] != null) await sp.setWebdavUser(s['webdavUser']);
+    if (s['webdavPassword'] != null)
+      await sp.setWebdavPassword(s['webdavPassword']);
+    if (s['upstashUrl'] != null) await sp.setUpstashUrl(s['upstashUrl']);
+    if (s['upstashToken'] != null) await sp.setUpstashToken(s['upstashToken']);
   }
 
   // ── 内部: 收集本地数据 ──

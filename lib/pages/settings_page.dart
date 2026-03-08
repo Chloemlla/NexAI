@@ -1013,6 +1013,75 @@ class _SettingsPageState extends State<SettingsPage> {
                             ],
                           ),
                           const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.tonalIcon(
+                              onPressed: sync.isSyncing
+                                  ? null
+                                  : () async {
+                                      final chatProv = ctx.read<ChatProvider>();
+                                      final notesProv = ctx
+                                          .read<NotesProvider>();
+                                      final passProv = ctx
+                                          .read<PasswordProvider>();
+                                      final transProv = ctx
+                                          .read<TranslationProvider>();
+                                      final urlProv = ctx
+                                          .read<ShortUrlProvider>();
+                                      final ok = await sync.incrementalSync(
+                                        authProvider: auth,
+                                        settingsProvider: settings,
+                                        chatProvider: chatProv,
+                                        notesProvider: notesProv,
+                                        passwordProvider: passProv,
+                                        translationProvider: transProv,
+                                        shortUrlProvider: urlProv,
+                                      );
+                                      if (ctx.mounted) {
+                                        ScaffoldMessenger.of(ctx).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              ok ? '✅ 增量同步完成' : '❌ 增量同步失败',
+                                            ),
+                                            behavior: SnackBarBehavior.floating,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            margin: const EdgeInsets.fromLTRB(
+                                              16,
+                                              0,
+                                              16,
+                                              16,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                              icon: sync.isSyncing
+                                  ? SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: cs.primary,
+                                      ),
+                                    )
+                                  : const Icon(Icons.sync_rounded, size: 18),
+                              label: Text(
+                                sync.isSyncing ? '同步中...' : '⚡ 增量同步（仅传输变更）',
+                              ),
+                              style: FilledButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
                           OutlinedButton.icon(
                             onPressed: sync.isSyncing
                                 ? null

@@ -643,6 +643,32 @@ ${safeEncode(e.response!.data)}
     await _save();
   }
 
+  /// 增量合并：按 id upsert 对话
+  Future<void> mergeItems(List<dynamic> list) async {
+    for (final item in list) {
+      final json = item as Map<String, dynamic>;
+      final incoming = Conversation.fromJson(json);
+      final idx = _conversations.indexWhere((c) => c.id == incoming.id);
+      if (idx == -1) {
+        _conversations.insert(0, incoming);
+      } else {
+        // 用最后消息时间判断哪个更新
+        final existingLast = _conversations[idx].messages.isNotEmpty
+            ? _conversations[idx].messages.last.timestamp
+            : _conversations[idx].createdAt;
+        final incomingLast = incoming.messages.isNotEmpty
+            ? incoming.messages.last.timestamp
+            : incoming.createdAt;
+        if (incomingLast.isAfter(existingLast) ||
+            incomingLast == existingLast) {
+          _conversations[idx] = incoming;
+        }
+      }
+    }
+    notifyListeners();
+    await _save();
+  }
+
   @override
   void dispose() {
     _dio.close();

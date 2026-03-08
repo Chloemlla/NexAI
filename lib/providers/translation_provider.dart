@@ -101,6 +101,22 @@ class TranslationProvider extends ChangeNotifier {
     await _save();
   }
 
+  /// 增量合并：按 id upsert
+  Future<void> mergeItems(List<dynamic> list) async {
+    for (final item in list) {
+      final incoming = TranslationRecord.fromJson(item as Map<String, dynamic>);
+      final idx = _history.indexWhere((r) => r.id == incoming.id);
+      if (idx == -1) {
+        _history.insert(0, incoming);
+      } else {
+        _history[idx] = incoming;
+      }
+    }
+    if (_history.length > 200) _history.removeRange(200, _history.length);
+    notifyListeners();
+    await _save();
+  }
+
   List<Map<String, dynamic>> exportToJsonList() {
     return _history.map((e) => e.toJson()).toList();
   }

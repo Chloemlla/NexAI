@@ -571,6 +571,26 @@ class NotesProvider extends ChangeNotifier {
     notifyListeners();
     await _save();
   }
+
+  /// 增量合并：按 id upsert，保留 updatedAt 较新的版本
+  Future<void> mergeItems(List<dynamic> list) async {
+    for (final item in list) {
+      final json = item as Map<String, dynamic>;
+      final incoming = Note.fromJson(json);
+      final idx = _notes.indexWhere((n) => n.id == incoming.id);
+      if (idx == -1) {
+        _notes.add(incoming);
+      } else {
+        if (incoming.updatedAt.isAfter(_notes[idx].updatedAt)) {
+          _notes[idx] = incoming;
+        }
+      }
+    }
+    _notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    _rebuildBacklinks();
+    notifyListeners();
+    await _save();
+  }
 }
 
 class TagInfo {

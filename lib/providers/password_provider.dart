@@ -101,6 +101,21 @@ class PasswordProvider extends ChangeNotifier {
     }
   }
 
+  /// 增量合并：按 id upsert
+  Future<void> mergeItems(List<dynamic> list) async {
+    for (final item in list) {
+      final incoming = SavedPassword.fromJson(item as Map<String, dynamic>);
+      final idx = _passwords.indexWhere((p) => p.id == incoming.id);
+      if (idx == -1) {
+        _passwords.insert(0, incoming);
+      } else {
+        _passwords[idx] = incoming;
+      }
+    }
+    notifyListeners();
+    await _saveToStorage();
+  }
+
   Future<String> createBackup() async {
     final backup = {
       'version': '1.0',

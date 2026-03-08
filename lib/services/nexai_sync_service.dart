@@ -113,4 +113,50 @@ class NexaiSyncApi {
     }
     return null;
   }
+
+  /// GET /sync/changes?since=ISO8601 — 增量拉取变更
+  static Future<Map<String, dynamic>?> getChangesSince({
+    required String accessToken,
+    required String since,
+  }) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/sync/changes?since=${Uri.encodeComponent(since)}'),
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      if (body['success'] == true) {
+        return body['data'] as Map<String, dynamic>?;
+      }
+    }
+    return null;
+  }
+
+  /// POST /sync/incremental — 增量同步（上传本地变更 + 拉取服务端变更）
+  static Future<Map<String, dynamic>?> postIncrementalSync({
+    required String accessToken,
+    required String lastSyncedAt,
+    required Map<String, dynamic> data,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/sync/incremental'),
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'lastSyncedAt': lastSyncedAt, 'data': data}),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      if (body['success'] == true) {
+        return body['data'] as Map<String, dynamic>?;
+      }
+    }
+    return null;
+  }
 }

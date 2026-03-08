@@ -1,5 +1,6 @@
 /// NexAI Cloud Sync Provider
 /// Orchestrates syncing local data to/from the cloud backend
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -680,12 +681,10 @@ class SyncProvider extends ChangeNotifier {
 
     // 恢复密码
     if (data['savedPasswords'] is List) {
-      final passwordsJson = (data['savedPasswords'] as List)
+      final passwordsList = (data['savedPasswords'] as List)
           .map((e) => e as Map<String, dynamic>)
           .toList();
-      await passwordProvider.importFromJson(
-        passwordsJson.map((e) => e).toList().toString(),
-      );
+      await passwordProvider.importFromJson(jsonEncode(passwordsList));
     }
 
     // 恢复短链接

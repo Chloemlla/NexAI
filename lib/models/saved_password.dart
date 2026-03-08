@@ -28,12 +28,16 @@ class SavedPassword {
 
   factory SavedPassword.fromJson(Map<String, dynamic> json) {
     return SavedPassword(
-      id: json['id'] as String,
-      password: json['password'] as String,
-      category: json['category'] as String? ?? '',
-      note: json['note'] as String? ?? '',
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      strength: json['strength'] as int? ?? 0,
+      id: json['id']?.toString() ?? '',
+      password: json['password']?.toString() ?? '',
+      category: json['category']?.toString() ?? '',
+      note: json['note']?.toString() ?? '',
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      strength: json['strength'] is int
+          ? json['strength'] as int
+          : int.tryParse(json['strength']?.toString() ?? '0') ?? 0,
     );
   }
 }

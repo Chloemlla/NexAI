@@ -1662,6 +1662,87 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildPasskeyCard(BuildContext context, ColorScheme cs, TextTheme tt) {
+    final auth = context.watch<AuthProvider>();
+    if (!auth.isLoggedIn || auth.currentUser == null)
+      return const SizedBox.shrink();
+
+    return _SettingsCard(
+      cs: cs,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: cs.secondaryContainer.withAlpha(200),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.fingerprint_rounded,
+                color: cs.secondary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '通行密钥 (Passkeys)',
+                    style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '安全便捷地登录，无需密码',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        FilledButton.tonalIcon(
+          onPressed: auth.isLoading
+              ? null
+              : () async {
+                  final success = await auth.bindPasskey();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          success ? '通行密钥绑定成功' : (auth.error ?? '绑定失败'),
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+          icon: auth.isLoading && auth.error == null
+              ? SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: cs.onSecondaryContainer,
+                  ),
+                )
+              : const Icon(Icons.add_moderator_rounded, size: 18),
+          label: const Text('添加通行密钥'),
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(double.infinity, 44),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _m3ColorChip(
     ColorScheme cs,
     SettingsProvider settings,

@@ -387,6 +387,19 @@ class AuthResponse {
       statusCode: res.statusCode,
     );
   }
+
+  factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    return AuthResponse(
+      success: json['success'] == true,
+      message: json['message'],
+      error: json['error'],
+      user: json['user'] != null ? NexaiUser.fromJson(json['user']) : null,
+      accessToken: json['accessToken'],
+      refreshToken: json['refreshToken'],
+      isNewUser: json['isNewUser'],
+      statusCode: json['statusCode'] ?? 200,
+    );
+  }
 }
 
 class OAuthConfigResponse {
@@ -403,4 +416,14 @@ class OAuthConfigResponse {
     required this.githubEnabled,
     required this.githubClientId,
   });
+
+  factory OAuthConfigResponse.fromJson(Map<String, dynamic> json) {
+    return OAuthConfigResponse(
+      success: json['success'] ?? true,
+      googleEnabled: json['googleEnabled'] == true,
+      googleClientId: json['googleClientId'] ?? '',
+      githubEnabled: json['githubEnabled'] == true,
+      githubClientId: json['githubClientId'] ?? '',
+    );
+  }
 }

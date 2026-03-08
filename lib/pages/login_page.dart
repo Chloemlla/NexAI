@@ -258,12 +258,19 @@ class _LoginPageState extends State<LoginPage>
             onFieldSubmitted: (_) => _handleLogin(auth),
           ),
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => _showForgotPasswordDialog(),
-              child: const Text('忘记密码？'),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton.icon(
+                onPressed: () => _handlePasskeyLogin(auth),
+                icon: const Icon(Icons.fingerprint_rounded, size: 18),
+                label: const Text('Passkey 登录'),
+              ),
+              TextButton(
+                onPressed: () => _showForgotPasswordDialog(),
+                child: const Text('忘记密码？'),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -442,6 +449,23 @@ class _LoginPageState extends State<LoginPage>
 
   Future<void> _handleGoogleSignIn(AuthProvider auth) async {
     final success = await auth.signInWithGoogle();
+    if (success && mounted) {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  Future<void> _handlePasskeyLogin(AuthProvider auth) async {
+    final identifier = _loginIdentifierController.text.trim();
+    if (identifier.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请先输入用户名或邮箱')));
+      }
+      return;
+    }
+
+    final success = await auth.loginWithPasskey(identifier: identifier);
     if (success && mounted) {
       Navigator.of(context).pop(true);
     }

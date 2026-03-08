@@ -42,18 +42,13 @@ class NexaiAuthApi {
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'identifier': identifier,
-        'password': password,
-      }),
+      body: jsonEncode({'identifier': identifier, 'password': password}),
     );
     return AuthResponse.fromResponse(res);
   }
 
   /// POST /auth/google — send Google idToken
-  static Future<AuthResponse> googleAuth({
-    required String idToken,
-  }) async {
+  static Future<AuthResponse> googleAuth({required String idToken}) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/google'),
       headers: {'Content-Type': 'application/json'},
@@ -63,9 +58,7 @@ class NexaiAuthApi {
   }
 
   /// POST /auth/github — send GitHub code
-  static Future<AuthResponse> githubAuth({
-    required String code,
-  }) async {
+  static Future<AuthResponse> githubAuth({required String code}) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/github'),
       headers: {'Content-Type': 'application/json'},
@@ -101,9 +94,7 @@ class NexaiAuthApi {
   }
 
   /// POST /auth/logout
-  static Future<AuthResponse> logout({
-    required String accessToken,
-  }) async {
+  static Future<AuthResponse> logout({required String accessToken}) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/logout'),
       headers: {
@@ -167,9 +158,7 @@ class NexaiAuthApi {
   }
 
   /// POST /auth/forgot-password
-  static Future<AuthResponse> forgotPassword({
-    required String email,
-  }) async {
+  static Future<AuthResponse> forgotPassword({required String email}) async {
     final res = await http.post(
       Uri.parse('$_baseUrl/auth/forgot-password'),
       headers: {'Content-Type': 'application/json'},
@@ -191,20 +180,113 @@ class NexaiAuthApi {
     return AuthResponse.fromResponse(res);
   }
 
-  /// GET /auth/oauth-config
+  // / GET /auth/oauth-config
   static Future<OAuthConfigResponse> getOAuthConfig() async {
-    final res = await http.get(
-      Uri.parse('$_baseUrl/auth/oauth-config'),
+    final response = await http.get(Uri.parse('$_baseUrl/auth/oauth-config'));
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return OAuthConfigResponse.fromJson(json['data']);
+    }
+
+    throw Exception('Failed to load OAuth config');
+  }
+
+  // ========== WebAuthn (Passkeys) API ==========
+
+  // / POST /auth/passkey/register/options
+  static Future<Map<String, dynamic>> generatePasskeyRegistrationOptions({
+    required String accessToken,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/passkey/register/options'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      if (json['success'] == true) {
+        return json['data'] as Map<String, dynamic>;
+      }
+      throw Exception(json['error'] ?? '获取通行密钥注册选项失败');
+    }
+
+    final errJson = jsonDecode(response.body);
+    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
+  }
+
+  // / POST /auth/passkey/register/verify
+  static Future<void> verifyPasskeyRegistration({
+    required String accessToken,
+    required Map<String, dynamic> responseInfo,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/passkey/register/verify'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+      body: jsonEncode(responseInfo),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      if (json['success'] == true) {
+        return;
+      }
+      throw Exception(json['error'] ?? '验证通行密钥失败');
+    }
+
+    final errJson = jsonDecode(response.body);
+    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
+  }
+
+  // / POST /auth/passkey/login/options
+  static Future<Map<String, dynamic>> generatePasskeyAuthenticationOptions({
+    required String identifier,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/passkey/login/options'),
       headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'identifier': identifier}),
     );
-    final body = jsonDecode(res.body);
-    return OAuthConfigResponse(
-      success: body['success'] == true,
-      googleEnabled: body['data']?['google']?['enabled'] == true,
-      googleClientId: body['data']?['google']?['clientId'] ?? '',
-      githubEnabled: body['data']?['github']?['enabled'] == true,
-      githubClientId: body['data']?['github']?['clientId'] ?? '',
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      if (json['success'] == true) {
+        return json['data'] as Map<String, dynamic>;
+      }
+      throw Exception(json['error'] ?? '获取通行密钥登录选项失败');
+    }
+
+    final errJson = jsonDecode(response.body);
+    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
+  }
+
+  // / POST /auth/passkey/login/verify
+  static Future<AuthResponse> verifyPasskeyAuthentication({
+    required String identifier,
+    required Map<String, dynamic> responseInfo,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/auth/passkey/login/verify'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'identifier': identifier, 'response': responseInfo}),
     );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        return AuthResponse.fromJson(json['data']);
+      }
+      throw Exception(json['error'] ?? '通行密钥验证失败');
+    }
+
+    final errJson = jsonDecode(response.body);
+    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
   }
 }
 

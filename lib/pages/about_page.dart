@@ -71,32 +71,7 @@ class _AboutPageState extends State<AboutPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const SizedBox(height: 20),
-                      Container(
-                        width: 76,
-                        height: 76,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [cs.primary, cs.tertiary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            BoxShadow(
-                              color: cs.primary.withAlpha(70),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Image.asset(
-                            'assets/icon.png',
-                            width: 38,
-                            height: 38,
-                          ),
-                        ),
-                      ),
+                      Image.asset('assets/icon.png', width: 76, height: 76),
                       const SizedBox(height: 12),
                       Text(
                         'NexAI',

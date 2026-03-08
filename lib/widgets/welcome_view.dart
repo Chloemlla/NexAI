@@ -20,28 +20,7 @@ class WelcomeView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.tertiary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: cs.primary.withAlpha(60),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Image.asset('assets/icon.png', width: 40, height: 40),
-              ),
-            ),
+            Image.asset('assets/icon.png', width: 80, height: 80),
             const SizedBox(height: 28),
             Text(
               'Welcome to NexAI',

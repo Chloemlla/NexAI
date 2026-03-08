@@ -92,31 +92,15 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 children: [
                   Hero(
                     tag: 'app_icon',
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [cs.primary, cs.tertiary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(11),
-                        boxShadow: [
-                          BoxShadow(
-                            color: cs.primary.withAlpha(60),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
+                    child: SizedBox(
+                      width: 32,
+                      height: 32,
                       child: Center(
                         child: _androidNavIndex == 0
                             ? Image.asset(
                                 'assets/icon.png',
-                                width: 18,
-                                height: 18,
+                                width: 32,
+                                height: 32,
                               )
                             : Icon(
                                 _androidNavIndex == 1
@@ -124,8 +108,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                     : _androidNavIndex == 2
                                     ? Icons.build_rounded
                                     : Icons.settings_rounded,
-                                size: 18,
-                                color: cs.onPrimary,
+                                size: 24,
+                                color: cs.primary,
                               ),
                       ),
                     ),
@@ -744,21 +728,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       alignment: AlignmentDirectional.centerStart,
       child: Row(
         children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [cs.primary, cs.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Image.asset('assets/icon.png', width: 16, height: 16),
-            ),
-          ),
+          Image.asset('assets/icon.png', width: 28, height: 28),
           const SizedBox(width: 10),
           const Text(
             'NexAI',

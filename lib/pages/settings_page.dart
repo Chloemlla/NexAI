@@ -1374,24 +1374,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Container(
+                      leading: Image.asset(
+                        'assets/icon.png',
                         width: 40,
                         height: 40,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [cs.primary, cs.tertiary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Image.asset(
-                            'assets/icon.png',
-                            width: 20,
-                            height: 20,
-                          ),
-                        ),
                       ),
                       title: Text(
                         '关于 NexAI',

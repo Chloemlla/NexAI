@@ -1278,21 +1278,7 @@ class _ChatPageState extends State<ChatPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [cs.primary, cs.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Image.asset('assets/icon.png', width: 14, height: 14),
-            ),
-          ),
+          Image.asset('assets/icon.png', width: 30, height: 30),
           const SizedBox(width: 10),
           Flexible(
             child: Container(

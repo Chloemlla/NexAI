@@ -61,24 +61,10 @@ class _MessageBubbleState extends State<MessageBubble> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isUser) ...[
-                Container(
+                Image.asset(
+                  'assets/icon.png',
                   width: isWide ? 36 : 30,
                   height: isWide ? 36 : 30,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [cs.primary, cs.tertiary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(isWide ? 12 : 10),
-                  ),
-                  child: Center(
-                    child: Image.asset(
-                      'assets/icon.png',
-                      width: isWide ? 18 : 14,
-                      height: isWide ? 18 : 14,
-                    ),
-                  ),
                 ),
                 SizedBox(width: isWide ? 10 : 8),
               ],

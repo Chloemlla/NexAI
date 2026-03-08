@@ -3,7 +3,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:passkeys/passkeys.dart';
+import 'package:passkeys/authenticator.dart';
+import 'package:passkeys/types.dart';
 
 import '../services/nexai_auth_service.dart';
 
@@ -336,70 +337,23 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final passkeyAuth = PasskeyAuth();
+      final passkeyAuth = PasskeyAuthenticator();
 
       // 1. Get options from backend
       final optionsMap = await NexaiAuthApi.generatePasskeyRegistrationOptions(
         accessToken: _accessToken!,
       );
 
-      // 2. Map JSON map to typed RegisterResponseType
-      // Note: passkeys plugin expects a specific subset of options
-      final registerResponse = RegisterResponseType(
-        challenge: optionsMap['challenge'] as String,
-        rp: RpType(
-          id: optionsMap['rp']['id'] as String,
-          name: optionsMap['rp']['name'] as String,
-        ),
-        user: UserType(
-          id: optionsMap['user']['id'] as String,
-          name: optionsMap['user']['name'] as String,
-          displayName: optionsMap['user']['displayName'] as String,
-        ),
-        pubKeyCredParams: (optionsMap['pubKeyCredParams'] as List)
-            .map(
-              (e) => PubKeyCredParamType(
-                alg: e['alg'] as int,
-                type: e['type'] as String,
-              ),
-            )
-            .toList(),
-        timeout: optionsMap['timeout'] as int?,
-        authenticatorSelection: optionsMap['authenticatorSelection'] != null
-            ? AuthenticatorSelectionType(
-                requireResidentKey:
-                    optionsMap['authenticatorSelection']?['requireResidentKey']
-                        as bool?,
-                residentKey:
-                    optionsMap['authenticatorSelection']?['residentKey']
-                        as String?,
-                userVerification:
-                    optionsMap['authenticatorSelection']?['userVerification']
-                        as String?,
-                authenticatorAttachment:
-                    optionsMap['authenticatorSelection']?['authenticatorAttachment']
-                        as String?,
-              )
-            : null,
-      );
+      // 2. Convert JSON to RegisterRequestType
+      final registerRequest = RegisterRequestType.fromJson(optionsMap);
 
-      // 3. Prompt user to create passkey using PasskeyAuth
-      final credential = await passkeyAuth.register(registerResponse);
+      // 3. Prompt user to create passkey using PasskeyAuthenticator
+      final credential = await passkeyAuth.register(registerRequest);
 
-      // 4. Send credential to backend to verify
-      final responseInfo = {
-        'id': credential.id,
-        'rawId': credential.rawId,
-        'response': {
-          'clientDataJSON': credential.clientDataJSON,
-          'attestationObject': credential.attestationObject,
-        },
-        'type': 'public-key',
-      };
-
+      // 4. Send credential to backend to verify (convert to JSON)
       await NexaiAuthApi.verifyPasskeyRegistration(
         accessToken: _accessToken!,
-        responseInfo: responseInfo,
+        responseInfo: credential.toJson(),
       );
 
       return true;
@@ -420,7 +374,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final passkeyAuth = PasskeyAuth();
+      final passkeyAuth = PasskeyAuthenticator();
 
       // 1. Get options from backend
       final optionsMap =
@@ -428,41 +382,16 @@ class AuthProvider extends ChangeNotifier {
             identifier: identifier,
           );
 
-      // 2. Map JSON to AuthenticateResponseType
-      final authResponse = AuthenticateResponseType(
-        challenge: optionsMap['challenge'] as String,
-        rpId: optionsMap['rpId'] as String,
-        timeout: optionsMap['timeout'] as int?,
-        allowCredentials: (optionsMap['allowCredentials'] as List?)
-            ?.map(
-              (e) => AllowCredentialType(
-                id: e['id'] as String,
-                type: 'public-key',
-              ),
-            )
-            .toList(),
-        userVerification: optionsMap['userVerification'] as String?,
-      );
+      // 2. Convert JSON to AuthenticateRequestType
+      final authRequest = AuthenticateRequestType.fromJson(optionsMap);
 
       // 3. Prompt user to authenticate
-      final assertion = await passkeyAuth.authenticate(authResponse);
+      final assertion = await passkeyAuth.authenticate(authRequest);
 
-      // 4. Send assertion to backend to verify
-      final responseInfo = {
-        'id': assertion.id,
-        'rawId': assertion.rawId,
-        'response': {
-          'clientDataJSON': assertion.clientDataJSON,
-          'authenticatorData': assertion.authenticatorData,
-          'signature': assertion.signature,
-          'userHandle': assertion.userHandle,
-        },
-        'type': 'public-key',
-      };
-
+      // 4. Send assertion to backend to verify (convert to JSON)
       final res = await NexaiAuthApi.verifyPasskeyAuthentication(
         identifier: identifier,
-        responseInfo: responseInfo,
+        responseInfo: assertion.toJson(),
       );
 
       if (res.success && res.accessToken != null && res.user != null) {

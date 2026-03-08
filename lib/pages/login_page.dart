@@ -108,7 +108,9 @@ class _LoginPageState extends State<LoginPage>
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              auth.error!,
+                              auth.error!.contains('google ID token not found')
+                                  ? '无法获取 Google ID Token，请检查配置或网络'
+                                  : auth.error!,
                               style: TextStyle(
                                 color: colorScheme.onErrorContainer,
                                 fontSize: 13,

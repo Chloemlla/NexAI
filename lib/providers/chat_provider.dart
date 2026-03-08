@@ -628,6 +628,21 @@ ${safeEncode(e.response!.data)}
     }
   }
 
+  /// 从 JSON 列表恢复对话（云同步用）
+  Future<void> restoreFromList(List<dynamic> list) async {
+    _conversations.clear();
+    _conversations.addAll(
+      list.map((e) => Conversation.fromJson(e as Map<String, dynamic>)),
+    );
+    if (_conversations.isNotEmpty) {
+      _currentIndex = 0;
+    } else {
+      _currentIndex = -1;
+    }
+    notifyListeners();
+    await _save();
+  }
+
   @override
   void dispose() {
     _dio.close();

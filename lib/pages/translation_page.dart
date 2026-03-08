@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 import '../providers/settings_provider.dart';
+import '../providers/translation_provider.dart';
 
 class TranslationPage extends StatefulWidget {
   const TranslationPage({super.key});
@@ -88,6 +89,20 @@ class _TranslationPageState extends State<TranslationPage> {
             final translatedText = parts[0]['text'] as String?;
             if (translatedText != null) {
               setState(() => _targetController.text = translatedText.trim());
+              // 保存翻译记录
+              if (mounted) {
+                final translationProv = context.read<TranslationProvider>();
+                await translationProv.addRecord(
+                  TranslationRecord(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    sourceLanguage: _sourceLanguage,
+                    targetLanguage: _targetLanguage,
+                    sourceText: text,
+                    translatedText: translatedText.trim(),
+                    createdAt: DateTime.now(),
+                  ),
+                );
+              }
               return;
             }
           }

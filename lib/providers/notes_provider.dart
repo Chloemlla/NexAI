@@ -562,6 +562,15 @@ class NotesProvider extends ChangeNotifier {
       // Silently fail - keep "Untitled Note" if generation fails
     }
   }
+
+  /// 从 JSON 列表恢复笔记（云同步用）
+  Future<void> restoreFromList(List<dynamic> list) async {
+    _notes = list.map((e) => Note.fromJson(e as Map<String, dynamic>)).toList();
+    _notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    _rebuildBacklinks();
+    notifyListeners();
+    await _save();
+  }
 }
 
 class TagInfo {

@@ -4,6 +4,12 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/chat_provider.dart';
+import '../providers/notes_provider.dart';
+import '../providers/password_provider.dart';
+import '../providers/translation_provider.dart';
+import '../providers/short_url_provider.dart';
+import '../providers/sync_provider.dart';
 import '../utils/update_checker.dart';
 import '../utils/google_font_paint.dart';
 import 'about_page.dart';
@@ -36,6 +42,15 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _showApiKey = false;
   bool _isDirty = false;
   String _version = '';
+
+  String _formatSyncTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return '刚刚';
+    if (diff.inHours < 1) return '${diff.inMinutes} 分钟前';
+    if (diff.inDays < 1) return '${diff.inHours} 小时前';
+    return '${dt.month}/${dt.day} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+  }
 
   @override
   void initState() {
@@ -721,6 +736,359 @@ class _SettingsPageState extends State<SettingsPage> {
                       ],
                     ],
                   ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── NexAI Cloud Sync ──
+                _SectionHeader(
+                  icon: Icons.cloud_upload_rounded,
+                  label: 'NexAI 云同步',
+                  cs: cs,
+                  tt: tt,
+                ),
+                const SizedBox(height: 10),
+                Builder(
+                  builder: (ctx) {
+                    final auth = ctx.watch<AuthProvider>();
+                    final sync = ctx.watch<SyncProvider>();
+                    final isLoggedIn = auth.accessToken != null;
+
+                    return _SettingsCard(
+                      cs: cs,
+                      children: [
+                        if (!isLoggedIn)
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: cs.errorContainer.withAlpha(80),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.warning_rounded,
+                                  size: 18,
+                                  color: cs.error,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    '请先登录 NexAI 账号以使用云同步功能',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: cs.error,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else ...[
+                          if (sync.lastSyncedAt != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.schedule_rounded,
+                                    size: 16,
+                                    color: cs.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '上次同步: ${_formatSyncTime(sync.lastSyncedAt!)}',
+                                    style: tt.bodySmall?.copyWith(
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (sync.status == SyncStatus.error &&
+                              sync.errorMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: cs.errorContainer.withAlpha(80),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  sync.errorMessage!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cs.error,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: sync.isSyncing
+                                      ? null
+                                      : () async {
+                                          final chatProv = ctx
+                                              .read<ChatProvider>();
+                                          final notesProv = ctx
+                                              .read<NotesProvider>();
+                                          final passProv = ctx
+                                              .read<PasswordProvider>();
+                                          final transProv = ctx
+                                              .read<TranslationProvider>();
+                                          final urlProv = ctx
+                                              .read<ShortUrlProvider>();
+                                          final ok = await sync.uploadAll(
+                                            authProvider: auth,
+                                            settingsProvider: settings,
+                                            chatProvider: chatProv,
+                                            notesProvider: notesProv,
+                                            passwordProvider: passProv,
+                                            translationProvider: transProv,
+                                            shortUrlProvider: urlProv,
+                                          );
+                                          if (ctx.mounted) {
+                                            ScaffoldMessenger.of(
+                                              ctx,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  ok ? '✅ 数据已上传到云端' : '❌ 上传失败',
+                                                ),
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                margin:
+                                                    const EdgeInsets.fromLTRB(
+                                                      16,
+                                                      0,
+                                                      16,
+                                                      16,
+                                                    ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                  icon: sync.status == SyncStatus.uploading
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: cs.onPrimary,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.cloud_upload_rounded,
+                                          size: 18,
+                                        ),
+                                  label: Text(
+                                    sync.status == SyncStatus.uploading
+                                        ? '上传中...'
+                                        : '上传到云端',
+                                  ),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton.tonalIcon(
+                                  onPressed: sync.isSyncing
+                                      ? null
+                                      : () async {
+                                          final confirmed =
+                                              await showDialog<bool>(
+                                                context: ctx,
+                                                builder: (c) => AlertDialog(
+                                                  title: const Text('从云端恢复'),
+                                                  content: const Text(
+                                                    '这将用云端数据覆盖本地数据，确定继续吗？',
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                            c,
+                                                            false,
+                                                          ),
+                                                      child: const Text('取消'),
+                                                    ),
+                                                    FilledButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                            c,
+                                                            true,
+                                                          ),
+                                                      child: const Text('确定'),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                          if (confirmed != true || !ctx.mounted)
+                                            return;
+                                          final chatProv = ctx
+                                              .read<ChatProvider>();
+                                          final notesProv = ctx
+                                              .read<NotesProvider>();
+                                          final passProv = ctx
+                                              .read<PasswordProvider>();
+                                          final transProv = ctx
+                                              .read<TranslationProvider>();
+                                          final urlProv = ctx
+                                              .read<ShortUrlProvider>();
+                                          final ok = await sync.downloadAll(
+                                            authProvider: auth,
+                                            settingsProvider: settings,
+                                            chatProvider: chatProv,
+                                            notesProvider: notesProv,
+                                            passwordProvider: passProv,
+                                            translationProvider: transProv,
+                                            shortUrlProvider: urlProv,
+                                          );
+                                          if (ctx.mounted) {
+                                            ScaffoldMessenger.of(
+                                              ctx,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  ok ? '✅ 数据已从云端恢复' : '❌ 恢复失败',
+                                                ),
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                margin:
+                                                    const EdgeInsets.fromLTRB(
+                                                      16,
+                                                      0,
+                                                      16,
+                                                      16,
+                                                    ),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                  icon: sync.status == SyncStatus.downloading
+                                      ? SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: cs.primary,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.cloud_download_rounded,
+                                          size: 18,
+                                        ),
+                                  label: Text(
+                                    sync.status == SyncStatus.downloading
+                                        ? '恢复中...'
+                                        : '从云端恢复',
+                                  ),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton.icon(
+                            onPressed: sync.isSyncing
+                                ? null
+                                : () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: ctx,
+                                      builder: (c) => AlertDialog(
+                                        title: const Text('清除云端数据'),
+                                        content: const Text(
+                                          '这将永久删除云端所有同步数据，本操作不可撤销。',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(c, false),
+                                            child: const Text('取消'),
+                                          ),
+                                          FilledButton(
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor: cs.error,
+                                            ),
+                                            onPressed: () =>
+                                                Navigator.pop(c, true),
+                                            child: const Text('删除'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed != true || !ctx.mounted)
+                                      return;
+                                    final ok = await sync.clearCloudData(
+                                      authProvider: auth,
+                                    );
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            ok ? '✅ 云端数据已清除' : '❌ 清除失败',
+                                          ),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          margin: const EdgeInsets.fromLTRB(
+                                            16,
+                                            0,
+                                            16,
+                                            16,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            icon: Icon(
+                              Icons.delete_outline_rounded,
+                              size: 18,
+                              color: cs.error,
+                            ),
+                            label: Text(
+                              '清除云端数据',
+                              style: TextStyle(color: cs.error),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(double.infinity, 44),
+                              side: BorderSide(color: cs.error.withAlpha(100)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
 

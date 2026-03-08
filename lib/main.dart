@@ -11,6 +11,9 @@ import 'providers/settings_provider.dart';
 import 'providers/image_generation_provider.dart';
 import 'providers/password_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/translation_provider.dart';
+import 'providers/short_url_provider.dart';
+import 'providers/sync_provider.dart';
 import 'app.dart';
 
 bool get isDesktop =>
@@ -68,6 +71,12 @@ void main() async {
   final passwordProvider = PasswordProvider();
   await passwordProvider.loadPasswords();
 
+  final translationProvider = TranslationProvider();
+  await translationProvider.loadHistory();
+
+  final shortUrlProvider = ShortUrlProvider();
+  await shortUrlProvider.loadHistory();
+
   final authProvider = AuthProvider();
   // Auth init is async but non-blocking - will restore session in background
   authProvider.init();
@@ -81,6 +90,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ImageGenerationProvider()),
         ChangeNotifierProvider.value(value: passwordProvider),
         ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider.value(value: translationProvider),
+        ChangeNotifierProvider.value(value: shortUrlProvider),
+        ChangeNotifierProvider(create: (_) => SyncProvider()),
       ],
       child: const NexAIApp(),
     ),

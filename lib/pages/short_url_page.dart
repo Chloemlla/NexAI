@@ -2,7 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../providers/short_url_provider.dart';
 
 class ShortUrlPage extends StatefulWidget {
   const ShortUrlPage({super.key});
@@ -61,6 +63,18 @@ class _ShortUrlPageState extends State<ShortUrlPage>
         setState(() {
           _resultUrl = response.data['shorturl'];
         });
+        // 保存短链接记录
+        if (mounted && _resultUrl != null) {
+          final urlProv = context.read<ShortUrlProvider>();
+          await urlProv.addRecord(
+            ShortUrlRecord(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              originalUrl: target,
+              shortUrl: _resultUrl!,
+              createdAt: DateTime.now(),
+            ),
+          );
+        }
         SmartDialog.showToast('🎉 短链接生成成功！');
       } else {
         final msg = response.data is Map<String, dynamic>

@@ -49,8 +49,8 @@ dependencies:
   window_manager: ^0.5.1
   dynamic_color: '>=1.8.1'
   fluent_ui: ^4.14.0
-  package_info_plus: '>=9.0.0'
-  device_info_plus: ^12.3.0
+  package_info_plus: ^8.3.0
+  device_info_plus: ^11.5.0
   v_video_compressor: ^2.0.0
   file_picker: ^10.3.10
   path_provider: ^2.1.5

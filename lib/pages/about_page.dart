@@ -152,8 +152,8 @@ class _AboutPageState extends State<AboutPage> {
                       child: _ActionCard(
                         cs: cs,
                         icon: Icons.system_update_rounded,
-                        label: '新版本',
-                        sublabel: '获取更新',
+                        label: '应用下载',
+                        sublabel: '获取最新发行版',
                         color: cs.secondaryContainer,
                         iconColor: cs.onSecondaryContainer,
                         onTap: () => _openUrl(

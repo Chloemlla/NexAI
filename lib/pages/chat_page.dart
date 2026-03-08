@@ -1290,9 +1290,10 @@ class _ChatPageState extends State<ChatPage> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: Icon(
-                Icons.smart_toy_rounded,
-                size: 14,
+              child: Image.asset(
+                'assets/icon.png',
+                width: 14,
+                height: 14,
                 color: cs.onPrimary,
               ),
             ),

@@ -1386,9 +1386,10 @@ class _SettingsPageState extends State<SettingsPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
-                          child: Icon(
-                            Icons.smart_toy_rounded,
-                            size: 20,
+                          child: Image.asset(
+                            'assets/icon.png',
+                            width: 20,
+                            height: 20,
                             color: cs.onPrimary,
                           ),
                         ),

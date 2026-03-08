@@ -112,17 +112,22 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         ],
                       ),
                       child: Center(
-                        child: Icon(
-                          _androidNavIndex == 0
-                              ? Icons.smart_toy_rounded
-                              : _androidNavIndex == 1
-                              ? Icons.note_alt_rounded
-                              : _androidNavIndex == 2
-                              ? Icons.build_rounded
-                              : Icons.settings_rounded,
-                          size: 18,
-                          color: cs.onPrimary,
-                        ),
+                        child: _androidNavIndex == 0
+                            ? Image.asset(
+                                'assets/icon.png',
+                                width: 18,
+                                height: 18,
+                                color: cs.onPrimary,
+                              )
+                            : Icon(
+                                _androidNavIndex == 1
+                                    ? Icons.note_alt_rounded
+                                    : _androidNavIndex == 2
+                                    ? Icons.build_rounded
+                                    : Icons.settings_rounded,
+                                size: 18,
+                                color: cs.onPrimary,
+                              ),
                       ),
                     ),
                   ),
@@ -752,9 +757,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
-              child: Icon(
-                Icons.smart_toy_rounded,
-                size: 16,
+              child: Image.asset(
+                'assets/icon.png',
+                width: 16,
+                height: 16,
                 color: cs.onPrimary,
               ),
             ),

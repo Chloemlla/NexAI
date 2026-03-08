@@ -39,9 +39,10 @@ class WelcomeView extends StatelessWidget {
                 ],
               ),
               child: Center(
-                child: Icon(
-                  Icons.smart_toy_rounded,
-                  size: 40,
+                child: Image.asset(
+                  'assets/icon.png',
+                  width: 40,
+                  height: 40,
                   color: cs.onPrimary,
                 ),
               ),

@@ -70,9 +70,10 @@ class _LoginPageState extends State<LoginPage>
                   const SizedBox(height: 32),
 
                   // Logo & Title
-                  Icon(
-                    Icons.smart_toy_rounded,
-                    size: 64,
+                  Image.asset(
+                    'assets/icon.png',
+                    width: 64,
+                    height: 64,
                     color: colorScheme.primary,
                   ),
                   const SizedBox(height: 16),

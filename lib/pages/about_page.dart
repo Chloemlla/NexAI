@@ -90,9 +90,10 @@ class _AboutPageState extends State<AboutPage> {
                           ],
                         ),
                         child: Center(
-                          child: Icon(
-                            Icons.smart_toy_rounded,
-                            size: 38,
+                          child: Image.asset(
+                            'assets/icon.png',
+                            width: 38,
+                            height: 38,
                             color: cs.onPrimary,
                           ),
                         ),

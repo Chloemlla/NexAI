@@ -73,9 +73,10 @@ class _MessageBubbleState extends State<MessageBubble> {
                     borderRadius: BorderRadius.circular(isWide ? 12 : 10),
                   ),
                   child: Center(
-                    child: Icon(
-                      Icons.smart_toy_rounded,
-                      size: isWide ? 18 : 14,
+                    child: Image.asset(
+                      'assets/icon.png',
+                      width: isWide ? 18 : 14,
+                      height: isWide ? 18 : 14,
                       color: cs.onPrimary,
                     ),
                   ),

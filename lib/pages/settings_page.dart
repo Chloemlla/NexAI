@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/update_checker.dart';
+import '../utils/google_font_paint.dart';
 import 'about_page.dart';
 import 'login_page.dart';
 
@@ -1052,10 +1053,9 @@ class _SettingsPageState extends State<SettingsPage> {
               if (user.hasGoogle)
                 Padding(
                   padding: const EdgeInsets.only(right: 4),
-                  child: Icon(
-                    Icons.g_mobiledata_rounded,
-                    size: 22,
-                    color: cs.primary,
+                  child: CustomPaint(
+                    painter: GoogleLogoPainter(),
+                    size: const Size.square(20),
                   ),
                 ),
               if (user.hasGithub)
@@ -1183,10 +1183,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       ).showSnackBar(SnackBar(content: Text(auth.error!)));
                     }
                   },
-            icon: Icon(
-              Icons.g_mobiledata_rounded,
-              size: 24,
-              color: auth.isLoading ? cs.outline : Colors.red,
+            icon: CustomPaint(
+              painter: GoogleLogoPainter(),
+              size: const Size.square(22),
             ),
             label: const Text('使用 Google 快速登录'),
             style: OutlinedButton.styleFrom(

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../services/nexai_auth_service.dart';
+import '../utils/google_font_paint.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -199,8 +200,10 @@ class _LoginPageState extends State<LoginPage>
                   // OAuth buttons — Google Sign-In 始终可用（Android SDK）
                   _buildOAuthButton(
                     label: '使用 Google 登录',
-                    icon: Icons.g_mobiledata_rounded,
-                    iconColor: Colors.red,
+                    iconWidget: CustomPaint(
+                      painter: GoogleLogoPainter(),
+                      size: const Size.square(24),
+                    ),
                     onPressed: auth.isLoading
                         ? null
                         : () => _handleGoogleSignIn(auth),
@@ -384,17 +387,19 @@ class _LoginPageState extends State<LoginPage>
 
   Widget _buildOAuthButton({
     required String label,
-    required IconData icon,
-    required Color iconColor,
+    Widget? iconWidget,
+    IconData? icon,
+    Color? iconColor,
     required VoidCallback? onPressed,
     required ColorScheme colorScheme,
   }) {
+    final displayIcon = iconWidget ?? Icon(icon!, color: iconColor, size: 28);
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: OutlinedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, color: iconColor, size: 28),
+        icon: displayIcon,
         label: Text(label),
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(

@@ -101,6 +101,7 @@ class NexaiAuthApi {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       },
+      body: jsonEncode({}),
     );
     return AuthResponse.fromResponse(res);
   }
@@ -153,6 +154,7 @@ class NexaiAuthApi {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       },
+      body: jsonEncode({}),
     );
     return AuthResponse.fromResponse(res);
   }
@@ -204,6 +206,7 @@ class NexaiAuthApi {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $accessToken',
       },
+      body: jsonEncode({}),
     );
 
     if (response.statusCode == 200) {

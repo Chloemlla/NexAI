@@ -143,6 +143,24 @@ class _AboutPageState extends State<AboutPage> {
                         ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionCard(
+                        cs: cs,
+                        icon: Icons.system_update_rounded,
+                        label: '新版本',
+                        sublabel: '获取更新',
+                        color: cs.secondaryContainer,
+                        iconColor: cs.onSecondaryContainer,
+                        onTap: () => _openUrl(
+                          'https://github.com/Chloemlla/NexAI/releases/latest',
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _ActionCard(

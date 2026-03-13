@@ -75,7 +75,7 @@ class MainActivity : FlutterActivity() {
                     packageName,
                     PackageManager.GET_SIGNING_CERTIFICATES
                 )
-                info.signingInfo.apkContentsSigners[0]
+                info.signingInfo?.apkContentsSigners?.get(0) ?: return null
             } else {
                 @Suppress("DEPRECATION")
                 val info = packageManager.getPackageInfo(
@@ -83,7 +83,7 @@ class MainActivity : FlutterActivity() {
                     PackageManager.GET_SIGNATURES
                 )
                 @Suppress("DEPRECATION")
-                info.signatures[0]
+                info.signatures?.get(0) ?: return null
             }
             val digest = MessageDigest.getInstance("SHA-256").digest(cert.toByteArray())
             digest.joinToString("") { "%02x".format(it) }
@@ -95,7 +95,7 @@ class MainActivity : FlutterActivity() {
     private fun getApkFileSha256(): String? {
         return try {
             val info = packageManager.getPackageInfo(packageName, 0)
-            val apkPath = info.applicationInfo.sourceDir
+            val apkPath = info.applicationInfo?.sourceDir ?: return null
             val apkFile = File(apkPath)
 
             if (!apkFile.exists()) return null

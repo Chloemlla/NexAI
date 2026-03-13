@@ -251,7 +251,7 @@ class DeviceFingerprint(private val context: Context) {
     fun getDexFileHash(): String? {
         return try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            val apkPath = packageInfo.applicationInfo.sourceDir
+            val apkPath = packageInfo.applicationInfo?.sourceDir ?: return null
             val apkFile = File(apkPath)
 
             if (!apkFile.exists()) return null

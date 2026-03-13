@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gpt_markdown/gpt_markdown.dart';
+import 'package:flutter/services.dart';
+import 'package:gpt_markdown_chloemlla/gpt_markdown_chloemlla.dart';
+import 'package:gpt_markdown_chloemlla/css/css.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -7,7 +9,6 @@ import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../pages/note_detail_page.dart';
-import '../utils/github_markdown_theme.dart';
 import 'flowchart/flowchart_widget.dart';
 
 // Pre-compiled regex — avoids recompilation per build
@@ -38,11 +39,33 @@ class RichContentView extends StatefulWidget {
 
 class _RichContentViewState extends State<RichContentView> {
   late List<_Segment> _segments;
+  CssTheme? _cssTheme;
+  bool _themeLoading = true;
 
   @override
   void initState() {
     super.initState();
     _segments = _parseContent(widget.content);
+    _loadCssTheme();
+  }
+
+  Future<void> _loadCssTheme() async {
+    try {
+      final theme = await CssTheme.fromAsset('assets/github-markdown.css');
+      if (mounted) {
+        setState(() {
+          _cssTheme = theme;
+          _themeLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Failed to load CSS theme: $e');
+      if (mounted) {
+        setState(() {
+          _themeLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -81,28 +104,51 @@ class _RichContentViewState extends State<RichContentView> {
         );
       case _SegmentType.markdown:
         if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
-          return _WikiLinkMarkdown(data: seg.content);
+          return _WikiLinkMarkdown(
+            data: seg.content,
+            cssTheme: _cssTheme,
+          );
         }
-        return _MarkdownWidget(data: seg.content);
+        return _MarkdownWidget(
+          data: seg.content,
+          cssTheme: _cssTheme,
+        );
     }
   }
 }
 
 class _MarkdownWidget extends StatelessWidget {
   final String data;
-  const _MarkdownWidget({required this.data});
+  final CssTheme? cssTheme;
+
+  const _MarkdownWidget({
+    required this.data,
+    this.cssTheme,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final settings = context.watch<SettingsProvider>();
     final isDark = theme.brightness == Brightness.dark;
-    final ghTheme = GitHubMarkdownTheme(isDark: isDark);
 
     final processed = _preprocessChemical(data);
 
+    // Get colors from CSS theme or use defaults
+    Color textColor;
+    Color? backgroundColor;
+
+    if (cssTheme != null) {
+      textColor = cssTheme!.getColor('--fgColor-default') ??
+                  (isDark ? const Color(0xFFf0f6fc) : const Color(0xFF1f2328));
+      backgroundColor = cssTheme!.getColor('--bgColor-default');
+    } else {
+      textColor = isDark ? const Color(0xFFf0f6fc) : const Color(0xFF1f2328);
+      backgroundColor = null;
+    }
+
     return Material(
-      color: Colors.transparent,
+      color: backgroundColor ?? Colors.transparent,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 800),
         child: GptMarkdown(
@@ -113,7 +159,7 @@ class _MarkdownWidget extends StatelessWidget {
             fontFamily: settings.fontFamily == 'System'
                 ? null
                 : settings.fontFamily,
-            color: ghTheme.fgDefault,
+            color: textColor,
             height: 1.6,
             letterSpacing: 0.1,
           ),
@@ -153,12 +199,22 @@ class _MarkdownWidget extends StatelessWidget {
 
 class _WikiLinkMarkdown extends StatelessWidget {
   final String data;
-  const _WikiLinkMarkdown({required this.data});
+  final CssTheme? cssTheme;
+
+  const _WikiLinkMarkdown({
+    required this.data,
+    this.cssTheme,
+  });
 
   @override
   Widget build(BuildContext context) {
     final matches = wikiLinkPattern.allMatches(data).toList();
-    if (matches.isEmpty) return _MarkdownWidget(data: data);
+    if (matches.isEmpty) {
+      return _MarkdownWidget(
+        data: data,
+        cssTheme: cssTheme,
+      );
+    }
 
     final parts = <_WikiSpan>[];
     int lastEnd = 0;
@@ -178,7 +234,10 @@ class _WikiLinkMarkdown extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: parts.map((p) {
         if (p.wikiLink != null) return _WikiLinkChip(link: p.wikiLink!);
-        return _MarkdownWidget(data: p.text!);
+        return _MarkdownWidget(
+          data: p.text!,
+          cssTheme: cssTheme,
+        );
       }).toList(),
     );
   }

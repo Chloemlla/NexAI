@@ -57,6 +57,17 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 - **Auto-update checker** — Checks GitHub Releases on startup
 - **Persistent settings** — All preferences saved via `SharedPreferences`
 
+### Security & Integrity
+
+- **APK integrity verification** — Validates APK signature and file hash against GitHub releases
+- **Certificate pinning** — TOFU (Trust On First Use) with automatic expiry management
+- **Device fingerprinting** — 7-layer permanent device identification (hardware, software, sensors, storage, network, system properties, DEX hash)
+- **Threat detection** — Root, VPN, debugger, emulator, Frida, Xposed detection
+- **Security event reporting** — Automatic reporting to backend API with risk scoring (0-100)
+- **Request signing** — HMAC-SHA256 signed requests with automatic security headers
+- **Honeypot mode** — Server-controlled device blocking for compromised devices
+- **Certificate cache management** — Clear certificate cache in settings when needed
+
 ## Quick Start
 
 ### Build via GitHub Actions
@@ -99,6 +110,7 @@ Open **Settings** in the app:
 | Borderless Mode   | Remove chat bubbles           | Off                         |
 | Smart Auto-scroll | Follow streaming output       | On                          |
 | Cloud Sync        | WebDAV or Upstash             | Off                         |
+| Certificate Cache | Clear certificate pinning     | Settings → Security         |
 
 ## Rendering Examples
 
@@ -149,8 +161,27 @@ lib/
 └── utils/
     ├── update_checker.dart        # GitHub Releases update check
     ├── navigation_helper.dart     # Cross-page navigation callbacks
-    └── build_config.dart          # Build metadata
+    ├── build_config.dart          # Build metadata
+    ├── app_security.dart          # Security status aggregation + risk scoring
+    ├── device_fingerprint.dart    # 7-layer device fingerprinting
+    ├── security_event_reporter.dart  # Security event reporting to backend
+    └── security_status_checker.dart  # Periodic device status checking
+├── services/
+│   ├── pinned_http_client.dart    # Certificate pinning (TOFU + expiry management)
+│   ├── nexai_auth_service.dart    # Authentication API
+│   ├── nexai_sync_service.dart    # Cloud sync API
+│   └── nexai_security_service.dart  # Security reporting API
+└── android/app/src/main/kotlin/com/chloemlla/nexai/
+    ├── MainActivity.kt            # Security checks (root, VPN, debugger, emulator, Frida, Xposed)
+    └── DeviceFingerprint.kt       # Native device characteristic collection
 ```
+
+## Security Documentation
+
+- [`docs/CERTIFICATE_ERROR_FIX.md`](docs/CERTIFICATE_ERROR_FIX.md) — Certificate verification error solutions
+- [`docs/SERVER_API_SECURITY.md`](docs/SERVER_API_SECURITY.md) — Backend security API specification
+- [`docs/NEXAI_CLIENT_INTEGRATION.md`](docs/NEXAI_CLIENT_INTEGRATION.md) — Client integration guide
+- [`docs/SECURITY_HARDENING_CHECKLIST.md`](docs/SECURITY_HARDENING_CHECKLIST.md) — Security hardening checklist
 
 ## License
 

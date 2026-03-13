@@ -52,12 +52,12 @@ class NexAIApp extends StatelessWidget {
           )
         : darkScheme;
 
-    // vivo Sans 字体主题
-    final vivoSansTextTheme = ThemeData.light().textTheme.apply(
-      fontFamily: 'vivoSans',
+    // Dynamic font theme based on user settings
+    final lightTextTheme = ThemeData.light().textTheme.apply(
+      fontFamily: settings.fontFamily,
     );
-    final vivoSansTextThemeDark = ThemeData.dark().textTheme.apply(
-      fontFamily: 'vivoSans',
+    final darkTextTheme = ThemeData.dark().textTheme.apply(
+      fontFamily: settings.fontFamily,
     );
 
     return MaterialApp(
@@ -67,16 +67,16 @@ class NexAIApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: effectiveLight,
-        fontFamily: 'vivoSans',
-        textTheme: vivoSansTextTheme,
+        fontFamily: settings.fontFamily,
+        textTheme: lightTextTheme,
         navigationBarTheme: NavigationBarThemeData(
           elevation: 0,
           indicatorColor: effectiveLight.secondaryContainer,
-          labelTextStyle: const WidgetStatePropertyAll(
+          labelTextStyle: WidgetStatePropertyAll(
             TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              fontFamily: 'vivoSans',
+              fontFamily: settings.fontFamily,
             ),
           ),
           height: 72,
@@ -123,16 +123,16 @@ class NexAIApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: effectiveDark,
-        fontFamily: 'vivoSans',
-        textTheme: vivoSansTextThemeDark,
+        fontFamily: settings.fontFamily,
+        textTheme: darkTextTheme,
         navigationBarTheme: NavigationBarThemeData(
           elevation: 0,
           indicatorColor: effectiveDark.secondaryContainer,
-          labelTextStyle: const WidgetStatePropertyAll(
+          labelTextStyle: WidgetStatePropertyAll(
             TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              fontFamily: 'vivoSans',
+              fontFamily: settings.fontFamily,
             ),
           ),
           height: 72,

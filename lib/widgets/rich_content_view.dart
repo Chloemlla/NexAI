@@ -156,9 +156,7 @@ class _MarkdownWidget extends StatelessWidget {
           useDollarSignsForLatex: true,
           style: TextStyle(
             fontSize: settings.fontSize,
-            fontFamily: settings.fontFamily == 'System'
-                ? 'vivoSans'
-                : settings.fontFamily,
+            fontFamily: settings.fontFamily,
             color: textColor,
             height: 1.6,
             letterSpacing: 0.1,

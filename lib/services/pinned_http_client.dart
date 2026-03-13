@@ -26,8 +26,9 @@ const String _pinnedHost = 'api.951100.xyz';
 /// Storage keys
 const String _pinKey = 'nexai.cert.sha256.v1';
 const String _pinExpiryKey = 'nexai.cert.expiry.v1'; // ISO-8601 DateTime
-const String _backupPin1Key = 'nexai.cert.backup1.v1';
-const String _backupPin2Key = 'nexai.cert.backup2.v1';
+// Reserved for future multi-cert support:
+// const String _backupPin1Key = 'nexai.cert.backup1.v1';
+// const String _backupPin2Key = 'nexai.cert.backup2.v1';
 
 /// Start background re-pin this many days before expiry.
 const int _renewWithinDays = 30; // Increased from 14 to 30 days

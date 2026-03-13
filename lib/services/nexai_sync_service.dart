@@ -26,11 +26,12 @@ class _NexaiHttp {
     Map<String, String>? headers,
   }) async => (await _get()).get(url, headers: headers);
 
-  static Future<http.Response> put(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async => (await _get()).put(url, headers: headers, body: body);
+  // Reserved for future use
+  // static Future<http.Response> put(
+  //   Uri url, {
+  //   Map<String, String>? headers,
+  //   Object? body,
+  // }) async => (await _get()).put(url, headers: headers, body: body);
 }
 
 const String _defaultBaseUrl = 'https://api.951100.xyz/api/nexai';

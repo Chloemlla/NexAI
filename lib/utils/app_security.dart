@@ -44,6 +44,15 @@ class AppSecurity {
   /// True if APK file hash matches GitHub release hash.
   bool isApkHashValid = true;
 
+  /// True if debugger is attached.
+  bool isDebuggerAttached = false;
+
+  /// True if running on emulator.
+  bool isEmulator = false;
+
+  /// True if VPN is active.
+  bool isVpnActive = false;
+
   /// Initialise security checks. Call once in [main] before [runApp].
   Future<void> init() async {
     if (kIsWeb) return;
@@ -51,6 +60,9 @@ class AppSecurity {
       _checkApkSignature(),
       _checkRootStatus(),
       _checkApkFileHash(),
+      _checkDebugger(),
+      _checkEmulator(),
+      _checkVpn(),
     ]);
   }
 
@@ -241,5 +253,76 @@ class AppSecurity {
     } catch (e) {
       debugPrint('AppSecurity: setSecureScreen error: $e');
     }
+  }
+
+  // ── Anti-Debug ────────────────────────────────────────────────────────────
+
+  Future<void> _checkDebugger() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final attached = await _channel.invokeMethod<bool>('isDebuggerAttached') ?? false;
+      if (attached) {
+        debugPrint('AppSecurity: ⚠️  Debugger attached');
+        isDebuggerAttached = true;
+        isCompromised = true;
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: debugger check error: $e');
+    }
+  }
+
+  // ── Emulator Detection ────────────────────────────────────────────────────
+
+  Future<void> _checkEmulator() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final emulator = await _channel.invokeMethod<bool>('isEmulator') ?? false;
+      if (emulator) {
+        debugPrint('AppSecurity: ⚠️  Running on emulator');
+        isEmulator = true;
+        isCompromised = true;
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: emulator check error: $e');
+    }
+  }
+
+  // ── VPN Detection ─────────────────────────────────────────────────────────
+
+  Future<void> _checkVpn() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final vpn = await _channel.invokeMethod<bool>('isVpnActive') ?? false;
+      if (vpn) {
+        debugPrint('AppSecurity: ⚠️  VPN connection detected');
+        isVpnActive = true;
+        // VPN is not always malicious, so we don't set isCompromised
+        // but we track it for risk scoring
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: VPN check error: $e');
+    }
+  }
+
+  /// Calculate risk score (0-100)
+  int get riskScore {
+    var score = 0;
+    if (!isSignatureValid) score += 50;
+    if (!isApkHashValid) score += 50;
+    if (isCompromised) score += 30;
+    if (isDebuggerAttached) score += 40;
+    if (isEmulator) score += 30;
+    if (isVpnActive) score += 20;
+    return score.clamp(0, 100);
+  }
+
+  /// Get risk level description
+  String get riskLevel {
+    final score = riskScore;
+    if (score >= 80) return 'CRITICAL';
+    if (score >= 50) return 'HIGH';
+    if (score >= 30) return 'MEDIUM';
+    if (score >= 10) return 'LOW';
+    return 'SAFE';
   }
 }

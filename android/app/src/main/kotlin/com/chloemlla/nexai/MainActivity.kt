@@ -1,8 +1,12 @@
 package com.chloemlla.nexai
 
+import android.content.Context
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
+import android.os.Debug
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -39,6 +43,9 @@ class MainActivity : FlutterActivity() {
                     "getApkSignatureFingerprint" -> result.success(getApkSignatureSha256())
                     "getApkFileSha256"          -> result.success(getApkFileSha256())
                     "isRooted"                  -> result.success(detectRoot())
+                    "isDebuggerAttached"        -> result.success(isDebuggerConnected())
+                    "isEmulator"                -> result.success(isRunningOnEmulator())
+                    "isVpnActive"               -> result.success(isVpnConnected())
                     "setSecureScreen"           -> {
                         val enable = call.argument<Boolean>("enable") ?: true
                         setSecureWindow(enable)
@@ -105,6 +112,8 @@ class MainActivity : FlutterActivity() {
             || checkDangerousProps()
             || checkRootApps()
             || checkTestKeys()
+            || checkFrida()
+            || checkXposed()
     }
 
     private fun checkSuBinaries(): Boolean {
@@ -149,6 +158,82 @@ class MainActivity : FlutterActivity() {
         return tags.contains("test-keys")
     }
 
+    // ── Frida Detection ───────────────────────────────────────────────────────
+
+    private fun checkFrida(): Boolean {
+        // Check for Frida server process
+        val fridaPorts = arrayOf(27042, 27043) // Default Frida ports
+        for (port in fridaPorts) {
+            try {
+                val process = Runtime.getRuntime().exec("netstat -an")
+                val result = process.inputStream.bufferedReader().readText()
+                if (result.contains(":$port")) {
+                    return true
+                }
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+
+        // Check for Frida libraries
+        val fridaLibs = arrayOf(
+            "frida-agent",
+            "frida-gadget",
+            "frida-server",
+            "re.frida.server"
+        )
+
+        try {
+            val mapsFile = File("/proc/self/maps")
+            if (mapsFile.exists()) {
+                val maps = mapsFile.readText()
+                for (lib in fridaLibs) {
+                    if (maps.contains(lib, ignoreCase = true)) {
+                        return true
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+
+        return false
+    }
+
+    // ── Xposed Detection ──────────────────────────────────────────────────────
+
+    private fun checkXposed(): Boolean {
+        // Check for Xposed framework
+        try {
+            throw Exception("Xposed check")
+        } catch (e: Exception) {
+            val stackTrace = e.stackTrace
+            for (element in stackTrace) {
+                if (element.className.contains("de.robv.android.xposed.XposedBridge") ||
+                    element.className.contains("de.robv.android.xposed.XposedHelpers")) {
+                    return true
+                }
+            }
+        }
+
+        // Check for Xposed installer
+        val xposedApps = arrayOf(
+            "de.robv.android.xposed.installer",
+            "org.meowcat.edxposed.manager",
+            "com.solohsu.android.edxp.manager",
+            "io.github.lsposed.manager"
+        )
+
+        return xposedApps.any {
+            try {
+                packageManager.getPackageInfo(it, 0)
+                true
+            } catch (e: PackageManager.NameNotFoundException) {
+                false
+            }
+        }
+    }
+
     // ── Secure Screen ─────────────────────────────────────────────────────────
 
     private fun setSecureWindow(enable: Boolean) {
@@ -158,6 +243,44 @@ class MainActivity : FlutterActivity() {
             } else {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             }
+        }
+    }
+
+    // ── Anti-Debug ────────────────────────────────────────────────────────────
+
+    private fun isDebuggerConnected(): Boolean {
+        return Debug.isDebuggerConnected() || Debug.waitingForDebugger()
+    }
+
+    // ── Emulator Detection ────────────────────────────────────────────────────
+
+    private fun isRunningOnEmulator(): Boolean {
+        return (Build.FINGERPRINT.startsWith("generic")
+            || Build.FINGERPRINT.startsWith("unknown")
+            || Build.MODEL.contains("google_sdk")
+            || Build.MODEL.contains("Emulator")
+            || Build.MODEL.contains("Android SDK built for x86")
+            || Build.MANUFACTURER.contains("Genymotion")
+            || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+            || "google_sdk" == Build.PRODUCT
+            || Build.HARDWARE.contains("goldfish")
+            || Build.HARDWARE.contains("ranchu"))
+    }
+
+    // ── VPN Detection ─────────────────────────────────────────────────────────
+
+    private fun isVpnConnected(): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val network = cm.activeNetwork ?: return false
+                val capabilities = cm.getNetworkCapabilities(network) ?: return false
+                capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 }

@@ -2,6 +2,36 @@
 /// Handles all communication with the NexAI backend sync endpoints
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'pinned_http_client.dart';
+
+// ─── Pinned HTTP wrapper ──────────────────────────────────────────────────────
+// Lazily initialises a certificate-pinned client on first use.
+// Subsequent calls reuse the same instance (connection pool preserved).
+class _NexaiHttp {
+  static http.Client? _client;
+
+  static Future<http.Client> _get() async {
+    _client ??= await buildPinnedHttpClient();
+    return _client!;
+  }
+
+  static Future<http.Response> post(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async => (await _get()).post(url, headers: headers, body: body);
+
+  static Future<http.Response> get(
+    Uri url, {
+    Map<String, String>? headers,
+  }) async => (await _get()).get(url, headers: headers);
+
+  static Future<http.Response> put(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async => (await _get()).put(url, headers: headers, body: body);
+}
 
 const String _defaultBaseUrl = 'https://api.951100.xyz/api/nexai';
 
@@ -119,7 +149,7 @@ class NexaiSyncApi {
     required String accessToken,
     required String since,
   }) async {
-    final response = await http.get(
+    final response = await _NexaiHttp.get(
       Uri.parse('$_baseUrl/sync/changes?since=${Uri.encodeComponent(since)}'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -142,7 +172,7 @@ class NexaiSyncApi {
     required String lastSyncedAt,
     required Map<String, dynamic> data,
   }) async {
-    final response = await http.post(
+    final response = await _NexaiHttp.post(
       Uri.parse('$_baseUrl/sync/incremental'),
       headers: {
         'Authorization': 'Bearer $accessToken',

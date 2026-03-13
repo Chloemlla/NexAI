@@ -270,6 +270,15 @@ class MainActivity : FlutterActivity() {
     // ── VPN Detection ─────────────────────────────────────────────────────────
 
     private fun isVpnConnected(): Boolean {
+        return checkVpnTransport() ||
+               checkVpnInterface() ||
+               checkVpnRoutes() ||
+               checkVpnDns() ||
+               checkVpnApps()
+    }
+
+    // Method 1: NetworkCapabilities API (Android M+)
+    private fun checkVpnTransport(): Boolean {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -281,6 +290,108 @@ class MainActivity : FlutterActivity() {
             }
         } catch (e: Exception) {
             false
+        }
+    }
+
+    // Method 2: Check network interfaces for VPN (tun0, ppp0, etc.)
+    private fun checkVpnInterface(): Boolean {
+        return try {
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            while (interfaces.hasMoreElements()) {
+                val intf = interfaces.nextElement()
+                val name = intf.name.lowercase()
+
+                // Common VPN interface names
+                if (name.startsWith("tun") ||    // TUN interface (most VPNs)
+                    name.startsWith("ppp") ||    // PPP interface (PPTP VPN)
+                    name.startsWith("pptp") ||   // PPTP VPN
+                    name.startsWith("l2tp") ||   // L2TP VPN
+                    name.startsWith("ipsec") ||  // IPSec VPN
+                    name.startsWith("wg")) {     // WireGuard VPN
+                    return true
+                }
+            }
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Method 3: Check routing table for VPN routes
+    private fun checkVpnRoutes(): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec("ip route")
+            val result = process.inputStream.bufferedReader().readText()
+
+            // VPN typically routes all traffic through tun/ppp interface
+            result.contains("tun", ignoreCase = true) ||
+            result.contains("ppp", ignoreCase = true) ||
+            result.contains("wg", ignoreCase = true)
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Method 4: Check DNS servers (VPN often uses custom DNS)
+    private fun checkVpnDns(): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val network = cm.activeNetwork ?: return false
+                val linkProperties = cm.getLinkProperties(network) ?: return false
+                val dnsServers = linkProperties.dnsServers
+
+                // Check for common VPN DNS servers
+                for (dns in dnsServers) {
+                    val dnsStr = dns.hostAddress ?: continue
+
+                    // Common VPN DNS patterns
+                    if (dnsStr.startsWith("10.") ||      // Private network
+                        dnsStr.startsWith("172.16.") ||  // Private network
+                        dnsStr.startsWith("192.168.") || // Private network
+                        dnsStr == "1.1.1.1" ||           // Cloudflare (common in VPNs)
+                        dnsStr == "8.8.8.8" ||           // Google DNS (common in VPNs)
+                        dnsStr == "9.9.9.9") {           // Quad9 (common in VPNs)
+                        // Note: This is a weak indicator, many non-VPN networks use these
+                        // Only flag if combined with other indicators
+                    }
+                }
+            }
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    // Method 5: Check for VPN apps installed
+    private fun checkVpnApps(): Boolean {
+        val vpnApps = arrayOf(
+            // Commercial VPNs
+            "com.nordvpn.android",
+            "net.openvpn.openvpn",
+            "com.expressvpn.vpn",
+            "com.privateinternetaccess.android",
+            "com.surfshark.vpnclient.android",
+            "com.protonvpn.android",
+            "com.cloudflare.onedotonedotonedotone",
+            "com.wireguard.android",
+            "de.blinkt.openvpn",
+            // Chinese VPNs
+            "com.github.shadowsocks",
+            "com.v2ray.ang",
+            "io.nekohasekai.sagernet",
+            "com.v2ray.actinium",
+            "com.github.kr328.clash",
+            "com.github.kr328.clash.premium",
+        )
+
+        return vpnApps.any {
+            try {
+                packageManager.getPackageInfo(it, 0)
+                true
+            } catch (e: PackageManager.NameNotFoundException) {
+                false
+            }
         }
     }
 }

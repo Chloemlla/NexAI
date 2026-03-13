@@ -43,3 +43,6 @@ scripts/keystore_base64.txt
 # Generated
 *.g.dart
 *.freezed.dart
+
+# Dart obfuscation debug symbols (never commit — store securely for crash symbolication)
+debug_symbols/

@@ -110,7 +110,12 @@ jobs:
         run: pwsh scripts/build.ps1 -Arg android
 
       - name: Build Android APK
-        run: flutter build apk --release --split-per-abi --dart-define-from-file=nexai_release.json --build-number=${{ env.VERSION_CODE }}
+        run: |
+          flutter build apk --release --split-per-abi \
+            --obfuscate \
+            --split-debug-info=debug_symbols/android \
+            --dart-define-from-file=nexai_release.json \
+            --build-number=${{ env.VERSION_CODE }}
 
       # - name: Build Android App Bundle
       #   run: flutter build appbundle --release --dart-define-from-file=nexai_release.json --build-number=${{ env.VERSION_CODE }}
@@ -158,6 +163,12 @@ jobs:
       #
       #     echo "=== AAB files ==="
       #     ls -lh build/app/outputs/bundle/release/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-symbols
+          path: debug_symbols/
+          retention-days: 90
 
       - uses: actions/upload-artifact@v4
         with:
@@ -249,7 +260,16 @@ jobs:
         run: flutter create --platforms windows .
 
       - name: Build Windows
-        run: flutter build windows --release
+        run: |
+          flutter build windows --release `
+            --obfuscate `
+            --split-debug-info=debug_symbols\windows
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-debug-symbols
+          path: debug_symbols\windows
+          retention-days: 90
 
       - uses: actions/upload-artifact@v4
         with:

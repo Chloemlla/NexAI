@@ -100,7 +100,17 @@ jobs:
         run: pwsh scripts/build.ps1 -Arg android
 
       - name: Build Android APK
-        run: flutter build apk --release --split-per-abi --dart-define-from-file=nexai_release.json
+        run: |
+          flutter build apk --release --split-per-abi \
+            --obfuscate \
+            --split-debug-info=debug_symbols/android \
+            --dart-define-from-file=nexai_release.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-symbols
+          path: debug_symbols/
+          retention-days: 90
 
       - name: Rename APK outputs for release
         run: |
@@ -190,7 +200,16 @@ jobs:
         run: flutter create --platforms windows .
 
       - name: Build Windows
-        run: flutter build windows --release
+        run: |
+          flutter build windows --release `
+            --obfuscate `
+            --split-debug-info=debug_symbols\windows
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-debug-symbols
+          path: debug_symbols\windows
+          retention-days: 90
 
       - name: Compress Windows Build
         run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath NexAI-Windows.zip

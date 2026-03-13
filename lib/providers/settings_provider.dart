@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
+  // ── Secure storage (Android Keystore / iOS Keychain) ─────────────────────
+  static const _secure = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+  );
+  static const _kSecApiKey = 'sec.apiKey';
+  static const _kSecWebdavPass = 'sec.webdavPassword';
+  static const _kSecUpstashToken = 'sec.upstashToken';
+  static const _kSecVertexApiKey = 'sec.vertexApiKey';
+
   String _baseUrl = 'https://api.openai.com/v1';
   String _apiKey = '';
   List<String> _models = [
@@ -84,8 +95,18 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // ── Migrate legacy plaintext secrets to secure storage (one-time) ──────
+    await _migrateLegacySecrets(prefs);
+
+    // ── Read sensitive fields from FlutterSecureStorage ────────────────────
+    _apiKey = await _secure.read(key: _kSecApiKey) ?? '';
+    _webdavPassword = await _secure.read(key: _kSecWebdavPass) ?? '';
+    _upstashToken = await _secure.read(key: _kSecUpstashToken) ?? '';
+    _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
+
+    // ── Read non-sensitive fields from SharedPreferences ───────────────────
     _baseUrl = prefs.getString('baseUrl') ?? _baseUrl;
-    _apiKey = prefs.getString('apiKey') ?? _apiKey;
     _selectedModel = prefs.getString('selectedModel') ?? _selectedModel;
     _temperature = prefs.getDouble('temperature') ?? _temperature;
     _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
@@ -104,11 +125,7 @@ class SettingsProvider extends ChangeNotifier {
     _syncMethod = prefs.getString('syncMethod') ?? 'WebDAV';
     _webdavServer = prefs.getString('webdavServer') ?? '';
     _webdavUser = prefs.getString('webdavUser') ?? '';
-    _webdavPassword = prefs.getString('webdavPassword') ?? '';
     _upstashUrl = prefs.getString('upstashUrl') ?? '';
-    _upstashToken = prefs.getString('upstashToken') ?? '';
-
-    _vertexApiKey = prefs.getString('vertexApiKey') ?? '';
 
     _apiMode = prefs.getString('apiMode') ?? 'OpenAI';
     _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
@@ -140,10 +157,34 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// One-time migration: move legacy plaintext secrets from SharedPreferences
+  /// into FlutterSecureStorage, then delete them from SharedPreferences.
+  static Future<void> _migrateLegacySecrets(SharedPreferences prefs) async {
+    Future<void> migrate(String prefKey, String secKey) async {
+      final val = prefs.getString(prefKey);
+      if (val != null && val.isNotEmpty) {
+        await _secure.write(key: secKey, value: val);
+        await prefs.remove(prefKey);
+      }
+    }
+
+    await migrate('apiKey', _kSecApiKey);
+    await migrate('webdavPassword', _kSecWebdavPass);
+    await migrate('upstashToken', _kSecUpstashToken);
+    await migrate('vertexApiKey', _kSecVertexApiKey);
+  }
+
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // ── Sensitive: write to secure storage ─────────────────────────────────
+    await _secure.write(key: _kSecApiKey, value: _apiKey);
+    await _secure.write(key: _kSecWebdavPass, value: _webdavPassword);
+    await _secure.write(key: _kSecUpstashToken, value: _upstashToken);
+    await _secure.write(key: _kSecVertexApiKey, value: _vertexApiKey);
+
+    // ── Non-sensitive: write to SharedPreferences ──────────────────────────
     await prefs.setString('baseUrl', _baseUrl);
-    await prefs.setString('apiKey', _apiKey);
     await prefs.setString('models', _models.join(','));
     await prefs.setString('selectedModel', _selectedModel);
     await prefs.setString('themeMode', _themeMode.name);
@@ -163,11 +204,7 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setString('syncMethod', _syncMethod);
     await prefs.setString('webdavServer', _webdavServer);
     await prefs.setString('webdavUser', _webdavUser);
-    await prefs.setString('webdavPassword', _webdavPassword);
     await prefs.setString('upstashUrl', _upstashUrl);
-    await prefs.setString('upstashToken', _upstashToken);
-
-    await prefs.setString('vertexApiKey', _vertexApiKey);
 
     await prefs.setString('apiMode', _apiMode);
     await prefs.setString('vertexProjectId', _vertexProjectId);

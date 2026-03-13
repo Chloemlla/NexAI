@@ -17,6 +17,7 @@ import java.security.MessageDigest
 class MainActivity : FlutterActivity() {
 
     private val SECURITY_CHANNEL = "com.chloemlla.nexai/security"
+    private lateinit var deviceFingerprint: DeviceFingerprint
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +38,8 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        deviceFingerprint = DeviceFingerprint(this)
+
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SECURITY_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -46,6 +49,13 @@ class MainActivity : FlutterActivity() {
                     "isDebuggerAttached"        -> result.success(isDebuggerConnected())
                     "isEmulator"                -> result.success(isRunningOnEmulator())
                     "isVpnActive"               -> result.success(isVpnConnected())
+                    "getHardwareInfo"           -> result.success(getHardwareInfo())
+                    "getSoftwareInfo"           -> result.success(getSoftwareInfo())
+                    "getStorageInfo"            -> result.success(getStorageInfo())
+                    "getSensorFingerprint"      -> result.success(getSensorFingerprint())
+                    "getNetworkInfo"            -> result.success(getNetworkInfo())
+                    "getSystemProperties"       -> result.success(getSystemProperties())
+                    "getDexHash"                -> result.success(getDexFileHash())
                     "setSecureScreen"           -> {
                         val enable = call.argument<Boolean>("enable") ?: true
                         setSecureWindow(enable)
@@ -394,4 +404,14 @@ class MainActivity : FlutterActivity() {
             }
         }
     }
+
+    // ── Device Fingerprint Methods ────────────────────────────────────────────
+
+    private fun getHardwareInfo(): Map<String, Any> = deviceFingerprint.getHardwareInfo()
+    private fun getSoftwareInfo(): Map<String, Any> = deviceFingerprint.getSoftwareInfo()
+    private fun getStorageInfo(): Map<String, Any> = deviceFingerprint.getStorageInfo()
+    private fun getSensorFingerprint(): Map<String, Any> = deviceFingerprint.getSensorFingerprint()
+    private fun getNetworkInfo(): Map<String, Any> = deviceFingerprint.getNetworkInfo()
+    private fun getSystemProperties(): Map<String, Any> = deviceFingerprint.getSystemProperties()
+    private fun getDexFileHash(): String? = deviceFingerprint.getDexFileHash()
 }

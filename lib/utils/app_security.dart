@@ -53,6 +53,9 @@ class AppSecurity {
   /// True if VPN is active.
   bool isVpnActive = false;
 
+  /// DEX file hash (for runtime integrity check)
+  String? dexHash;
+
   /// Initialise security checks. Call once in [main] before [runApp].
   Future<void> init() async {
     if (kIsWeb) return;
@@ -63,6 +66,7 @@ class AppSecurity {
       _checkDebugger(),
       _checkEmulator(),
       _checkVpn(),
+      _checkDexIntegrity(),
     ]);
   }
 
@@ -324,5 +328,45 @@ class AppSecurity {
     if (score >= 30) return 'MEDIUM';
     if (score >= 10) return 'LOW';
     return 'SAFE';
+  }
+
+  // ── DEX Integrity Check ───────────────────────────────────────────────────
+
+  Future<void> _checkDexIntegrity() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final hash = await _channel.invokeMethod<String>('getDexHash');
+      if (hash != null && hash.isNotEmpty) {
+        dexHash = hash;
+        debugPrint('AppSecurity: DEX hash: ${hash.substring(0, 16)}...');
+
+        // Store initial DEX hash for runtime comparison
+        final stored = await _storage.read(key: 'nexai.dex.hash.v1');
+        if (stored == null) {
+          await _storage.write(key: 'nexai.dex.hash.v1', value: hash);
+          debugPrint('AppSecurity: DEX hash stored (TOFU)');
+        } else if (stored != hash) {
+          debugPrint('AppSecurity: ⚠️  DEX HASH MISMATCH (runtime tampering)');
+          isCompromised = true;
+        }
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: DEX integrity check error: $e');
+    }
+  }
+
+  /// Verify DEX integrity at runtime (call periodically)
+  Future<bool> verifyDexIntegrity() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final currentHash = await _channel.invokeMethod<String>('getDexHash');
+      if (currentHash == null) return false;
+
+      final stored = await _storage.read(key: 'nexai.dex.hash.v1');
+      return currentHash == stored;
+    } catch (e) {
+      debugPrint('AppSecurity: DEX verification error: $e');
+      return false;
+    }
   }
 }

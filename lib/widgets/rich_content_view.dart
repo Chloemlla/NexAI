@@ -157,7 +157,7 @@ class _MarkdownWidget extends StatelessWidget {
           style: TextStyle(
             fontSize: settings.fontSize,
             fontFamily: settings.fontFamily == 'System'
-                ? null
+                ? 'vivoSans'
                 : settings.fontFamily,
             color: textColor,
             height: 1.6,

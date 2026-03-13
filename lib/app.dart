@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -53,6 +52,14 @@ class NexAIApp extends StatelessWidget {
           )
         : darkScheme;
 
+    // vivo Sans 字体主题
+    final vivoSansTextTheme = ThemeData.light().textTheme.apply(
+      fontFamily: 'vivoSans',
+    );
+    final vivoSansTextThemeDark = ThemeData.dark().textTheme.apply(
+      fontFamily: 'vivoSans',
+    );
+
     return MaterialApp(
       title: 'NexAI',
       debugShowCheckedModeBanner: false,
@@ -60,12 +67,17 @@ class NexAIApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: effectiveLight,
-        textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+        fontFamily: 'vivoSans',
+        textTheme: vivoSansTextTheme,
         navigationBarTheme: NavigationBarThemeData(
           elevation: 0,
           indicatorColor: effectiveLight.secondaryContainer,
-          labelTextStyle: WidgetStatePropertyAll(
-            GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+          labelTextStyle: const WidgetStatePropertyAll(
+            TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'vivoSans',
+            ),
           ),
           height: 72,
         ),
@@ -111,12 +123,17 @@ class NexAIApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: effectiveDark,
-        textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+        fontFamily: 'vivoSans',
+        textTheme: vivoSansTextThemeDark,
         navigationBarTheme: NavigationBarThemeData(
           elevation: 0,
           indicatorColor: effectiveDark.secondaryContainer,
-          labelTextStyle: WidgetStatePropertyAll(
-            GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w500),
+          labelTextStyle: const WidgetStatePropertyAll(
+            TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'vivoSans',
+            ),
           ),
           height: 72,
         ),

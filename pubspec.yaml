@@ -84,3 +84,48 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+
+  fonts:
+    # vivo Sans 简体 - 主要字体（包含完整中文字符）
+    - family: vivoSans
+      fonts:
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Thin.ttf
+          weight: 100
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-ExtraLight.ttf
+          weight: 200
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Light.ttf
+          weight: 300
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Regular.ttf
+          weight: 400
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Medium.ttf
+          weight: 500
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-DemiBold.ttf
+          weight: 600
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Bold.ttf
+          weight: 700
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-ExtraBold.ttf
+          weight: 800
+        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Heavy.ttf
+          weight: 900
+
+    # vivo Sans Global - 备用字体（轻量级，适合英文）
+    - family: vivoSansGlobal
+      fonts:
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Thin.ttf
+          weight: 100
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Extralight.ttf
+          weight: 200
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Light.ttf
+          weight: 300
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Regular.ttf
+          weight: 400
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Medium.ttf
+          weight: 500
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Demibold.ttf
+          weight: 600
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Bold.ttf
+          weight: 700
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Extrabold.ttf
+          weight: 800
+        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Heavy.ttf
+          weight: 900

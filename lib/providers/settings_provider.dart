@@ -31,7 +31,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Appearance
   double _fontSize = 14.0;
-  String _fontFamily = 'System';
+  String _fontFamily = 'vivoSans';
   bool _borderlessMode = false;
   bool _fullScreenMode = false;
   bool _smartAutoScroll = true;
@@ -116,7 +116,7 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
 
     _fontSize = prefs.getDouble('fontSize') ?? 14.0;
-    _fontFamily = prefs.getString('fontFamily') ?? 'System';
+    _fontFamily = prefs.getString('fontFamily') ?? 'vivoSans';
     _borderlessMode = prefs.getBool('borderlessMode') ?? false;
     _fullScreenMode = prefs.getBool('fullScreenMode') ?? false;
     _smartAutoScroll = prefs.getBool('smartAutoScroll') ?? true;

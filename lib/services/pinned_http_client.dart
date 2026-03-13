@@ -48,11 +48,17 @@ const _storage = FlutterSecureStorage(
 ///    no  → TOFU mode (first run)
 ///    yes → check expiry
 ///            expired?  → clear + TOFU (re-pin to new cert automatically)
-///            ≤14 days? → strict mode + background re-pin probe
+///            ≤30 days? → strict mode + background re-pin probe
 ///            else      → strict mode
 /// ```
-Future<http.Client> buildPinnedHttpClient() async {
+Future<http.Client> buildPinnedHttpClient({bool enablePinning = true}) async {
   if (kIsWeb) return http.Client(); // Web: dart:io unavailable
+
+  // Allow disabling pinning for development/testing
+  if (!enablePinning) {
+    debugPrint('NexAI Pinning: DISABLED (development mode)');
+    return http.Client();
+  }
 
   final stored = await _storage.read(key: _pinKey);
 

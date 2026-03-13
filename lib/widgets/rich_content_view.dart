@@ -7,6 +7,7 @@ import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../pages/note_detail_page.dart';
+import '../utils/github_markdown_theme.dart';
 import 'flowchart/flowchart_widget.dart';
 
 // Pre-compiled regex — avoids recompilation per build
@@ -94,8 +95,9 @@ class _MarkdownWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final settings = context.watch<SettingsProvider>();
+    final isDark = theme.brightness == Brightness.dark;
+    final ghTheme = GitHubMarkdownTheme(isDark: isDark);
 
     final processed = _preprocessChemical(data);
 
@@ -111,7 +113,7 @@ class _MarkdownWidget extends StatelessWidget {
             fontFamily: settings.fontFamily == 'System'
                 ? null
                 : settings.fontFamily,
-            color: cs.onSurface,
+            color: ghTheme.fgDefault,
             height: 1.6,
             letterSpacing: 0.1,
           ),

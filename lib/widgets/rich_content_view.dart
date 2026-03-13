@@ -12,7 +12,7 @@ import 'flowchart/flowchart_widget.dart';
 // Pre-compiled regex — avoids recompilation per build
 final _cePattern = RegExp(r'\$?\s*\\ce\{([^}]+)\}\s*\$?');
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
-final _chargePattern = RegExp(r'\^?(\d*[+-])(?!\})');
+final _chargePattern = RegExp(r'(?<=[A-Za-z\d\)\}])\^?(\d*[+-])(?!\})');
 final _mermaidBlockPattern = RegExp(
   r'```mermaid\s*\n([\s\S]*?)```',
   multiLine: true,

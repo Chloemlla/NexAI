@@ -195,7 +195,7 @@ result.replaceAllMapped(
 
 ```dart
 result.replaceAllMapped(
-  RegExp(r'\^?(\d*[+-])(?!\})'),
+  RegExp(r'(?<=[A-Za-z\d\)\}])\^?(\d*[+-])(?!\})'),
   (m) => '^{${m.group(1)}}',
 )
 ```
@@ -204,13 +204,22 @@ result.replaceAllMapped(
 |---|---|---|
 | `Na+` | `Na^{+}` | Simple positive charge |
 | `Cl-` | `Cl^{-}` | Simple negative charge |
-| `Fe3+` | `Fe_{3}^{+}` | After Rule 1, `3` → `_{3}` first, then `+` → `^{+}` |
+| `Fe3+` | `Fe_{3}^{+}` | After Rule 1, `3` → `_{3}` first; `}` in lookbehind ✓ |
 | `SO4^2-` | `SO_{4}^{2-}` | Explicit caret with numeric charge |
-| `^2-` | `^{2-}` | Bare caret consumed |
+| `2H2 + O2` | *(unchanged)* | Space before `+` → lookbehind fails → no match ✓ |
+
+**Positive lookbehind `(?<=[A-Za-z\d\)\}])`:** Requires the charge to be immediately preceded
+by a formula character (letter, digit, `)`, or `}`). This prevents reaction-operator `+` signs
+(surrounded by spaces, e.g., `H₂ + O₂`) from being incorrectly promoted to superscripts.
 
 **Negative lookahead `(?!\})`:** Prevents double-processing of already-converted `^{...}` groups.
 
-**Regex:** `\^?(\d*[+-])(?!\})` — optional leading `^`, then optional digits, then `+` or `-`, not followed by `}`.
+**Regex:** `(?<=[A-Za-z\d\)\}])\^?(\d*[+-])(?!\})` — lookbehind for formula char, optional `^`,
+optional digits, `+` or `-`, not followed by `}`.
+
+> **Bug fix note (2026-03-13):** The original regex `\^?(\d*[+-])(?!\})` lacked position context
+> and incorrectly converted the `+` operator between reactants (e.g., `2H₂ + O₂ → 2H₂O`) into
+> a superscript charge `^{+}`. The lookbehind assertion was added to fix this.
 
 ### Rule 3 — Reversible Reaction Arrow
 
@@ -444,7 +453,7 @@ Currently all chemical equations render inline (`$ ... $`). To support block-lev
 // Pre-compiled regexes (top-level, outside any class)
 final _cePattern       = RegExp(r'\$?\s*\\ce\{([^}]+)\}\s*\$?');
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
-final _chargePattern   = RegExp(r'\^?(\d*[+-])(?!\})');
+final _chargePattern   = RegExp(r'(?<=[A-Za-z\d\)\}])\^?(\d*[+-])(?!\})');
 
 // Preprocessing entry point
 static String _preprocessChemical(String text) {

@@ -145,3 +145,8 @@ flutter:
           weight: 700
         - asset: assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Black.ttf
           weight: 900
+
+    # OPPO Sans 4.0 - 可变字体（Variable Font）
+    - family: OPPO_Sans
+      fonts:
+        - asset: assets/OPPO_Sans_4.0/OPPO Sans 4.0.ttf

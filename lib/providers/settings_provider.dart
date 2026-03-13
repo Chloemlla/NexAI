@@ -8,6 +8,7 @@ class SettingsProvider extends ChangeNotifier {
     'vivoSans',
     'vivoSansGlobal',
     'HarmonyOS_Sans_SC',
+    'OPPO_Sans',
   ];
 
   // ── Secure storage (Android Keystore / iOS Keychain) ─────────────────────

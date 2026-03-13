@@ -16,6 +16,10 @@ import 'providers/short_url_provider.dart';
 import 'providers/sync_provider.dart';
 import 'app.dart';
 import 'utils/app_security.dart';
+import 'utils/security_headers_interceptor.dart';
+import 'utils/security_event_reporter.dart';
+import 'services/nexai_security_service.dart';
+import 'package:dio/dio.dart';
 
 bool get isDesktop =>
     !kIsWeb &&
@@ -34,6 +38,25 @@ void main() async {
 
   // Security: APK integrity + root detection (honeypot mode)
   await AppSecurity.instance.init();
+
+  // Initialize security services
+  final securityDio = createSecureDio(
+    options: BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 120),
+      sendTimeout: const Duration(seconds: 30),
+    ),
+  );
+  final securityService = NexAISecurityService(securityDio);
+  final securityReporter = SecurityEventReporter(securityService);
+
+  // Report security issues if detected
+  if (AppSecurity.instance.isCompromised ||
+      !AppSecurity.instance.isSignatureValid ||
+      !AppSecurity.instance.isApkHashValid) {
+    // Report asynchronously, don't block app startup
+    securityReporter.reportAllIssues().ignore();
+  }
 
   if (isAndroid) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

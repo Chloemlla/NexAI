@@ -10,6 +10,9 @@ import '../providers/settings_provider.dart';
 import '../utils/update_checker.dart';
 import '../utils/navigation_helper.dart';
 import '../utils/app_security.dart';
+import '../utils/security_status_checker.dart';
+import '../utils/security_headers_interceptor.dart';
+import '../services/nexai_security_service.dart';
 import 'chat_page.dart';
 import 'notes_page.dart';
 import 'note_detail_page.dart';
@@ -27,6 +30,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with WindowListener {
   int _androidNavIndex = 0;
   String _currentPage = 'chat';
+  SecurityStatusChecker? _securityChecker;
 
   @override
   void didChangeDependencies() {
@@ -52,7 +56,25 @@ class _HomePageState extends State<HomePage> with WindowListener {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UpdateChecker.checkUpdateOnStart(context);
       _checkIntegrity();
+      _startSecurityStatusCheck();
     });
+  }
+
+  void _startSecurityStatusCheck() {
+    try {
+      // Create security service with secure Dio
+      final dio = createSecureDio();
+      final service = NexAISecurityService(dio);
+      _securityChecker = SecurityStatusChecker(service);
+
+      // Start periodic check (every 30 minutes)
+      _securityChecker?.startPeriodicCheck(
+        interval: const Duration(minutes: 30),
+        context: context,
+      );
+    } catch (e) {
+      debugPrint('Failed to start security status check: $e');
+    }
   }
 
   void _checkIntegrity() {
@@ -106,6 +128,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
   void dispose() {
     if (isDesktop) windowManager.removeListener(this);
     NavigationHelper.navigateToSettings = null; // Clean up callback
+    _securityChecker?.dispose();
     super.dispose();
   }
 

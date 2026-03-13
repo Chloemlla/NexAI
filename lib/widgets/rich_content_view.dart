@@ -13,6 +13,7 @@ import 'flowchart/flowchart_widget.dart';
 final _cePattern = RegExp(r'\$?\s*\\ce\{([^}]+)\}\s*\$?');
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
 final _chargePattern = RegExp(r'(?<=[A-Za-z\d\)\}])\^?(\d*[+-])(?!\})');
+final _bareCaretPattern = RegExp(r'\^(?!\{)');
 final _mermaidBlockPattern = RegExp(
   r'```mermaid\s*\n([\s\S]*?)```',
   multiLine: true,
@@ -47,7 +48,9 @@ class _RichContentViewState extends State<RichContentView> {
   void didUpdateWidget(RichContentView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.content != widget.content) {
-      _segments = _parseContent(widget.content);
+      setState(() {
+        _segments = _parseContent(widget.content);
+      });
     }
   }
 
@@ -141,7 +144,7 @@ class _MarkdownWidget extends StatelessWidget {
     result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
     result = result.replaceAll('<->', '\\rightleftharpoons ');
     result = result.replaceAll('->', '\\rightarrow ');
-    result = result.replaceAllMapped(RegExp(r'\^(?!\{)'), (m) => '\\uparrow ');
+    result = result.replaceAllMapped(_bareCaretPattern, (m) => '\\uparrow ');
     return result;
   }
 }
@@ -283,8 +286,9 @@ List<_Segment> _parseContent(String text) {
   for (final match in _mermaidBlockPattern.allMatches(text)) {
     if (match.start > lastEnd) {
       final before = text.substring(lastEnd, match.start).trim();
-      if (before.isNotEmpty)
+      if (before.isNotEmpty) {
         segments.add(_Segment(_SegmentType.markdown, before));
+      }
     }
     segments.add(_Segment(_SegmentType.mermaid, match.group(1)!.trim()));
     lastEnd = match.end;
@@ -292,12 +296,14 @@ List<_Segment> _parseContent(String text) {
 
   if (lastEnd < text.length) {
     final remaining = text.substring(lastEnd).trim();
-    if (remaining.isNotEmpty)
+    if (remaining.isNotEmpty) {
       segments.add(_Segment(_SegmentType.markdown, remaining));
+    }
   }
 
-  if (segments.isEmpty && text.isNotEmpty) {
-    segments.add(_Segment(_SegmentType.markdown, text));
+  final trimmedText = text.trim();
+  if (segments.isEmpty && trimmedText.isNotEmpty) {
+    segments.add(_Segment(_SegmentType.markdown, trimmedText));
   }
   return segments;
 }

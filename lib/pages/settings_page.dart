@@ -620,8 +620,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           size: 20,
                         ),
                       ),
-                      items:
-                          ['System', 'Roboto', 'Open Sans', 'Lato', 'Monospace']
+                      items: SettingsProvider.availableFonts
                               .map(
                                 (f) =>
                                     DropdownMenuItem(value: f, child: Text(f)),

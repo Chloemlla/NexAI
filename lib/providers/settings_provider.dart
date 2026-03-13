@@ -3,6 +3,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
+  // ── Available font families (from pubspec.yaml) ──────────────────────────
+  static const List<String> availableFonts = [
+    'vivoSans',
+    'vivoSansGlobal',
+    'HarmonyOS_Sans_SC',
+  ];
+
   // ── Secure storage (Android Keystore / iOS Keychain) ─────────────────────
   static const _secure = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),

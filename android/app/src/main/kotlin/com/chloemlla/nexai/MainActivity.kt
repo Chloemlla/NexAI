@@ -37,6 +37,7 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "getApkSignatureFingerprint" -> result.success(getApkSignatureSha256())
+                    "getApkFileSha256"          -> result.success(getApkFileSha256())
                     "isRooted"                  -> result.success(detectRoot())
                     "setSecureScreen"           -> {
                         val enable = call.argument<Boolean>("enable") ?: true
@@ -69,6 +70,29 @@ class MainActivity : FlutterActivity() {
             }
             val digest = MessageDigest.getInstance("SHA-256").digest(cert.toByteArray())
             digest.joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun getApkFileSha256(): String? {
+        return try {
+            val info = packageManager.getPackageInfo(packageName, 0)
+            val apkPath = info.applicationInfo.sourceDir
+            val apkFile = File(apkPath)
+
+            if (!apkFile.exists()) return null
+
+            val digest = MessageDigest.getInstance("SHA-256")
+            apkFile.inputStream().use { input ->
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    digest.update(buffer, 0, bytesRead)
+                }
+            }
+
+            digest.digest().joinToString("") { "%02x".format(it) }
         } catch (e: Exception) {
             null
         }

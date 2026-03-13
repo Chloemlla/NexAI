@@ -2,16 +2,21 @@
 ///
 /// Provides:
 ///   1. APK integrity check (signature TOFU — no hardcoded fingerprint in binary)
-///   2. Root / jailbreak detection (honeypot mode — doesn't block, just flags)
-///   3. Secure screen toggle (FLAG_SECURE on Android)
-///   4. Security context accessible app-wide via [AppSecurity.instance]
+///   2. APK file hash verification against GitHub releases
+///   3. Root / jailbreak detection (honeypot mode — doesn't block, just flags)
+///   4. Secure screen toggle (FLAG_SECURE on Android)
+///   5. Security context accessible app-wide via [AppSecurity.instance]
 library;
 
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 const _channel = MethodChannel('com.chloemlla.nexai/security');
 
@@ -21,6 +26,7 @@ const _storage = FlutterSecureStorage(
 );
 
 const _sigPinKey = 'nexai.apk.signature.v1';
+const _githubApiUrl = 'https://api.github.com/repos/Chloemlla/NexAI/releases';
 
 // ─── AppSecurity singleton ────────────────────────────────────────────────────
 
@@ -35,10 +41,17 @@ class AppSecurity {
   /// True if APK signature matches the first-run pinned value.
   bool isSignatureValid = true;
 
+  /// True if APK file hash matches GitHub release hash.
+  bool isApkHashValid = true;
+
   /// Initialise security checks. Call once in [main] before [runApp].
   Future<void> init() async {
     if (kIsWeb) return;
-    await Future.wait([_checkApkSignature(), _checkRootStatus()]);
+    await Future.wait([
+      _checkApkSignature(),
+      _checkRootStatus(),
+      _checkApkFileHash(),
+    ]);
   }
 
   // ── APK Signature (TOFU) ────────────────────────────────────────────────────
@@ -76,6 +89,128 @@ class AppSecurity {
   /// Force-clear stored APK signature (call after legitimate app update
   /// where keystore changes — extremely rare, but supported).
   Future<void> clearSignaturePin() => _storage.delete(key: _sigPinKey);
+
+  // ── APK File Hash Verification ───────────────────────────────────────────
+
+  Future<void> _checkApkFileHash() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      // Extract commit hash from version (e.g., "1.0.7-e19d98d36")
+      final parts = currentVersion.split('-');
+      if (parts.length < 2) {
+        debugPrint('AppSecurity: version format missing commit hash');
+        return;
+      }
+
+      final versionTag = 'v$currentVersion';
+
+      // Fetch release data from GitHub
+      final releaseData = await _fetchReleaseByTag(versionTag);
+      if (releaseData == null) {
+        debugPrint('AppSecurity: release not found on GitHub');
+        return;
+      }
+
+      // Get device ABI
+      final androidInfo = await DeviceInfoPlugin().androidInfo;
+      final supportedAbis = androidInfo.supportedAbis;
+
+      // Find matching APK asset and expected hash
+      final expectedHash = await _findExpectedHash(releaseData, supportedAbis);
+      if (expectedHash == null) {
+        debugPrint('AppSecurity: no matching APK hash found in release');
+        return;
+      }
+
+      // Get installed APK hash from native code
+      final installedHash = await _channel.invokeMethod<String>('getApkFileSha256');
+      if (installedHash == null || installedHash.isEmpty) {
+        debugPrint('AppSecurity: failed to calculate APK hash');
+        return;
+      }
+
+      // Compare hashes
+      if (installedHash.toLowerCase() != expectedHash.toLowerCase()) {
+        debugPrint('AppSecurity: ⚠️  APK HASH MISMATCH');
+        debugPrint('  Expected: $expectedHash');
+        debugPrint('  Got:      $installedHash');
+        isApkHashValid = false;
+        isCompromised = true;
+      } else {
+        debugPrint('AppSecurity: APK hash verified ✓');
+        isApkHashValid = true;
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: APK hash check error: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>?> _fetchReleaseByTag(String tag) async {
+    try {
+      final url = '$_githubApiUrl/tags/$tag';
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('AppSecurity: failed to fetch release: $e');
+      return null;
+    }
+  }
+
+  Future<String?> _findExpectedHash(
+    Map<String, dynamic> releaseData,
+    List<String> supportedAbis,
+  ) async {
+    final assets = releaseData['assets'] as List<dynamic>? ?? [];
+    final body = releaseData['body'] as String? ?? '';
+
+    for (final asset in assets) {
+      final name = (asset['name'] as String? ?? '').toLowerCase();
+      if (!name.endsWith('.apk')) continue;
+
+      // Try to match device ABI
+      for (final abi in supportedAbis) {
+        final abiLower = abi.toLowerCase().replaceAll('_', '-');
+        if (name.contains(abiLower)) {
+          // Extract SHA256 from release body
+          return _extractHashFromBody(body, name);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _extractHashFromBody(String body, String assetName) {
+    // Parse format: "sha256:c4ff1d8f8b9f8cd5cb023a81346f389231bddf4843f2fd71845192a01af4518d"
+    final lines = body.split('\n');
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+
+      // Check if this line contains the asset name
+      if (line.contains(assetName)) {
+        // Look for sha256 in nearby lines (within 5 lines)
+        for (int j = i; j < i + 5 && j < lines.length; j++) {
+          final hashLine = lines[j];
+          final match = RegExp(r'sha256:([a-f0-9]{64})', caseSensitive: false)
+              .firstMatch(hashLine);
+
+          if (match != null) {
+            return match.group(1);
+          }
+        }
+      }
+    }
+
+    return null;
+  }
 
   // ── Root / Jailbreak Detection ───────────────────────────────────────────────
 

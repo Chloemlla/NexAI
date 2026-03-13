@@ -9,6 +9,7 @@ import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/update_checker.dart';
 import '../utils/navigation_helper.dart';
+import '../utils/app_security.dart';
 import 'chat_page.dart';
 import 'notes_page.dart';
 import 'note_detail_page.dart';
@@ -50,7 +51,55 @@ class _HomePageState extends State<HomePage> with WindowListener {
     // Check for updates on app start
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UpdateChecker.checkUpdateOnStart(context);
+      _checkIntegrity();
     });
+  }
+
+  void _checkIntegrity() {
+    final security = AppSecurity.instance;
+
+    // Show warning if APK integrity check failed
+    if (!security.isApkHashValid && isAndroid) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showIntegrityWarning();
+        }
+      });
+    }
+  }
+
+  void _showIntegrityWarning() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('安全警告'),
+          ],
+        ),
+        content: const Text(
+          'APK 完整性验证失败。安装的应用可能已被修改。\n\n'
+          '为了您的安全，请从 GitHub 下载官方版本。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('忽略'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Open GitHub releases
+              UpdateChecker.checkUpdate(context);
+            },
+            child: const Text('下载官方版本'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

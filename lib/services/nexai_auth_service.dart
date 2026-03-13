@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'pinned_http_client.dart';
+import '../utils/app_security.dart';
+import '../utils/request_signer.dart';
 
 // ─── Pinned HTTP wrapper ──────────────────────────────────────────────────────
 // Lazily initialises a certificate-pinned client on first use.
@@ -15,22 +17,57 @@ class _NexaiHttp {
     return _client!;
   }
 
+  /// Base headers: Content-Type + optional compromise honeypot flag.
+  static Map<String, String> _base([Map<String, String>? extra]) {
+    final h = <String, String>{...?extra};
+    // Honeypot: server sees this flag and can throttle/track compromised devices
+    if (AppSecurity.instance.isCompromised) {
+      h['X-NexAI-Device'] = 'flagged';
+    }
+    return h;
+  }
+
   static Future<http.Response> post(
     Uri url, {
     Map<String, String>? headers,
     Object? body,
-  }) async => (await _get()).post(url, headers: headers, body: body);
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'POST',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).post(url, headers: signed, body: body);
+  }
 
   static Future<http.Response> get(
     Uri url, {
     Map<String, String>? headers,
-  }) async => (await _get()).get(url, headers: headers);
+  }) async {
+    final signed = await signRequest(
+      method: 'GET',
+      path: url.path,
+      headers: _base(headers),
+    );
+    return (await _get()).get(url, headers: signed);
+  }
 
   static Future<http.Response> put(
     Uri url, {
     Map<String, String>? headers,
     Object? body,
-  }) async => (await _get()).put(url, headers: headers, body: body);
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'PUT',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).put(url, headers: signed, body: body);
+  }
 }
 
 const String _nexaiBaseUrl = 'https://api.951100.xyz/api/nexai';

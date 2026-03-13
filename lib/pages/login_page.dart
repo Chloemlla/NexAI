@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/nexai_auth_service.dart';
 import '../utils/google_font_paint.dart';
+import '../utils/app_security.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -37,10 +38,14 @@ class _LoginPageState extends State<LoginPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Prevent screenshots / screen recording on the login page
+    AppSecurity.instance.setSecureScreen(enable: true);
   }
 
   @override
   void dispose() {
+    // Restore normal screen capture when leaving login
+    AppSecurity.instance.setSecureScreen(enable: false);
     _tabController.dispose();
     _loginIdentifierController.dispose();
     _loginPasswordController.dispose();

@@ -15,6 +15,7 @@ import 'providers/translation_provider.dart';
 import 'providers/short_url_provider.dart';
 import 'providers/sync_provider.dart';
 import 'app.dart';
+import 'utils/app_security.dart';
 
 bool get isDesktop =>
     !kIsWeb &&
@@ -30,6 +31,9 @@ void main() async {
 
   // Initialize media_kit for video playback
   MediaKit.ensureInitialized();
+
+  // Security: APK integrity + root detection (honeypot mode)
+  await AppSecurity.instance.init();
 
   if (isAndroid) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

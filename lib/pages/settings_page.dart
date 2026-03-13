@@ -12,6 +12,7 @@ import '../providers/short_url_provider.dart';
 import '../providers/sync_provider.dart';
 import '../utils/update_checker.dart';
 import '../utils/google_font_paint.dart';
+import '../services/pinned_http_client.dart';
 import 'about_page.dart';
 import 'login_page.dart';
 
@@ -1356,6 +1357,114 @@ class _SettingsPageState extends State<SettingsPage> {
                       obscureText: true,
                       onChanged: (v) =>
                           context.read<SettingsProvider>().setVertexApiKey(v),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Security ──
+                _SectionHeader(
+                  icon: Icons.security_rounded,
+                  label: '安全',
+                  cs: cs,
+                  tt: tt,
+                ),
+                const SizedBox(height: 10),
+                _SettingsCard(
+                  cs: cs,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.verified_user_rounded,
+                        color: cs.primary,
+                      ),
+                      title: Text(
+                        '证书固定',
+                        style: tt.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        '使用 TOFU 模式保护 API 连接安全',
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (c) => AlertDialog(
+                            title: const Text('清除证书缓存'),
+                            content: const Text(
+                              '这将清除已存储的证书指纹，下次连接时将重新固定证书。\n\n'
+                              '仅在以下情况使用：\n'
+                              '• 服务器证书已更新\n'
+                              '• 遇到证书验证错误\n'
+                              '• 需要重新建立信任',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(c, false),
+                                child: const Text('取消'),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.pop(c, true),
+                                child: const Text('清除'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed != true || !context.mounted) return;
+
+                        try {
+                          await clearCertPin();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('✅ 证书缓存已清除，请重启应用'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('❌ 清除失败: $e'),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: Icon(
+                        Icons.refresh_rounded,
+                        size: 18,
+                        color: cs.primary,
+                      ),
+                      label: Text(
+                        '清除证书缓存',
+                        style: TextStyle(color: cs.primary),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 44),
+                        side: BorderSide(color: cs.primary.withAlpha(100)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                     ),
                   ],
                 ),

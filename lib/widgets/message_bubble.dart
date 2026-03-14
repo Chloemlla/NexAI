@@ -388,7 +388,11 @@ class _MessageFooter extends StatelessWidget {
             SnackBar(
               content: Row(
                 children: [
-                  FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                  FaIcon(
+                    FontAwesomeIcons.circleCheck,
+                    size: 16,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 8),
                   Text('图片已保存到系统相册'),
                 ],
@@ -400,7 +404,11 @@ class _MessageFooter extends StatelessWidget {
             SnackBar(
               content: Row(
                 children: [
-                  FaIcon(FontAwesomeIcons.triangleExclamation, size: 16, color: Colors.white),
+                  FaIcon(
+                    FontAwesomeIcons.triangleExclamation,
+                    size: 16,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 8),
                   Text('缺少存储权限'),
                 ],
@@ -422,7 +430,11 @@ class _MessageFooter extends StatelessWidget {
             SnackBar(
               content: Row(
                 children: [
-                  FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                  FaIcon(
+                    FontAwesomeIcons.circleCheck,
+                    size: 16,
+                    color: Colors.white,
+                  ),
                   SizedBox(width: 8),
                   Expanded(child: Text('图片已保存到: $path')),
                 ],
@@ -436,7 +448,11 @@ class _MessageFooter extends StatelessWidget {
         SnackBar(
           content: Row(
             children: [
-              FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+              FaIcon(
+                FontAwesomeIcons.circleXmark,
+                size: 16,
+                color: Colors.white,
+              ),
               SizedBox(width: 8),
               Expanded(child: Text('保存失败: $e')),
             ],
@@ -460,9 +476,9 @@ class _MessageFooter extends StatelessWidget {
 
     // Check if user is logged in
     if (!authProvider.isLoggedIn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先登录以使用分享功能')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先登录以使用分享功能')));
       return;
     }
 
@@ -471,15 +487,61 @@ class _MessageFooter extends StatelessWidget {
     String? language;
     String content = message.content;
 
-    // Check if message contains code blocks
+    // 1. Check for fenced code block  ```lang\n...\n```
     final codeBlockRegex = RegExp(r'```(\w+)?\n([\s\S]*?)```');
     final match = codeBlockRegex.firstMatch(message.content);
 
     if (match != null) {
-      // Extract code block
-      language = match.group(1);
+      language = match.group(1)?.toLowerCase();
       content = match.group(2) ?? '';
-      contentType = 'code';
+
+      // Promote certain languages to their own content type
+      if (language == 'json') {
+        contentType = 'json';
+        language = null;
+      } else if (language == 'svg') {
+        contentType = 'svg';
+        language = null;
+      } else if (language == 'html') {
+        contentType = 'html';
+        language = null;
+      } else if (language == 'xml') {
+        contentType = 'xml';
+        language = null;
+      } else if (language == 'csv') {
+        contentType = 'csv';
+        language = null;
+      } else if (language == 'latex' || language == 'tex') {
+        contentType = 'latex';
+        language = null;
+      } else if (language == 'mermaid') {
+        contentType = 'mermaid';
+        language = null;
+      } else {
+        contentType = 'code';
+      }
+    } else {
+      // 2. No code block — try to auto-detect from raw content
+      final trimmed = message.content.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          // Basic JSON heuristic
+          contentType = 'json';
+          content = trimmed;
+        } catch (_) {}
+      } else if (trimmed.startsWith('<svg') || trimmed.startsWith('<?xml')) {
+        contentType = trimmed.contains('<svg') ? 'svg' : 'xml';
+        content = trimmed;
+      } else if (trimmed.startsWith('<!DOCTYPE html') ||
+          trimmed.startsWith('<html')) {
+        contentType = 'html';
+        content = trimmed;
+      } else if (trimmed.startsWith('\\documentclass') ||
+          trimmed.contains('\\begin{')) {
+        contentType = 'latex';
+        content = trimmed;
+      }
+      // else stays 'markdown'
     }
 
     // Show share dialog

@@ -40,12 +40,8 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
 
     if (!authProvider.isLoggedIn) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('我的分享'),
-        ),
-        body: const Center(
-          child: Text('请先登录以查看分享内容'),
-        ),
+        appBar: AppBar(title: const Text('我的分享')),
+        body: const Center(child: Text('请先登录以查看分享内容')),
       );
     }
 
@@ -62,37 +58,35 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
       body: artifactsProvider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : artifactsProvider.error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('加载失败: ${artifactsProvider.error}'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadArtifacts,
-                        child: const Text('重试'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('加载失败: ${artifactsProvider.error}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadArtifacts,
+                    child: const Text('重试'),
                   ),
-                )
-              : artifactsProvider.artifacts.isEmpty
-                  ? const Center(
-                      child: Text('暂无分享内容'),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadArtifacts,
-                      child: ListView.builder(
-                        itemCount: artifactsProvider.artifacts.length,
-                        itemBuilder: (context, index) {
-                          final artifact = artifactsProvider.artifacts[index];
-                          return _ArtifactListItem(
-                            artifact: artifact,
-                            onDelete: () => _deleteArtifact(artifact.shortId),
-                            onCopyLink: () => _copyLink(artifact.shortId),
-                          );
-                        },
-                      ),
-                    ),
+                ],
+              ),
+            )
+          : artifactsProvider.artifacts.isEmpty
+          ? const Center(child: Text('暂无分享内容'))
+          : RefreshIndicator(
+              onRefresh: _loadArtifacts,
+              child: ListView.builder(
+                itemCount: artifactsProvider.artifacts.length,
+                itemBuilder: (context, index) {
+                  final artifact = artifactsProvider.artifacts[index];
+                  return _ArtifactListItem(
+                    artifact: artifact,
+                    onDelete: () => _deleteArtifact(artifact.shortId),
+                    onCopyLink: () => _copyLink(artifact.shortId),
+                  );
+                },
+              ),
+            ),
     );
   }
 
@@ -109,9 +103,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('删除'),
           ),
         ],
@@ -128,11 +120,9 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? '删除成功' : '删除失败'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(success ? '删除成功' : '删除失败')));
       }
     }
   }
@@ -140,9 +130,9 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
   void _copyLink(String shortId) {
     final url = 'https://api.951100.xyz/share/$shortId';
     Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('链接已复制到剪贴板')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('链接已复制到剪贴板')));
   }
 }
 
@@ -196,11 +186,7 @@ class _ArtifactListItem extends StatelessWidget {
             const PopupMenuItem(
               value: 'copy',
               child: Row(
-                children: [
-                  Icon(Icons.copy),
-                  SizedBox(width: 8),
-                  Text('复制链接'),
-                ],
+                children: [Icon(Icons.copy), SizedBox(width: 8), Text('复制链接')],
               ),
             ),
             const PopupMenuItem(
@@ -229,6 +215,18 @@ class _ArtifactListItem extends StatelessWidget {
         return const Icon(Icons.web, color: Colors.orange);
       case 'mermaid':
         return const Icon(Icons.account_tree, color: Colors.purple);
+      case 'json':
+        return const Icon(Icons.data_object, color: Colors.teal);
+      case 'svg':
+        return const Icon(Icons.draw, color: Colors.pink);
+      case 'latex':
+        return const Icon(Icons.functions, color: Colors.indigo);
+      case 'csv':
+        return const Icon(Icons.table_chart, color: Colors.amber);
+      case 'xml':
+        return const Icon(Icons.code_off, color: Colors.brown);
+      case 'text':
+        return const Icon(Icons.text_snippet, color: Colors.grey);
       default:
         return const Icon(Icons.description);
     }
@@ -244,6 +242,18 @@ class _ArtifactListItem extends StatelessWidget {
         return 'HTML';
       case 'mermaid':
         return 'Mermaid 图表';
+      case 'json':
+        return 'JSON';
+      case 'svg':
+        return 'SVG 图形';
+      case 'latex':
+        return 'LaTeX';
+      case 'csv':
+        return 'CSV 表格';
+      case 'xml':
+        return 'XML';
+      case 'text':
+        return '纯文本';
       default:
         return artifact.contentType;
     }

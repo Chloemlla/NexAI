@@ -778,6 +778,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
   // ─── Desktop: Material Design NavigationRail layout ───
   Widget _buildDesktopLayout(BuildContext context) {
     final chat = context.watch<ChatProvider>();
+    final notes = context.watch<NotesProvider>();
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -785,6 +786,12 @@ class _HomePageState extends State<HomePage> with WindowListener {
     Widget body;
 
     switch (_currentPage) {
+      case 'notes':
+        body = const NotesPage();
+        break;
+      case 'tools':
+        body = const ToolsPage();
+        break;
       case 'settings':
         body = const SettingsPage();
         break;
@@ -968,6 +975,46 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       ),
                       // Footer nav items
                       const Divider(height: 1),
+                      ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        selected: _currentPage == 'notes',
+                        selectedTileColor: cs.secondaryContainer.withAlpha(180),
+                        leading: Icon(
+                          _currentPage == 'notes'
+                              ? Icons.note_alt_rounded
+                              : Icons.note_alt_outlined,
+                          size: 20,
+                          color: _currentPage == 'notes'
+                              ? cs.primary
+                              : cs.onSurfaceVariant,
+                        ),
+                        title: const Text('笔记', style: TextStyle(fontSize: 13)),
+                        onTap: () => setState(() => _currentPage = 'notes'),
+                      ),
+                      ListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        selected: _currentPage == 'tools',
+                        selectedTileColor: cs.secondaryContainer.withAlpha(180),
+                        leading: Icon(
+                          _currentPage == 'tools'
+                              ? Icons.build_rounded
+                              : Icons.build_outlined,
+                          size: 20,
+                          color: _currentPage == 'tools'
+                              ? cs.primary
+                              : cs.onSurfaceVariant,
+                        ),
+                        title: const Text('工具', style: TextStyle(fontSize: 13)),
+                        onTap: () => setState(() => _currentPage = 'tools'),
+                      ),
                       ListTile(
                         dense: true,
                         visualDensity: VisualDensity.compact,

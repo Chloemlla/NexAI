@@ -55,7 +55,10 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final settings = context.watch<SettingsProvider>();
+    // Try to get settings, but use defaults if not available
+    final settings = context.watch<SettingsProvider?>();
+    final fontFamily = settings?.fontFamily ?? 'vivoSans';
+    final fontSize = settings?.fontSize ?? 14.0;
 
     return Dialog(
       backgroundColor: colorScheme.surface,
@@ -98,14 +101,14 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
-                          fontFamily: settings.fontFamily,
+                          fontFamily: fontFamily,
                         ),
                       ),
                       Text(
                         '正在初始化应用组件...',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
-                          fontFamily: settings.fontFamily,
+                          fontFamily: fontFamily,
                         ),
                       ),
                     ],
@@ -135,8 +138,8 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                     return _TypewriterText(
                       text: _logs[index],
                       delay: Duration(milliseconds: index * 50),
-                      fontFamily: settings.fontFamily,
-                      fontSize: settings.fontSize,
+                      fontFamily: fontFamily,
+                      fontSize: fontSize,
                     );
                   },
                 ),
@@ -163,7 +166,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                   '${_logs.length} 个任务已完成',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    fontFamily: settings.fontFamily,
+                    fontFamily: fontFamily,
                   ),
                 ),
               ],

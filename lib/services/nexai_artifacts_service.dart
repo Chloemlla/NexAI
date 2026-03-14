@@ -2,87 +2,13 @@
 /// Handles all communication with the NexAI backend artifacts endpoints
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'pinned_http_client.dart';
-import '../utils/app_security.dart';
-import '../utils/request_signer.dart';
 import '../models/artifact.dart';
-
-// ─── Pinned HTTP wrapper ──────────────────────────────────────────────────────
-class _NexaiHttp {
-  static http.Client? _client;
-
-  static Future<http.Client> _get() async {
-    _client ??= await buildPinnedHttpClient();
-    return _client!;
-  }
-
-  static Map<String, String> _base([Map<String, String>? extra]) {
-    final h = <String, String>{...?extra};
-    if (AppSecurity.instance.isCompromised) {
-      h['X-NexAI-Device'] = 'flagged';
-    }
-    return h;
-  }
-
-  static Future<http.Response> post(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    final bodyStr = body is String ? body : (body?.toString() ?? '');
-    final signed = await signRequest(
-      method: 'POST',
-      path: url.path,
-      headers: _base(headers),
-      body: bodyStr,
-    );
-    return (await _get()).post(url, headers: signed, body: body);
-  }
-
-  static Future<http.Response> get(
-    Uri url, {
-    Map<String, String>? headers,
-  }) async {
-    final signed = await signRequest(
-      method: 'GET',
-      path: url.path,
-      headers: _base(headers),
-    );
-    return (await _get()).get(url, headers: signed);
-  }
-
-  static Future<http.Response> patch(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    final bodyStr = body is String ? body : (body?.toString() ?? '');
-    final signed = await signRequest(
-      method: 'PATCH',
-      path: url.path,
-      headers: _base(headers),
-      body: bodyStr,
-    );
-    return (await _get()).patch(url, headers: signed, body: body);
-  }
-
-  static Future<http.Response> delete(
-    Uri url, {
-    Map<String, String>? headers,
-  }) async {
-    final signed = await signRequest(
-      method: 'DELETE',
-      path: url.path,
-      headers: _base(headers),
-    );
-    return (await _get()).delete(url, headers: signed);
-  }
-}
 
 const String _nexaiBaseUrl = 'https://api.951100.xyz/api/nexai';
 
 class NexaiArtifactsApi {
   static String _baseUrl = _nexaiBaseUrl;
+  static final http.Client _client = http.Client();
 
   static void setBaseUrl(String url) {
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
@@ -118,7 +44,7 @@ class NexaiArtifactsApi {
       if (expiresInDays != null) 'expires_in_days': expiresInDays,
     };
 
-    final response = await _NexaiHttp.post(
+    final response = await _client.post(
       Uri.parse('$_baseUrl/artifacts'),
       headers: {
         'Content-Type': 'application/json',
@@ -148,7 +74,7 @@ class NexaiArtifactsApi {
       headers['X-Password'] = password;
     }
 
-    final response = await _NexaiHttp.get(
+    final response = await _client.get(
       Uri.parse('$_baseUrl/artifacts/$shortId'),
       headers: headers,
     );
@@ -191,7 +117,7 @@ class NexaiArtifactsApi {
     if (tags != null) body['tags'] = tags;
     if (expiresInDays != null) body['expires_in_days'] = expiresInDays;
 
-    final response = await _NexaiHttp.patch(
+    final response = await _client.patch(
       Uri.parse('$_baseUrl/artifacts/$shortId'),
       headers: {
         'Content-Type': 'application/json',
@@ -211,7 +137,7 @@ class NexaiArtifactsApi {
     String shortId, {
     required String accessToken,
   }) async {
-    final response = await _NexaiHttp.delete(
+    final response = await _client.delete(
       Uri.parse('$_baseUrl/artifacts/$shortId'),
       headers: {
         'Content-Type': 'application/json',
@@ -244,7 +170,7 @@ class NexaiArtifactsApi {
       queryParameters: queryParams,
     );
 
-    final response = await _NexaiHttp.get(
+    final response = await _client.get(
       uri,
       headers: {
         'Content-Type': 'application/json',
@@ -264,7 +190,7 @@ class NexaiArtifactsApi {
   /// POST /artifacts/:shortId/view - Record view
   static Future<void> recordView(String shortId) async {
     try {
-      await _NexaiHttp.post(
+      await _client.post(
         Uri.parse('$_baseUrl/artifacts/$shortId/view'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({

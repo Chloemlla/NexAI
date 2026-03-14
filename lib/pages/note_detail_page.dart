@@ -863,7 +863,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ 导出成功: $path'),
+            content: Text('导出成功: $path'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green,
             shape: RoundedRectangleBorder(

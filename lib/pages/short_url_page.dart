@@ -75,7 +75,7 @@ class _ShortUrlPageState extends State<ShortUrlPage>
             ),
           );
         }
-        SmartDialog.showToast('🎉 短链接生成成功！');
+        SmartDialog.showToast('短链接生成成功！');
       } else {
         final msg = response.data is Map<String, dynamic>
             ? response.data['msg']
@@ -104,7 +104,7 @@ class _ShortUrlPageState extends State<ShortUrlPage>
 
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
-    SmartDialog.showToast('✅ 链接已复制到剪贴板');
+    SmartDialog.showToast('链接已复制到剪贴板');
   }
 
   Future<void> _launchUrl(String url) async {

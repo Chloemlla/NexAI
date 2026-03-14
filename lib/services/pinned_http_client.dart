@@ -163,7 +163,7 @@ class _PinnedClient extends http.BaseClient {
           if (!_mismatchHandled) {
             _mismatchHandled = true;
             debugPrint(
-              'NexAI Pinning: ⚠️  CERT MISMATCH at $host\n'
+              'NexAI Pinning: CERT MISMATCH at $host\n'
               '  stored : $_expectedFp\n'
               '  current: $actual\n'
               '  → attempting auto-recovery (verifying new cert with system CA)',
@@ -206,7 +206,7 @@ class _PinnedClient extends http.BaseClient {
           await _storage.write(key: _pinExpiryKey, value: expiry.toIso8601String());
 
           debugPrint(
-            'NexAI Pinning: ✅ AUTO-RECOVERY successful\n'
+            'NexAI Pinning: AUTO-RECOVERY successful\n'
             '  New cert verified by system CA and pinned\n'
             '  fingerprint: $verifiedFp\n'
             '  expires    : ${expiry.toIso8601String()}\n'
@@ -216,7 +216,7 @@ class _PinnedClient extends http.BaseClient {
       }
     } catch (e) {
       debugPrint(
-        'NexAI Pinning: ❌ AUTO-RECOVERY failed\n'
+        'NexAI Pinning: AUTO-RECOVERY failed\n'
         '  New certificate could not be verified by system CA\n'
         '  Error: $e\n'
         '  → This may indicate a MITM attack or invalid certificate\n'
@@ -305,7 +305,7 @@ Future<void> _probeAndPin(String host, int port) async {
       await _storage.write(key: _pinExpiryKey, value: expiry.toIso8601String());
 
       debugPrint(
-        'NexAI Pinning: pin updated ✓\n'
+        'NexAI Pinning: pin updated\n'
         '  fingerprint: $fp\n'
         '  expires    : ${expiry.toIso8601String()}',
       );

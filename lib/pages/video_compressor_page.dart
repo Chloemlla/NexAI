@@ -171,7 +171,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         _initializePlayer(result.compressedFilePath);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ 压缩完成！'),
+            content: Text('压缩完成！'),
             backgroundColor: Colors.green,
           ),
         );
@@ -180,7 +180,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('❌ 压缩失败: $e')));
+        ).showSnackBar(SnackBar(content: Text('压缩失败: $e')));
       }
     } finally {
       if (mounted) {
@@ -218,7 +218,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ 已保存到相册'),
+            content: Text('已保存到相册'),
             backgroundColor: Colors.green,
           ),
         );

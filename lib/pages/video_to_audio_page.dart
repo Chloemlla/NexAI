@@ -203,7 +203,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       if (_completedCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ 完成 $_completedCount 个，失败 $_failedCount 个'),
+            content: Text('完成 $_completedCount 个，失败 $_failedCount 个'),
             backgroundColor: _failedCount == 0 ? Colors.green : Colors.orange,
           ),
         );
@@ -347,7 +347,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ 已保存到 ${p.dirname(savePath)}'),
+            content: Text('已保存到 ${p.dirname(savePath)}'),
             backgroundColor: Colors.green,
           ),
         );

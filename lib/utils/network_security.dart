@@ -33,7 +33,7 @@ class NetworkSecurity {
 
       if (httpProxy != null || httpsProxy != null) {
         isProxyDetected = true;
-        debugPrint('NetworkSecurity: ⚠️  Proxy detected');
+        debugPrint('NetworkSecurity: Proxy detected');
         debugPrint('  HTTP_PROXY: $httpProxy');
         debugPrint('  HTTPS_PROXY: $httpsProxy');
       }

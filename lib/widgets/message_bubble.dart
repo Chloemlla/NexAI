@@ -382,11 +382,11 @@ class _MessageFooter extends StatelessWidget {
           await file.writeAsBytes(pngBytes);
           await Gal.putImage(file.path, album: 'NexAI');
           scaffoldMessenger.showSnackBar(
-            const SnackBar(content: Text('✅ 图片已保存到系统相册')),
+            const SnackBar(content: Text('图片已保存到系统相册')),
           );
         } else {
           scaffoldMessenger.showSnackBar(
-            const SnackBar(content: Text('⚠️ 缺少存储权限')),
+            const SnackBar(content: Text('缺少存储权限')),
           );
         }
       } else if (isDesktop) {
@@ -400,12 +400,12 @@ class _MessageFooter extends StatelessWidget {
           final file = File(path);
           await file.writeAsBytes(pngBytes);
           scaffoldMessenger.showSnackBar(
-            SnackBar(content: Text('✅ 图片已保存到: $path')),
+            SnackBar(content: Text('图片已保存到: $path')),
           );
         }
       }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('❌ 保存失败: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text('保存失败: $e')));
     }
   }
 

@@ -857,7 +857,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  ok ? '✅ 数据已上传到云端' : '❌ 上传失败',
+                                                  ok ? '数据已上传到云端' : '上传失败',
                                                 ),
                                                 behavior:
                                                     SnackBarBehavior.floating,
@@ -965,7 +965,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  ok ? '✅ 数据已从云端恢复' : '❌ 恢复失败',
+                                                  ok ? '数据已从云端恢复' : '恢复失败',
                                                 ),
                                                 behavior:
                                                     SnackBarBehavior.floating,
@@ -1043,7 +1043,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                         ScaffoldMessenger.of(ctx).showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              ok ? '✅ 增量同步完成' : '❌ 增量同步失败',
+                                              ok ? '增量同步完成' : '增量同步失败',
                                             ),
                                             behavior: SnackBarBehavior.floating,
                                             shape: RoundedRectangleBorder(
@@ -1071,7 +1071,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     )
                                   : const Icon(Icons.sync_rounded, size: 18),
                               label: Text(
-                                sync.isSyncing ? '同步中...' : '⚡ 增量同步（仅传输变更）',
+                                sync.isSyncing ? '同步中...' : '增量同步（仅传输变更）',
                               ),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
@@ -1121,7 +1121,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                       ScaffoldMessenger.of(ctx).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            ok ? '✅ 云端数据已清除' : '❌ 清除失败',
+                                            ok ? '云端数据已清除' : '清除失败',
                                           ),
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
@@ -1424,7 +1424,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: const Text('✅ 证书缓存已清除，请重启应用'),
+                                content: const Text('证书缓存已清除，请重启应用'),
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -1437,7 +1437,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('❌ 清除失败: $e'),
+                                content: Text('清除失败: $e'),
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),

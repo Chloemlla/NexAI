@@ -392,7 +392,7 @@ ${safeEncode(e.response!.data)}
       conversation.messages.add(
         Message(
           role: 'assistant',
-          content: '⚠️ Error: $errorMsg$requestDetails',
+          content: 'Error: $errorMsg$requestDetails',
           timestamp: DateTime.now(),
           isError: true,
         ),
@@ -401,7 +401,7 @@ ${safeEncode(e.response!.data)}
       conversation.messages.add(
         Message(
           role: 'assistant',
-          content: '⚠️ Connection error: $e',
+          content: 'Connection error: $e',
           timestamp: DateTime.now(),
           isError: true,
         ),
@@ -493,14 +493,14 @@ ${safeEncode(e.response!.data)}
       }
 
       if (assistantMessage.content.isEmpty) {
-        assistantMessage.updateContent('⚠️ Error: Empty response from API');
+        assistantMessage.updateContent('Error: Empty response from API');
         assistantMessage.markAsError();
       }
     } else {
       conversation.messages.add(
         Message(
           role: 'assistant',
-          content: '⚠️ Error: HTTP ${response.statusCode}',
+          content: 'Error: HTTP ${response.statusCode}',
           timestamp: DateTime.now(),
           isError: true,
         ),
@@ -613,14 +613,14 @@ ${safeEncode(e.response!.data)}
       }
 
       if (assistantMessage.content.isEmpty) {
-        assistantMessage.updateContent('⚠️ Error: Empty response from API');
+        assistantMessage.updateContent('Error: Empty response from API');
         assistantMessage.markAsError();
       }
     } else {
       conversation.messages.add(
         Message(
           role: 'assistant',
-          content: '⚠️ Error: HTTP ${response.statusCode}',
+          content: 'Error: HTTP ${response.statusCode}',
           timestamp: DateTime.now(),
           isError: true,
         ),

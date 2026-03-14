@@ -177,7 +177,7 @@ void main() async {
       ),
     );
   } catch (e) {
-    logController.add('❌ 启动失败: $e');
+    logController.add('启动失败: $e');
     await Future.delayed(const Duration(seconds: 3));
     logController.close();
     rethrow;

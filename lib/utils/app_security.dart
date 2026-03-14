@@ -85,11 +85,11 @@ class AppSecurity {
       if (stored == null) {
         // TOFU first run — trust and pin current signature
         await _storage.write(key: _sigPinKey, value: current);
-        debugPrint('AppSecurity: APK signature pinned (TOFU) ✓');
+        debugPrint('AppSecurity: APK signature pinned (TOFU)');
         isSignatureValid = true;
       } else if (stored != current) {
         // Mismatch → APK was repackaged / re-signed
-        debugPrint('AppSecurity: ⚠️  APK SIGNATURE MISMATCH (possible repack)');
+        debugPrint('AppSecurity: APK SIGNATURE MISMATCH (possible repack)');
         isSignatureValid = false;
         // Strategy: set compromised flag instead of hard-exit,
         // so honeypot requests can be tracked server-side.
@@ -150,13 +150,13 @@ class AppSecurity {
 
       // Compare hashes
       if (installedHash.toLowerCase() != expectedHash.toLowerCase()) {
-        debugPrint('AppSecurity: ⚠️  APK HASH MISMATCH');
+        debugPrint('AppSecurity: APK HASH MISMATCH');
         debugPrint('  Expected: $expectedHash');
         debugPrint('  Got:      $installedHash');
         isApkHashValid = false;
         isCompromised = true;
       } else {
-        debugPrint('AppSecurity: APK hash verified ✓');
+        debugPrint('AppSecurity: APK hash verified');
         isApkHashValid = true;
       }
     } catch (e) {
@@ -236,7 +236,7 @@ class AppSecurity {
       if (Platform.isAndroid) {
         final rooted = await _channel.invokeMethod<bool>('isRooted') ?? false;
         if (rooted) {
-          debugPrint('AppSecurity: ⚠️  Root indicators detected');
+          debugPrint('AppSecurity: Root indicators detected');
           isCompromised = true;
         }
       }
@@ -266,7 +266,7 @@ class AppSecurity {
     try {
       final attached = await _channel.invokeMethod<bool>('isDebuggerAttached') ?? false;
       if (attached) {
-        debugPrint('AppSecurity: ⚠️  Debugger attached');
+        debugPrint('AppSecurity: Debugger attached');
         isDebuggerAttached = true;
         isCompromised = true;
       }
@@ -282,7 +282,7 @@ class AppSecurity {
     try {
       final emulator = await _channel.invokeMethod<bool>('isEmulator') ?? false;
       if (emulator) {
-        debugPrint('AppSecurity: ⚠️  Running on emulator');
+        debugPrint('AppSecurity: Running on emulator');
         isEmulator = true;
         isCompromised = true;
       }
@@ -298,7 +298,7 @@ class AppSecurity {
     try {
       final vpn = await _channel.invokeMethod<bool>('isVpnActive') ?? false;
       if (vpn) {
-        debugPrint('AppSecurity: ⚠️  VPN connection detected');
+        debugPrint('AppSecurity: VPN connection detected');
         isVpnActive = true;
         // VPN is not always malicious, so we don't set isCompromised
         // but we track it for risk scoring
@@ -346,7 +346,7 @@ class AppSecurity {
           await _storage.write(key: 'nexai.dex.hash.v1', value: hash);
           debugPrint('AppSecurity: DEX hash stored (TOFU)');
         } else if (stored != hash) {
-          debugPrint('AppSecurity: ⚠️  DEX HASH MISMATCH (runtime tampering)');
+          debugPrint('AppSecurity: DEX HASH MISMATCH (runtime tampering)');
           isCompromised = true;
         }
       }

@@ -232,7 +232,7 @@ class _GraphPageState extends State<GraphPage>
                     (t) => PopupMenuItem(
                       value: 'tag:${t.name}',
                       child: Text(
-                        '#${t.name}${_tagFilter == t.name ? ' ✓' : ''}',
+                        '#${t.name}${_tagFilter == t.name ? ' (已选)' : ''}',
                       ),
                     ),
                   ),

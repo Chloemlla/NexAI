@@ -357,18 +357,10 @@ class AuthProvider extends ChangeNotifier {
 
       debugPrint('[NexAI Passkey] Registration options: $optionsMap');
 
-      // 2. Convert JSON to RegisterRequestType with null safety
-      // Ensure excludeCredentials is a list (not null)
-      final sanitizedOptions = Map<String, dynamic>.from(optionsMap);
-      if (sanitizedOptions['excludeCredentials'] == null) {
-        sanitizedOptions['excludeCredentials'] = [];
-      }
-      if (sanitizedOptions['authenticatorSelection'] != null) {
-        final authSelection = sanitizedOptions['authenticatorSelection'] as Map<String, dynamic>;
-        if (authSelection['authenticatorAttachment'] == null) {
-          authSelection.remove('authenticatorAttachment');
-        }
-      }
+      // 2. Convert JSON to RegisterRequestType with comprehensive null safety
+      final sanitizedOptions = _sanitizePasskeyRegistrationOptions(optionsMap);
+
+      debugPrint('[NexAI Passkey] Sanitized options: $sanitizedOptions');
 
       final registerRequest = RegisterRequestType.fromJson(sanitizedOptions);
 
@@ -409,12 +401,10 @@ class AuthProvider extends ChangeNotifier {
 
       debugPrint('[NexAI Passkey] Authentication options: $optionsMap');
 
-      // 2. Convert JSON to AuthenticateRequestType with null safety
-      // Ensure allowCredentials is a list (not null)
-      final sanitizedOptions = Map<String, dynamic>.from(optionsMap);
-      if (sanitizedOptions['allowCredentials'] == null) {
-        sanitizedOptions['allowCredentials'] = [];
-      }
+      // 2. Convert JSON to AuthenticateRequestType with comprehensive null safety
+      final sanitizedOptions = _sanitizePasskeyAuthenticationOptions(optionsMap);
+
+      debugPrint('[NexAI Passkey] Sanitized auth options: $sanitizedOptions');
 
       final authRequest = AuthenticateRequestType.fromJson(sanitizedOptions);
 
@@ -445,6 +435,65 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== Internal Methods ==========
+
+  /// Sanitize passkey registration options to handle null values
+  Map<String, dynamic> _sanitizePasskeyRegistrationOptions(
+    Map<String, dynamic> options,
+  ) {
+    final sanitized = Map<String, dynamic>.from(options);
+
+    // Ensure excludeCredentials is a list (not null)
+    if (sanitized['excludeCredentials'] == null) {
+      sanitized['excludeCredentials'] = [];
+    }
+
+    // Handle authenticatorSelection
+    if (sanitized['authenticatorSelection'] != null) {
+      final authSelection = Map<String, dynamic>.from(
+        sanitized['authenticatorSelection'] as Map<String, dynamic>,
+      );
+
+      // Remove null authenticatorAttachment
+      if (authSelection['authenticatorAttachment'] == null) {
+        authSelection.remove('authenticatorAttachment');
+      }
+
+      sanitized['authenticatorSelection'] = authSelection;
+    }
+
+    // Handle pubKeyCredParams - ensure it's a list
+    if (sanitized['pubKeyCredParams'] == null) {
+      sanitized['pubKeyCredParams'] = [];
+    }
+
+    // Handle extensions
+    if (sanitized['extensions'] == null) {
+      sanitized['extensions'] = {};
+    }
+
+    return sanitized;
+  }
+
+  /// Sanitize passkey authentication options to handle null values
+  Map<String, dynamic> _sanitizePasskeyAuthenticationOptions(
+    Map<String, dynamic> options,
+  ) {
+    final sanitized = Map<String, dynamic>.from(options);
+
+    // Ensure allowCredentials is a list (not null)
+    if (sanitized['allowCredentials'] == null) {
+      sanitized['allowCredentials'] = [];
+    }
+
+    // Handle extensions
+    if (sanitized['extensions'] == null) {
+      sanitized['extensions'] = {};
+    }
+
+    return sanitized;
+  }
+
+  // ========== Session Management ==========
 
   Future<void> _saveSession(
     NexaiUser user,

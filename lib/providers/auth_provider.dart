@@ -24,6 +24,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   bool _initialized = false;
+  Map<String, dynamic>? _lastPasskeyDebugContext;
 
   // OAuth config from server
   bool _googleEnabled = false;
@@ -42,6 +43,7 @@ class AuthProvider extends ChangeNotifier {
   bool get githubEnabled => _githubEnabled;
   String get googleClientId => _googleClientId;
   String get githubClientId => _githubClientId;
+  Map<String, dynamic>? get lastPasskeyDebugContext => _lastPasskeyDebugContext;
 
   /// Initialize: load persisted tokens and try to restore session
   Future<void> init() async {
@@ -347,6 +349,13 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    final debugContext = <String, dynamic>{
+      'timestamp': DateTime.now().toIso8601String(),
+      'operation': 'bindPasskey',
+      'userId': _currentUser?.id,
+      'username': _currentUser?.username,
+    };
+
     try {
       final passkeyAuth = PasskeyAuthenticator();
 
@@ -355,11 +364,13 @@ class AuthProvider extends ChangeNotifier {
         accessToken: _accessToken!,
       );
 
+      debugContext['rawOptions'] = optionsMap;
       debugPrint('[NexAI Passkey] Registration options: $optionsMap');
 
       // 2. Convert JSON to RegisterRequestType with comprehensive null safety
       final sanitizedOptions = _sanitizePasskeyRegistrationOptions(optionsMap);
 
+      debugContext['sanitizedOptions'] = sanitizedOptions;
       debugPrint('[NexAI Passkey] Sanitized options: $sanitizedOptions');
 
       final registerRequest = RegisterRequestType.fromJson(sanitizedOptions);
@@ -367,16 +378,27 @@ class AuthProvider extends ChangeNotifier {
       // 3. Prompt user to create passkey using PasskeyAuthenticator
       final credential = await passkeyAuth.register(registerRequest);
 
+      debugContext['credentialId'] = credential.id;
+      debugContext['credentialType'] = credential.type;
+
       // 4. Send credential to backend to verify (convert to JSON)
       await NexaiAuthApi.verifyPasskeyRegistration(
         accessToken: _accessToken!,
         responseInfo: credential.toJson(),
       );
 
+      debugContext['success'] = true;
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugContext['error'] = e.toString();
+      debugContext['errorType'] = e.runtimeType.toString();
+      debugContext['stackTrace'] = stackTrace.toString();
+
       debugPrint('[NexAI Passkey] Bind error: $e');
+      debugPrint('[NexAI Passkey] Stack trace: $stackTrace');
+
       _error = '绑定 Passkey 失败: $e';
+      _lastPasskeyDebugContext = debugContext;
       return false;
     } finally {
       _isLoading = false;
@@ -390,6 +412,12 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    final debugContext = <String, dynamic>{
+      'timestamp': DateTime.now().toIso8601String(),
+      'operation': 'loginWithPasskey',
+      'identifier': identifier,
+    };
+
     try {
       final passkeyAuth = PasskeyAuthenticator();
 
@@ -399,17 +427,22 @@ class AuthProvider extends ChangeNotifier {
             identifier: identifier,
           );
 
+      debugContext['rawOptions'] = optionsMap;
       debugPrint('[NexAI Passkey] Authentication options: $optionsMap');
 
       // 2. Convert JSON to AuthenticateRequestType with comprehensive null safety
       final sanitizedOptions = _sanitizePasskeyAuthenticationOptions(optionsMap);
 
+      debugContext['sanitizedOptions'] = sanitizedOptions;
       debugPrint('[NexAI Passkey] Sanitized auth options: $sanitizedOptions');
 
       final authRequest = AuthenticateRequestType.fromJson(sanitizedOptions);
 
       // 3. Prompt user to authenticate
       final assertion = await passkeyAuth.authenticate(authRequest);
+
+      debugContext['assertionId'] = assertion.id;
+      debugContext['assertionType'] = assertion.type;
 
       // 4. Send assertion to backend to verify (convert to JSON)
       final res = await NexaiAuthApi.verifyPasskeyAuthentication(
@@ -419,14 +452,26 @@ class AuthProvider extends ChangeNotifier {
 
       if (res.success && res.accessToken != null && res.user != null) {
         await _saveSession(res.user!, res.accessToken!, res.refreshToken);
+        debugContext['success'] = true;
+        debugContext['userId'] = res.user!.id;
         return true;
       } else {
         _error = res.error ?? 'Passkey 登录失败';
+        debugContext['success'] = false;
+        debugContext['error'] = _error;
+        _lastPasskeyDebugContext = debugContext;
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugContext['error'] = e.toString();
+      debugContext['errorType'] = e.runtimeType.toString();
+      debugContext['stackTrace'] = stackTrace.toString();
+
       debugPrint('[NexAI Passkey] Login error: $e');
+      debugPrint('[NexAI Passkey] Stack trace: $stackTrace');
+
       _error = 'Passkey 登录失败: $e';
+      _lastPasskeyDebugContext = debugContext;
       return false;
     } finally {
       _isLoading = false;

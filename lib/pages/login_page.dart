@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../services/nexai_auth_service.dart';
 import '../utils/google_font_paint.dart';
 import '../utils/app_security.dart';
+import '../widgets/passkey_debug_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -478,8 +479,24 @@ class _LoginPageState extends State<LoginPage>
     }
 
     final success = await auth.loginWithPasskey(identifier: identifier);
-    if (success && mounted) {
-      Navigator.of(context).pop(true);
+    if (mounted) {
+      if (success) {
+        Navigator.of(context).pop(true);
+      } else {
+        // Show detailed debug dialog on failure
+        if (auth.lastPasskeyDebugContext != null) {
+          showDialog(
+            context: context,
+            builder: (context) => PasskeyDebugDialog(
+              debugContext: auth.lastPasskeyDebugContext!,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(auth.error ?? 'Passkey 登录失败')),
+          );
+        }
+      }
     }
   }
 

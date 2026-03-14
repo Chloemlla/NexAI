@@ -14,6 +14,7 @@ import '../providers/sync_provider.dart';
 import '../utils/update_checker.dart';
 import '../utils/google_font_paint.dart';
 import '../services/pinned_http_client.dart';
+import '../widgets/passkey_debug_dialog.dart';
 import 'about_page.dart';
 import 'login_page.dart';
 
@@ -1850,14 +1851,31 @@ class _SettingsPageState extends State<SettingsPage> {
               : () async {
                   final success = await auth.bindPasskey();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          success ? '通行密钥绑定成功' : (auth.error ?? '绑定失败'),
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('通行密钥绑定成功'),
+                          behavior: SnackBarBehavior.floating,
                         ),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                      );
+                    } else {
+                      // Show detailed debug dialog on failure
+                      if (auth.lastPasskeyDebugContext != null) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => PasskeyDebugDialog(
+                            debugContext: auth.lastPasskeyDebugContext!,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(auth.error ?? '绑定失败'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    }
                   }
                 },
           icon: auth.isLoading && auth.error == null

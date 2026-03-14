@@ -43,7 +43,7 @@ class _AboutPageState extends State<AboutPage> {
         slivers: [
           // ── Collapsing hero AppBar ──
           SliverAppBar(
-            automaticallyImplyLeading: false,
+            automaticallyImplyLeading: true,
             pinned: true,
             expandedHeight: 230,
             backgroundColor: cs.surface,

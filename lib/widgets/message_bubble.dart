@@ -10,6 +10,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../main.dart' show isAndroid, isDesktop;
 import '../models/message.dart';
@@ -382,11 +383,27 @@ class _MessageFooter extends StatelessWidget {
           await file.writeAsBytes(pngBytes);
           await Gal.putImage(file.path, album: 'NexAI');
           scaffoldMessenger.showSnackBar(
-            const SnackBar(content: Text('图片已保存到系统相册')),
+            SnackBar(
+              content: Row(
+                children: [
+                  FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('图片已保存到系统相册'),
+                ],
+              ),
+            ),
           );
         } else {
           scaffoldMessenger.showSnackBar(
-            const SnackBar(content: Text('缺少存储权限')),
+            SnackBar(
+              content: Row(
+                children: [
+                  FaIcon(FontAwesomeIcons.triangleExclamation, size: 16, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('缺少存储权限'),
+                ],
+              ),
+            ),
           );
         }
       } else if (isDesktop) {
@@ -400,12 +417,30 @@ class _MessageFooter extends StatelessWidget {
           final file = File(path);
           await file.writeAsBytes(pngBytes);
           scaffoldMessenger.showSnackBar(
-            SnackBar(content: Text('图片已保存到: $path')),
+            SnackBar(
+              content: Row(
+                children: [
+                  FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                  SizedBox(width: 8),
+                  Expanded(child: Text('图片已保存到: $path')),
+                ],
+              ),
+            ),
           );
         }
       }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('保存失败: $e')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(child: Text('保存失败: $e')),
+            ],
+          ),
+        ),
+      );
     }
   }
 

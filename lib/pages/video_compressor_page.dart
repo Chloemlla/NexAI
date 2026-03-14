@@ -8,6 +8,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class VideoCompressorPage extends StatefulWidget {
   const VideoCompressorPage({super.key});
@@ -170,8 +171,14 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         setState(() => _compressionResult = result);
         _initializePlayer(result.compressedFilePath);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('压缩完成！'),
+          SnackBar(
+            content: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Text('压缩完成！'),
+              ],
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -180,7 +187,17 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('压缩失败: $e')));
+        ).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('压缩失败: $e')),
+              ],
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -217,8 +234,14 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('已保存到相册'),
+          SnackBar(
+            content: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Text('已保存到相册'),
+              ],
+            ),
             backgroundColor: Colors.green,
           ),
         );

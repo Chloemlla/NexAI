@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../providers/short_url_provider.dart';
 
 class ShortUrlPage extends StatefulWidget {
@@ -75,7 +76,24 @@ class _ShortUrlPageState extends State<ShortUrlPage>
             ),
           );
         }
-        SmartDialog.showToast('短链接生成成功！');
+        SmartDialog.show(
+          builder: (_) => Container(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Text('短链接生成成功！', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
+          displayTime: Duration(seconds: 2),
+        );
       } else {
         final msg = response.data is Map<String, dynamic>
             ? response.data['msg']
@@ -104,7 +122,24 @@ class _ShortUrlPageState extends State<ShortUrlPage>
 
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
-    SmartDialog.showToast('链接已复制到剪贴板');
+    SmartDialog.show(
+      builder: (_) => Container(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.black87,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FaIcon(FontAwesomeIcons.copy, size: 16, color: Colors.white),
+            SizedBox(width: 8),
+            Text('链接已复制到剪贴板', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+      displayTime: Duration(seconds: 2),
+    );
   }
 
   Future<void> _launchUrl(String url) async {

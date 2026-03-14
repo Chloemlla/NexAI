@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
@@ -856,8 +857,16 @@ class _SettingsPageState extends State<SettingsPage> {
                                               ctx,
                                             ).showSnackBar(
                                               SnackBar(
-                                                content: Text(
-                                                  ok ? '数据已上传到云端' : '上传失败',
+                                                content: Row(
+                                                  children: [
+                                                    FaIcon(
+                                                      ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                      size: 16,
+                                                      color: Colors.white,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Text(ok ? '数据已上传到云端' : '上传失败'),
+                                                  ],
                                                 ),
                                                 behavior:
                                                     SnackBarBehavior.floating,
@@ -964,8 +973,16 @@ class _SettingsPageState extends State<SettingsPage> {
                                               ctx,
                                             ).showSnackBar(
                                               SnackBar(
-                                                content: Text(
-                                                  ok ? '数据已从云端恢复' : '恢复失败',
+                                                content: Row(
+                                                  children: [
+                                                    FaIcon(
+                                                      ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                      size: 16,
+                                                      color: Colors.white,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Text(ok ? '数据已从云端恢复' : '恢复失败'),
+                                                  ],
                                                 ),
                                                 behavior:
                                                     SnackBarBehavior.floating,
@@ -1042,8 +1059,16 @@ class _SettingsPageState extends State<SettingsPage> {
                                       if (ctx.mounted) {
                                         ScaffoldMessenger.of(ctx).showSnackBar(
                                           SnackBar(
-                                            content: Text(
-                                              ok ? '增量同步完成' : '增量同步失败',
+                                            content: Row(
+                                              children: [
+                                                FaIcon(
+                                                  ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                  size: 16,
+                                                  color: Colors.white,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text(ok ? '增量同步完成' : '增量同步失败'),
+                                              ],
                                             ),
                                             behavior: SnackBarBehavior.floating,
                                             shape: RoundedRectangleBorder(
@@ -1120,8 +1145,16 @@ class _SettingsPageState extends State<SettingsPage> {
                                     if (ctx.mounted) {
                                       ScaffoldMessenger.of(ctx).showSnackBar(
                                         SnackBar(
-                                          content: Text(
-                                            ok ? '云端数据已清除' : '清除失败',
+                                          content: Row(
+                                            children: [
+                                              FaIcon(
+                                                ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                size: 16,
+                                                color: Colors.white,
+                                              ),
+                                              SizedBox(width: 8),
+                                              Text(ok ? '云端数据已清除' : '清除失败'),
+                                            ],
                                           ),
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
@@ -1424,7 +1457,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: const Text('证书缓存已清除，请重启应用'),
+                                content: Row(
+                                  children: [
+                                    FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Text('证书缓存已清除，请重启应用'),
+                                  ],
+                                ),
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -1437,7 +1476,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('清除失败: $e'),
+                                content: Row(
+                                  children: [
+                                    FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+                                    SizedBox(width: 8),
+                                    Expanded(child: Text('清除失败: $e')),
+                                  ],
+                                ),
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),

@@ -11,6 +11,7 @@ import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:path/path.dart' as p;
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 enum AudioFormat { mp3, aac, flac, wav, ogg }
 
@@ -203,7 +204,17 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       if (_completedCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('完成 $_completedCount 个，失败 $_failedCount 个'),
+            content: Row(
+              children: [
+                FaIcon(
+                  _failedCount == 0 ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.triangleExclamation,
+                  size: 16,
+                  color: Colors.white,
+                ),
+                SizedBox(width: 8),
+                Text('完成 $_completedCount 个，失败 $_failedCount 个'),
+              ],
+            ),
             backgroundColor: _failedCount == 0 ? Colors.green : Colors.orange,
           ),
         );
@@ -347,7 +358,13 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已保存到 ${p.dirname(savePath)}'),
+            content: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('已保存到 ${p.dirname(savePath)}')),
+              ],
+            ),
             backgroundColor: Colors.green,
           ),
         );

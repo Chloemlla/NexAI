@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
@@ -863,7 +864,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出成功: $path'),
+            content: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('导出成功: $path')),
+              ],
+            ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green,
             shape: RoundedRectangleBorder(
@@ -876,7 +883,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       if (mounted && e != '取消导出') {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出失败: $e'),
+            content: Row(
+              children: [
+                FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(child: Text('导出失败: $e')),
+              ],
+            ),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.redAccent,
             shape: RoundedRectangleBorder(

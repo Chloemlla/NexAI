@@ -65,17 +65,19 @@ class _TranslationPageState extends State<TranslationPage> {
         '$endpoint?key=${settings.vertexApiKey}',
         options: Options(headers: {'Content-Type': 'application/json'}),
         data: {
-          'contents': {
-            'role': 'user',
-            'parts': [
-              {
-                'text':
-                    'Translate the following text from $sourceLang to $targetLang. '
-                    'Only return the translated text without any explanation or additional content.\n\n'
-                    'Text to translate:\n$text',
-              },
-            ],
-          },
+          'contents': [
+            {
+              'role': 'user',
+              'parts': [
+                {
+                  'text':
+                      'Translate the following text from $sourceLang to $targetLang. '
+                      'Only return the translated text without any explanation or additional content.\n\n'
+                      'Text to translate:\n$text',
+                },
+              ],
+            },
+          ],
           'generationConfig': {'temperature': 0.3, 'maxOutputTokens': 2048},
         },
       );
@@ -88,21 +90,20 @@ class _TranslationPageState extends State<TranslationPage> {
           if (parts != null && parts.isNotEmpty) {
             final translatedText = parts[0]['text'] as String?;
             if (translatedText != null) {
+              if (!mounted) return;
               setState(() => _targetController.text = translatedText.trim());
               // 保存翻译记录
-              if (mounted) {
-                final translationProv = context.read<TranslationProvider>();
-                await translationProv.addRecord(
-                  TranslationRecord(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    sourceLanguage: _sourceLanguage,
-                    targetLanguage: _targetLanguage,
-                    sourceText: text,
-                    translatedText: translatedText.trim(),
-                    createdAt: DateTime.now(),
-                  ),
-                );
-              }
+              final translationProv = context.read<TranslationProvider>();
+              await translationProv.addRecord(
+                TranslationRecord(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  sourceLanguage: _sourceLanguage,
+                  targetLanguage: _targetLanguage,
+                  sourceText: text,
+                  translatedText: translatedText.trim(),
+                  createdAt: DateTime.now(),
+                ),
+              );
               return;
             }
           }
@@ -114,7 +115,9 @@ class _TranslationPageState extends State<TranslationPage> {
     } catch (e) {
       _showError('翻译错误: $e');
     } finally {
-      setState(() => _isTranslating = false);
+      if (mounted) {
+        setState(() => _isTranslating = false);
+      }
     }
   }
 

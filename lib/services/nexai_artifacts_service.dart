@@ -1,14 +1,90 @@
 /// NexAI Artifacts API Service
 /// Handles all communication with the NexAI backend artifacts endpoints
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import '../models/artifact.dart';
+import 'pinned_http_client.dart';
+import '../utils/app_security.dart';
+import '../utils/request_signer.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 
 const String _nexaiBaseUrl = 'https://api.951100.xyz/api/nexai';
 
+// ─── Signed + Pinned HTTP wrapper (mirrors nexai_auth_service.dart) ───────────
+
+class _Http {
+  static http.Client? _client;
+
+  static Future<http.Client> _get() async {
+    _client ??= await buildPinnedHttpClient();
+    return _client!;
+  }
+
+  static Map<String, String> _base([Map<String, String>? extra]) {
+    final h = <String, String>{...?extra};
+    if (AppSecurity.instance.isCompromised) h['X-NexAI-Device'] = 'flagged';
+    return h;
+  }
+
+  static Future<http.Response> get(
+    Uri url, {
+    Map<String, String>? headers,
+  }) async {
+    final signed = await signRequest(
+      method: 'GET',
+      path: url.path,
+      headers: _base(headers),
+    );
+    return (await _get()).get(url, headers: signed);
+  }
+
+  static Future<http.Response> post(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'POST',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).post(url, headers: signed, body: body);
+  }
+
+  static Future<http.Response> patch(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'PATCH',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).patch(url, headers: signed, body: body);
+  }
+
+  static Future<http.Response> delete(
+    Uri url, {
+    Map<String, String>? headers,
+  }) async {
+    final signed = await signRequest(
+      method: 'DELETE',
+      path: url.path,
+      headers: _base(headers),
+    );
+    return (await _get()).delete(url, headers: signed);
+  }
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 class NexaiArtifactsApi {
   static String _baseUrl = _nexaiBaseUrl;
-  static final http.Client _client = http.Client();
 
   static void setBaseUrl(String url) {
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
@@ -44,7 +120,7 @@ class NexaiArtifactsApi {
       if (expiresInDays != null) 'expires_in_days': expiresInDays,
     };
 
-    final response = await _client.post(
+    final response = await _Http.post(
       Uri.parse('$_baseUrl/artifacts'),
       headers: {
         'Content-Type': 'application/json',
@@ -58,6 +134,9 @@ class NexaiArtifactsApi {
       return ArtifactCreateResponse.fromJson(data['data']);
     } else {
       final error = jsonDecode(response.body);
+      debugPrint(
+        '[ArtifactsApi] createArtifact ${response.statusCode}: ${response.body}',
+      );
       throw Exception(error['error'] ?? 'Failed to create artifact');
     }
   }
@@ -67,14 +146,12 @@ class NexaiArtifactsApi {
     String shortId, {
     String? password,
   }) async {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-    };
+    final headers = <String, String>{'Content-Type': 'application/json'};
     if (password != null) {
       headers['X-Password'] = password;
     }
 
-    final response = await _client.get(
+    final response = await _Http.get(
       Uri.parse('$_baseUrl/artifacts/$shortId'),
       headers: headers,
     );
@@ -94,6 +171,9 @@ class NexaiArtifactsApi {
       throw ArtifactNotFoundException();
     } else {
       final error = jsonDecode(response.body);
+      debugPrint(
+        '[ArtifactsApi] getArtifact ${response.statusCode}: ${response.body}',
+      );
       throw Exception(error['error'] ?? 'Failed to get artifact');
     }
   }
@@ -117,7 +197,7 @@ class NexaiArtifactsApi {
     if (tags != null) body['tags'] = tags;
     if (expiresInDays != null) body['expires_in_days'] = expiresInDays;
 
-    final response = await _client.patch(
+    final response = await _Http.patch(
       Uri.parse('$_baseUrl/artifacts/$shortId'),
       headers: {
         'Content-Type': 'application/json',
@@ -128,6 +208,9 @@ class NexaiArtifactsApi {
 
     if (response.statusCode != 200) {
       final error = jsonDecode(response.body);
+      debugPrint(
+        '[ArtifactsApi] updateArtifact ${response.statusCode}: ${response.body}',
+      );
       throw Exception(error['error'] ?? 'Failed to update artifact');
     }
   }
@@ -137,7 +220,7 @@ class NexaiArtifactsApi {
     String shortId, {
     required String accessToken,
   }) async {
-    final response = await _client.delete(
+    final response = await _Http.delete(
       Uri.parse('$_baseUrl/artifacts/$shortId'),
       headers: {
         'Content-Type': 'application/json',
@@ -147,6 +230,9 @@ class NexaiArtifactsApi {
 
     if (response.statusCode != 204) {
       final error = jsonDecode(response.body);
+      debugPrint(
+        '[ArtifactsApi] deleteArtifact ${response.statusCode}: ${response.body}',
+      );
       throw Exception(error['error'] ?? 'Failed to delete artifact');
     }
   }
@@ -166,11 +252,11 @@ class NexaiArtifactsApi {
       'order': order,
     };
 
-    final uri = Uri.parse('$_baseUrl/artifacts').replace(
-      queryParameters: queryParams,
-    );
+    final uri = Uri.parse(
+      '$_baseUrl/artifacts',
+    ).replace(queryParameters: queryParams);
 
-    final response = await _client.get(
+    final response = await _Http.get(
       uri,
       headers: {
         'Content-Type': 'application/json',
@@ -183,6 +269,9 @@ class NexaiArtifactsApi {
       return ArtifactListResponse.fromJson(data['data']);
     } else {
       final error = jsonDecode(response.body);
+      debugPrint(
+        '[ArtifactsApi] listArtifacts ${response.statusCode}: ${response.body}',
+      );
       throw Exception(error['error'] ?? 'Failed to list artifacts');
     }
   }
@@ -190,13 +279,10 @@ class NexaiArtifactsApi {
   /// POST /artifacts/:shortId/view - Record view
   static Future<void> recordView(String shortId) async {
     try {
-      await _client.post(
+      await _Http.post(
         Uri.parse('$_baseUrl/artifacts/$shortId/view'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'referer': '',
-          'user_agent': 'NexAI Flutter App',
-        }),
+        body: jsonEncode({'referer': '', 'user_agent': 'NexAI Flutter App'}),
       );
     } catch (e) {
       // Ignore errors for view tracking

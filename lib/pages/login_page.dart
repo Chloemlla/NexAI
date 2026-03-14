@@ -63,6 +63,15 @@ class _LoginPageState extends State<LoginPage>
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+          tooltip: '返回',
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -72,7 +81,7 @@ class _LoginPageState extends State<LoginPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 16),
 
                   // Logo & Title
                   Image.asset('assets/icon.png', width: 64, height: 64),

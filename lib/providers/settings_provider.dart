@@ -21,14 +21,6 @@ class SettingsProvider extends ChangeNotifier {
   static const _kSecUpstashToken = 'sec.upstashToken';
   static const _kSecVertexApiKey = 'sec.vertexApiKey';
 
-  String _baseUrl = 'https://api.openai.com/v1';
-  String _apiKey = '';
-  List<String> _models = [
-    'gpt-4o',
-    'gpt-4o-mini',
-    'gpt-4-turbo',
-    'gpt-3.5-turbo',
-  ];
   String _selectedModel = 'gpt-4o';
   ThemeMode _themeMode = ThemeMode.system;
   double _temperature = 0.7;
@@ -113,8 +105,6 @@ class SettingsProvider extends ChangeNotifier {
   String get vertexLocation => _vertexLocation;
   List<String> get vertexModels => _vertexModels;
 
-  // API Mode
-  String _apiMode = 'OpenAI'; // 'OpenAI' or 'Vertex'
   String get apiMode => _apiMode;
 
   // Notes auto-save setting
@@ -125,7 +115,8 @@ class SettingsProvider extends ChangeNotifier {
   bool _aiTitleGeneration = true;
   bool get aiTitleGeneration => _aiTitleGeneration;
 
-  bool get isConfigured => _apiKey.isNotEmpty;
+  bool get isConfigured =>
+      _apiMode == 'OpenAI' ? _openaiApiKey.isNotEmpty : _vertexApiKey.isNotEmpty;
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();

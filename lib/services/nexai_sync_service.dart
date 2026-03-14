@@ -26,12 +26,22 @@ class _NexaiHttp {
     Map<String, String>? headers,
   }) async => (await _get()).get(url, headers: headers);
 
-  // Reserved for future use
-  // static Future<http.Response> put(
-  //   Uri url, {
-  //   Map<String, String>? headers,
-  //   Object? body,
-  // }) async => (await _get()).put(url, headers: headers, body: body);
+  static Future<http.Response> put(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async => (await _get()).put(url, headers: headers, body: body);
+
+  static Future<http.Response> patch(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async => (await _get()).patch(url, headers: headers, body: body);
+
+  static Future<http.Response> delete(
+    Uri url, {
+    Map<String, String>? headers,
+  }) async => (await _get()).delete(url, headers: headers);
 }
 
 const String _defaultBaseUrl = 'https://api.951100.xyz/api/nexai';
@@ -43,11 +53,21 @@ class NexaiSyncApi {
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
+  static Map<String, dynamic>? _tryDecode(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {
+      // ignore invalid json
+    }
+    return null;
+  }
+
   /// GET /sync — 获取全部同步数据
   static Future<Map<String, dynamic>?> getSyncData({
     required String accessToken,
   }) async {
-    final response = await http.get(
+    final response = await _NexaiHttp.get(
       Uri.parse('$_baseUrl/sync'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -55,11 +75,11 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
-      }
+    if (response.statusCode < 200 || response.statusCode >= 300) return null;
+
+    final body = _tryDecode(response.body);
+    if (body?['success'] == true) {
+      return body?['data'] as Map<String, dynamic>?;
     }
     return null;
   }
@@ -69,7 +89,7 @@ class NexaiSyncApi {
     required String accessToken,
     required Map<String, dynamic> data,
   }) async {
-    final response = await http.put(
+    final response = await _NexaiHttp.put(
       Uri.parse('$_baseUrl/sync'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -78,11 +98,8 @@ class NexaiSyncApi {
       body: jsonEncode(data),
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      return body['success'] == true;
-    }
-    return false;
+    if (response.statusCode < 200 || response.statusCode >= 300) return false;
+    return _tryDecode(response.body)?['success'] == true;
   }
 
   /// PATCH /sync/:category — 按类别局部更新
@@ -91,7 +108,7 @@ class NexaiSyncApi {
     required String category,
     required dynamic data,
   }) async {
-    final response = await http.patch(
+    final response = await _NexaiHttp.patch(
       Uri.parse('$_baseUrl/sync/$category'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -100,16 +117,13 @@ class NexaiSyncApi {
       body: jsonEncode({'data': data}),
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      return body['success'] == true;
-    }
-    return false;
+    if (response.statusCode < 200 || response.statusCode >= 300) return false;
+    return _tryDecode(response.body)?['success'] == true;
   }
 
   /// DELETE /sync — 清除同步数据
   static Future<bool> deleteSyncData({required String accessToken}) async {
-    final response = await http.delete(
+    final response = await _NexaiHttp.delete(
       Uri.parse('$_baseUrl/sync'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -117,18 +131,15 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      return body['success'] == true;
-    }
-    return false;
+    if (response.statusCode < 200 || response.statusCode >= 300) return false;
+    return _tryDecode(response.body)?['success'] == true;
   }
 
   /// GET /sync/meta — 获取同步元信息
   static Future<Map<String, dynamic>?> getSyncMeta({
     required String accessToken,
   }) async {
-    final response = await http.get(
+    final response = await _NexaiHttp.get(
       Uri.parse('$_baseUrl/sync/meta'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -136,11 +147,11 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
-      }
+    if (response.statusCode < 200 || response.statusCode >= 300) return null;
+
+    final body = _tryDecode(response.body);
+    if (body?['success'] == true) {
+      return body?['data'] as Map<String, dynamic>?;
     }
     return null;
   }
@@ -158,11 +169,11 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
-      }
+    if (response.statusCode < 200 || response.statusCode >= 300) return null;
+
+    final body = _tryDecode(response.body);
+    if (body?['success'] == true) {
+      return body?['data'] as Map<String, dynamic>?;
     }
     return null;
   }
@@ -182,11 +193,11 @@ class NexaiSyncApi {
       body: jsonEncode({'lastSyncedAt': lastSyncedAt, 'data': data}),
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
-      }
+    if (response.statusCode < 200 || response.statusCode >= 300) return null;
+
+    final body = _tryDecode(response.body);
+    if (body?['success'] == true) {
+      return body?['data'] as Map<String, dynamic>?;
     }
     return null;
   }

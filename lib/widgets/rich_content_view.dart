@@ -12,10 +12,14 @@ import '../pages/note_detail_page.dart';
 import 'flowchart/flowchart_widget.dart';
 
 // Pre-compiled regex — avoids recompilation per build
-final _cePattern = RegExp(r'\$?\s*\\ce\{([^}]+)\}\s*\$?');
+// Matches both $\ce{...}$ and \ce{...} forms
+final _cePattern = RegExp(r'\$\s*\\ce\{([^}]+)\}\s*\$|\\ce\{([^}]+)\}');
+// Subscript: letter/digit immediately followed by digits (e.g. H2O -> H_{2}O)
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
-final _chargePattern = RegExp(r'(?<=[A-Za-z\d\)\}])\^?(\d*[+-])(?!\})');
-final _bareCaretPattern = RegExp(r'\^(?!\{)');
+// Underscore subscript: H_2O -> H_{2}O
+final _underscoreSubscriptPattern = RegExp(r'_([^{\s}]+)');
+// Charge: only when explicitly preceded by ^ (e.g. Na^+ or Ca^2+)
+final _chargePattern = RegExp(r'\^(\d*[+\-])');
 final _mermaidBlockPattern = RegExp(
   r'```mermaid\s*\n([\s\S]*?)```',
   multiLine: true,
@@ -104,15 +108,9 @@ class _RichContentViewState extends State<RichContentView> {
         );
       case _SegmentType.markdown:
         if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
-          return _WikiLinkMarkdown(
-            data: seg.content,
-            cssTheme: _cssTheme,
-          );
+          return _WikiLinkMarkdown(data: seg.content, cssTheme: _cssTheme);
         }
-        return _MarkdownWidget(
-          data: seg.content,
-          cssTheme: _cssTheme,
-        );
+        return _MarkdownWidget(data: seg.content, cssTheme: _cssTheme);
     }
   }
 }
@@ -121,10 +119,7 @@ class _MarkdownWidget extends StatelessWidget {
   final String data;
   final CssTheme? cssTheme;
 
-  const _MarkdownWidget({
-    required this.data,
-    this.cssTheme,
-  });
+  const _MarkdownWidget({required this.data, this.cssTheme});
 
   @override
   Widget build(BuildContext context) {
@@ -139,8 +134,9 @@ class _MarkdownWidget extends StatelessWidget {
     Color? backgroundColor;
 
     if (cssTheme != null) {
-      textColor = cssTheme!.getColor('--fgColor-default') ??
-                  (isDark ? const Color(0xFFf0f6fc) : const Color(0xFF1f2328));
+      textColor =
+          cssTheme!.getColor('--fgColor-default') ??
+          (isDark ? const Color(0xFFf0f6fc) : const Color(0xFF1f2328));
       backgroundColor = cssTheme!.getColor('--bgColor-default');
     } else {
       textColor = isDark ? const Color(0xFFf0f6fc) : const Color(0xFF1f2328);
@@ -176,21 +172,30 @@ class _MarkdownWidget extends StatelessWidget {
 
   static String _preprocessChemical(String text) {
     return text.replaceAllMapped(_cePattern, (m) {
-      final converted = _convertChemical(m.group(1)!);
+      // Group 1: from $\ce{...}$ form; Group 2: from bare \ce{...} form
+      final inner = m.group(1) ?? m.group(2) ?? '';
+      final converted = _convertChemical(inner);
       return '\$ $converted \$';
     });
   }
 
   static String _convertChemical(String formula) {
     var result = formula;
+    // 1. Handle arrow operators before any other substitution
+    result = result.replaceAll('<->', '\\rightleftharpoons ');
+    result = result.replaceAll('->', '\\rightarrow ');
+    // 2. Convert explicit charges: Na^+ -> Na^{+}, Ca^2+ -> Ca^{2+}
+    result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
+    // 3. Convert _N subscripts: H_2O -> H_{2}O
+    result = result.replaceAllMapped(
+      _underscoreSubscriptPattern,
+      (m) => '_{${m.group(1)}}',
+    );
+    // 4. Convert implicit subscripts: H2O -> H_{2}O (only after charge/underscore handled)
     result = result.replaceAllMapped(
       _subscriptPattern,
       (m) => '${m.group(1)}_{${m.group(2)}}',
     );
-    result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
-    result = result.replaceAll('<->', '\\rightleftharpoons ');
-    result = result.replaceAll('->', '\\rightarrow ');
-    result = result.replaceAllMapped(_bareCaretPattern, (m) => '\\uparrow ');
     return result;
   }
 }
@@ -199,19 +204,13 @@ class _WikiLinkMarkdown extends StatelessWidget {
   final String data;
   final CssTheme? cssTheme;
 
-  const _WikiLinkMarkdown({
-    required this.data,
-    this.cssTheme,
-  });
+  const _WikiLinkMarkdown({required this.data, this.cssTheme});
 
   @override
   Widget build(BuildContext context) {
     final matches = wikiLinkPattern.allMatches(data).toList();
     if (matches.isEmpty) {
-      return _MarkdownWidget(
-        data: data,
-        cssTheme: cssTheme,
-      );
+      return _MarkdownWidget(data: data, cssTheme: cssTheme);
     }
 
     final parts = <_WikiSpan>[];
@@ -232,10 +231,7 @@ class _WikiLinkMarkdown extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: parts.map((p) {
         if (p.wikiLink != null) return _WikiLinkChip(link: p.wikiLink!);
-        return _MarkdownWidget(
-          data: p.text!,
-          cssTheme: cssTheme,
-        );
+        return _MarkdownWidget(data: p.text!, cssTheme: cssTheme);
       }).toList(),
     );
   }

@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/settings_provider.dart';
 
 /// Startup loading dialog that shows initialization progress with typewriter effect
 class StartupLoadingDialog extends StatefulWidget {
@@ -52,6 +55,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final settings = context.watch<SettingsProvider>();
 
     return Dialog(
       backgroundColor: colorScheme.surface,
@@ -94,12 +98,14 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colorScheme.onSurface,
+                          fontFamily: settings.fontFamily,
                         ),
                       ),
                       Text(
                         '正在初始化应用组件...',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
+                          fontFamily: settings.fontFamily,
                         ),
                       ),
                     ],
@@ -129,6 +135,8 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                     return _TypewriterText(
                       text: _logs[index],
                       delay: Duration(milliseconds: index * 50),
+                      fontFamily: settings.fontFamily,
+                      fontSize: settings.fontSize,
                     );
                   },
                 ),
@@ -155,6 +163,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                   '${_logs.length} 个任务已完成',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
+                    fontFamily: settings.fontFamily,
                   ),
                 ),
               ],
@@ -170,10 +179,14 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
 class _TypewriterText extends StatefulWidget {
   final String text;
   final Duration delay;
+  final String fontFamily;
+  final double fontSize;
 
   const _TypewriterText({
     required this.text,
     required this.delay,
+    required this.fontFamily,
+    required this.fontSize,
   });
 
   @override
@@ -245,8 +258,8 @@ class _TypewriterTextState extends State<_TypewriterText>
                 child: Text(
                   displayText,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontFamily: 'monospace',
+                    fontSize: widget.fontSize,
+                    fontFamily: widget.fontFamily,
                     color: colorScheme.onSurfaceVariant,
                     height: 1.5,
                   ),

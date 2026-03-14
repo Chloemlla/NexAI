@@ -6,6 +6,7 @@ import 'base64_converter_page.dart';
 import 'password_generator_page.dart';
 import 'short_url_page.dart';
 import 'translation_page.dart';
+import 'artifacts_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -258,6 +259,19 @@ class ToolsPage extends StatelessWidget {
                   ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ShortUrlPage()),
+                  ),
+                ),
+                _ToolCard(
+                  icon: Icons.share_rounded,
+                  title: '内容分享',
+                  description: '分享代码与文档',
+                  gradient: LinearGradient(
+                    colors: [cs.tertiaryContainer, cs.primaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ArtifactsPage()),
                   ),
                 ),
               ]),

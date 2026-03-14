@@ -17,7 +17,9 @@ import '../models/message.dart';
 import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/auth_provider.dart';
 import 'rich_content_view.dart';
+import 'share_artifact_dialog.dart';
 
 class MessageBubble extends StatefulWidget {
   final Message message;
@@ -453,9 +455,43 @@ class _MessageFooter extends StatelessWidget {
 
   void _generateArtifact(BuildContext context) {
     if (isAndroid) Navigator.pop(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Artifacts 页面已生成 (演示)')));
+
+    final authProvider = context.read<AuthProvider>();
+
+    // Check if user is logged in
+    if (!authProvider.isLoggedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先登录以使用分享功能')),
+      );
+      return;
+    }
+
+    // Determine content type and extract content
+    String contentType = 'markdown';
+    String? language;
+    String content = message.content;
+
+    // Check if message contains code blocks
+    final codeBlockRegex = RegExp(r'```(\w+)?\n([\s\S]*?)```');
+    final match = codeBlockRegex.firstMatch(message.content);
+
+    if (match != null) {
+      // Extract code block
+      language = match.group(1);
+      content = match.group(2) ?? '';
+      contentType = 'code';
+    }
+
+    // Show share dialog
+    showDialog(
+      context: context,
+      builder: (ctx) => ShareArtifactDialog(
+        content: content,
+        contentType: contentType,
+        language: language,
+        defaultTitle: isUser ? '用户消息' : 'AI 回复',
+      ),
+    );
   }
 
   void _showEditDialog(BuildContext context) {

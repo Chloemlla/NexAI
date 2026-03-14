@@ -15,6 +15,7 @@ import 'providers/auth_provider.dart';
 import 'providers/translation_provider.dart';
 import 'providers/short_url_provider.dart';
 import 'providers/sync_provider.dart';
+import 'providers/artifacts_provider.dart';
 import 'app.dart';
 import 'utils/app_security.dart';
 import 'utils/security_headers_interceptor.dart';
@@ -172,6 +173,7 @@ void main() async {
           ChangeNotifierProvider.value(value: translationProvider),
           ChangeNotifierProvider.value(value: shortUrlProvider),
           ChangeNotifierProvider(create: (_) => SyncProvider()),
+          ChangeNotifierProvider(create: (_) => ArtifactsProvider()),
         ],
         child: const NexAIApp(),
       ),

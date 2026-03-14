@@ -51,10 +51,10 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
 
     return Dialog(
-      backgroundColor: isDark ? const Color(0xFF1a1a1a) : Colors.white,
+      backgroundColor: colorScheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: 400,
@@ -72,15 +72,15 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        theme.colorScheme.primary,
-                        theme.colorScheme.secondary,
+                        colorScheme.primary,
+                        colorScheme.secondary,
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.rocket_launch_rounded,
-                    color: Colors.white,
+                    color: colorScheme.onPrimary,
                     size: 24,
                   ),
                 ),
@@ -93,12 +93,13 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                         'NexAI 启动中',
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '正在初始化应用组件...',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -107,19 +108,17 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
               ],
             ),
             const SizedBox(height: 24),
-            const Divider(height: 1),
+            Divider(height: 1, color: colorScheme.outlineVariant),
             const SizedBox(height: 16),
 
             // Log area with typewriter effect
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF0d1117)
-                      : const Color(0xFFF6F8FA),
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: theme.colorScheme.outline.withOpacity(0.2),
+                    color: colorScheme.outlineVariant,
                   ),
                 ),
                 padding: const EdgeInsets.all(16),
@@ -147,7 +146,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      theme.colorScheme.primary,
+                      colorScheme.primary,
                     ),
                   ),
                 ),
@@ -155,7 +154,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                 Text(
                   '${_logs.length} 个任务已完成',
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -219,6 +218,7 @@ class _TypewriterTextState extends State<_TypewriterText>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return AnimatedBuilder(
       animation: _characterCount,
@@ -237,8 +237,8 @@ class _TypewriterTextState extends State<_TypewriterText>
                 Icons.check_circle_rounded,
                 size: 16,
                 color: _characterCount.value == widget.text.length
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outline.withOpacity(0.3),
+                    ? colorScheme.primary
+                    : colorScheme.outline.withOpacity(0.3),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -247,7 +247,7 @@ class _TypewriterTextState extends State<_TypewriterText>
                   style: TextStyle(
                     fontSize: 13,
                     fontFamily: 'monospace',
-                    color: theme.colorScheme.onSurface.withOpacity(0.8),
+                    color: colorScheme.onSurfaceVariant,
                     height: 1.5,
                   ),
                 ),
@@ -258,7 +258,7 @@ class _TypewriterTextState extends State<_TypewriterText>
                   height: 16,
                   margin: const EdgeInsets.only(left: 2),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
+                    color: colorScheme.primary,
                     borderRadius: BorderRadius.circular(1),
                   ),
                 ),

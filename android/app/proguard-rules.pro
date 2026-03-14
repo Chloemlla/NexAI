@@ -133,3 +133,13 @@
 # Preserve line numbers for debugging stack traces
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# ========== Apache Commons Imaging (AWT not available on Android) ==========
+# Suppress warnings for Java AWT classes (not available on Android)
+-dontwarn java.awt.**
+-dontwarn javax.imageio.**
+-dontwarn org.apache.commons.imaging.**
+
+# Keep Apache Commons Imaging classes but ignore AWT dependencies
+-keep class org.apache.commons.imaging.** { *; }
+-keep interface org.apache.commons.imaging.** { *; }

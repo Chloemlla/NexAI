@@ -15,8 +15,19 @@
 -keep class androidx.lifecycle.** { *; }
 -keep class androidx.appcompat.** { *; }
 
+# ========== SharedPreferences (API Configuration Storage) ==========
 # Keep shared_preferences plugin
 -keep class io.flutter.plugins.sharedpreferences.** { *; }
+
+# Keep Android SharedPreferences implementation
+-keep class android.content.SharedPreferences { *; }
+-keep class android.content.SharedPreferences$** { *; }
+-keepclassmembers class android.content.SharedPreferences {
+    <methods>;
+}
+
+# Keep preference data classes
+-keep class androidx.preference.** { *; }
 
 # Keep ffmpeg_kit_flutter_new native classes
 -keep class com.antonkarpenko.ffmpegkit.** { *; }
@@ -94,3 +105,31 @@
 -keep class android.security.keystore.** { *; }
 -keep class javax.crypto.** { *; }
 -keep class java.security.** { *; }
+
+# ========== Dio HTTP Client (OpenAI API Calls) ==========
+# Keep Dio native adapter classes
+-keep class io.flutter.plugins.connectivity.** { *; }
+-keep class com.baseflow.connectivity_plus.** { *; }
+
+# Keep HTTP/2 adapter
+-keep class com.baseflow.http2adapter.** { *; }
+
+# Keep cookie jar
+-keep class io.flutter.plugins.cookiejar.** { *; }
+
+# ========== JSON Serialization (API Configuration & Data Models) ==========
+# Keep all JSON-related reflection for Dart models
+-keepattributes *Annotation*
+-keepattributes Signature
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
+
+# Keep all classes with toJson/fromJson methods (Dart models)
+-keepclassmembers class * {
+    public <methods>;
+    public <fields>;
+}
+
+# Preserve line numbers for debugging stack traces
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

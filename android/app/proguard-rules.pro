@@ -57,3 +57,40 @@
 
 # Suppress warnings for missing classes in R8 full mode
 -dontwarn java.lang.invoke.StringConcatFactory
+
+# ========== Passkeys / WebAuthn (Corbado) ==========
+# Keep all Corbado passkeys plugin classes
+-keep class com.corbado.passkeys_android.** { *; }
+-keep class com.corbado.passkeys_doctor.** { *; }
+-keep interface com.corbado.passkeys_android.** { *; }
+-keep interface com.corbado.passkeys_doctor.** { *; }
+
+# Keep WebAuthn/FIDO2 related classes (used by passkeys)
+-keep class androidx.credentials.** { *; }
+-keep interface androidx.credentials.** { *; }
+-keepclassmembers class androidx.credentials.** { *; }
+
+# Keep Google Play Services Auth (required for passkeys on Android)
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.fido.** { *; }
+-keep class com.google.android.gms.fido.fido2.** { *; }
+
+# Keep JSON serialization for passkey data structures
+-keepclassmembers class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
+
+# ========== Google Sign-In ==========
+# Keep Google Sign-In plugin classes
+-keep class io.flutter.plugins.googlesignin.** { *; }
+-keep class com.google.android.gms.auth.api.signin.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+
+# ========== Flutter Secure Storage ==========
+# Keep flutter_secure_storage plugin (used for token persistence)
+-keep class com.it_nomads.fluttersecurestorage.** { *; }
+
+# Keep AndroidKeyStore (used by secure storage)
+-keep class android.security.keystore.** { *; }
+-keep class javax.crypto.** { *; }
+-keep class java.security.** { *; }

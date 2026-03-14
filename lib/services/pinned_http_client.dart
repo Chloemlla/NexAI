@@ -46,8 +46,9 @@ const _storage = FlutterSecureStorage(
 /// ```
 ///  stored pin?
 ///    no  → TOFU mode (first run)
-///    yes → check expiry
-///            expired?  → clear + TOFU (re-pin to new cert automatically)
+///    yes → verify stored pin is still valid
+///            invalid? → clear + TOFU (auto-recovery from cert rotation)
+///            expired? → clear + TOFU (re-pin to new cert automatically)
 ///            ≤30 days? → strict mode + background re-pin probe
 ///            else      → strict mode
 /// ```
@@ -64,6 +65,16 @@ Future<http.Client> buildPinnedHttpClient({bool enablePinning = true}) async {
 
   if (stored == null) {
     debugPrint('NexAI Pinning: no stored pin → TOFU mode');
+    return _ToFuClient();
+  }
+
+  // ── Verify stored pin is still valid ──────────────────────────────────────
+  final isValid = await _verifyStoredPin(stored);
+  if (!isValid) {
+    debugPrint(
+      'NexAI Pinning: stored pin is INVALID (cert rotated) → auto-clearing and re-entering TOFU',
+    );
+    await _clearPin();
     return _ToFuClient();
   }
 
@@ -132,8 +143,10 @@ class _ToFuClient extends http.BaseClient {
 
 class _PinnedClient extends http.BaseClient {
   late final IOClient _inner;
+  final String _expectedFp;
+  bool _mismatchHandled = false;
 
-  _PinnedClient(String expectedFp) {
+  _PinnedClient(this._expectedFp) {
     // withTrustedRoots:false → every cert becomes "untrusted" → callback fires
     // for ALL certs (including valid public-CA certs), enabling fingerprint check.
     final ctx = SecurityContext(withTrustedRoots: false);
@@ -144,21 +157,72 @@ class _PinnedClient extends http.BaseClient {
           final actual = _sha256Hex(cert.der);
 
           // Check primary pin
-          if (_timingSafeEq(actual, expectedFp)) return true;
+          if (_timingSafeEq(actual, _expectedFp)) return true;
 
-          // Check backup pins (synchronous read from cache)
-          final ok = _checkBackupPins(actual);
-          if (!ok) {
+          // Certificate mismatch detected
+          if (!_mismatchHandled) {
+            _mismatchHandled = true;
             debugPrint(
               'NexAI Pinning: ⚠️  CERT MISMATCH at $host\n'
-              '  stored : $expectedFp\n'
+              '  stored : $_expectedFp\n'
               '  current: $actual\n'
-              '  → connection rejected (possible MITM or unannounced rotation)',
+              '  → attempting auto-recovery (verifying new cert with system CA)',
             );
+
+            // Schedule async recovery: verify new cert with system CA and update pin
+            _handleCertMismatch(host, 443, actual).ignore();
           }
-          return ok;
+
+          // Temporarily reject this connection, but recovery is in progress
+          return false;
         },
     );
+  }
+
+  /// Handles certificate mismatch by verifying the new certificate with system CA.
+  /// If valid, updates the pin. This allows automatic recovery from legitimate
+  /// certificate rotations without user intervention.
+  Future<void> _handleCertMismatch(String host, int port, String newFp) async {
+    try {
+      // Connect with system CA validation to verify the new certificate is legitimate
+      final socket = await SecureSocket.connect(
+        host,
+        port,
+        timeout: const Duration(seconds: 10),
+        // Use default system CA validation (onBadCertificate not set)
+      );
+      final cert = socket.peerCertificate;
+      socket.destroy();
+
+      if (cert != null) {
+        final verifiedFp = _sha256Hex(cert.der);
+
+        // Verify the fingerprint matches what we saw in the callback
+        if (verifiedFp == newFp) {
+          final expiry = cert.endValidity;
+
+          // Update the pin with the new verified certificate
+          await _storage.write(key: _pinKey, value: verifiedFp);
+          await _storage.write(key: _pinExpiryKey, value: expiry.toIso8601String());
+
+          debugPrint(
+            'NexAI Pinning: ✅ AUTO-RECOVERY successful\n'
+            '  New cert verified by system CA and pinned\n'
+            '  fingerprint: $verifiedFp\n'
+            '  expires    : ${expiry.toIso8601String()}\n'
+            '  → Please restart the app to use the new certificate',
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint(
+        'NexAI Pinning: ❌ AUTO-RECOVERY failed\n'
+        '  New certificate could not be verified by system CA\n'
+        '  Error: $e\n'
+        '  → This may indicate a MITM attack or invalid certificate\n'
+        '  → Manual intervention required: clear cert cache in settings',
+      );
+    }
   }
 
   bool _checkBackupPins(String actual) {
@@ -176,6 +240,45 @@ class _PinnedClient extends http.BaseClient {
 }
 
 // ─── Probe & Pin ─────────────────────────────────────────────────────────────
+
+/// Verifies that the stored pin matches the current server certificate.
+/// Returns false if the certificate has changed (triggering auto-recovery).
+Future<bool> _verifyStoredPin(String storedFp) async {
+  try {
+    final socket = await SecureSocket.connect(
+      _pinnedHost,
+      443,
+      timeout: const Duration(seconds: 5),
+      // Use system CA validation to ensure the cert is legitimate
+    );
+    final cert = socket.peerCertificate;
+    socket.destroy();
+
+    if (cert != null) {
+      final currentFp = _sha256Hex(cert.der);
+
+      if (currentFp == storedFp) {
+        // Pin is still valid
+        return true;
+      }
+
+      // Certificate has changed - verify it's legitimate before clearing old pin
+      debugPrint(
+        'NexAI Pinning: Certificate rotation detected\n'
+        '  stored : $storedFp\n'
+        '  current: $currentFp\n'
+        '  → New cert verified by system CA, will auto-update pin',
+      );
+      return false; // Trigger TOFU mode to re-pin
+    }
+  } catch (e) {
+    debugPrint('NexAI Pinning: verification probe error: $e');
+    // On error, assume pin is still valid to avoid breaking existing connections
+    return true;
+  }
+
+  return true;
+}
 
 /// Opens a SecureSocket to [host]:[port], extracts the server certificate,
 /// stores its SHA-256 fingerprint AND expiry in FlutterSecureStorage.

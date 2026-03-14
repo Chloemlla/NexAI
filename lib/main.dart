@@ -150,8 +150,8 @@ void main() async {
 
     logController.add('初始化身份验证服务...');
     final authProvider = AuthProvider();
-    // Auth init is async but non-blocking - will restore session in background
-    authProvider.init();
+    // Wait for auth to restore session from secure storage
+    await authProvider.init();
     await Future.delayed(const Duration(milliseconds: 50));
 
     logController.add('启动完成！正在进入应用...');

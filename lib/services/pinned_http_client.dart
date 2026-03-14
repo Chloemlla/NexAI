@@ -203,7 +203,10 @@ class _PinnedClient extends http.BaseClient {
 
           // Update the pin with the new verified certificate
           await _storage.write(key: _pinKey, value: verifiedFp);
-          await _storage.write(key: _pinExpiryKey, value: expiry.toIso8601String());
+          await _storage.write(
+            key: _pinExpiryKey,
+            value: expiry.toIso8601String(),
+          );
 
           debugPrint(
             'NexAI Pinning: AUTO-RECOVERY successful\n'
@@ -223,13 +226,6 @@ class _PinnedClient extends http.BaseClient {
         '  → Manual intervention required: clear cert cache in settings',
       );
     }
-  }
-
-  bool _checkBackupPins(String actual) {
-    // Note: This is a simplified check. In production, you'd cache backup pins
-    // during initialization to avoid async operations in the callback.
-    // For now, we'll enhance this in the next iteration.
-    return false;
   }
 
   @override
@@ -288,18 +284,31 @@ Future<bool> _verifyStoredPin(String storedFp) async {
 ///   · When the stored pin is within [_renewWithinDays] of expiry (silent renewal).
 Future<void> _probeAndPin(String host, int port) async {
   try {
-    final socket = await SecureSocket.connect(
-      host,
-      port,
-      timeout: const Duration(seconds: 10),
-      onBadCertificate: (_) => false, // accept cert to read its contents
-    );
-    final cert = socket.peerCertificate;
-    socket.destroy();
+    // Use a permissive SecurityContext so we can read the cert DER bytes
+    // regardless of CA trust. We only want the fingerprint, not TLS auth.
+    final ctx = SecurityContext(withTrustedRoots: false);
+    X509Certificate? cert;
+
+    final httpClient = HttpClient(context: ctx)
+      ..badCertificateCallback = (X509Certificate c, String h, int p) {
+        cert = c; // capture cert before accepting
+        return true; // accept to complete the handshake
+      };
+
+    try {
+      final req = await httpClient.getUrl(
+        Uri(scheme: 'https', host: host, port: port, path: '/'),
+      );
+      await req.close();
+    } catch (_) {
+      // Response errors are irrelevant; we only care about the cert.
+    } finally {
+      httpClient.close(force: true);
+    }
 
     if (cert != null) {
-      final fp = _sha256Hex(cert.der);
-      final expiry = cert.endValidity;
+      final fp = _sha256Hex(cert!.der);
+      final expiry = cert!.endValidity;
 
       await _storage.write(key: _pinKey, value: fp);
       await _storage.write(key: _pinExpiryKey, value: expiry.toIso8601String());

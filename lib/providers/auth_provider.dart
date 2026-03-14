@@ -13,7 +13,10 @@ class AuthProvider extends ChangeNotifier {
   static const _keyRefreshToken = 'nexai_refresh_token';
   static const _keyUserId = 'nexai_user_id';
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    wOptions: WindowsOptions(useBackwardCompatibility: false),
+  );
 
   NexaiUser? _currentUser;
   String? _accessToken;
@@ -47,35 +50,43 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Load OAuth config
-      await _loadOAuthConfig();
-
-      // Try to restore session from secure storage
+      // ① Restore session first — must not be blocked by network calls.
       _accessToken = await _storage.read(key: _keyAccessToken);
       _refreshToken = await _storage.read(key: _keyRefreshToken);
 
       if (_accessToken != null) {
         // Try to get current user with stored token
-        final res = await NexaiAuthApi.getCurrentUser(
-          accessToken: _accessToken!,
-        );
-        if (res.success && res.user != null) {
-          _currentUser = res.user;
-        } else if (_refreshToken != null) {
-          // Access token expired, try refresh
-          await _tryRefreshToken();
-        } else {
-          await _clearTokens();
+        try {
+          final res = await NexaiAuthApi.getCurrentUser(
+            accessToken: _accessToken!,
+          );
+          if (res.success && res.user != null) {
+            _currentUser = res.user;
+          } else if (_refreshToken != null) {
+            // Access token expired, try refresh
+            await _tryRefreshToken();
+          } else {
+            await _clearTokens();
+          }
+        } catch (e) {
+          // Network error — keep tokens, user is considered 'offline logged-in'.
+          // Session will be validated on next successful request.
+          debugPrint(
+            '[NexAI Auth] Session restore network error (offline?): $e',
+          );
         }
       }
     } catch (e) {
-      debugPrint('[NexAI Auth] Init error: $e');
-      // Don't clear tokens on network error - might be offline
+      debugPrint('[NexAI Auth] Init storage error: $e');
+      // Storage read failed — do not clear tokens, treat as transient error.
     } finally {
       _isLoading = false;
       _initialized = true;
       notifyListeners();
     }
+
+    // ② Load OAuth config in background — failure must not affect login state.
+    _loadOAuthConfig().ignore();
   }
 
   /// Load OAuth config from server

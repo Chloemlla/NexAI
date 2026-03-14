@@ -355,8 +355,22 @@ class AuthProvider extends ChangeNotifier {
         accessToken: _accessToken!,
       );
 
-      // 2. Convert JSON to RegisterRequestType
-      final registerRequest = RegisterRequestType.fromJson(optionsMap);
+      debugPrint('[NexAI Passkey] Registration options: $optionsMap');
+
+      // 2. Convert JSON to RegisterRequestType with null safety
+      // Ensure excludeCredentials is a list (not null)
+      final sanitizedOptions = Map<String, dynamic>.from(optionsMap);
+      if (sanitizedOptions['excludeCredentials'] == null) {
+        sanitizedOptions['excludeCredentials'] = [];
+      }
+      if (sanitizedOptions['authenticatorSelection'] != null) {
+        final authSelection = sanitizedOptions['authenticatorSelection'] as Map<String, dynamic>;
+        if (authSelection['authenticatorAttachment'] == null) {
+          authSelection.remove('authenticatorAttachment');
+        }
+      }
+
+      final registerRequest = RegisterRequestType.fromJson(sanitizedOptions);
 
       // 3. Prompt user to create passkey using PasskeyAuthenticator
       final credential = await passkeyAuth.register(registerRequest);
@@ -393,8 +407,16 @@ class AuthProvider extends ChangeNotifier {
             identifier: identifier,
           );
 
-      // 2. Convert JSON to AuthenticateRequestType
-      final authRequest = AuthenticateRequestType.fromJson(optionsMap);
+      debugPrint('[NexAI Passkey] Authentication options: $optionsMap');
+
+      // 2. Convert JSON to AuthenticateRequestType with null safety
+      // Ensure allowCredentials is a list (not null)
+      final sanitizedOptions = Map<String, dynamic>.from(optionsMap);
+      if (sanitizedOptions['allowCredentials'] == null) {
+        sanitizedOptions['allowCredentials'] = [];
+      }
+
+      final authRequest = AuthenticateRequestType.fromJson(sanitizedOptions);
 
       // 3. Prompt user to authenticate
       final assertion = await passkeyAuth.authenticate(authRequest);

@@ -37,6 +37,26 @@ class SettingsProvider extends ChangeNotifier {
       'You are a helpful assistant. When responding with mathematical or chemical formulas, use LaTeX notation.';
   int? _accentColorValue;
 
+  // OpenAI specific settings
+  String _openaiBaseUrl = 'https://api.openai.com/v1';
+  String _openaiApiKey = '';
+  List<String> _openaiModels = [
+    'gpt-4o',
+    'gpt-4o-mini',
+    'gpt-4-turbo',
+    'gpt-3.5-turbo',
+  ];
+
+  // Vertex AI specific settings
+  String _vertexApiKey = '';
+  String _vertexProjectId = '';
+  String _vertexLocation = 'global';
+  List<String> _vertexModels = [
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-pro',
+    'gemini-1.5-flash',
+  ];
+
   // Appearance
   double _fontSize = 14.0;
   String _fontFamily = 'vivoSans';
@@ -53,12 +73,15 @@ class SettingsProvider extends ChangeNotifier {
   String _upstashUrl = '';
   String _upstashToken = '';
 
-  // Gemini AI Translation
-  String _vertexApiKey = '';
+  // API Mode
+  String _apiMode = 'OpenAI'; // 'OpenAI' or 'Vertex'
 
-  String get baseUrl => _baseUrl;
-  String get apiKey => _apiKey;
-  List<String> get models => _models;
+  // Getters - return current mode's settings
+  String get baseUrl => _apiMode == 'OpenAI' ? _openaiBaseUrl : '';
+  String get apiKey =>
+      _apiMode == 'OpenAI' ? _openaiApiKey : _vertexApiKey;
+  List<String> get models =>
+      _apiMode == 'OpenAI' ? _openaiModels : _vertexModels;
   String get selectedModel => _selectedModel;
   ThemeMode get themeMode => _themeMode;
   double get temperature => _temperature;
@@ -80,16 +103,19 @@ class SettingsProvider extends ChangeNotifier {
   String get upstashUrl => _upstashUrl;
   String get upstashToken => _upstashToken;
 
+  // Mode-specific getters
+  String get openaiBaseUrl => _openaiBaseUrl;
+  String get openaiApiKey => _openaiApiKey;
+  List<String> get openaiModels => _openaiModels;
+
   String get vertexApiKey => _vertexApiKey;
+  String get vertexProjectId => _vertexProjectId;
+  String get vertexLocation => _vertexLocation;
+  List<String> get vertexModels => _vertexModels;
 
   // API Mode
   String _apiMode = 'OpenAI'; // 'OpenAI' or 'Vertex'
-  String _vertexProjectId = '';
-  String _vertexLocation = 'global';
-
   String get apiMode => _apiMode;
-  String get vertexProjectId => _vertexProjectId;
-  String get vertexLocation => _vertexLocation;
 
   // Notes auto-save setting
   bool _notesAutoSave = true;
@@ -108,13 +134,16 @@ class SettingsProvider extends ChangeNotifier {
     await _migrateLegacySecrets(prefs);
 
     // ── Read sensitive fields from FlutterSecureStorage ────────────────────
-    _apiKey = await _secure.read(key: _kSecApiKey) ?? '';
+    _openaiApiKey = await _secure.read(key: _kSecApiKey) ?? '';
     _webdavPassword = await _secure.read(key: _kSecWebdavPass) ?? '';
     _upstashToken = await _secure.read(key: _kSecUpstashToken) ?? '';
     _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
 
     // ── Read non-sensitive fields from SharedPreferences ───────────────────
-    _baseUrl = prefs.getString('baseUrl') ?? _baseUrl;
+    _openaiBaseUrl = prefs.getString('openaiBaseUrl') ?? _openaiBaseUrl;
+    _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
+    _vertexLocation = prefs.getString('vertexLocation') ?? 'global';
+
     _selectedModel = prefs.getString('selectedModel') ?? _selectedModel;
     _temperature = prefs.getDouble('temperature') ?? _temperature;
     _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
@@ -136,24 +165,33 @@ class SettingsProvider extends ChangeNotifier {
     _upstashUrl = prefs.getString('upstashUrl') ?? '';
 
     _apiMode = prefs.getString('apiMode') ?? 'OpenAI';
-    _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
-    _vertexLocation = prefs.getString('vertexLocation') ?? 'global';
 
     final accentVal = prefs.getInt('accentColorValue');
     _accentColorValue = accentVal;
 
-    final modelsStr = prefs.getString('models');
-    if (modelsStr != null && modelsStr.isNotEmpty) {
-      _models = modelsStr
+    // Load OpenAI models
+    final openaiModelsStr = prefs.getString('openaiModels');
+    if (openaiModelsStr != null && openaiModelsStr.isNotEmpty) {
+      _openaiModels = openaiModelsStr
           .split(',')
           .map((e) => e.trim())
           .where((e) => e.isNotEmpty)
           .toList();
     }
 
-    // Ensure selectedModel exists in the models list
-    if (_models.isNotEmpty && !_models.contains(_selectedModel)) {
-      _selectedModel = _models.first;
+    // Load Vertex models
+    final vertexModelsStr = prefs.getString('vertexModels');
+    if (vertexModelsStr != null && vertexModelsStr.isNotEmpty) {
+      _vertexModels = vertexModelsStr
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+
+    // Ensure selectedModel exists in the current mode's models list
+    if (models.isNotEmpty && !models.contains(_selectedModel)) {
+      _selectedModel = models.first;
     }
 
     final themeModeStr = prefs.getString('themeMode') ?? 'system';
@@ -186,14 +224,15 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
 
     // ── Sensitive: write to secure storage ─────────────────────────────────
-    await _secure.write(key: _kSecApiKey, value: _apiKey);
+    await _secure.write(key: _kSecApiKey, value: _openaiApiKey);
     await _secure.write(key: _kSecWebdavPass, value: _webdavPassword);
     await _secure.write(key: _kSecUpstashToken, value: _upstashToken);
     await _secure.write(key: _kSecVertexApiKey, value: _vertexApiKey);
 
     // ── Non-sensitive: write to SharedPreferences ──────────────────────────
-    await prefs.setString('baseUrl', _baseUrl);
-    await prefs.setString('models', _models.join(','));
+    await prefs.setString('openaiBaseUrl', _openaiBaseUrl);
+    await prefs.setString('openaiModels', _openaiModels.join(','));
+    await prefs.setString('vertexModels', _vertexModels.join(','));
     await prefs.setString('selectedModel', _selectedModel);
     await prefs.setString('themeMode', _themeMode.name);
     await prefs.setDouble('temperature', _temperature);
@@ -256,15 +295,23 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setBaseUrl(String url) async {
-    _baseUrl = url.trimRight().endsWith('/')
+    final normalized = url.trimRight().endsWith('/')
         ? url.trimRight().substring(0, url.trimRight().length - 1)
         : url.trim();
+    if (_apiMode == 'OpenAI') {
+      _openaiBaseUrl = normalized;
+    }
     notifyListeners();
     await _save();
   }
 
   Future<void> setApiKey(String key) async {
-    _apiKey = key.trim();
+    final trimmed = key.trim();
+    if (_apiMode == 'OpenAI') {
+      _openaiApiKey = trimmed;
+    } else {
+      _vertexApiKey = trimmed;
+    }
     notifyListeners();
     await _save();
   }
@@ -276,9 +323,17 @@ class SettingsProvider extends ChangeNotifier {
         .where((e) => e.isNotEmpty)
         .toList();
     if (parsed.isEmpty) return; // Don't allow empty models list
-    _models = parsed;
-    if (!_models.contains(_selectedModel)) {
-      _selectedModel = _models.first;
+
+    if (_apiMode == 'OpenAI') {
+      _openaiModels = parsed;
+      if (!_openaiModels.contains(_selectedModel)) {
+        _selectedModel = _openaiModels.first;
+      }
+    } else {
+      _vertexModels = parsed;
+      if (!_vertexModels.contains(_selectedModel)) {
+        _selectedModel = _vertexModels.first;
+      }
     }
     notifyListeners();
     await _save();
@@ -382,6 +437,10 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setApiMode(String mode) async {
     _apiMode = mode;
+    // Switch selectedModel to match the new mode's models
+    if (models.isNotEmpty && !models.contains(_selectedModel)) {
+      _selectedModel = models.first;
+    }
     notifyListeners();
     await _save();
   }

@@ -3,10 +3,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'pinned_http_client.dart';
+import '../utils/app_security.dart';
+import '../utils/request_signer.dart';
 
-// ─── Pinned HTTP wrapper ──────────────────────────────────────────────────────
-// Lazily initialises a certificate-pinned client on first use.
-// Subsequent calls reuse the same instance (connection pool preserved).
+// ─── Signed + Pinned HTTP wrapper ────────────────────────────────────────────
 class _NexaiHttp {
   static http.Client? _client;
 
@@ -15,23 +15,82 @@ class _NexaiHttp {
     return _client!;
   }
 
-  static Future<http.Response> post(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async => (await _get()).post(url, headers: headers, body: body);
+  static Map<String, String> _base([Map<String, String>? extra]) {
+    final h = <String, String>{...?extra};
+    if (AppSecurity.instance.isCompromised) {
+      h['X-NexAI-Device'] = 'flagged';
+    }
+    return h;
+  }
 
   static Future<http.Response> get(
     Uri url, {
     Map<String, String>? headers,
-  }) async => (await _get()).get(url, headers: headers);
+  }) async {
+    final signed = await signRequest(
+      method: 'GET',
+      path: url.path,
+      headers: _base(headers),
+    );
+    return (await _get()).get(url, headers: signed);
+  }
 
-  // Reserved for future use
-  // static Future<http.Response> put(
-  //   Uri url, {
-  //   Map<String, String>? headers,
-  //   Object? body,
-  // }) async => (await _get()).put(url, headers: headers, body: body);
+  static Future<http.Response> post(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'POST',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).post(url, headers: signed, body: body);
+  }
+
+  static Future<http.Response> put(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'PUT',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).put(url, headers: signed, body: body);
+  }
+
+  static Future<http.Response> patch(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'PATCH',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).patch(url, headers: signed, body: body);
+  }
+
+  static Future<http.Response> delete(
+    Uri url, {
+    Map<String, String>? headers,
+  }) async {
+    final signed = await signRequest(
+      method: 'DELETE',
+      path: url.path,
+      headers: _base(headers),
+    );
+    return (await _get()).delete(url, headers: signed);
+  }
 }
 
 const String _defaultBaseUrl = 'https://api.951100.xyz/api/nexai';
@@ -43,11 +102,25 @@ class NexaiSyncApi {
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
+  static bool _isSuccess(http.Response response) {
+    return response.statusCode >= 200 && response.statusCode < 300;
+  }
+
+  static Map<String, dynamic>? _safeBody(http.Response response) {
+    if (response.body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(response.body);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// GET /sync — 获取全部同步数据
   static Future<Map<String, dynamic>?> getSyncData({
     required String accessToken,
   }) async {
-    final response = await http.get(
+    final response = await _NexaiHttp.get(
       Uri.parse('$_baseUrl/sync'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -55,10 +128,10 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
+    if (_isSuccess(response)) {
+      final body = _safeBody(response);
+      if (body?['success'] == true) {
+        return body?['data'] as Map<String, dynamic>?;
       }
     }
     return null;
@@ -69,7 +142,7 @@ class NexaiSyncApi {
     required String accessToken,
     required Map<String, dynamic> data,
   }) async {
-    final response = await http.put(
+    final response = await _NexaiHttp.put(
       Uri.parse('$_baseUrl/sync'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -78,9 +151,9 @@ class NexaiSyncApi {
       body: jsonEncode(data),
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      return body['success'] == true;
+    if (_isSuccess(response)) {
+      final body = _safeBody(response);
+      return body?['success'] == true;
     }
     return false;
   }
@@ -91,7 +164,7 @@ class NexaiSyncApi {
     required String category,
     required dynamic data,
   }) async {
-    final response = await http.patch(
+    final response = await _NexaiHttp.patch(
       Uri.parse('$_baseUrl/sync/$category'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -100,16 +173,16 @@ class NexaiSyncApi {
       body: jsonEncode({'data': data}),
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      return body['success'] == true;
+    if (_isSuccess(response)) {
+      final body = _safeBody(response);
+      return body?['success'] == true;
     }
     return false;
   }
 
   /// DELETE /sync — 清除同步数据
   static Future<bool> deleteSyncData({required String accessToken}) async {
-    final response = await http.delete(
+    final response = await _NexaiHttp.delete(
       Uri.parse('$_baseUrl/sync'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -117,9 +190,9 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      return body['success'] == true;
+    if (_isSuccess(response)) {
+      final body = _safeBody(response);
+      return body?['success'] == true;
     }
     return false;
   }
@@ -128,7 +201,7 @@ class NexaiSyncApi {
   static Future<Map<String, dynamic>?> getSyncMeta({
     required String accessToken,
   }) async {
-    final response = await http.get(
+    final response = await _NexaiHttp.get(
       Uri.parse('$_baseUrl/sync/meta'),
       headers: {
         'Authorization': 'Bearer $accessToken',
@@ -136,10 +209,10 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
+    if (_isSuccess(response)) {
+      final body = _safeBody(response);
+      if (body?['success'] == true) {
+        return body?['data'] as Map<String, dynamic>?;
       }
     }
     return null;
@@ -158,10 +231,10 @@ class NexaiSyncApi {
       },
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
+    if (_isSuccess(response)) {
+      final body = _safeBody(response);
+      if (body?['success'] == true) {
+        return body?['data'] as Map<String, dynamic>?;
       }
     }
     return null;
@@ -182,10 +255,10 @@ class NexaiSyncApi {
       body: jsonEncode({'lastSyncedAt': lastSyncedAt, 'data': data}),
     );
 
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      if (body['success'] == true) {
-        return body['data'] as Map<String, dynamic>?;
+    if (_isSuccess(response)) {
+      final body = _safeBody(response);
+      if (body?['success'] == true) {
+        return body?['data'] as Map<String, dynamic>?;
       }
     }
     return null;

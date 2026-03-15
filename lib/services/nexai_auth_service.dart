@@ -445,17 +445,33 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromResponse(http.Response res) {
-    final body = jsonDecode(res.body);
+    Map<String, dynamic> body;
+    try {
+      final decoded = jsonDecode(res.body);
+      body = decoded is Map<String, dynamic>
+          ? decoded
+          : <String, dynamic>{'success': false, 'error': 'Invalid response'};
+    } catch (_) {
+      body = <String, dynamic>{
+        'success': false,
+        'error': res.body.isNotEmpty ? res.body : 'Invalid response body',
+      };
+    }
+
+    final data = body['data'];
+    final dataMap = data is Map<String, dynamic> ? data : null;
+    final userJson = dataMap?['user'] ?? body['user'];
+
     return AuthResponse(
       success: body['success'] == true,
       message: body['message'],
       error: body['error'],
-      user: body['data']?['user'] != null
-          ? NexaiUser.fromJson(body['data']['user'])
+      user: userJson is Map<String, dynamic>
+          ? NexaiUser.fromJson(userJson)
           : null,
-      accessToken: body['data']?['accessToken'],
-      refreshToken: body['data']?['refreshToken'],
-      isNewUser: body['data']?['isNewUser'],
+      accessToken: dataMap?['accessToken'] ?? body['accessToken'],
+      refreshToken: dataMap?['refreshToken'] ?? body['refreshToken'],
+      isNewUser: dataMap?['isNewUser'] ?? body['isNewUser'],
       statusCode: res.statusCode,
     );
   }

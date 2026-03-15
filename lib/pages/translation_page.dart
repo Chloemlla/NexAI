@@ -65,17 +65,19 @@ class _TranslationPageState extends State<TranslationPage> {
         '$endpoint?key=${settings.vertexApiKey}',
         options: Options(headers: {'Content-Type': 'application/json'}),
         data: {
-          'contents': {
-            'role': 'user',
-            'parts': [
+          'contents': [
+            {
+              'role': 'user',
+              'parts': [
               {
                 'text':
                     'Translate the following text from $sourceLang to $targetLang. '
                     'Only return the translated text without any explanation or additional content.\n\n'
                     'Text to translate:\n$text',
               },
-            ],
-          },
+            ]
+            },
+          ],
           'generationConfig': {'temperature': 0.3, 'maxOutputTokens': 2048},
         },
       );
@@ -114,7 +116,11 @@ class _TranslationPageState extends State<TranslationPage> {
     } catch (e) {
       _showError('翻译错误: $e');
     } finally {
-      setState(() => _isTranslating = false);
+      if (mounted) {
+        setState(() => _isTranslating = false);
+      } else {
+        _isTranslating = false;
+      }
     }
   }
 

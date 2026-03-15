@@ -487,10 +487,8 @@ class AuthProvider extends ChangeNotifier {
   ) {
     final sanitized = Map<String, dynamic>.from(options);
 
-    // Ensure excludeCredentials is a list (not null)
-    if (sanitized['excludeCredentials'] == null) {
-      sanitized['excludeCredentials'] = [];
-    }
+    sanitized['excludeCredentials'] =
+        _sanitizeCredentialDescriptorList(sanitized['excludeCredentials']);
 
     // Handle authenticatorSelection
     if (sanitized['authenticatorSelection'] != null) {
@@ -507,8 +505,13 @@ class AuthProvider extends ChangeNotifier {
     }
 
     // Handle pubKeyCredParams - ensure it's a list
-    if (sanitized['pubKeyCredParams'] == null) {
+    if (sanitized['pubKeyCredParams'] is! List) {
       sanitized['pubKeyCredParams'] = [];
+    }
+
+    // Handle hints - passkeys package expects a list
+    if (sanitized['hints'] is! List) {
+      sanitized['hints'] = [];
     }
 
     // Handle extensions
@@ -525,9 +528,12 @@ class AuthProvider extends ChangeNotifier {
   ) {
     final sanitized = Map<String, dynamic>.from(options);
 
-    // Ensure allowCredentials is a list (not null)
-    if (sanitized['allowCredentials'] == null) {
-      sanitized['allowCredentials'] = [];
+    sanitized['allowCredentials'] =
+        _sanitizeCredentialDescriptorList(sanitized['allowCredentials']);
+
+    // Handle hints - passkeys package expects a list
+    if (sanitized['hints'] is! List) {
+      sanitized['hints'] = [];
     }
 
     // Handle extensions
@@ -536,6 +542,25 @@ class AuthProvider extends ChangeNotifier {
     }
 
     return sanitized;
+  }
+
+  List<Map<String, dynamic>> _sanitizeCredentialDescriptorList(dynamic value) {
+    if (value is! List) return const [];
+
+    return value
+        .whereType<Map>()
+        .map((entry) {
+          final descriptor = Map<String, dynamic>.from(entry);
+
+          // Android passkeys parser may cast transports to List directly.
+          // Normalize to an empty list when omitted by backend.
+          if (descriptor['transports'] is! List) {
+            descriptor['transports'] = [];
+          }
+
+          return descriptor;
+        })
+        .toList();
   }
 
   // ========== Session Management ==========

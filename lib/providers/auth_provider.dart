@@ -677,9 +677,9 @@ class AuthProvider extends ChangeNotifier {
           if (credMap['type'] == null) {
             credMap['type'] = 'public-key';
           }
-          // Remove transports if null to avoid type cast issues
-          if (credMap['transports'] == null) {
-            credMap.remove('transports');
+          // Add empty transports array if missing - passkeys package may expect this
+          if (!credMap.containsKey('transports') || credMap['transports'] == null) {
+            credMap['transports'] = <String>[];
           }
           return credMap;
         }
@@ -771,6 +771,10 @@ class AuthProvider extends ChangeNotifier {
           if (credMap['type'] == null) {
             credMap['type'] = 'public-key';
           }
+          // Add empty transports array if missing
+          if (!credMap.containsKey('transports') || credMap['transports'] == null) {
+            credMap['transports'] = <String>[];
+          }
           return credMap;
         }
         return cred;
@@ -790,6 +794,12 @@ class AuthProvider extends ChangeNotifier {
     // Handle extensions
     if (sanitized['extensions'] == null) {
       sanitized['extensions'] = {};
+    }
+
+    // Remove hints field if it's null or empty array
+    if (sanitized['hints'] == null ||
+        (sanitized['hints'] is List && (sanitized['hints'] as List).isEmpty)) {
+      sanitized.remove('hints');
     }
 
     return sanitized;

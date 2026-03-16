@@ -186,9 +186,20 @@ class AuthProvider extends ChangeNotifier {
     };
 
     try {
+      // Check if Google OAuth is configured
+      if (!_googleEnabled || _googleClientId.isEmpty) {
+        _error = 'Google 登录未配置或未启用\n请联系管理员配置 Google OAuth';
+        debugContext['error'] = _error;
+        debugContext['errorType'] = 'GoogleNotConfigured';
+        _lastGoogleDebugContext = debugContext;
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
       // Use server client ID (Web Application type) for backend verification
       final googleSignIn = GoogleSignIn(
-        serverClientId: _googleClientId.isNotEmpty ? _googleClientId : null,
+        serverClientId: _googleClientId,
         scopes: ['email', 'profile'],
       );
 
@@ -215,7 +226,9 @@ class AuthProvider extends ChangeNotifier {
 
       final idToken = auth.idToken;
       if (idToken == null) {
-        _error = '无法获取 Google ID Token';
+        _error = '无法获取 Google ID Token\n'
+            '这通常是因为 Google Client ID 配置不正确\n'
+            '请确保使用的是 Web Application 类型的 Client ID';
         debugContext['error'] = _error;
         debugContext['errorType'] = 'MissingIdToken';
         _lastGoogleDebugContext = debugContext;
@@ -333,8 +346,17 @@ class AuthProvider extends ChangeNotifier {
     };
 
     try {
+      // Check if Google OAuth is configured
+      if (!_googleEnabled || _googleClientId.isEmpty) {
+        _error = 'Google 登录未配置或未启用\n请联系管理员配置 Google OAuth';
+        debugContext['error'] = _error;
+        debugContext['errorType'] = 'GoogleNotConfigured';
+        _lastGoogleDebugContext = debugContext;
+        return false;
+      }
+
       final googleSignIn = GoogleSignIn(
-        serverClientId: _googleClientId.isNotEmpty ? _googleClientId : null,
+        serverClientId: _googleClientId,
         scopes: ['email', 'profile'],
       );
 
@@ -352,7 +374,9 @@ class AuthProvider extends ChangeNotifier {
 
       final idToken = auth.idToken;
       if (idToken == null) {
-        _error = '无法获取 Google ID Token';
+        _error = '无法获取 Google ID Token\n'
+            '这通常是因为 Google Client ID 配置不正确\n'
+            '请确保使用的是 Web Application 类型的 Client ID';
         debugContext['error'] = _error;
         debugContext['errorType'] = 'MissingIdToken';
         _lastGoogleDebugContext = debugContext;

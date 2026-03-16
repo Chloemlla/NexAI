@@ -649,7 +649,8 @@ class AuthProvider extends ChangeNotifier {
       if (user['name'] == null) {
         throw Exception('Missing required field: user.name');
       }
-      if (user['displayName'] == null) {
+      // Handle empty displayName
+      if (user['displayName'] == null || user['displayName'] == '') {
         user['displayName'] = user['name'];
       }
 
@@ -676,6 +677,10 @@ class AuthProvider extends ChangeNotifier {
           if (credMap['type'] == null) {
             credMap['type'] = 'public-key';
           }
+          // Remove transports if null to avoid type cast issues
+          if (credMap['transports'] == null) {
+            credMap.remove('transports');
+          }
           return credMap;
         }
         return cred;
@@ -688,7 +693,7 @@ class AuthProvider extends ChangeNotifier {
         sanitized['authenticatorSelection'] as Map<String, dynamic>,
       );
 
-      // Remove null authenticatorAttachment
+      // Remove null authenticatorAttachment or keep it if it has a value
       if (authSelection['authenticatorAttachment'] == null) {
         authSelection.remove('authenticatorAttachment');
       }
@@ -726,6 +731,12 @@ class AuthProvider extends ChangeNotifier {
     // Handle extensions
     if (sanitized['extensions'] == null) {
       sanitized['extensions'] = {};
+    }
+
+    // Remove hints field if it's null or empty array - it may cause type cast issues
+    if (sanitized['hints'] == null ||
+        (sanitized['hints'] is List && (sanitized['hints'] as List).isEmpty)) {
+      sanitized.remove('hints');
     }
 
     return sanitized;

@@ -556,12 +556,17 @@ class OAuthConfigResponse {
   });
 
   factory OAuthConfigResponse.fromJson(Map<String, dynamic> json) {
+    // Handle nested structure from API documentation:
+    // { "google": { "enabled": true, "clientId": "..." }, "github": { ... } }
+    final google = json['google'] as Map<String, dynamic>?;
+    final github = json['github'] as Map<String, dynamic>?;
+
     return OAuthConfigResponse(
       success: json['success'] ?? true,
-      googleEnabled: json['googleEnabled'] == true,
-      googleClientId: json['googleClientId'] ?? '',
-      githubEnabled: json['githubEnabled'] == true,
-      githubClientId: json['githubClientId'] ?? '',
+      googleEnabled: google?['enabled'] == true,
+      googleClientId: google?['clientId'] as String? ?? '',
+      githubEnabled: github?['enabled'] == true,
+      githubClientId: github?['clientId'] as String? ?? '',
     );
   }
 }

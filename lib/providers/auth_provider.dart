@@ -174,6 +174,15 @@ class AuthProvider extends ChangeNotifier {
 
   /// Google Sign-In
   Future<bool> signInWithGoogle() async {
+    // Check platform support - google_sign_in only supports Android, iOS, and Web
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      _error = 'Google 登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
+      notifyListeners();
+      return false;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -183,6 +192,7 @@ class AuthProvider extends ChangeNotifier {
       'operation': 'signInWithGoogle',
       'googleClientId': _googleClientId,
       'googleEnabled': _googleEnabled,
+      'platform': defaultTargetPlatform.toString(),
     };
 
     try {
@@ -335,6 +345,15 @@ class AuthProvider extends ChangeNotifier {
 
   /// Link Google account
   Future<bool> linkGoogle() async {
+    // Check platform support - google_sign_in only supports Android, iOS, and Web
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      _error = 'Google 登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
+      notifyListeners();
+      return false;
+    }
+
     if (_accessToken == null) return false;
     _error = null;
 
@@ -343,6 +362,7 @@ class AuthProvider extends ChangeNotifier {
       'operation': 'linkGoogle',
       'userId': _currentUser?.id,
       'googleClientId': _googleClientId,
+      'platform': defaultTargetPlatform.toString(),
     };
 
     try {

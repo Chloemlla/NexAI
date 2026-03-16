@@ -108,28 +108,6 @@ flutter:
         - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Heavy.ttf
           weight: 900
 
-    # vivo Sans Global - 备用字体（轻量级，适合英文）
-    - family: vivoSansGlobal
-      fonts:
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Thin.ttf
-          weight: 100
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Extralight.ttf
-          weight: 200
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Light.ttf
-          weight: 300
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Regular.ttf
-          weight: 400
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Medium.ttf
-          weight: 500
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Demibold.ttf
-          weight: 600
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Bold.ttf
-          weight: 700
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Extrabold.ttf
-          weight: 800
-        - asset: assets/vivo Sans/Brand/vivo Sans Global/vivoSansGlobal-Heavy.ttf
-          weight: 900
-
     # HarmonyOS Sans SC - 鸿蒙简体中文字体
     - family: HarmonyOS_Sans_SC
       fonts:

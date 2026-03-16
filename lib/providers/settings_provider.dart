@@ -6,7 +6,6 @@ class SettingsProvider extends ChangeNotifier {
   // ── Available font families (from pubspec.yaml) ──────────────────────────
   static const List<String> availableFonts = [
     'vivoSans',
-    'vivoSansGlobal',
     'HarmonyOS_Sans_SC',
     'OPPO_Sans',
   ];

@@ -748,9 +748,14 @@ class AuthProvider extends ChangeNotifier {
       sanitized['timeout'] = 60000; // 60 seconds default
     }
 
-    // Handle extensions
+    // Handle extensions - remove problematic fields
     if (sanitized['extensions'] == null) {
       sanitized['extensions'] = {};
+    } else if (sanitized['extensions'] is Map) {
+      final ext = Map<String, dynamic>.from(sanitized['extensions'] as Map<String, dynamic>);
+      // Remove credProps as it may cause issues with some authenticators
+      ext.remove('credProps');
+      sanitized['extensions'] = ext;
     }
 
     // Remove hints field if it's null or empty array - it may cause type cast issues

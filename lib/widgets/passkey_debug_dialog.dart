@@ -2,24 +2,39 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Detailed debug dialog for Passkey errors with full context and copy support
-class PasskeyDebugDialog extends StatelessWidget {
+/// Detailed debug dialog for authentication errors with full context and copy support
+class AuthDebugDialog extends StatelessWidget {
   final Map<String, dynamic> debugContext;
+  final String title;
 
-  const PasskeyDebugDialog({
+  const AuthDebugDialog({
     super.key,
     required this.debugContext,
+    this.title = '调试信息',
   });
 
   String _formatContext() {
     final buffer = StringBuffer();
-    buffer.writeln('=== Passkey Debug Context ===\n');
+    final operation = debugContext['operation'] ?? 'Unknown';
+    buffer.writeln('=== $operation Debug Context ===\n');
 
     // Basic info
     buffer.writeln('Timestamp: ${debugContext['timestamp']}');
     buffer.writeln('Operation: ${debugContext['operation']}');
-    buffer.writeln('User ID: ${debugContext['userId']}');
-    buffer.writeln('Username: ${debugContext['username']}');
+
+    // User/identifier info
+    if (debugContext['userId'] != null) {
+      buffer.writeln('User ID: ${debugContext['userId']}');
+    }
+    if (debugContext['username'] != null) {
+      buffer.writeln('Username: ${debugContext['username']}');
+    }
+    if (debugContext['identifier'] != null) {
+      buffer.writeln('Identifier: ${debugContext['identifier']}');
+    }
+    if (debugContext['accountEmail'] != null) {
+      buffer.writeln('Account Email: ${debugContext['accountEmail']}');
+    }
     buffer.writeln();
 
     // Error info
@@ -27,10 +42,36 @@ class PasskeyDebugDialog extends StatelessWidget {
       buffer.writeln('=== Error ===');
       buffer.writeln('Type: ${debugContext['errorType']}');
       buffer.writeln('Message: ${debugContext['error']}');
+      if (debugContext['errorDetails'] != null) {
+        buffer.writeln('Details: ${debugContext['errorDetails']}');
+      }
       buffer.writeln();
     }
 
-    // Raw options
+    // Google-specific info
+    if (debugContext['googleClientId'] != null) {
+      buffer.writeln('=== Google Configuration ===');
+      buffer.writeln('Client ID: ${debugContext['googleClientId']}');
+      buffer.writeln('Google Enabled: ${debugContext['googleEnabled']}');
+      buffer.writeln('Has ID Token: ${debugContext['hasIdToken']}');
+      buffer.writeln('Has Access Token: ${debugContext['hasAccessToken']}');
+      buffer.writeln();
+    }
+
+    // Backend response
+    if (debugContext['backendResponse'] != null) {
+      buffer.writeln('=== Backend Response ===');
+      try {
+        final formatted = JsonEncoder.withIndent('  ')
+            .convert(debugContext['backendResponse']);
+        buffer.writeln(formatted);
+      } catch (e) {
+        buffer.writeln(debugContext['backendResponse'].toString());
+      }
+      buffer.writeln();
+    }
+
+    // Raw options (for Passkey)
     if (debugContext['rawOptions'] != null) {
       buffer.writeln('=== Raw Options from Backend ===');
       try {
@@ -43,7 +84,7 @@ class PasskeyDebugDialog extends StatelessWidget {
       buffer.writeln();
     }
 
-    // Sanitized options
+    // Sanitized options (for Passkey)
     if (debugContext['sanitizedOptions'] != null) {
       buffer.writeln('=== Sanitized Options ===');
       try {
@@ -56,7 +97,7 @@ class PasskeyDebugDialog extends StatelessWidget {
       buffer.writeln();
     }
 
-    // Credential info
+    // Credential info (for Passkey)
     if (debugContext['credentialId'] != null) {
       buffer.writeln('=== Credential ===');
       buffer.writeln('ID: ${debugContext['credentialId']}');
@@ -83,7 +124,7 @@ class PasskeyDebugDialog extends StatelessWidget {
         children: [
           Icon(Icons.bug_report, color: theme.colorScheme.error),
           const SizedBox(width: 8),
-          const Text('Passkey 调试信息'),
+          Text(title),
         ],
       ),
       content: SizedBox(
@@ -129,7 +170,7 @@ class PasskeyDebugDialog extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        debugContext['error'] ?? '',
+                        debugContext['errorDetails'] ?? debugContext['error'] ?? '',
                         style: TextStyle(
                           color: theme.colorScheme.onErrorContainer,
                         ),
@@ -183,3 +224,10 @@ class PasskeyDebugDialog extends StatelessWidget {
     );
   }
 }
+
+/// Legacy alias for backward compatibility
+class PasskeyDebugDialog extends AuthDebugDialog {
+  const PasskeyDebugDialog({
+    super.key,
+    required super.debugContext,
+  }) : super(title: 'Passkey 调试信息');

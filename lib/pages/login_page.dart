@@ -462,8 +462,25 @@ class _LoginPageState extends State<LoginPage>
 
   Future<void> _handleGoogleSignIn(AuthProvider auth) async {
     final success = await auth.signInWithGoogle();
-    if (success && mounted) {
-      Navigator.of(context).pop(true);
+    if (mounted) {
+      if (success) {
+        Navigator.of(context).pop(true);
+      } else {
+        // Show detailed debug dialog on failure
+        if (auth.lastGoogleDebugContext != null) {
+          showDialog(
+            context: context,
+            builder: (context) => AuthDebugDialog(
+              debugContext: auth.lastGoogleDebugContext!,
+              title: 'Google 登录调试信息',
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(auth.error ?? 'Google 登录失败')),
+          );
+        }
+      }
     }
   }
 

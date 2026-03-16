@@ -25,6 +25,7 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   bool _initialized = false;
   Map<String, dynamic>? _lastPasskeyDebugContext;
+  Map<String, dynamic>? _lastGoogleDebugContext;
 
   // OAuth config from server
   bool _googleEnabled = false;
@@ -44,6 +45,7 @@ class AuthProvider extends ChangeNotifier {
   String get googleClientId => _googleClientId;
   String get githubClientId => _githubClientId;
   Map<String, dynamic>? get lastPasskeyDebugContext => _lastPasskeyDebugContext;
+  Map<String, dynamic>? get lastGoogleDebugContext => _lastGoogleDebugContext;
 
   /// Initialize: load persisted tokens and try to restore session
   Future<void> init() async {
@@ -176,6 +178,13 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    final debugContext = <String, dynamic>{
+      'timestamp': DateTime.now().toIso8601String(),
+      'operation': 'signInWithGoogle',
+      'googleClientId': _googleClientId,
+      'googleEnabled': _googleEnabled,
+    };
+
     try {
       // Use server client ID (Web Application type) for backend verification
       final googleSignIn = GoogleSignIn(
@@ -183,35 +192,74 @@ class AuthProvider extends ChangeNotifier {
         scopes: ['email', 'profile'],
       );
 
+      debugContext['googleSignInConfigured'] = true;
+
       final account = await googleSignIn.signIn();
       if (account == null) {
         _error = '已取消 Google 登录';
+        debugContext['cancelled'] = true;
+        _lastGoogleDebugContext = debugContext;
         _isLoading = false;
         notifyListeners();
         return false;
       }
 
+      debugContext['accountEmail'] = account.email;
+      debugContext['accountId'] = account.id;
+      debugContext['accountDisplayName'] = account.displayName;
+
       final auth = await account.authentication;
+      debugContext['hasAccessToken'] = auth.accessToken != null;
+      debugContext['hasIdToken'] = auth.idToken != null;
+      debugContext['hasServerAuthCode'] = auth.serverAuthCode != null;
+
       final idToken = auth.idToken;
       if (idToken == null) {
         _error = '无法获取 Google ID Token';
+        debugContext['error'] = _error;
+        debugContext['errorType'] = 'MissingIdToken';
+        _lastGoogleDebugContext = debugContext;
         _isLoading = false;
         notifyListeners();
         return false;
       }
+
+      debugContext['idTokenLength'] = idToken.length;
 
       // Send idToken to backend
       final res = await NexaiAuthApi.googleAuth(idToken: idToken);
 
+      debugContext['backendResponse'] = {
+        'success': res.success,
+        'hasAccessToken': res.accessToken != null,
+        'hasUser': res.user != null,
+        'error': res.error,
+      };
+
       if (res.success && res.accessToken != null && res.user != null) {
         await _saveSession(res.user!, res.accessToken!, res.refreshToken);
+        debugContext['success'] = true;
+        debugContext['userId'] = res.user!.id;
         return true;
       } else {
         _error = res.error ?? 'Google 登录失败';
+        debugContext['success'] = false;
+        debugContext['error'] = _error;
+        _lastGoogleDebugContext = debugContext;
         return false;
       }
-    } catch (e) {
-      _error = 'Google 登录错误: $e';
+    } catch (e, stackTrace) {
+      debugContext['error'] = e.toString();
+      debugContext['errorType'] = e.runtimeType.toString();
+      debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['stackTrace'] = stackTrace.toString();
+
+      debugPrint('[NexAI Google] Sign-in error: $e');
+      debugPrint('[NexAI Google] Error type: ${e.runtimeType}');
+      debugPrint('[NexAI Google] Stack trace: $stackTrace');
+
+      _error = 'Google 登录错误: ${_extractErrorDetails(e)}';
+      _lastGoogleDebugContext = debugContext;
       return false;
     } finally {
       _isLoading = false;
@@ -277,6 +325,13 @@ class AuthProvider extends ChangeNotifier {
     if (_accessToken == null) return false;
     _error = null;
 
+    final debugContext = <String, dynamic>{
+      'timestamp': DateTime.now().toIso8601String(),
+      'operation': 'linkGoogle',
+      'userId': _currentUser?.id,
+      'googleClientId': _googleClientId,
+    };
+
     try {
       final googleSignIn = GoogleSignIn(
         serverClientId: _googleClientId.isNotEmpty ? _googleClientId : null,
@@ -284,12 +339,23 @@ class AuthProvider extends ChangeNotifier {
       );
 
       final account = await googleSignIn.signIn();
-      if (account == null) return false;
+      if (account == null) {
+        debugContext['cancelled'] = true;
+        _lastGoogleDebugContext = debugContext;
+        return false;
+      }
+
+      debugContext['accountEmail'] = account.email;
 
       final auth = await account.authentication;
+      debugContext['hasIdToken'] = auth.idToken != null;
+
       final idToken = auth.idToken;
       if (idToken == null) {
         _error = '无法获取 Google ID Token';
+        debugContext['error'] = _error;
+        debugContext['errorType'] = 'MissingIdToken';
+        _lastGoogleDebugContext = debugContext;
         return false;
       }
 
@@ -298,16 +364,33 @@ class AuthProvider extends ChangeNotifier {
         idToken: idToken,
       );
 
+      debugContext['backendResponse'] = {
+        'success': res.success,
+        'error': res.error,
+      };
+
       if (res.success && res.user != null) {
         _currentUser = res.user;
+        debugContext['success'] = true;
         notifyListeners();
         return true;
       } else {
         _error = res.error ?? '关联失败';
+        debugContext['error'] = _error;
+        _lastGoogleDebugContext = debugContext;
         return false;
       }
-    } catch (e) {
-      _error = '关联错误: $e';
+    } catch (e, stackTrace) {
+      debugContext['error'] = e.toString();
+      debugContext['errorType'] = e.runtimeType.toString();
+      debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['stackTrace'] = stackTrace.toString();
+
+      debugPrint('[NexAI Google] Link error: $e');
+      debugPrint('[NexAI Google] Stack trace: $stackTrace');
+
+      _error = '关联错误: ${_extractErrorDetails(e)}';
+      _lastGoogleDebugContext = debugContext;
       return false;
     }
   }
@@ -392,12 +475,14 @@ class AuthProvider extends ChangeNotifier {
     } catch (e, stackTrace) {
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
+      debugContext['errorDetails'] = _extractErrorDetails(e);
       debugContext['stackTrace'] = stackTrace.toString();
 
       debugPrint('[NexAI Passkey] Bind error: $e');
+      debugPrint('[NexAI Passkey] Error type: ${e.runtimeType}');
       debugPrint('[NexAI Passkey] Stack trace: $stackTrace');
 
-      _error = '绑定 Passkey 失败: $e';
+      _error = '绑定 Passkey 失败: ${_extractErrorDetails(e)}';
       _lastPasskeyDebugContext = debugContext;
       return false;
     } finally {
@@ -465,12 +550,14 @@ class AuthProvider extends ChangeNotifier {
     } catch (e, stackTrace) {
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
+      debugContext['errorDetails'] = _extractErrorDetails(e);
       debugContext['stackTrace'] = stackTrace.toString();
 
       debugPrint('[NexAI Passkey] Login error: $e');
+      debugPrint('[NexAI Passkey] Error type: ${e.runtimeType}');
       debugPrint('[NexAI Passkey] Stack trace: $stackTrace');
 
-      _error = 'Passkey 登录失败: $e';
+      _error = 'Passkey 登录失败: ${_extractErrorDetails(e)}';
       _lastPasskeyDebugContext = debugContext;
       return false;
     } finally {
@@ -480,6 +567,39 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // ========== Internal Methods ==========
+
+  /// Extract detailed error information from exception
+  String _extractErrorDetails(dynamic error) {
+    if (error == null) return 'Unknown error';
+
+    // Try to get meaningful error message
+    final errorStr = error.toString();
+
+    // If it's just "Instance of 'ClassName'", try to extract more info
+    if (errorStr.startsWith('Instance of ')) {
+      final buffer = StringBuffer();
+      buffer.write(errorStr);
+
+      // Try to access common error properties
+      try {
+        if (error is Error) {
+          buffer.write(' - ${error.stackTrace}');
+        }
+      } catch (_) {}
+
+      try {
+        // Try to get message property if it exists
+        final dynamic errorObj = error;
+        if (errorObj.message != null) {
+          buffer.write(' - Message: ${errorObj.message}');
+        }
+      } catch (_) {}
+
+      return buffer.toString();
+    }
+
+    return errorStr;
+  }
 
   /// Sanitize passkey registration options to handle null values
   Map<String, dynamic> _sanitizePasskeyRegistrationOptions(

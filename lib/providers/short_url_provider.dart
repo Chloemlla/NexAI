@@ -46,7 +46,16 @@ class ShortUrlProvider extends ChangeNotifier {
       if (data != null && data.isNotEmpty) {
         final List<dynamic> decoded = jsonDecode(data);
         _history.clear();
-        _history.addAll(decoded.map((e) => ShortUrlRecord.fromJson(e)));
+        // Filter to Map entries and safely parse
+        for (final item in decoded) {
+          if (item is Map<String, dynamic>) {
+            try {
+              _history.add(ShortUrlRecord.fromJson(item));
+            } catch (e) {
+              debugPrint('NexAI: skipping malformed short url record: $e');
+            }
+          }
+        }
         notifyListeners();
       }
     } catch (e) {
@@ -87,7 +96,16 @@ class ShortUrlProvider extends ChangeNotifier {
   /// 从JSON数据恢复（同步用）
   Future<void> restoreFromList(List<dynamic> list) async {
     _history.clear();
-    _history.addAll(list.map((e) => ShortUrlRecord.fromJson(e)));
+    // Filter to Map entries and safely parse
+    for (final item in list) {
+      if (item is Map<String, dynamic>) {
+        try {
+          _history.add(ShortUrlRecord.fromJson(item));
+        } catch (e) {
+          debugPrint('NexAI: skipping malformed short url record in restore: $e');
+        }
+      }
+    }
     notifyListeners();
     await _save();
   }
@@ -95,12 +113,18 @@ class ShortUrlProvider extends ChangeNotifier {
   /// 增量合并：按 id upsert
   Future<void> mergeItems(List<dynamic> list) async {
     for (final item in list) {
-      final incoming = ShortUrlRecord.fromJson(item as Map<String, dynamic>);
-      final idx = _history.indexWhere((r) => r.id == incoming.id);
-      if (idx == -1) {
-        _history.insert(0, incoming);
-      } else {
-        _history[idx] = incoming;
+      if (item is! Map<String, dynamic>) continue;
+
+      try {
+        final incoming = ShortUrlRecord.fromJson(item);
+        final idx = _history.indexWhere((r) => r.id == incoming.id);
+        if (idx == -1) {
+          _history.insert(0, incoming);
+        } else {
+          _history[idx] = incoming;
+        }
+      } catch (e) {
+        debugPrint('NexAI: skipping malformed short url record in merge: $e');
       }
     }
     if (_history.length > 100) _history.removeRange(100, _history.length);

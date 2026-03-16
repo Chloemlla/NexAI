@@ -68,6 +68,33 @@ class _NexaiHttp {
     );
     return (await _get()).put(url, headers: signed, body: body);
   }
+
+  static Future<http.Response> patch(
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+  }) async {
+    final bodyStr = body is String ? body : (body?.toString() ?? '');
+    final signed = await signRequest(
+      method: 'PATCH',
+      path: url.path,
+      headers: _base(headers),
+      body: bodyStr,
+    );
+    return (await _get()).patch(url, headers: signed, body: body);
+  }
+
+  static Future<http.Response> delete(
+    Uri url, {
+    Map<String, String>? headers,
+  }) async {
+    final signed = await signRequest(
+      method: 'DELETE',
+      path: url.path,
+      headers: _base(headers),
+    );
+    return (await _get()).delete(url, headers: signed);
+  }
 }
 
 const String _nexaiBaseUrl = 'https://api.951100.xyz/api/nexai';
@@ -80,6 +107,17 @@ class NexaiAuthApi {
   }
 
   static String get baseUrl => _baseUrl;
+
+  /// Safely decode JSON body, returning null on parse errors or empty body
+  static Map<String, dynamic>? _decodeBody(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(body);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// POST /auth/register
   static Future<AuthResponse> register({
@@ -256,8 +294,11 @@ class NexaiAuthApi {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      return OAuthConfigResponse.fromJson(json['data']);
+      final json = _decodeBody(response.body);
+      if (json != null) {
+        final data = json['data'] ?? json;
+        return OAuthConfigResponse.fromJson(data is Map<String, dynamic> ? data : {});
+      }
     }
 
     throw Exception('Failed to load OAuth config');
@@ -279,15 +320,15 @@ class NexaiAuthApi {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (json['success'] == true) {
-        return json['data'] as Map<String, dynamic>;
+      final json = _decodeBody(response.body);
+      if (json != null && json['success'] == true) {
+        return json['data'] as Map<String, dynamic>? ?? {};
       }
-      throw Exception(json['error'] ?? '获取通行密钥注册选项失败');
+      throw Exception(json?['error'] ?? '获取通行密钥注册选项失败');
     }
 
-    final errJson = jsonDecode(response.body);
-    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
+    final errJson = _decodeBody(response.body);
+    throw Exception(errJson?['error'] ?? '请求失败，状态码: ${response.statusCode}');
   }
 
   // / POST /auth/passkey/register/verify
@@ -305,15 +346,15 @@ class NexaiAuthApi {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (json['success'] == true) {
+      final json = _decodeBody(response.body);
+      if (json != null && json['success'] == true) {
         return;
       }
-      throw Exception(json['error'] ?? '验证通行密钥失败');
+      throw Exception(json?['error'] ?? '验证通行密钥失败');
     }
 
-    final errJson = jsonDecode(response.body);
-    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
+    final errJson = _decodeBody(response.body);
+    throw Exception(errJson?['error'] ?? '请求失败，状态码: ${response.statusCode}');
   }
 
   // / POST /auth/passkey/login/options
@@ -327,15 +368,15 @@ class NexaiAuthApi {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (json['success'] == true) {
-        return json['data'] as Map<String, dynamic>;
+      final json = _decodeBody(response.body);
+      if (json != null && json['success'] == true) {
+        return json['data'] as Map<String, dynamic>? ?? {};
       }
-      throw Exception(json['error'] ?? '获取通行密钥登录选项失败');
+      throw Exception(json?['error'] ?? '获取通行密钥登录选项失败');
     }
 
-    final errJson = jsonDecode(response.body);
-    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
+    final errJson = _decodeBody(response.body);
+    throw Exception(errJson?['error'] ?? '请求失败，状态码: ${response.statusCode}');
   }
 
   // / POST /auth/passkey/login/verify
@@ -350,15 +391,16 @@ class NexaiAuthApi {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      if (json['success'] == true) {
-        return AuthResponse.fromJson(json['data']);
+      final json = _decodeBody(response.body);
+      if (json != null && json['success'] == true) {
+        final data = json['data'];
+        return AuthResponse.fromJson(data is Map<String, dynamic> ? data : {});
       }
-      throw Exception(json['error'] ?? '通行密钥验证失败');
+      throw Exception(json?['error'] ?? '通行密钥验证失败');
     }
 
-    final errJson = jsonDecode(response.body);
-    throw Exception(errJson['error'] ?? '请求失败，状态码: ${response.statusCode}');
+    final errJson = _decodeBody(response.body);
+    throw Exception(errJson?['error'] ?? '请求失败，状态码: ${response.statusCode}');
   }
 }
 
@@ -445,17 +487,41 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromResponse(http.Response res) {
-    final body = jsonDecode(res.body);
+    final body = _decodeBody(res.body);
+
+    // Handle non-JSON or malformed responses
+    if (body == null) {
+      return AuthResponse(
+        success: res.statusCode >= 200 && res.statusCode < 300,
+        error: res.statusCode >= 400 ? 'Server returned non-JSON response' : null,
+        statusCode: res.statusCode,
+      );
+    }
+
+    // Try multiple locations for user/token data (data.user, user, data)
+    final dataField = body['data'];
+    final userData = dataField is Map<String, dynamic> && dataField['user'] != null
+        ? dataField['user']
+        : body['user'];
+
+    final accessToken = dataField is Map<String, dynamic> && dataField['accessToken'] != null
+        ? dataField['accessToken']
+        : body['accessToken'];
+
+    final refreshToken = dataField is Map<String, dynamic> && dataField['refreshToken'] != null
+        ? dataField['refreshToken']
+        : body['refreshToken'];
+
     return AuthResponse(
       success: body['success'] == true,
-      message: body['message'],
-      error: body['error'],
-      user: body['data']?['user'] != null
-          ? NexaiUser.fromJson(body['data']['user'])
+      message: body['message'] as String?,
+      error: body['error'] as String?,
+      user: userData != null && userData is Map<String, dynamic>
+          ? NexaiUser.fromJson(userData)
           : null,
-      accessToken: body['data']?['accessToken'],
-      refreshToken: body['data']?['refreshToken'],
-      isNewUser: body['data']?['isNewUser'],
+      accessToken: accessToken as String?,
+      refreshToken: refreshToken as String?,
+      isNewUser: (dataField is Map<String, dynamic> ? dataField['isNewUser'] : body['isNewUser']) as bool?,
       statusCode: res.statusCode,
     );
   }

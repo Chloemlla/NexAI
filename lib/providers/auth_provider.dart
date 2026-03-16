@@ -599,15 +599,63 @@ class AuthProvider extends ChangeNotifier {
     return errorStr;
   }
 
-  /// Sanitize passkey registration options to handle null values
+  /// Sanitize passkey registration options to handle null values and encoding
   Map<String, dynamic> _sanitizePasskeyRegistrationOptions(
     Map<String, dynamic> options,
   ) {
     final sanitized = Map<String, dynamic>.from(options);
 
+    // Handle challenge - ensure it's properly formatted
+    // The passkeys package expects challenge as-is from the server
+    // (server should send base64url-encoded string)
+    if (sanitized['challenge'] == null) {
+      throw Exception('Missing required field: challenge');
+    }
+
+    // Handle user object
+    if (sanitized['user'] != null) {
+      final user = Map<String, dynamic>.from(
+        sanitized['user'] as Map<String, dynamic>,
+      );
+
+      // Ensure required user fields exist
+      if (user['id'] == null) {
+        throw Exception('Missing required field: user.id');
+      }
+      if (user['name'] == null) {
+        throw Exception('Missing required field: user.name');
+      }
+      if (user['displayName'] == null) {
+        user['displayName'] = user['name'];
+      }
+
+      sanitized['user'] = user;
+    } else {
+      throw Exception('Missing required field: user');
+    }
+
+    // Handle rp (Relying Party)
+    if (sanitized['rp'] == null) {
+      throw Exception('Missing required field: rp');
+    }
+
     // Ensure excludeCredentials is a list (not null)
     if (sanitized['excludeCredentials'] == null) {
       sanitized['excludeCredentials'] = [];
+    } else if (sanitized['excludeCredentials'] is List) {
+      // Ensure each credential has proper structure
+      final credentials = sanitized['excludeCredentials'] as List;
+      sanitized['excludeCredentials'] = credentials.map((cred) {
+        if (cred is Map<String, dynamic>) {
+          final credMap = Map<String, dynamic>.from(cred);
+          // Ensure type field exists
+          if (credMap['type'] == null) {
+            credMap['type'] = 'public-key';
+          }
+          return credMap;
+        }
+        return cred;
+      }).toList();
     }
 
     // Handle authenticatorSelection
@@ -621,12 +669,34 @@ class AuthProvider extends ChangeNotifier {
         authSelection.remove('authenticatorAttachment');
       }
 
+      // Set defaults for other fields if missing
+      if (authSelection['requireResidentKey'] == null) {
+        authSelection['requireResidentKey'] = false;
+      }
+      if (authSelection['userVerification'] == null) {
+        authSelection['userVerification'] = 'preferred';
+      }
+
       sanitized['authenticatorSelection'] = authSelection;
     }
 
-    // Handle pubKeyCredParams - ensure it's a list
+    // Handle pubKeyCredParams - ensure it's a list with proper structure
     if (sanitized['pubKeyCredParams'] == null) {
-      sanitized['pubKeyCredParams'] = [];
+      // Provide default algorithms if missing
+      sanitized['pubKeyCredParams'] = [
+        {'type': 'public-key', 'alg': -7},  // ES256
+        {'type': 'public-key', 'alg': -257}, // RS256
+      ];
+    }
+
+    // Handle attestation
+    if (sanitized['attestation'] == null) {
+      sanitized['attestation'] = 'none';
+    }
+
+    // Handle timeout
+    if (sanitized['timeout'] == null) {
+      sanitized['timeout'] = 60000; // 60 seconds default
     }
 
     // Handle extensions
@@ -637,15 +707,49 @@ class AuthProvider extends ChangeNotifier {
     return sanitized;
   }
 
-  /// Sanitize passkey authentication options to handle null values
+  /// Sanitize passkey authentication options to handle null values and encoding
   Map<String, dynamic> _sanitizePasskeyAuthenticationOptions(
     Map<String, dynamic> options,
   ) {
     final sanitized = Map<String, dynamic>.from(options);
 
+    // Handle challenge - ensure it's properly formatted
+    if (sanitized['challenge'] == null) {
+      throw Exception('Missing required field: challenge');
+    }
+
+    // Handle rpId
+    if (sanitized['rpId'] == null) {
+      throw Exception('Missing required field: rpId');
+    }
+
     // Ensure allowCredentials is a list (not null)
     if (sanitized['allowCredentials'] == null) {
       sanitized['allowCredentials'] = [];
+    } else if (sanitized['allowCredentials'] is List) {
+      // Ensure each credential has proper structure
+      final credentials = sanitized['allowCredentials'] as List;
+      sanitized['allowCredentials'] = credentials.map((cred) {
+        if (cred is Map<String, dynamic>) {
+          final credMap = Map<String, dynamic>.from(cred);
+          // Ensure type field exists
+          if (credMap['type'] == null) {
+            credMap['type'] = 'public-key';
+          }
+          return credMap;
+        }
+        return cred;
+      }).toList();
+    }
+
+    // Handle userVerification
+    if (sanitized['userVerification'] == null) {
+      sanitized['userVerification'] = 'preferred';
+    }
+
+    // Handle timeout
+    if (sanitized['timeout'] == null) {
+      sanitized['timeout'] = 60000; // 60 seconds default
     }
 
     // Handle extensions

@@ -462,7 +462,6 @@ class AuthProvider extends ChangeNotifier {
       final credential = await passkeyAuth.register(registerRequest);
 
       debugContext['credentialId'] = credential.id;
-      debugContext['credentialType'] = credential.type;
 
       // 4. Send credential to backend to verify (convert to JSON)
       await NexaiAuthApi.verifyPasskeyRegistration(
@@ -527,7 +526,6 @@ class AuthProvider extends ChangeNotifier {
       final assertion = await passkeyAuth.authenticate(authRequest);
 
       debugContext['assertionId'] = assertion.id;
-      debugContext['assertionType'] = assertion.type;
 
       // 4. Send assertion to backend to verify (convert to JSON)
       final res = await NexaiAuthApi.verifyPasskeyAuthentication(

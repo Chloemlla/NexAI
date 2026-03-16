@@ -217,7 +217,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               content: const Text('需要相册权限才能保存视频'),
               action: SnackBarAction(
                 label: '去设置',
-                onPressed: () => openAppSettings(),
+                onPressed: () => Gal.open(),
               ),
             ),
           );

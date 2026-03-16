@@ -231,3 +231,5 @@ class PasskeyDebugDialog extends AuthDebugDialog {
     super.key,
     required super.debugContext,
   }) : super(title: 'Passkey 调试信息');
+}
+}

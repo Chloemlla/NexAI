@@ -293,6 +293,15 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       final fileName = 'passwords_${DateTime.now().millisecondsSinceEpoch}.csv';
       final path = await _getSafeSavePath(fileName);
 
+      if (path == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('取消导出')),
+          );
+        }
+        return;
+      }
+
       final file = File(path);
       await file.writeAsString(buffer.toString());
       if (mounted) {
@@ -325,6 +334,15 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           'saved_passwords_${DateTime.now().millisecondsSinceEpoch}.csv';
       final path = await _getSafeSavePath(fileName);
 
+      if (path == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('取消导出')),
+          );
+        }
+        return;
+      }
+
       final file = File(path);
       await file.writeAsString(csv);
       if (mounted) {
@@ -356,6 +374,15 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       final fileName =
           'password_backup_${DateTime.now().millisecondsSinceEpoch}.json';
       final path = await _getSafeSavePath(fileName);
+
+      if (path == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('取消备份')),
+          );
+        }
+        return;
+      }
 
       final file = File(path);
       await file.writeAsString(backup);

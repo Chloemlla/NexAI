@@ -827,6 +827,15 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           '${_titleController.text.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')}.md';
       final path = await _getSafeSavePath(fileName);
 
+      if (path == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('取消导出')),
+          );
+        }
+        return;
+      }
+
       final file = File(path);
       await file.writeAsString(_contentController.text);
 

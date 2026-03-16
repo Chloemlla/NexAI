@@ -487,7 +487,7 @@ class AuthResponse {
   });
 
   factory AuthResponse.fromResponse(http.Response res) {
-    final body = _decodeBody(res.body);
+    final body = NexaiAuthApi._decodeBody(res.body);
 
     // Handle non-JSON or malformed responses
     if (body == null) {

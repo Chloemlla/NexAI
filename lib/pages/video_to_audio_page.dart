@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
@@ -8,10 +7,9 @@ import 'package:ffmpeg_kit_flutter_new/statistics.dart';
 import 'package:ffmpeg_kit_flutter_new/log.dart';
 import 'package:ffmpeg_kit_flutter_new/session.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../utils/file_access_helper.dart';
 
 enum AudioFormat { mp3, aac, flac, wav, ogg }
 
@@ -115,26 +113,23 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
 
   Future<void> _pickVideos() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
-        allowMultiple: true,
-      );
-      if (result == null || result.files.isEmpty) return;
+      final videoPaths = await FileAccessHelper.pickVideos();
+      if (videoPaths.isEmpty) return;
 
       final outputDir = await _getOutputDirectory();
 
       final newTasks = <VideoToAudioTask>[];
-      for (final file in result.files) {
-        if (file.path == null) continue;
-        final baseName = p.basenameWithoutExtension(file.name);
+      for (final videoPath in videoPaths) {
+        final fileName = p.basename(videoPath);
+        final baseName = p.basenameWithoutExtension(fileName);
         final outputPath = p.join(
           outputDir,
           '$baseName.${_selectedFormat.extension}',
         );
         newTasks.add(
           VideoToAudioTask(
-            inputPath: file.path!,
-            fileName: file.name,
+            inputPath: videoPath,
+            fileName: fileName,
             outputPath: outputPath,
           ),
         );
@@ -325,34 +320,23 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
 
   Future<void> _saveToDownloads(VideoToAudioTask task) async {
     try {
-      if (Platform.isAndroid) {
-        final hasPermission = await _requestStoragePermission();
-        if (!hasPermission) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('需要存储权限才能保存文件'),
-                action: SnackBarAction(
-                  label: '去设置',
-                  onPressed: () => openAppSettings(),
-                ),
-              ),
-            );
-          }
-          return;
+      // Use SAF to let user choose save location
+      final fileName = p.basename(task.outputPath);
+      final savePath = await FileAccessHelper.saveFile(
+        fileName: fileName,
+        dialogTitle: '保存音频文件',
+      );
+
+      if (savePath == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('取消保存')),
+          );
         }
+        return;
       }
 
-      // Copy to Downloads or Music directory
-      final saveDir = Platform.isAndroid
-          ? Directory('/storage/emulated/0/Music/NexAI')
-          : await getApplicationDocumentsDirectory();
-
-      if (!await saveDir.exists()) {
-        await saveDir.create(recursive: true);
-      }
-
-      final savePath = p.join(saveDir.path, p.basename(task.outputPath));
+      // Copy file to selected location
       await File(task.outputPath).copy(savePath);
 
       if (mounted) {
@@ -362,7 +346,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
               children: [
                 FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
                 SizedBox(width: 8),
-                Expanded(child: Text('已保存到 ${p.dirname(savePath)}')),
+                Text('已保存'),
               ],
             ),
             backgroundColor: Colors.green,
@@ -376,21 +360,6 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
         ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
       }
     }
-  }
-
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      final deviceInfo = await DeviceInfoPlugin().androidInfo;
-      final sdkInt = deviceInfo.version.sdkInt;
-      if (sdkInt >= 30) {
-        final status = await Permission.manageExternalStorage.request();
-        return status.isGranted;
-      } else {
-        final status = await Permission.storage.request();
-        return status.isGranted;
-      }
-    }
-    return true;
   }
 
   String _formatDuration(Duration d) {

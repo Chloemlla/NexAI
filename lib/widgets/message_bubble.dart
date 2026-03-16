@@ -1,11 +1,8 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +15,7 @@ import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
+import '../utils/file_access_helper.dart';
 import 'rich_content_view.dart';
 import 'share_artifact_dialog.dart';
 
@@ -365,19 +363,11 @@ class _MessageFooter extends StatelessWidget {
       final Uint8List pngBytes = byteData.buffer.asUint8List();
 
       if (isAndroid) {
-        final deviceInfo = await DeviceInfoPlugin().androidInfo;
-        final sdkInt = deviceInfo.version.sdkInt;
+        // Use Gal library which handles MediaStore API properly
+        final hasAccess = await Gal.hasAccess(toAlbum: true);
+        final granted = hasAccess || await Gal.requestAccess(toAlbum: true);
 
-        bool hasAccess = false;
-        if (sdkInt >= 29) {
-          hasAccess = await Gal.hasAccess(toAlbum: true);
-          if (!hasAccess) hasAccess = await Gal.requestAccess(toAlbum: true);
-        } else {
-          final status = await Permission.storage.request();
-          hasAccess = status.isGranted;
-        }
-
-        if (hasAccess) {
+        if (granted) {
           final tempDir = await getTemporaryDirectory();
           final file = File(
             '${tempDir.path}/nexai_chat_${DateTime.now().millisecondsSinceEpoch}.png',
@@ -417,10 +407,9 @@ class _MessageFooter extends StatelessWidget {
           );
         }
       } else if (isDesktop) {
-        final String? path = await FilePicker.platform.saveFile(
-          dialogTitle: '保存聊天截图',
+        final String? path = await FileAccessHelper.saveFile(
           fileName: 'nexai_chat_${DateTime.now().millisecondsSinceEpoch}.png',
-          type: FileType.custom,
+          dialogTitle: '保存聊天截图',
           allowedExtensions: ['png'],
         );
         if (path != null) {

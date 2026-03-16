@@ -3,16 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:path/path.dart' as p;
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/rich_content_view.dart';
+import '../utils/file_access_helper.dart';
 
 /// Regex to find headings in markdown for outline generation
 final _headingRegex = RegExp(r'^(#{1,6})\s+(.+)$', multiLine: true);
@@ -100,40 +97,12 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     super.dispose();
   }
 
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      final deviceInfo = await DeviceInfoPlugin().androidInfo;
-      final sdkInt = deviceInfo.version.sdkInt;
-      if (sdkInt >= 30) {
-        final status = await Permission.manageExternalStorage.request();
-        return status.isGranted;
-      } else {
-        final status = await Permission.storage.request();
-        return status.isGranted;
-      }
-    }
-    return true;
-  }
-
-  Future<String> _getSafeSavePath(String fileName) async {
-    if (Platform.isAndroid) {
-      final hasPermission = await _requestStoragePermission();
-      if (!hasPermission) {
-        throw '需要存储权限才能保存文件';
-      }
-      final dir = Directory('/storage/emulated/0/Download/NexAI');
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      return p.join(dir.path, fileName);
-    } else {
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: '导出笔记',
-        fileName: fileName,
-      );
-      if (path == null) throw '取消导出';
-      return path;
-    }
+  Future<String?> _getSafeSavePath(String fileName) async {
+    final path = await FileAccessHelper.saveFile(
+      fileName: fileName,
+      dialogTitle: '导出笔记',
+    );
+    return path;
   }
 
   void _onContentChanged() {

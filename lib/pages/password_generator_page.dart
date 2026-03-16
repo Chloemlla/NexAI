@@ -2,13 +2,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import 'package:path/path.dart' as p;
-import 'package:device_info_plus/device_info_plus.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../providers/password_provider.dart';
 import '../models/saved_password.dart';
+import '../utils/file_access_helper.dart';
 
 enum PasswordType { random, memorable, pin }
 
@@ -79,40 +76,12 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     super.dispose();
   }
 
-  Future<bool> _requestStoragePermission() async {
-    if (Platform.isAndroid) {
-      final deviceInfo = await DeviceInfoPlugin().androidInfo;
-      final sdkInt = deviceInfo.version.sdkInt;
-      if (sdkInt >= 30) {
-        final status = await Permission.manageExternalStorage.request();
-        return status.isGranted;
-      } else {
-        final status = await Permission.storage.request();
-        return status.isGranted;
-      }
-    }
-    return true;
-  }
-
-  Future<String> _getSafeSavePath(String fileName) async {
-    if (Platform.isAndroid) {
-      final hasPermission = await _requestStoragePermission();
-      if (!hasPermission) {
-        throw '需要存储权限才能保存文件';
-      }
-      final dir = Directory('/storage/emulated/0/Download/NexAI');
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
-      return p.join(dir.path, fileName);
-    } else {
-      final path = await FilePicker.platform.saveFile(
-        dialogTitle: '保存文件',
-        fileName: fileName,
-      );
-      if (path == null) throw '取消保存';
-      return path;
-    }
+  Future<String?> _getSafeSavePath(String fileName) async {
+    final path = await FileAccessHelper.saveFile(
+      fileName: fileName,
+      dialogTitle: '保存文件',
+    );
+    return path;
   }
 
   void _generatePassword() {
@@ -412,14 +381,13 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
   }
 
   Future<void> _restoreBackup() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
+    final filePath = await FileAccessHelper.pickFile(
       allowedExtensions: ['json'],
     );
 
-    if (result != null && result.files.single.path != null) {
+    if (filePath != null) {
       try {
-        final file = File(result.files.single.path!);
+        final file = File(filePath);
         final content = await file.readAsString();
         if (!mounted) return;
         final provider = context.read<PasswordProvider>();

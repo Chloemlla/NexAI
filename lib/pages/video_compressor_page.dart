@@ -1,14 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:v_video_compressor/v_video_compressor.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:gal/gal.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../utils/file_access_helper.dart';
 
 class VideoCompressorPage extends StatefulWidget {
   const VideoCompressorPage({super.key});
@@ -99,14 +97,14 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
   Future<void> _pickVideo() async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.video);
+      final videoPath = await FileAccessHelper.pickVideo();
 
-      if (result == null || result.files.single.path == null) return;
+      if (videoPath == null) return;
 
       if (!mounted) return;
 
       setState(() {
-        _videoPath = result.files.single.path;
+        _videoPath = videoPath;
         _videoInfo = null;
         _compressionResult = null;
         _isLoadingInfo = true;
@@ -256,28 +254,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   }
 
   Future<bool> _requestGalleryPermission() async {
-    // Android 13+ (API 33): use READ_MEDIA_VIDEO, no write permission needed for MediaStore
-    // Android 10-12 (API 29-32): scoped storage, no WRITE_EXTERNAL_STORAGE needed
-    // Android 9 and below (API ≤ 28): need WRITE_EXTERNAL_STORAGE
+    // Use Gal library which handles MediaStore API properly for all Android versions
     if (Platform.isAndroid) {
-      final deviceInfo = await DeviceInfoPlugin().androidInfo;
-      final sdkInt = deviceInfo.version.sdkInt;
-
-      if (sdkInt >= 33) {
-        // Android 13+: check if Gal has access (uses MediaStore, no extra permission needed usually)
-        final hasAccess = await Gal.hasAccess(toAlbum: true);
-        if (hasAccess) return true;
-        return await Gal.requestAccess(toAlbum: true);
-      } else if (sdkInt >= 29) {
-        // Android 10-12: scoped storage handles it
-        final hasAccess = await Gal.hasAccess(toAlbum: true);
-        if (hasAccess) return true;
-        return await Gal.requestAccess(toAlbum: true);
-      } else {
-        // Android 9 and below
-        final status = await Permission.storage.request();
-        return status.isGranted;
-      }
+      final hasAccess = await Gal.hasAccess(toAlbum: true);
+      if (hasAccess) return true;
+      return await Gal.requestAccess(toAlbum: true);
     }
     // Non-Android platforms
     final hasAccess = await Gal.hasAccess(toAlbum: true);

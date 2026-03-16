@@ -143,11 +143,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     }
   }
 
-  void _saveNote() {
+  void _saveNote() async {
     final provider = context.read<NotesProvider>();
     final settings = context.read<SettingsProvider>();
 
-    provider.updateNote(
+    await provider.updateNote(
       widget.noteId,
       title: _titleController.text.trim().isEmpty
           ? 'Untitled Note'
@@ -598,8 +598,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         ? Colors.amber.shade600
                         : cs.onSurfaceVariant,
                   ),
-                  onPressed: () =>
-                      context.read<NotesProvider>().toggleStar(widget.noteId),
+                  onPressed: () async =>
+                      await context.read<NotesProvider>().toggleStar(widget.noteId),
                   visualDensity: VisualDensity.comfortable,
                   tooltip: note.isStarred ? '取消星标' : '星标',
                 ),
@@ -766,7 +766,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         _showExportDialog();
         break;
       case 'delete':
-        context.read<NotesProvider>().deleteNote(widget.noteId);
+        await context.read<NotesProvider>().deleteNote(widget.noteId);
         Navigator.of(context).pop();
         break;
     }
@@ -1349,8 +1349,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         style: const TextStyle(fontSize: 14),
       ),
       trailing: FilledButton.tonal(
-        onPressed: () {
-          provider.addLinkToNote(widget.noteId, note.title);
+        onPressed: () async {
+          await provider.addLinkToNote(widget.noteId, note.title);
           // Refresh the content controller
           final updatedNote = provider.notes
               .where((n) => n.id == widget.noteId)

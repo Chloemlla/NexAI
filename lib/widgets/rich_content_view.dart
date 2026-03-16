@@ -265,17 +265,17 @@ class _WikiLinkChip extends StatelessWidget {
             : 'Create new note: ${link.target}',
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () {
+          onTap: () async {
             final provider = context.read<NotesProvider>();
             if (exists) {
-              provider.markViewed(targetNote.id);
+              await provider.markViewed(targetNote.id);
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => NoteDetailPage(noteId: targetNote.id),
                 ),
               );
             } else {
-              final newNote = provider.createNote(title: link.target);
+              final newNote = await provider.createNote(title: link.target);
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => NoteDetailPage(noteId: newNote.id),

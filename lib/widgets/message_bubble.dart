@@ -678,11 +678,11 @@ class _MessageFooter extends StatelessWidget {
                   'Save as a new note',
                   style: TextStyle(fontSize: 12, color: cs.outline),
                 ),
-                onTap: () {
+                onTap: () async {
                   final title = message.content.length > 40
                       ? '${message.content.substring(0, 40)}...'
                       : message.content;
-                  notesProvider.createNote(
+                  await notesProvider.createNote(
                     title: title,
                     content: message.content,
                   );
@@ -764,8 +764,8 @@ class _MessageFooter extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontSize: 14),
                         ),
-                        onTap: () {
-                          notesProvider.appendToNote(note.id, message.content);
+                        onTap: () async {
+                          await notesProvider.appendToNote(note.id, message.content);
                           Navigator.of(ctx).pop();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(

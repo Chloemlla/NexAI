@@ -717,10 +717,10 @@ class _NotesPageState extends State<NotesPage>
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               final newTag = controller.text.trim();
               if (newTag.isNotEmpty && newTag != oldTag) {
-                context.read<NotesProvider>().renameTag(oldTag, newTag);
+                await context.read<NotesProvider>().renameTag(oldTag, newTag);
               }
               Navigator.of(ctx).pop();
             },
@@ -744,8 +744,8 @@ class _NotesPageState extends State<NotesPage>
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
-              context.read<NotesProvider>().deleteTag(tag);
+            onPressed: () async {
+              await context.read<NotesProvider>().deleteTag(tag);
               Navigator.of(ctx).pop();
               setState(() => _selectedTag = null);
             },
@@ -837,8 +837,8 @@ class _NotesPageState extends State<NotesPage>
     );
   }
 
-  void _createAndOpen(BuildContext context, NotesProvider provider) {
-    final note = provider.createNote();
+  void _createAndOpen(BuildContext context, NotesProvider provider) async {
+    final note = await provider.createNote();
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)));
@@ -995,8 +995,8 @@ class _NoteCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          context.read<NotesProvider>().markViewed(note.id);
+        onTap: () async {
+          await context.read<NotesProvider>().markViewed(note.id);
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)),
           );
@@ -1078,8 +1078,8 @@ class _NoteCard extends StatelessWidget {
                           ? Colors.amber.shade600
                           : cs.onSurfaceVariant,
                     ),
-                    onPressed: () =>
-                        context.read<NotesProvider>().toggleStar(note.id),
+                    onPressed: () async =>
+                        await context.read<NotesProvider>().toggleStar(note.id),
                     visualDensity: VisualDensity.compact,
                     tooltip: note.isStarred ? '取消星标' : '星标',
                   ),
@@ -1278,8 +1278,8 @@ class _NoteCard extends StatelessWidget {
             child: const Text('取消'),
           ),
           FilledButton(
-            onPressed: () {
-              context.read<NotesProvider>().deleteNote(note.id);
+            onPressed: () async {
+              await context.read<NotesProvider>().deleteNote(note.id);
               Navigator.of(ctx).pop();
             },
             style: FilledButton.styleFrom(backgroundColor: cs.error),

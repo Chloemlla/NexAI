@@ -217,8 +217,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
               actions: [
                 if (_androidNavIndex == 0) ...[
                   FilledButton.tonalIcon(
-                    onPressed: () {
-                      chat.newConversation();
+                    onPressed: () async {
+                      await chat.newConversation();
                     },
                     icon: const Icon(Icons.add_rounded, size: 18),
                     label: const Text('新建'),
@@ -244,8 +244,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 ],
                 if (_androidNavIndex == 1) ...[
                   FilledButton.tonalIcon(
-                    onPressed: () {
-                      final note = context.read<NotesProvider>().createNote();
+                    onPressed: () async {
+                      final note = await context.read<NotesProvider>().createNote();
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => NoteDetailPage(noteId: note.id),
@@ -535,8 +535,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
               const Text('开始新的聊天', style: TextStyle(fontSize: 14)),
               const SizedBox(height: 24),
               FilledButton.icon(
-                onPressed: () {
-                  chat.newConversation();
+                onPressed: () async {
+                  await chat.newConversation();
                   Navigator.of(ctx).pop();
                 },
                 icon: const Icon(Icons.add_rounded, size: 20),
@@ -592,8 +592,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 ) ??
                 false;
           },
-          onDismissed: (_) {
-            chat.deleteConversation(idx);
+          onDismissed: (_) async {
+            await chat.deleteConversation(idx);
             if (chat.conversations.isEmpty) Navigator.of(ctx).pop();
           },
           child: ListTile(
@@ -845,8 +845,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       size: 18,
                       color: cs.onSurfaceVariant,
                     ),
-                    onPressed: () {
-                      chat.newConversation();
+                    onPressed: () async {
+                      await chat.newConversation();
                       setState(() => _currentPage = 'chat');
                     },
                     tooltip: '新建对话',
@@ -944,8 +944,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                       size: 14,
                                       color: cs.onSurfaceVariant.withAlpha(120),
                                     ),
-                                    onPressed: () {
-                                      chat.deleteConversation(idx);
+                                    onPressed: () async {
+                                      await chat.deleteConversation(idx);
                                       if (chat.conversations.isEmpty) {
                                         setState(
                                           () => _currentPage = 'settings',

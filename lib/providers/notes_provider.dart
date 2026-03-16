@@ -130,7 +130,7 @@ class NotesProvider extends ChangeNotifier {
   }
 
   /// Create a link from sourceNote to targetNote title at cursor position
-  void addLinkToNote(String sourceNoteId, String targetTitle) {
+  Future<void> addLinkToNote(String sourceNoteId, String targetTitle) async {
     final idx = _notes.indexWhere((n) => n.id == sourceNoteId);
     if (idx == -1) return;
     final note = _notes[idx];
@@ -146,7 +146,7 @@ class NotesProvider extends ChangeNotifier {
         note.updatedAt = DateTime.now();
         _rebuildBacklinks();
         notifyListeners();
-        _save();
+        await _save();
       }
     }
   }
@@ -238,7 +238,7 @@ class NotesProvider extends ChangeNotifier {
     }
   }
 
-  Note createNote({String title = '', String content = ''}) {
+  Future<Note> createNote({String title = '', String content = ''}) async {
     final now = DateTime.now();
     final note = Note(
       id: _newId(),
@@ -249,11 +249,11 @@ class NotesProvider extends ChangeNotifier {
     );
     _notes.insert(0, note);
     notifyListeners();
-    _save();
+    await _save();
     return note;
   }
 
-  void updateNote(String id, {String? title, String? content}) {
+  Future<void> updateNote(String id, {String? title, String? content}) async {
     final idx = _notes.indexWhere((n) => n.id == id);
     if (idx == -1) return;
     if (title != null) _notes[idx].title = title;
@@ -261,17 +261,17 @@ class NotesProvider extends ChangeNotifier {
     _notes[idx].updatedAt = DateTime.now();
     _rebuildBacklinks();
     notifyListeners();
-    _save();
+    await _save();
   }
 
-  void deleteNote(String id) {
+  Future<void> deleteNote(String id) async {
     _notes.removeWhere((n) => n.id == id);
     _rebuildBacklinks();
     notifyListeners();
-    _save();
+    await _save();
   }
 
-  void appendToNote(String id, String text) {
+  Future<void> appendToNote(String id, String text) async {
     final idx = _notes.indexWhere((n) => n.id == id);
     if (idx == -1) return;
     final note = _notes[idx];
@@ -281,33 +281,33 @@ class NotesProvider extends ChangeNotifier {
     note.updatedAt = DateTime.now();
     _rebuildBacklinks();
     notifyListeners();
-    _save();
+    await _save();
   }
 
   // ─── Star ───
 
-  void toggleStar(String id) {
+  Future<void> toggleStar(String id) async {
     final idx = _notes.indexWhere((n) => n.id == id);
     if (idx == -1) return;
     _notes[idx].isStarred = !_notes[idx].isStarred;
     notifyListeners();
-    _save();
+    await _save();
   }
 
   // ─── Recent ───
 
-  void markViewed(String id) {
+  Future<void> markViewed(String id) async {
     final idx = _notes.indexWhere((n) => n.id == id);
     if (idx == -1) return;
     _notes[idx].lastViewedAt = DateTime.now();
     // Don't notifyListeners here to avoid rebuild loops
-    _save();
+    await _save();
   }
 
   // ─── Tag operations ───
 
   /// Rename a tag across all notes
-  void renameTag(String oldTag, String newTag) {
+  Future<void> renameTag(String oldTag, String newTag) async {
     if (oldTag == newTag || newTag.isEmpty) return;
     for (final note in _notes) {
       if (note.tags.contains(oldTag)) {
@@ -316,16 +316,16 @@ class NotesProvider extends ChangeNotifier {
       }
     }
     notifyListeners();
-    _save();
+    await _save();
   }
 
   /// Merge sourceTag into targetTag (replace all occurrences)
-  void mergeTags(String sourceTag, String targetTag) {
-    renameTag(sourceTag, targetTag);
+  Future<void> mergeTags(String sourceTag, String targetTag) async {
+    await renameTag(sourceTag, targetTag);
   }
 
   /// Delete a tag from all notes
-  void deleteTag(String tag) {
+  Future<void> deleteTag(String tag) async {
     for (final note in _notes) {
       if (note.tags.contains(tag)) {
         // Remove the tag but keep surrounding text clean
@@ -336,7 +336,7 @@ class NotesProvider extends ChangeNotifier {
       }
     }
     notifyListeners();
-    _save();
+    await _save();
   }
 
   // ─── Advanced search ───
@@ -551,7 +551,7 @@ class NotesProvider extends ChangeNotifier {
               _notes[idx].title = cleanTitle;
               _notes[idx].updatedAt = DateTime.now();
               notifyListeners();
-              _save();
+              await _save();
               debugPrint('NexAI: Generated title for note: $cleanTitle');
             }
           }

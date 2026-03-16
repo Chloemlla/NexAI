@@ -110,7 +110,7 @@ class ChatProvider extends ChangeNotifier {
     return results;
   }
 
-  void newConversation() {
+  Future<void> newConversation() async {
     _conversations.insert(
       0,
       Conversation(
@@ -122,7 +122,7 @@ class ChatProvider extends ChangeNotifier {
     );
     _currentIndex = 0;
     notifyListeners();
-    _save();
+    await _save();
   }
 
   void selectConversation(int index) {
@@ -132,7 +132,7 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteConversation(int index) {
+  Future<void> deleteConversation(int index) async {
     if (index < 0 || index >= _conversations.length) return;
     if (_isLoading && index == _currentIndex) return;
 
@@ -145,7 +145,7 @@ class ChatProvider extends ChangeNotifier {
       _currentIndex--;
     }
     notifyListeners();
-    _save();
+    await _save();
   }
 
   Future<void> sendMessage({
@@ -410,7 +410,7 @@ ${safeEncode(e.response!.data)}
 
     _isLoading = false;
     notifyListeners();
-    _save();
+    await _save();
   }
 
   Future<void> _performOpenAiCall(

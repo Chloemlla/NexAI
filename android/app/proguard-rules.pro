@@ -70,26 +70,65 @@
 -dontwarn java.lang.invoke.StringConcatFactory
 
 # ========== Passkeys / WebAuthn (Corbado) ==========
-# Keep all Corbado passkeys plugin classes
+# Keep all Corbado passkeys plugin classes and prevent obfuscation
 -keep class com.corbado.passkeys_android.** { *; }
 -keep class com.corbado.passkeys_doctor.** { *; }
 -keep interface com.corbado.passkeys_android.** { *; }
 -keep interface com.corbado.passkeys_doctor.** { *; }
 
+# Keep all passkey exception classes with original names for debugging
+-keep class com.corbado.passkeys_android.**$*Exception { *; }
+-keep class com.corbado.passkeys_android.**$*Error { *; }
+-keepnames class com.corbado.passkeys_android.** { *; }
+-keepnames interface com.corbado.passkeys_android.** { *; }
+
+# Keep all exception and error classes to preserve error messages
+-keep class * extends java.lang.Exception { *; }
+-keep class * extends java.lang.Error { *; }
+-keep class * extends java.lang.Throwable { *; }
+-keepnames class * extends java.lang.Exception { *; }
+-keepnames class * extends java.lang.Error { *; }
+-keepnames class * extends java.lang.Throwable { *; }
+
+# Keep exception constructors and getMessage() for error reporting
+-keepclassmembers class * extends java.lang.Throwable {
+    <init>(...);
+    public java.lang.String getMessage();
+    public java.lang.String getLocalizedMessage();
+    public java.lang.Throwable getCause();
+    public java.lang.StackTraceElement[] getStackTrace();
+}
+
 # Keep WebAuthn/FIDO2 related classes (used by passkeys)
 -keep class androidx.credentials.** { *; }
 -keep interface androidx.credentials.** { *; }
 -keepclassmembers class androidx.credentials.** { *; }
+-keepnames class androidx.credentials.** { *; }
+
+# Keep all credentials exceptions
+-keep class androidx.credentials.exceptions.** { *; }
+-keepnames class androidx.credentials.exceptions.** { *; }
 
 # Keep Google Play Services Auth (required for passkeys on Android)
 -keep class com.google.android.gms.auth.** { *; }
 -keep class com.google.android.gms.fido.** { *; }
 -keep class com.google.android.gms.fido.fido2.** { *; }
+-keepnames class com.google.android.gms.auth.** { *; }
+-keepnames class com.google.android.gms.fido.** { *; }
+
+# Keep all GMS exceptions for error reporting
+-keep class com.google.android.gms.common.api.ApiException { *; }
+-keep class com.google.android.gms.common.api.Status { *; }
+-keepnames class com.google.android.gms.common.api.** { *; }
 
 # Keep JSON serialization for passkey data structures
 -keepclassmembers class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }
+
+# Keep all method names for better stack traces
+-keepattributes SourceFile,LineNumberTable
+-keepattributes *Annotation*
 
 # ========== Google Sign-In ==========
 # Keep Google Sign-In plugin classes

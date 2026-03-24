@@ -741,7 +741,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     );
   }
 
-  void _onMenuAction(String action) {
+  Future<void> _onMenuAction(String action) async {
     switch (action) {
       case 'outline':
         _showOutlineDrawer();
@@ -756,7 +756,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         _showTagsSheet();
         break;
       case 'focus':
-        _saveNote();
+        await _saveNote();
         setState(() => _focusMode = true);
         break;
       case 'stats':

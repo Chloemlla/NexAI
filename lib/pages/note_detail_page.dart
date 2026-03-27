@@ -598,8 +598,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         ? Colors.amber.shade600
                         : cs.onSurfaceVariant,
                   ),
-                  onPressed: () async =>
-                      await context.read<NotesProvider>().toggleStar(widget.noteId),
+                  onPressed: () async => await context
+                      .read<NotesProvider>()
+                      .toggleStar(widget.noteId),
                   visualDensity: VisualDensity.comfortable,
                   tooltip: note.isStarred ? '取消星标' : '星标',
                 ),
@@ -756,7 +757,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         _showTagsSheet();
         break;
       case 'focus':
-        await _saveNote();
+        _saveNote();
         setState(() => _focusMode = true);
         break;
       case 'stats':
@@ -829,9 +830,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
       if (path == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('取消导出')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('取消导出')));
         }
         return;
       }
@@ -844,7 +845,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                FaIcon(
+                  FontAwesomeIcons.circleCheck,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 SizedBox(width: 8),
                 Expanded(child: Text('导出成功: $path')),
               ],
@@ -863,7 +868,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+                FaIcon(
+                  FontAwesomeIcons.circleXmark,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 SizedBox(width: 8),
                 Expanded(child: Text('导出失败: $e')),
               ],

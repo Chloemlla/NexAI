@@ -1,30 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:gpt_markdown_chloemlla/gpt_markdown_chloemlla.dart';
 import 'package:gpt_markdown_chloemlla/css/css.dart';
-import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../models/note.dart';
-import '../providers/notes_provider.dart';
-import '../providers/settings_provider.dart';
-import '../pages/note_detail_page.dart';
 import 'flowchart/flowchart_widget.dart';
-
-// Pre-compiled regex — avoids recompilation per build
-// Matches both $\ce{...}$ and \ce{...} forms
-final _cePattern = RegExp(r'\$\s*\\ce\{([^}]+)\}\s*\$|\\ce\{([^}]+)\}');
-// Subscript: letter/digit immediately followed by digits (e.g. H2O -> H_{2}O)
-final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
-// Underscore subscript: H_2O -> H_{2}O
-final _underscoreSubscriptPattern = RegExp(r'_([^{\s}]+)');
-// Charge: only when explicitly preceded by ^ (e.g. Na^+ or Ca^2+)
-final _chargePattern = RegExp(r'\^(\d*[+\-])');
-final _mermaidBlockPattern = RegExp(
-  r'```mermaid\s*\n([\s\S]*?)```',
-  multiLine: true,
-  caseSensitive: false,
-);
+import 'markdown/markdown_render_utils.dart';
+import 'markdown/markdown_renderer.dart';
 
 /// Renders message content with Markdown, LaTeX/chemical formulas, and Mermaid flowcharts.
 class RichContentView extends StatefulWidget {
@@ -42,331 +21,82 @@ class RichContentView extends StatefulWidget {
 }
 
 class _RichContentViewState extends State<RichContentView> {
-  late List<_Segment> _segments;
-  CssTheme? _cssTheme;
-  bool _themeLoading = true;
+  late List<RichContentSegment> _segments;
+  Future<CssTheme>? _cssThemeFuture;
+  Brightness? _themeBrightness;
 
   @override
   void initState() {
     super.initState();
-    _segments = _parseContent(widget.content);
-    _loadCssTheme();
+    _segments = parseRichContentSegments(widget.content);
   }
 
-  Future<void> _loadCssTheme() async {
-    try {
-      final theme = await CssTheme.fromAsset('assets/github-markdown.css');
-      if (mounted) {
-        setState(() {
-          _cssTheme = theme;
-          _themeLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Failed to load CSS theme: $e');
-      if (mounted) {
-        setState(() {
-          _themeLoading = false;
-        });
-      }
-    }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncCssThemeFuture();
   }
 
   @override
   void didUpdateWidget(RichContentView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.content != widget.content) {
-      setState(() {
-        _segments = _parseContent(widget.content);
-      });
+      _segments = parseRichContentSegments(widget.content);
     }
+  }
+
+  void _syncCssThemeFuture() {
+    final brightness = Theme.of(context).brightness;
+    if (_cssThemeFuture != null && _themeBrightness == brightness) {
+      return;
+    }
+
+    _themeBrightness = brightness;
+    _cssThemeFuture = MarkdownCssThemeCache.load(brightness);
   }
 
   @override
   Widget build(BuildContext context) {
     if (_segments.isEmpty) return const SizedBox.shrink();
 
-    return SelectionArea(
-      child: RepaintBoundary(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: _segments.map(_buildSegment).toList(),
-        ),
-      ),
+    final cssThemeFuture = _cssThemeFuture;
+    if (cssThemeFuture == null) return const SizedBox.shrink();
+
+    return FutureBuilder<CssTheme>(
+      future: cssThemeFuture,
+      builder: (context, snapshot) {
+        final cssTheme = snapshot.data;
+
+        return SelectionArea(
+          child: RepaintBoundary(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: _segments
+                  .map((segment) => _buildSegment(segment, cssTheme))
+                  .toList(),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSegment(_Segment seg) {
-    switch (seg.type) {
-      case _SegmentType.mermaid:
+  Widget _buildSegment(RichContentSegment segment, CssTheme? cssTheme) {
+    switch (segment.type) {
+      case RichContentSegmentType.mermaid:
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: RepaintBoundary(
-            child: FlowchartWidget(mermaidSource: seg.content),
+            child: FlowchartWidget(mermaidSource: segment.content),
           ),
         );
-      case _SegmentType.markdown:
-        if (widget.enableWikiLinks && wikiLinkPattern.hasMatch(seg.content)) {
-          return _WikiLinkMarkdown(data: seg.content, cssTheme: _cssTheme);
-        }
-        return _MarkdownWidget(data: seg.content, cssTheme: _cssTheme);
+      case RichContentSegmentType.markdown:
+        return MarkdownRenderer(
+          data: segment.content,
+          cssTheme: cssTheme,
+          enableWikiLinks: widget.enableWikiLinks,
+        );
     }
   }
-}
-
-class _MarkdownWidget extends StatelessWidget {
-  final String data;
-  final CssTheme? cssTheme;
-
-  const _MarkdownWidget({required this.data, this.cssTheme});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final settings = context.watch<SettingsProvider>();
-    final isDark = theme.brightness == Brightness.dark;
-
-    final processed = _preprocessChemical(data);
-
-    // Get colors from CSS theme or use defaults
-    Color textColor;
-    Color? backgroundColor;
-
-    if (cssTheme != null) {
-      textColor =
-          cssTheme!.getColor('--fgColor-default') ??
-          (isDark ? const Color(0xFFf0f6fc) : const Color(0xFF1f2328));
-      backgroundColor = cssTheme!.getColor('--bgColor-default');
-    } else {
-      textColor = isDark ? const Color(0xFFf0f6fc) : const Color(0xFF1f2328);
-      backgroundColor = null;
-    }
-
-    return Material(
-      color: backgroundColor ?? Colors.transparent,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 800),
-        child: GptMarkdown(
-          processed,
-          useDollarSignsForLatex: true,
-          style: TextStyle(
-            fontSize: settings.fontSize,
-            fontFamily: settings.fontFamily,
-            color: textColor,
-            height: 1.6,
-            letterSpacing: 0.1,
-          ),
-          onLinkTap: (url, title) async {
-            if (url.isNotEmpty) {
-              final uri = Uri.tryParse(url);
-              if (uri != null) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }
-            }
-          },
-        ),
-      ),
-    );
-  }
-
-  static String _preprocessChemical(String text) {
-    return text.replaceAllMapped(_cePattern, (m) {
-      // Group 1: from $\ce{...}$ form; Group 2: from bare \ce{...} form
-      final inner = m.group(1) ?? m.group(2) ?? '';
-      final converted = _convertChemical(inner);
-      return '\$ $converted \$';
-    });
-  }
-
-  static String _convertChemical(String formula) {
-    var result = formula;
-    // 1. Handle arrow operators before any other substitution
-    result = result.replaceAll('<->', '\\rightleftharpoons ');
-    result = result.replaceAll('->', '\\rightarrow ');
-    // 2. Convert explicit charges: Na^+ -> Na^{+}, Ca^2+ -> Ca^{2+}
-    result = result.replaceAllMapped(_chargePattern, (m) => '^{${m.group(1)}}');
-    // 3. Convert _N subscripts: H_2O -> H_{2}O
-    result = result.replaceAllMapped(
-      _underscoreSubscriptPattern,
-      (m) => '_{${m.group(1)}}',
-    );
-    // 4. Convert implicit subscripts: H2O -> H_{2}O (only after charge/underscore handled)
-    result = result.replaceAllMapped(
-      _subscriptPattern,
-      (m) => '${m.group(1)}_{${m.group(2)}}',
-    );
-    return result;
-  }
-}
-
-class _WikiLinkMarkdown extends StatelessWidget {
-  final String data;
-  final CssTheme? cssTheme;
-
-  const _WikiLinkMarkdown({required this.data, this.cssTheme});
-
-  @override
-  Widget build(BuildContext context) {
-    final matches = wikiLinkPattern.allMatches(data).toList();
-    if (matches.isEmpty) {
-      return _MarkdownWidget(data: data, cssTheme: cssTheme);
-    }
-
-    final parts = <_WikiSpan>[];
-    int lastEnd = 0;
-
-    for (final match in matches) {
-      if (match.start > lastEnd) {
-        parts.add(_WikiSpan(text: data.substring(lastEnd, match.start)));
-      }
-      parts.add(_WikiSpan(wikiLink: WikiLink.parse(match.group(1)!)));
-      lastEnd = match.end;
-    }
-    if (lastEnd < data.length) {
-      parts.add(_WikiSpan(text: data.substring(lastEnd)));
-    }
-
-    return Wrap(
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: parts.map((p) {
-        if (p.wikiLink != null) return _WikiLinkChip(link: p.wikiLink!);
-        return _MarkdownWidget(data: p.text!, cssTheme: cssTheme);
-      }).toList(),
-    );
-  }
-}
-
-class _WikiSpan {
-  final String? text;
-  final WikiLink? wikiLink;
-  _WikiSpan({this.text, this.wikiLink});
-}
-
-class _WikiLinkChip extends StatelessWidget {
-  final WikiLink link;
-  const _WikiLinkChip({required this.link});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    // Reactive check for target note existence
-    final targetNote = context.select<NotesProvider, Note?>(
-      (p) => p.findNoteByTitle(link.target),
-    );
-    final exists = targetNote != null;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      child: Tooltip(
-        message: exists
-            ? 'Open note: ${link.target}'
-            : 'Create new note: ${link.target}',
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: () async {
-            final provider = context.read<NotesProvider>();
-            if (exists) {
-              await provider.markViewed(targetNote.id);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => NoteDetailPage(noteId: targetNote.id),
-                ),
-              );
-            } else {
-              final newNote = await provider.createNote(title: link.target);
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => NoteDetailPage(noteId: newNote.id),
-                ),
-              );
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: exists
-                  ? cs.primaryContainer.withAlpha(120)
-                  : cs.errorContainer.withAlpha(80),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: exists
-                    ? cs.primary.withAlpha(60)
-                    : cs.error.withAlpha(60),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  exists ? Icons.link_rounded : Icons.add_link_rounded,
-                  size: 14,
-                  color: exists ? cs.primary : cs.error,
-                ),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    link.displayText,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: exists ? cs.primary : cs.error,
-                      fontWeight: FontWeight.w600,
-                      decoration: exists ? null : TextDecoration.underline,
-                      decorationStyle: TextDecorationStyle.dashed,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (link.heading != null) ...[
-                  Text(
-                    ' › ${link.heading}',
-                    style: TextStyle(fontSize: 11, color: cs.outline),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-List<_Segment> _parseContent(String text) {
-  final segments = <_Segment>[];
-  int lastEnd = 0;
-
-  for (final match in _mermaidBlockPattern.allMatches(text)) {
-    if (match.start > lastEnd) {
-      final before = text.substring(lastEnd, match.start).trim();
-      if (before.isNotEmpty) {
-        segments.add(_Segment(_SegmentType.markdown, before));
-      }
-    }
-    segments.add(_Segment(_SegmentType.mermaid, match.group(1)!.trim()));
-    lastEnd = match.end;
-  }
-
-  if (lastEnd < text.length) {
-    final remaining = text.substring(lastEnd).trim();
-    if (remaining.isNotEmpty) {
-      segments.add(_Segment(_SegmentType.markdown, remaining));
-    }
-  }
-
-  final trimmedText = text.trim();
-  if (segments.isEmpty && trimmedText.isNotEmpty) {
-    segments.add(_Segment(_SegmentType.markdown, trimmedText));
-  }
-  return segments;
-}
-
-enum _SegmentType { markdown, mermaid }
-
-class _Segment {
-  final _SegmentType type;
-  final String content;
-  _Segment(this.type, this.content);
 }

@@ -229,7 +229,7 @@ class _LoginPageState extends State<LoginPage>
       return _buildInfoCard(
         colorScheme: colorScheme,
         icon: Icons.devices_rounded,
-        message: 'Google 登录仅支持 Android、iOS 和 Web。',
+        message: 'Google 快速登录仅支持 Android、iOS 和 Web。',
       );
     }
 
@@ -237,7 +237,7 @@ class _LoginPageState extends State<LoginPage>
       return _buildInfoCard(
         colorScheme: colorScheme,
         icon: Icons.sync_rounded,
-        message: '正在检查 Google 登录可用性...',
+        message: '正在检查 'Google 快速登录可用性...',
       );
     }
 

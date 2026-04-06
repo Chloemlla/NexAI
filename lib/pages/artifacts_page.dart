@@ -16,10 +16,19 @@ class ArtifactsPage extends StatefulWidget {
 }
 
 class _ArtifactsPageState extends State<ArtifactsPage> {
+  late final AuthProvider _authProvider;
+  String? _lastLoadedAccessToken;
+
   @override
   void initState() {
     super.initState();
-    _loadArtifacts();
+    _authProvider = context.read<AuthProvider>();
+    _authProvider.addListener(_handleAuthChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _handleAuthChanged();
+      }
+    });
   }
 
   Future<void> _loadArtifacts() async {
@@ -31,6 +40,31 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
         accessToken: authProvider.accessToken!,
       );
     }
+  }
+
+  void _handleAuthChanged() {
+    if (!mounted) return;
+
+    final accessToken = _authProvider.accessToken;
+    final artifactsProvider = context.read<ArtifactsProvider>();
+
+    if (!_authProvider.isLoggedIn || accessToken == null) {
+      _lastLoadedAccessToken = null;
+      return;
+    }
+
+    if (artifactsProvider.isLoading || _lastLoadedAccessToken == accessToken) {
+      return;
+    }
+
+    _lastLoadedAccessToken = accessToken;
+    _loadArtifacts();
+  }
+
+  @override
+  void dispose() {
+    _authProvider.removeListener(_handleAuthChanged);
+    super.dispose();
   }
 
   Future<void> _deleteArtifact(String shortId) async {

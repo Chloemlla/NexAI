@@ -1825,36 +1825,10 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
         ),
-        if (auth.googleEnabled) ...[
+        if (_buildGoogleQuickLoginWidget(auth, cs)
+            case final googleQuickLogin?) ...[
           const SizedBox(height: 10),
-          OutlinedButton.icon(
-            onPressed: auth.isLoading
-                ? null
-                : () async {
-                    final success = await auth.signInWithGoogle();
-                    if (success && context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(const SnackBar(content: Text('登录成功')));
-                    } else if (auth.error != null && context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(auth.error!)));
-                    }
-                  },
-            icon: CustomPaint(
-              painter: GoogleLogoPainter(),
-              size: const Size.square(22),
-            ),
-            label: const Text('使用 Google 快速登录'),
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              side: BorderSide(color: cs.outlineVariant),
-            ),
-          ),
+          googleQuickLogin,
         ],
         if (auth.error != null) ...[
           const SizedBox(height: 8),
@@ -1879,6 +1853,85 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget? _buildGoogleQuickLoginWidget(AuthProvider auth, ColorScheme cs) {
+    if (!auth.googleSignInSupportedPlatform) {
+      return _buildInfoBanner(
+        cs: cs,
+        icon: Icons.devices_rounded,
+        message: 'Google 快速登录仅支持 Android、iOS 和 Web。',
+      );
+    }
+
+    if (!auth.oauthConfigLoaded) {
+      return _buildInfoBanner(
+        cs: cs,
+        icon: Icons.sync_rounded,
+        message: '正在检查 Google 快速登录可用性...',
+      );
+    }
+
+    if (!auth.googleEnabled) {
+      return _buildInfoBanner(
+        cs: cs,
+        icon: Icons.info_outline_rounded,
+        message: '当前服务器未启用 Google 快速登录。',
+      );
+    }
+
+    return OutlinedButton.icon(
+      onPressed: auth.isLoading
+          ? null
+          : () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await auth.signInWithGoogle();
+              if (!context.mounted) return;
+              if (success) {
+                messenger.showSnackBar(const SnackBar(content: Text('登录成功')));
+              } else if (auth.error != null) {
+                messenger.showSnackBar(SnackBar(content: Text(auth.error!)));
+              }
+            },
+      icon: CustomPaint(
+        painter: GoogleLogoPainter(),
+        size: const Size.square(22),
+      ),
+      label: const Text('使用 Google 快速登录'),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(double.infinity, 48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        side: BorderSide(color: cs.outlineVariant),
+      ),
+    );
+  }
+
+  Widget _buildInfoBanner({
+    required ColorScheme cs,
+    required IconData icon,
+    required String message,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withAlpha(120),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: cs.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

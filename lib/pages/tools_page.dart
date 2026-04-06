@@ -256,7 +256,7 @@ class ToolsPage extends StatelessWidget {
                 _ToolCard(
                   icon: Icons.link_rounded,
                   title: '短链接生成',
-                  description: '快速缩短 URL',
+                  description: '缩短长链接，便于分享',
                   gradient: LinearGradient(
                     colors: [cs.secondaryContainer, cs.primaryContainer],
                     begin: Alignment.topLeft,

@@ -64,6 +64,7 @@ class _LoginPageState extends State<LoginPage>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final auth = context.watch<AuthProvider>();
+    final googleSection = _buildGoogleSection(auth, colorScheme);
 
     return Scaffold(
       appBar: AppBar(
@@ -189,47 +190,103 @@ class _LoginPageState extends State<LoginPage>
 
                   const SizedBox(height: 16),
 
-                  // Divider
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Divider(color: colorScheme.outlineVariant),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          '或',
-                          style: TextStyle(
-                            color: colorScheme.onSurfaceVariant,
-                            fontSize: 13,
+                  if (googleSection != null) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(color: colorScheme.outlineVariant),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Google 登录',
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: Divider(color: colorScheme.outlineVariant),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // OAuth buttons — Google Sign-In 始终可用（Android SDK）
-                  _buildOAuthButton(
-                    label: '使用 Google 登录',
-                    iconWidget: CustomPaint(
-                      painter: GoogleLogoPainter(),
-                      size: const Size.square(24),
+                        Expanded(
+                          child: Divider(color: colorScheme.outlineVariant),
+                        ),
+                      ],
                     ),
-                    onPressed: auth.isLoading
-                        ? null
-                        : () => _handleGoogleSignIn(auth),
-                    colorScheme: colorScheme,
-                  ),
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 16),
+                    googleSection,
+                    const SizedBox(height: 32),
+                  ],
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget? _buildGoogleSection(AuthProvider auth, ColorScheme colorScheme) {
+    if (!auth.googleSignInSupportedPlatform) {
+      return _buildInfoCard(
+        colorScheme: colorScheme,
+        icon: Icons.devices_rounded,
+        message: 'Google 登录仅支持 Android、iOS 和 Web。',
+      );
+    }
+
+    if (!auth.oauthConfigLoaded) {
+      return _buildInfoCard(
+        colorScheme: colorScheme,
+        icon: Icons.sync_rounded,
+        message: '正在检查 Google 登录可用性...',
+      );
+    }
+
+    if (!auth.googleEnabled) {
+      return _buildInfoCard(
+        colorScheme: colorScheme,
+        icon: Icons.info_outline_rounded,
+        message: '当前服务器未启用 Google 登录。',
+      );
+    }
+
+    return _buildOAuthButton(
+      label: '使用 Google 登录',
+      iconWidget: CustomPaint(
+        painter: GoogleLogoPainter(),
+        size: const Size.square(24),
+      ),
+      onPressed: auth.isLoading ? null : () => _handleGoogleSignIn(auth),
+      colorScheme: colorScheme,
+    );
+  }
+
+  Widget _buildInfoCard({
+    required ColorScheme colorScheme,
+    required IconData icon,
+    required String message,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withAlpha(120),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: colorScheme.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

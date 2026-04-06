@@ -34,6 +34,7 @@ class AuthProvider extends ChangeNotifier {
   String _googleClientId = '';
   bool _githubEnabled = false;
   String _githubClientId = '';
+  bool _oauthConfigLoaded = false;
 
   // Getters
   NexaiUser? get currentUser => _currentUser;
@@ -46,6 +47,11 @@ class AuthProvider extends ChangeNotifier {
   bool get githubEnabled => _githubEnabled;
   String get googleClientId => _googleClientId;
   String get githubClientId => _githubClientId;
+  bool get oauthConfigLoaded => _oauthConfigLoaded;
+  bool get googleSignInSupportedPlatform =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
   Map<String, dynamic>? get lastPasskeyDebugContext => _lastPasskeyDebugContext;
   Map<String, dynamic>? get lastGoogleDebugContext => _lastGoogleDebugContext;
 
@@ -105,6 +111,9 @@ class AuthProvider extends ChangeNotifier {
       _githubClientId = config.githubClientId;
     } catch (e) {
       debugPrint('[NexAI Auth] Failed to load OAuth config: $e');
+    } finally {
+      _oauthConfigLoaded = true;
+      notifyListeners();
     }
   }
 
@@ -177,9 +186,7 @@ class AuthProvider extends ChangeNotifier {
   /// Google Sign-In
   Future<bool> signInWithGoogle() async {
     // Check platform support - google_sign_in only supports Android, iOS, and Web
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.macOS) {
+    if (!googleSignInSupportedPlatform) {
       _error = 'Google 登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
       notifyListeners();
       return false;
@@ -349,9 +356,7 @@ class AuthProvider extends ChangeNotifier {
   /// Link Google account
   Future<bool> linkGoogle() async {
     // Check platform support - google_sign_in only supports Android, iOS, and Web
-    if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.macOS) {
+    if (!googleSignInSupportedPlatform) {
       _error = 'Google 登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
       notifyListeners();
       return false;

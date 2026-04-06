@@ -80,7 +80,10 @@ class _NotesPageState extends State<NotesPage>
             body: Column(
               children: [
                 // Search bar (toggleable)
-                if (_showSearch) _buildSearchBar(cs),
+                if (_showSearch)
+                  _buildSearchBar(cs)
+                else
+                  _buildSearchRevealBar(cs),
                 // Tab bar
                 _buildTabBar(cs),
                 // Content
@@ -167,6 +170,32 @@ class _NotesPageState extends State<NotesPage>
         backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerLow),
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 8),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchRevealBar(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: () {
+            setState(() => _showSearch = true);
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _searchFocus.requestFocus(),
+            );
+          },
+          icon: const Icon(Icons.search_rounded, size: 18),
+          label: const Text('打开搜索'),
+          style: TextButton.styleFrom(
+            foregroundColor: cs.primary,
+            backgroundColor: cs.primaryContainer.withAlpha(100),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
         ),
       ),
     );

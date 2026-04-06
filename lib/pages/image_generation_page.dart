@@ -708,6 +708,38 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                           ),
                           const SizedBox(height: 16),
                         ],
+                        if (_mode != ImageGenerationMode.chat) ...[
+                          DropdownButtonFormField<String>(
+                            initialValue: _size,
+                            decoration: InputDecoration(
+                              labelText: '尺寸',
+                              prefixIcon: const Icon(
+                                Icons.aspect_ratio,
+                                size: 20,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items:
+                                [
+                                      '1024x1024',
+                                      '1024x1792',
+                                      '1792x1024',
+                                      '512x512',
+                                    ]
+                                    .map(
+                                      (s) => DropdownMenuItem(
+                                        value: s,
+                                        child: Text(s),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged: (value) =>
+                                setState(() => _size = value!),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         TextField(
                           controller: _promptController,
                           maxLines: 4,

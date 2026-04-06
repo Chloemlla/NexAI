@@ -19,6 +19,7 @@ import 'notes_page.dart';
 import 'note_detail_page.dart';
 import 'settings_page.dart';
 import 'about_page.dart';
+import 'graph_page.dart';
 import 'tools_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -305,6 +306,15 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.hub_rounded, color: cs.onSurfaceVariant),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const GraphPage()),
+                      );
+                    },
+                    tooltip: '知识图谱',
                   ),
                   const SizedBox(width: 4),
                 ],

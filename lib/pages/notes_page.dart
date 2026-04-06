@@ -76,35 +76,7 @@ class _NotesPageState extends State<NotesPage>
         child: Focus(
           autofocus: true,
           child: Scaffold(
-            appBar: AppBar(
-              surfaceTintColor: cs.surfaceTint,
-              title: Row(
-                children: [
-                  Icon(Icons.note_alt_rounded, size: 22, color: cs.primary),
-                  const SizedBox(width: 10),
-                  const Text(
-                    '笔记',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
-                  ),
-                ],
-              ),
-              actions: [
-                // 知识图谱按钮
-                IconButton(
-                  icon: Icon(
-                    Icons.hub_rounded,
-                    size: 22,
-                    color: cs.onSurfaceVariant,
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const GraphPage()),
-                    );
-                  },
-                  tooltip: '知识图谱',
-                ),
-              ],
-            ),
+            backgroundColor: cs.surface,
             body: Column(
               children: [
                 // Search bar (toggleable)

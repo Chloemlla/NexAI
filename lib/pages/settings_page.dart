@@ -201,32 +201,8 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       body: CustomScrollView(
         slivers: [
-          // Collapsing header
-          SliverAppBar(
-            automaticallyImplyLeading: false,
-            pinned: true,
-            expandedHeight: 0,
-            backgroundColor: cs.surface,
-            surfaceTintColor: cs.surfaceTint,
-            title: Text(
-              '设置',
-              style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            actions: [
-              if (_isDirty)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: TextButton.icon(
-                    onPressed: saveAll,
-                    icon: const Icon(Icons.save_rounded, size: 18),
-                    label: const Text('保存'),
-                  ),
-                ),
-            ],
-          ),
-
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 // ── Account ──
@@ -623,11 +599,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ),
                       items: SettingsProvider.availableFonts
-                              .map(
-                                (f) =>
-                                    DropdownMenuItem(value: f, child: Text(f)),
-                              )
-                              .toList(),
+                          .map(
+                            (f) => DropdownMenuItem(value: f, child: Text(f)),
+                          )
+                          .toList(),
                       onChanged: (v) {
                         if (v != null) settings.setFontFamily(v);
                       },
@@ -861,12 +836,18 @@ class _SettingsPageState extends State<SettingsPage> {
                                                 content: Row(
                                                   children: [
                                                     FaIcon(
-                                                      ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                      ok
+                                                          ? FontAwesomeIcons
+                                                                .circleCheck
+                                                          : FontAwesomeIcons
+                                                                .circleXmark,
                                                       size: 16,
                                                       color: Colors.white,
                                                     ),
                                                     SizedBox(width: 8),
-                                                    Text(ok ? '数据已上传到云端' : '上传失败'),
+                                                    Text(
+                                                      ok ? '数据已上传到云端' : '上传失败',
+                                                    ),
                                                   ],
                                                 ),
                                                 behavior:
@@ -977,12 +958,18 @@ class _SettingsPageState extends State<SettingsPage> {
                                                 content: Row(
                                                   children: [
                                                     FaIcon(
-                                                      ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                      ok
+                                                          ? FontAwesomeIcons
+                                                                .circleCheck
+                                                          : FontAwesomeIcons
+                                                                .circleXmark,
                                                       size: 16,
                                                       color: Colors.white,
                                                     ),
                                                     SizedBox(width: 8),
-                                                    Text(ok ? '数据已从云端恢复' : '恢复失败'),
+                                                    Text(
+                                                      ok ? '数据已从云端恢复' : '恢复失败',
+                                                    ),
                                                   ],
                                                 ),
                                                 behavior:
@@ -1063,7 +1050,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                             content: Row(
                                               children: [
                                                 FaIcon(
-                                                  ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                  ok
+                                                      ? FontAwesomeIcons
+                                                            .circleCheck
+                                                      : FontAwesomeIcons
+                                                            .circleXmark,
                                                   size: 16,
                                                   color: Colors.white,
                                                 ),
@@ -1149,7 +1140,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                           content: Row(
                                             children: [
                                               FaIcon(
-                                                ok ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.circleXmark,
+                                                ok
+                                                    ? FontAwesomeIcons
+                                                          .circleCheck
+                                                    : FontAwesomeIcons
+                                                          .circleXmark,
                                                 size: 16,
                                                 color: Colors.white,
                                               ),
@@ -1460,7 +1455,11 @@ class _SettingsPageState extends State<SettingsPage> {
                               SnackBar(
                                 content: Row(
                                   children: [
-                                    FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                                    FaIcon(
+                                      FontAwesomeIcons.circleCheck,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
                                     SizedBox(width: 8),
                                     Text('证书缓存已清除，请重启应用'),
                                   ],
@@ -1469,7 +1468,12 @@ class _SettingsPageState extends State<SettingsPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                margin: const EdgeInsets.fromLTRB(
+                                  16,
+                                  0,
+                                  16,
+                                  16,
+                                ),
                               ),
                             );
                           }
@@ -1479,7 +1483,11 @@ class _SettingsPageState extends State<SettingsPage> {
                               SnackBar(
                                 content: Row(
                                   children: [
-                                    FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+                                    FaIcon(
+                                      FontAwesomeIcons.circleXmark,
+                                      size: 16,
+                                      color: Colors.white,
+                                    ),
                                     SizedBox(width: 8),
                                     Expanded(child: Text('清除失败: $e')),
                                   ],
@@ -1488,7 +1496,12 @@ class _SettingsPageState extends State<SettingsPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                margin: const EdgeInsets.fromLTRB(
+                                  16,
+                                  0,
+                                  16,
+                                  16,
+                                ),
                               ),
                             );
                           }

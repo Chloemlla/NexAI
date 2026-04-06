@@ -21,62 +21,66 @@ class ToolsPage extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // ── Header ──
+          // ── Intro ──
           SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(hPad, 32, hPad, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child: Container(
+              margin: EdgeInsets.fromLTRB(hPad, 20, hPad, 4),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: cs.outlineVariant.withAlpha(40)),
+              ),
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [cs.primary, cs.tertiary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: cs.primary.withAlpha(50),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.build_circle_rounded,
-                          size: 24,
-                          color: cs.onPrimary,
-                        ),
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [cs.primary, cs.tertiary],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '工具箱',
-                            style: tt.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
-                            ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: cs.primary.withAlpha(50),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.build_circle_rounded,
+                      size: 24,
+                      color: cs.onPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '按场景整理常用能力，减少来回查找。',
+                          style: tt.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '实用工具集合，提升效率',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: cs.onSurfaceVariant,
-                              letterSpacing: 0.1,
-                            ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '媒体处理、编码转换、网络和 AI 工具都集中在这里。',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.onSurfaceVariant,
+                            height: 1.45,
+                            letterSpacing: 0.1,
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -90,7 +94,7 @@ class ToolsPage extends StatelessWidget {
               icon: Icons.movie_filter_rounded,
               title: '媒体处理',
               subtitle: '视频与多媒体工具',
-              padding: EdgeInsets.fromLTRB(hPad, 28, hPad, 12),
+              padding: EdgeInsets.fromLTRB(hPad, 24, hPad, 12),
             ),
           ),
           SliverPadding(

@@ -1,14 +1,13 @@
 name: nexai
 description: NexAI - A beautiful OpenAI client with Material Design 3
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.7-4a1684455
 
 environment:
-  sdk: '>=3.11.0 <4.0.0'
-  flutter: '>=3.41.0'
+  sdk: ">=3.11.0 <4.0.0"
+  flutter: ">=3.41.0"
 
 dependencies:
-  
   # Google Cloud
   gcloud: ^0.9.0
 
@@ -25,7 +24,8 @@ dependencies:
       url: https://github.com/bggRGjQaUbCoE/material_design_icons_flutter.git
       ref: const
   # toast
-  flutter_smart_dialog: ^4.9.8+5
+  flutter_smart_dialog:
+    ^4.9.8+5
     # 加密
   crypto: ^3.0.6
   encrypt: ^5.0.3
@@ -41,13 +41,13 @@ dependencies:
   http: ^1.6.0
   shared_preferences: ^2.5.4
   intl: ^0.20.2
-  flutter_math_fork: '>=0.7.4'
+  flutter_math_fork: ">=0.7.4"
   gpt_markdown_chloemlla: ^2.0.1
   provider: ^6.1.5
   google_fonts: ^8.0.2
   url_launcher: ^6.3.2
   window_manager: ^0.5.1
-  dynamic_color: '>=1.8.1'
+  dynamic_color: ">=1.8.1"
   fluent_ui: ^4.14.0
   package_info_plus: ^8.3.0
   device_info_plus: ^11.5.0
@@ -61,7 +61,7 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   # Passkey / WebAuthn
   passkeys: ^2.17.4
-  # Google 登录
+  # Google 快速登录
   google_sign_in: ^6.2.2
 
 dev_dependencies:

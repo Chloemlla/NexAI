@@ -58,8 +58,14 @@ class MarkdownRenderer extends StatelessWidget {
         child: GptMarkdown(
           processed,
           useDollarSignsForLatex: true,
-          followLinkColor: true,
+          followLinkColor: false,
           style: styles.bodyStyle,
+          linkBuilder: (context, span, url, baseStyle) {
+            return Text.rich(
+              TextSpan(style: styles.linkTextStyle, children: [span]),
+              textDirection: Directionality.of(context),
+            );
+          },
           components: buildMarkdownComponents(styles),
           inlineComponents: buildInlineComponents(
             styles,
@@ -109,6 +115,7 @@ class MarkdownRendererStyles {
     required this.textColor,
     required this.mutedTextColor,
     required this.linkColor,
+    required this.linkTextStyle,
     required this.borderColor,
     required this.dividerColor,
     required this.codeBackgroundColor,
@@ -135,6 +142,7 @@ class MarkdownRendererStyles {
   final Color textColor;
   final Color mutedTextColor;
   final Color linkColor;
+  final TextStyle linkTextStyle;
   final Color borderColor;
   final Color dividerColor;
   final Color codeBackgroundColor;
@@ -171,14 +179,15 @@ class MarkdownRendererStyles {
       letterSpacing: 0.1,
     );
 
-    final themedBodyStyle =
-        resolveCssTextStyle(cssTheme, '.markdown-body', baseBodyStyle).copyWith(
-          fontSize: settings.fontSize,
-          fontFamily: settings.fontFamily,
-          color: baseTextColor,
-          height: 1.65,
-          letterSpacing: 0.1,
-        );
+    final themedBodyStyle = sanitizeMarkdownBodyStyle(
+      resolveCssTextStyle(cssTheme, '.markdown-body', baseBodyStyle).copyWith(
+        fontSize: settings.fontSize,
+        fontFamily: settings.fontFamily,
+        color: baseTextColor,
+        height: 1.65,
+        letterSpacing: 0.1,
+      ),
+    );
 
     final mutedTextColor = resolveCssColor(
       cssTheme,
@@ -290,6 +299,11 @@ class MarkdownRendererStyles {
       textColor: baseTextColor,
       mutedTextColor: mutedTextColor,
       linkColor: linkColor,
+      linkTextStyle: themedBodyStyle.copyWith(
+        color: linkColor,
+        decoration: TextDecoration.underline,
+        decorationColor: linkColor,
+      ),
       borderColor: borderColor,
       dividerColor: dividerColor,
       codeBackgroundColor: codeBackgroundColor,
@@ -342,6 +356,10 @@ TextStyle resolveCssTextStyle(
 Color resolveCssColor(CssTheme? cssTheme, String variable, Color fallback) {
   return cssTheme?.getColor(variable) ?? fallback;
 }
+
+@visibleForTesting
+TextStyle sanitizeMarkdownBodyStyle(TextStyle style) =>
+    style.copyWith(decoration: TextDecoration.none);
 
 List<MarkdownComponent> buildMarkdownComponents(MarkdownRendererStyles styles) {
   return [

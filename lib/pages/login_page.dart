@@ -199,7 +199,7 @@ class _LoginPageState extends State<LoginPage>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
-                            'Google 登录',
+                            'Google 快速登录',
                             style: TextStyle(
                               color: colorScheme.onSurfaceVariant,
                               fontSize: 13,
@@ -237,7 +237,7 @@ class _LoginPageState extends State<LoginPage>
       return _buildInfoCard(
         colorScheme: colorScheme,
         icon: Icons.sync_rounded,
-        message: '正在检查 'Google 快速登录可用性...',
+        message: '正在检查 Google 快速登录可用性...',
       );
     }
 
@@ -245,12 +245,12 @@ class _LoginPageState extends State<LoginPage>
       return _buildInfoCard(
         colorScheme: colorScheme,
         icon: Icons.info_outline_rounded,
-        message: '当前服务器未启用 Google 登录。',
+        message: '当前服务器未启用 Google 快速登录。',
       );
     }
 
     return _buildOAuthButton(
-      label: '使用 Google 登录',
+      label: '使用 Google 快速登录',
       iconWidget: CustomPaint(
         painter: GoogleLogoPainter(),
         size: const Size.square(24),
@@ -531,13 +531,13 @@ class _LoginPageState extends State<LoginPage>
             context: context,
             builder: (context) => AuthDebugDialog(
               debugContext: auth.lastGoogleDebugContext!,
-              title: 'Google 登录调试信息',
+              title: 'Google 快速登录调试信息',
             ),
           );
         } else {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Google 登录失败')));
+          ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Google 快速登录失败')));
         }
       }
     }

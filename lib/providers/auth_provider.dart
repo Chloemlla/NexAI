@@ -187,7 +187,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> signInWithGoogle() async {
     // Check platform support - google_sign_in only supports Android, iOS, and Web
     if (!googleSignInSupportedPlatform) {
-      _error = 'Google 登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
+      _error = 'Google 快速登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
       notifyListeners();
       return false;
     }
@@ -207,7 +207,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       // Check if Google OAuth is configured
       if (!_googleEnabled || _googleClientId.isEmpty) {
-        _error = 'Google 登录未配置或未启用\n请联系管理员配置 Google OAuth';
+        _error = 'Google 快速登录未配置或未启用\n请联系管理员配置 Google OAuth';
         debugContext['error'] = _error;
         debugContext['errorType'] = 'GoogleNotConfigured';
         _lastGoogleDebugContext = debugContext;
@@ -226,7 +226,7 @@ class AuthProvider extends ChangeNotifier {
 
       final account = await googleSignIn.signIn();
       if (account == null) {
-        _error = '已取消 Google 登录';
+        _error = '已取消 Google 快速登录';
         debugContext['cancelled'] = true;
         _lastGoogleDebugContext = debugContext;
         _isLoading = false;
@@ -275,7 +275,7 @@ class AuthProvider extends ChangeNotifier {
         debugContext['userId'] = res.user!.id;
         return true;
       } else {
-        _error = res.error ?? 'Google 登录失败';
+        _error = res.error ?? 'Google 快速登录失败';
         debugContext['success'] = false;
         debugContext['error'] = _error;
         _lastGoogleDebugContext = debugContext;
@@ -291,7 +291,7 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[NexAI Google] Error type: ${e.runtimeType}');
       debugPrint('[NexAI Google] Stack trace: $stackTrace');
 
-      _error = 'Google 登录错误: ${_extractErrorDetails(e)}';
+      _error = 'Google 快速登录错误: ${_extractErrorDetails(e)}';
       _lastGoogleDebugContext = debugContext;
       return false;
     } finally {
@@ -357,7 +357,7 @@ class AuthProvider extends ChangeNotifier {
   Future<bool> linkGoogle() async {
     // Check platform support - google_sign_in only supports Android, iOS, and Web
     if (!googleSignInSupportedPlatform) {
-      _error = 'Google 登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
+      _error = 'Google 快速登录暂不支持桌面平台\n请使用 Android 或 Web 版本';
       notifyListeners();
       return false;
     }
@@ -376,7 +376,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       // Check if Google OAuth is configured
       if (!_googleEnabled || _googleClientId.isEmpty) {
-        _error = 'Google 登录未配置或未启用\n请联系管理员配置 Google OAuth';
+        _error = 'Google 快速登录未配置或未启用\n请联系管理员配置 Google OAuth';
         debugContext['error'] = _error;
         debugContext['errorType'] = 'GoogleNotConfigured';
         _lastGoogleDebugContext = debugContext;

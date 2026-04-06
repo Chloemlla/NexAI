@@ -21,7 +21,6 @@ import 'utils/app_security.dart';
 import 'utils/security_headers_interceptor.dart';
 import 'utils/security_event_reporter.dart';
 import 'services/nexai_security_service.dart';
-import 'widgets/startup_loading_dialog.dart';
 import 'package:dio/dio.dart';
 
 bool get isDesktop =>
@@ -35,153 +34,117 @@ bool get isAndroid =>
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
-  // Create log stream for startup dialog
-  final logController = StreamController<String>();
+  if (isAndroid) {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Color(0x00000000),
+        systemNavigationBarColor: Color(0x00000000),
+        systemNavigationBarDividerColor: Color(0x00000000),
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+  }
 
-  // Show loading dialog in a separate zone
+  if (isDesktop) {
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      size: Size(1100, 750),
+      minimumSize: Size(800, 600),
+      center: true,
+      title: 'NexAI',
+      titleBarStyle: TitleBarStyle.hidden,
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
+  final settingsProvider = SettingsProvider();
+  final notesProvider = NotesProvider();
+  final chatProvider = ChatProvider();
+  final passwordProvider = PasswordProvider();
+  final translationProvider = TranslationProvider();
+  final shortUrlProvider = ShortUrlProvider();
+  final authProvider = AuthProvider();
+
   runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.light(useMaterial3: true),
-      darkTheme: ThemeData.dark(useMaterial3: true),
-      home: StartupLoadingDialog(logStream: logController.stream),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: settingsProvider),
+        ChangeNotifierProvider.value(value: chatProvider),
+        ChangeNotifierProvider.value(value: notesProvider),
+        ChangeNotifierProvider(create: (_) => ImageGenerationProvider()),
+        ChangeNotifierProvider.value(value: passwordProvider),
+        ChangeNotifierProvider.value(value: authProvider),
+        ChangeNotifierProvider.value(value: translationProvider),
+        ChangeNotifierProvider.value(value: shortUrlProvider),
+        ChangeNotifierProvider(create: (_) => SyncProvider()),
+        ChangeNotifierProvider(create: (_) => ArtifactsProvider()),
+      ],
+      child: const NexAIApp(),
     ),
   );
 
-  // Give UI time to render
-  await Future.delayed(const Duration(milliseconds: 100));
+  unawaited(
+    _bootstrapAppInBackground(
+      settingsProvider: settingsProvider,
+      notesProvider: notesProvider,
+      chatProvider: chatProvider,
+      passwordProvider: passwordProvider,
+      translationProvider: translationProvider,
+      shortUrlProvider: shortUrlProvider,
+      authProvider: authProvider,
+    ),
+  );
+}
 
+Future<void> _bootstrapAppInBackground({
+  required SettingsProvider settingsProvider,
+  required NotesProvider notesProvider,
+  required ChatProvider chatProvider,
+  required PasswordProvider passwordProvider,
+  required TranslationProvider translationProvider,
+  required ShortUrlProvider shortUrlProvider,
+  required AuthProvider authProvider,
+}) async {
   try {
-    // Initialize media_kit for video playback
-    logController.add('初始化媒体播放器...');
-    MediaKit.ensureInitialized();
-    await Future.delayed(const Duration(milliseconds: 50));
+    await Future.wait([
+      _runSecurityChecksInBackground(),
+      settingsProvider.loadSettings(),
+      notesProvider.loadNotes(),
+      chatProvider.loadConversations(),
+      passwordProvider.loadPasswords(),
+      translationProvider.loadHistory(),
+      shortUrlProvider.loadHistory(),
+      authProvider.init(),
+    ]);
+  } catch (e, stackTrace) {
+    debugPrint('NexAI startup bootstrap failed: $e');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+}
 
-    // Security: APK integrity + root detection (honeypot mode)
-    logController.add('执行安全检查...');
-    await AppSecurity.instance.init();
-    await Future.delayed(const Duration(milliseconds: 50));
+Future<void> _runSecurityChecksInBackground() async {
+  await AppSecurity.instance.init();
 
-    // Initialize security services
-    logController.add('初始化安全服务...');
-    final securityDio = createSecureDio(
-      options: BaseOptions(
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 120),
-        sendTimeout: const Duration(seconds: 30),
-      ),
-    );
-    final securityService = NexAISecurityService(securityDio);
-    final securityReporter = SecurityEventReporter(securityService);
-    await Future.delayed(const Duration(milliseconds: 50));
+  final securityDio = createSecureDio(
+    options: BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 120),
+      sendTimeout: const Duration(seconds: 30),
+    ),
+  );
+  final securityService = NexAISecurityService(securityDio);
+  final securityReporter = SecurityEventReporter(securityService);
 
-    // Report security issues if detected
-    if (AppSecurity.instance.isCompromised ||
-        !AppSecurity.instance.isSignatureValid ||
-        !AppSecurity.instance.isApkHashValid) {
-      logController.add('检测到安全问题，正在上报...');
-      // Report asynchronously, don't block app startup
-      securityReporter.reportAllIssues().ignore();
-      await Future.delayed(const Duration(milliseconds: 50));
-    }
-
-    if (isAndroid) {
-      logController.add('配置 Android 系统界面...');
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-      SystemChrome.setSystemUIOverlayStyle(
-        const SystemUiOverlayStyle(
-          statusBarColor: Color(0x00000000),
-          systemNavigationBarColor: Color(0x00000000),
-          systemNavigationBarDividerColor: Color(0x00000000),
-          statusBarIconBrightness: Brightness.dark,
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-      );
-      await Future.delayed(const Duration(milliseconds: 50));
-    }
-
-    if (isDesktop) {
-      logController.add('初始化桌面窗口管理器...');
-      await windowManager.ensureInitialized();
-      const windowOptions = WindowOptions(
-        size: Size(1100, 750),
-        minimumSize: Size(800, 600),
-        center: true,
-        title: 'NexAI',
-        titleBarStyle: TitleBarStyle.hidden,
-      );
-      windowManager.waitUntilReadyToShow(windowOptions, () async {
-        await windowManager.show();
-        await windowManager.focus();
-      });
-      await Future.delayed(const Duration(milliseconds: 50));
-    }
-
-    logController.add('加载应用设置...');
-    final settingsProvider = SettingsProvider();
-    await settingsProvider.loadSettings();
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    logController.add('加载笔记数据...');
-    final notesProvider = NotesProvider();
-    await notesProvider.loadNotes();
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    logController.add('加载对话历史...');
-    final chatProvider = ChatProvider();
-    await chatProvider.loadConversations();
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    logController.add('加载密码管理器...');
-    final passwordProvider = PasswordProvider();
-    await passwordProvider.loadPasswords();
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    logController.add('加载翻译历史...');
-    final translationProvider = TranslationProvider();
-    await translationProvider.loadHistory();
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    logController.add('加载短链接历史...');
-    final shortUrlProvider = ShortUrlProvider();
-    await shortUrlProvider.loadHistory();
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    logController.add('初始化身份验证服务...');
-    final authProvider = AuthProvider();
-    // Wait for auth to restore session from secure storage
-    await authProvider.init();
-    await Future.delayed(const Duration(milliseconds: 50));
-
-    logController.add('启动完成！正在进入应用...');
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    // Close log stream
-    await logController.close();
-
-    // Launch main app
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: settingsProvider),
-          ChangeNotifierProvider.value(value: chatProvider),
-          ChangeNotifierProvider.value(value: notesProvider),
-          ChangeNotifierProvider(create: (_) => ImageGenerationProvider()),
-          ChangeNotifierProvider.value(value: passwordProvider),
-          ChangeNotifierProvider.value(value: authProvider),
-          ChangeNotifierProvider.value(value: translationProvider),
-          ChangeNotifierProvider.value(value: shortUrlProvider),
-          ChangeNotifierProvider(create: (_) => SyncProvider()),
-          ChangeNotifierProvider(create: (_) => ArtifactsProvider()),
-        ],
-        child: const NexAIApp(),
-      ),
-    );
-  } catch (e) {
-    logController.add('启动失败: $e');
-    await Future.delayed(const Duration(seconds: 3));
-    logController.close();
-    rethrow;
+  if (AppSecurity.instance.isCompromised ||
+      !AppSecurity.instance.isSignatureValid ||
+      !AppSecurity.instance.isApkHashValid) {
+    await securityReporter.reportAllIssues();
   }
 }

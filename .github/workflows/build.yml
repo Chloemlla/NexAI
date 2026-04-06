@@ -218,8 +218,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Run build.ps1 (version control)
+        run: pwsh scripts/build.ps1
+
       - name: Build Web
-        run: flutter build web --release
+        run: flutter build web --release --dart-define-from-file=nexai_release.json
 
       - uses: actions/upload-artifact@v4
         with:
@@ -259,11 +262,15 @@ jobs:
       - name: Recreate Windows directory
         run: flutter create --platforms windows .
 
+      - name: Run build.ps1 (version control)
+        run: pwsh scripts/build.ps1
+
       - name: Build Windows
         run: |
           flutter build windows --release `
             --obfuscate `
-            --split-debug-info=debug_symbols\windows
+            --split-debug-info=debug_symbols\windows `
+            --dart-define-from-file=nexai_release.json
 
       - uses: actions/upload-artifact@v4
         with:

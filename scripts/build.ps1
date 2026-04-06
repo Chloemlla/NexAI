@@ -3,12 +3,20 @@ param(
 )
 
 try {
-    $versionName = $null
+    $ErrorActionPreference = 'Stop'
+    Set-StrictMode -Version Latest
+    $utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+    [Console]::InputEncoding = $utf8NoBom
+    [Console]::OutputEncoding = $utf8NoBom
+    $OutputEncoding = $utf8NoBom
 
-    $versionCode = [int](git rev-list --count HEAD).Trim()
+    $versionName = $null
 
     $commitHash = (git rev-parse HEAD).Trim()
     $shortHash = $commitHash.Substring(0, 9)
+    $utcNow = [DateTime]::UtcNow
+    $buildTime = [int]([DateTimeOffset]::new($utcNow).ToUnixTimeSeconds())
+    $versionCode = [int]('{0:yy}{1:000}{2:HHmm}' -f $utcNow, $utcNow.DayOfYear, $utcNow)
 
     $updatedContent = foreach ($line in (Get-Content -Path 'pubspec.yaml' -Encoding UTF8)) {
         if ($line -match '^\s*version:\s*([\d\.]+)') {
@@ -32,8 +40,6 @@ try {
 
     $updatedContent | Set-Content -Path 'pubspec.yaml' -Encoding UTF8
 
-    $buildTime = [int]([DateTimeOffset]::Now.ToUnixTimeSeconds())
-
     # Use displayName (with hash for android) instead of versionName
     $data = @{
         'nexai.name'  = $displayName
@@ -53,7 +59,15 @@ try {
         Add-Content -Path $env:GITHUB_ENV -Value "SHORT_HASH=$shortHash"
     }
 
-    Write-Host "Version: $displayName+$versionCode (hash: $shortHash)"
+    @{
+        version = $displayName
+        versionName = $versionName
+        versionCode = $versionCode
+        versionCodeFormat = 'yyDDDHHmm'
+        shortHash = $shortHash
+        commitHash = $commitHash
+        buildTime = $buildTime
+    } | ConvertTo-Json -Compress | Write-Output
 }
 catch {
     Write-Error "Prebuild Error: $($_.Exception.Message)"

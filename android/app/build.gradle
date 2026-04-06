@@ -12,9 +12,17 @@ if (localPropertiesFile.exists()) {
     }
 }
 
+def versionCodeTimeZone = TimeZone.getTimeZone('UTC')
+def fallbackVersionCode = Integer.parseInt(new Date().format('yyDDDHHmm', versionCodeTimeZone))
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
 if (flutterVersionCode == null) {
-    flutterVersionCode = '107'
+    flutterVersionCode = "${fallbackVersionCode}"
+} else {
+    try {
+        flutterVersionCode = "${Math.max(flutterVersionCode.toInteger(), fallbackVersionCode)}"
+    } catch (Exception ignored) {
+        flutterVersionCode = "${fallbackVersionCode}"
+    }
 }
 
 def flutterVersionName = localProperties.getProperty('flutter.versionName')
@@ -36,7 +44,7 @@ if (nexaiFile.exists()) {
     flutterVersionCode = nexaiCode
     flutterVersionName = nexaiName
 } else {
-    // Fallback: append git short SHA
+    // Fallback: use a time-based versionCode so newer local releases stay upgradeable.
     try {
         def stdout = new ByteArrayOutputStream()
         exec {

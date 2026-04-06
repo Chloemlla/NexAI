@@ -117,10 +117,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
             child: const Text('忽略'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(context).pop();
-              // Open GitHub releases
-              UpdateChecker.checkUpdate(context);
+              await UpdateChecker.openLatestReleasePage();
             },
             child: const Text('下载官方版本'),
           ),

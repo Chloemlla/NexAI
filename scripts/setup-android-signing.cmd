@@ -214,7 +214,7 @@ echo   ✓ Keystore 生成成功: %KEYSTORE_FILE%
 
 echo.
 echo   正在编码为 Base64...
-powershell -NoProfile -Command "[Convert]::ToBase64String([IO.File]::ReadAllBytes('%KEYSTORE_FILE%'))" > keystore_base64.txt
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); $OutputEncoding=[Console]::OutputEncoding; [Convert]::ToBase64String([IO.File]::ReadAllBytes('%KEYSTORE_FILE%'))" > keystore_base64.txt
 if %errorlevel% neq 0 (
     echo [错误] Base64 编码失败
     pause
@@ -247,7 +247,7 @@ echo.
 echo 变量列表:
 echo   1. KEYSTORE_BASE64
 echo      长度: 
-powershell -NoProfile -Command "Write-Host ('      ' + '%KEYSTORE_BASE64%'.Length + ' 字符')"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); $OutputEncoding=[Console]::OutputEncoding; Write-Output ('      ' + '%KEYSTORE_BASE64%'.Length + ' 字符')"
 echo      预览: %KEYSTORE_BASE64:~0,60%...
 echo.
 echo   2. KEYSTORE_PASSWORD

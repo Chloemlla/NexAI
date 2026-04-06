@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../utils/build_config.dart';
+
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
 
@@ -180,6 +182,10 @@ class _AboutPageState extends State<AboutPage> {
                 // ── App Info section ──
                 _m3Section(cs, tt, Icons.info_outline_rounded, '应用信息', [
                   _m3InfoRow(cs, '版本', _version.isNotEmpty ? _version : '...'),
+                  if (BuildConfig.buildTime > 0) ...[
+                    const SizedBox(height: 8),
+                    _m3InfoRow(cs, '构建号', '${BuildConfig.versionCode}'),
+                  ],
                   const SizedBox(height: 8),
                   _m3InfoRow(cs, '许可证', 'GPL-3.0 license'),
                   const SizedBox(height: 8),

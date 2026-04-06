@@ -12,6 +12,7 @@ import '../providers/translation_provider.dart';
 import '../providers/short_url_provider.dart';
 import '../providers/sync_provider.dart';
 import '../utils/update_checker.dart';
+import '../utils/build_config.dart';
 import '../utils/google_font_paint.dart';
 import '../services/pinned_http_client.dart';
 import '../widgets/passkey_debug_dialog.dart';
@@ -1384,6 +1385,40 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ],
                     ),
+                    if (BuildConfig.buildTime > 0) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.tag_rounded, size: 18, color: cs.primary),
+                          const SizedBox(width: 10),
+                          Text(
+                            '构建号',
+                            style: tt.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cs.secondaryContainer.withAlpha(120),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${BuildConfig.versionCode}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: cs.secondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     FutureBuilder<bool>(
                       future: UpdateChecker.getAutoUpdate(),
@@ -1410,6 +1445,14 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                     ),
                     const SizedBox(height: 8),
+                    Text(
+                      '更新判断会优先参考发布时间，避免最新 Release 版本号较低时无法提示升级。',
+                      style: tt.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     FilledButton.icon(
                       onPressed: () =>
                           UpdateChecker.checkUpdate(context, isAuto: false),

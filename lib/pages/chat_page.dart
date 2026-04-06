@@ -22,16 +22,13 @@ class _ChatPageState extends State<ChatPage> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  final Map<String, String> _draftsByConversationId = {};
   bool _hasText = false;
   bool _isAtBottom = true;
   bool _forceScroll = false;
+  bool _showComposerPreview = false;
   String? _activeConversationId;
   int _observedMessageCount = 0;
-  final _imagePromptController = TextEditingController();
-  final _imageUrlController = TextEditingController();
-  final _imageModelController = TextEditingController(
-    text: 'doubao-seedream-4-0-250828',
-  );
 
   @override
   void initState() {
@@ -50,10 +47,14 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _onTextChanged() {
-    final hasText = _controller.text.trim().isNotEmpty;
-    if (hasText != _hasText) {
-      setState(() => _hasText = hasText);
-    }
+    final text = _controller.text;
+    _saveDraftForConversation(_activeConversationId, text);
+    setState(() {
+      _hasText = text.trim().isNotEmpty;
+      if (!_hasText) {
+        _showComposerPreview = false;
+      }
+    });
   }
 
   @override
@@ -63,22 +64,61 @@ class _ChatPageState extends State<ChatPage> {
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
-    _imagePromptController.dispose();
-    _imageUrlController.dispose();
-    _imageModelController.dispose();
     super.dispose();
+  }
+
+  void _saveDraftForConversation(String? conversationId, String text) {
+    if (conversationId == null) return;
+    if (text.isEmpty) {
+      _draftsByConversationId.remove(conversationId);
+      return;
+    }
+    _draftsByConversationId[conversationId] = text;
+  }
+
+  void _replaceComposerText(String text, {bool collapsePreview = false}) {
+    _controller.removeListener(_onTextChanged);
+    _controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    _controller.addListener(_onTextChanged);
+    _hasText = text.trim().isNotEmpty;
+    if (!_hasText || collapsePreview) {
+      _showComposerPreview = false;
+    }
+  }
+
+  void _restoreDraftForConversation(String? conversationId) {
+    final restoredText = conversationId == null
+        ? ''
+        : (_draftsByConversationId[conversationId] ?? '');
+    if (_controller.text == restoredText) {
+      _hasText = restoredText.trim().isNotEmpty;
+      if (!_hasText) {
+        _showComposerPreview = false;
+      }
+      return;
+    }
+    _replaceComposerText(restoredText, collapsePreview: true);
   }
 
   void _syncVisibleConversation(ChatProvider chat) {
     final conversationId = chat.currentConversation?.id;
     final messageCount = chat.messages.length;
-    final conversationChanged = conversationId != _activeConversationId;
+    final previousConversationId = _activeConversationId;
+    final conversationChanged = conversationId != previousConversationId;
     final messageCountChanged = messageCount != _observedMessageCount;
+
+    if (conversationChanged) {
+      _saveDraftForConversation(previousConversationId, _controller.text);
+    }
 
     _activeConversationId = conversationId;
     _observedMessageCount = messageCount;
 
     if (conversationChanged) {
+      _restoreDraftForConversation(conversationId);
       _isAtBottom = true;
       if (messageCount > 0) {
         _scrollToBottom(animate: false, ignoreScrollPosition: true);
@@ -169,6 +209,10 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     _controller.clear();
+    _saveDraftForConversation(_activeConversationId, '');
+    if (_showComposerPreview) {
+      setState(() => _showComposerPreview = false);
+    }
     final chat = context.read<ChatProvider>();
 
     _forceScroll = true;
@@ -199,6 +243,16 @@ class _ChatPageState extends State<ChatPage> {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const ImageGenerationPage()));
+  }
+
+  void _clearComposer() {
+    _controller.clear();
+    _focusNode.requestFocus();
+  }
+
+  int _lineCount(String text) {
+    if (text.isEmpty) return 0;
+    return '\n'.allMatches(text).length + 1;
   }
 
   @override
@@ -281,8 +335,8 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
 
-        // ── Preview bubble ──
-        if (_hasText) _buildPreviewBubble(cs),
+        if (_hasText) _buildComposerActionBar(cs),
+        if (_showComposerPreview && _hasText) _buildPreviewBubble(cs),
 
         // ── Input bar ──
         // AnimatedPadding so the bar slides up smoothly with the keyboard
@@ -390,10 +444,14 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildPreviewBubble(ColorScheme cs) {
+  Widget _buildPreviewBubble(
+    ColorScheme cs, {
+    EdgeInsetsGeometry margin = const EdgeInsets.fromLTRB(14, 0, 14, 8),
+    double maxHeightFactor = 0.2,
+  }) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      margin: margin,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
@@ -429,10 +487,99 @@ class _ChatPageState extends State<ChatPage> {
           const SizedBox(height: 8),
           ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.2,
+              maxHeight: MediaQuery.of(context).size.height * maxHeightFactor,
             ),
             child: SingleChildScrollView(
               child: RichContentView(content: _controller.text),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComposerActionBar(
+    ColorScheme cs, {
+    EdgeInsetsGeometry margin = const EdgeInsets.fromLTRB(14, 0, 14, 8),
+  }) {
+    final text = _controller.text;
+    final charCount = text.length;
+    final lineCount = _lineCount(text);
+
+    return Container(
+      margin: margin,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _buildComposerStatPill(
+            cs,
+            icon: Icons.text_fields_rounded,
+            label: '$charCount 字',
+          ),
+          _buildComposerStatPill(
+            cs,
+            icon: Icons.subject_rounded,
+            label: '$lineCount 行',
+          ),
+          TextButton.icon(
+            onPressed: () =>
+                setState(() => _showComposerPreview = !_showComposerPreview),
+            icon: Icon(
+              _showComposerPreview
+                  ? Icons.visibility_off_rounded
+                  : Icons.visibility_rounded,
+              size: 18,
+            ),
+            label: Text(_showComposerPreview ? '收起预览' : '打开预览'),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              foregroundColor: cs.primary,
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _clearComposer,
+            icon: const Icon(Icons.close_rounded, size: 18),
+            label: const Text('清空'),
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              foregroundColor: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComposerStatPill(
+    ColorScheme cs, {
+    required IconData icon,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withAlpha(200),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: cs.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
             ),
           ),
         ],
@@ -800,6 +947,17 @@ class _ChatPageState extends State<ChatPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (_hasText) ...[
+                _buildComposerActionBar(cs, margin: EdgeInsets.zero),
+                if (_showComposerPreview) ...[
+                  _buildPreviewBubble(
+                    cs,
+                    margin: EdgeInsets.zero,
+                    maxHeightFactor: 0.18,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ],
               Row(
                 children: [
                   Expanded(

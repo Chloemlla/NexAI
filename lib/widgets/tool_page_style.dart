@@ -47,21 +47,33 @@ class ToolPageHeroSliver extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final titleBottom = (bottom?.preferredSize.height ?? 0) + 14;
+    final mq = MediaQuery.of(context);
+    final bottomHeight = bottom?.preferredSize.height ?? 0;
+    final hasLeading = ModalRoute.of(context)?.canPop ?? false;
+    final titleBottom = bottomHeight + 14;
+    final titleLeft = hasLeading ? (kToolbarHeight + 20) : 20.0;
+    final effectiveExpandedHeight =
+        expandedHeight + bottomHeight + (mq.size.width < 600 ? 28 : 0);
 
     return SliverAppBar(
       pinned: true,
-      expandedHeight: expandedHeight,
+      expandedHeight: effectiveExpandedHeight,
       backgroundColor: cs.surface,
       surfaceTintColor: cs.surfaceTint,
       actions: actions,
       bottom: bottom,
       flexibleSpace: FlexibleSpaceBar(
         collapseMode: CollapseMode.parallax,
-        titlePadding: EdgeInsets.only(left: 20, bottom: titleBottom),
+        titlePadding: EdgeInsets.only(
+          left: titleLeft,
+          right: 16,
+          bottom: titleBottom,
+        ),
         title: Text(
           title,
           style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         background: Container(
           decoration: BoxDecoration(
@@ -76,55 +88,67 @@ class ToolPageHeroSliver extends StatelessWidget {
             ),
           ),
           child: SafeArea(
+            bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [cs.primary, cs.tertiary],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+              padding: EdgeInsets.fromLTRB(
+                24,
+                kToolbarHeight + 16,
+                24,
+                bottomHeight + 28,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 560),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [cs.primary, cs.tertiary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cs.primary.withAlpha(60),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Icon(icon, size: 32, color: cs.onPrimary),
                       ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: cs.primary.withAlpha(60),
-                          blurRadius: 20,
-                          offset: const Offset(0, 6),
+                      const SizedBox(height: 12),
+                      Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: tt.bodyMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          height: 1.45,
+                        ),
+                      ),
+                      if (chips.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.center,
+                          children: chips
+                              .map(
+                                (chip) =>
+                                    _ToolHeroChip(chip: chip, colorScheme: cs),
+                              )
+                              .toList(),
                         ),
                       ],
-                    ),
-                    child: Icon(icon, size: 32, color: cs.onPrimary),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: tt.bodyMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      height: 1.45,
-                    ),
-                  ),
-                  if (chips.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      alignment: WrapAlignment.center,
-                      children: chips
-                          .map(
-                            (chip) =>
-                                _ToolHeroChip(chip: chip, colorScheme: cs),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),

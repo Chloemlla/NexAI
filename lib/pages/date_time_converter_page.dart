@@ -205,6 +205,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
     final tt = Theme.of(context).textTheme;
     final mq = MediaQuery.of(context);
     final isNarrow = mq.size.width < 600;
+    final hasLeading = ModalRoute.of(context)?.canPop ?? false;
     final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
     return Scaffold(
@@ -214,15 +215,21 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
           // ── Hero AppBar ──
           SliverAppBar(
             pinned: true,
-            expandedHeight: isNarrow ? 170 : 190,
+            expandedHeight: isNarrow ? 208 : 220,
             backgroundColor: cs.surface,
             surfaceTintColor: cs.surfaceTint,
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,
-              titlePadding: const EdgeInsets.only(left: 20, bottom: 14),
+              titlePadding: EdgeInsets.only(
+                left: hasLeading ? (kToolbarHeight + 20) : 20,
+                right: 16,
+                bottom: 14,
+              ),
               title: Text(
                 '日期时间转换器',
                 style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               background: Container(
                 decoration: BoxDecoration(
@@ -236,46 +243,58 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                   ),
                 ),
                 child: SafeArea(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [cs.primary, cs.tertiary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: cs.primary.withAlpha(60),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
+                  bottom: false,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      kToolbarHeight + 16,
+                      24,
+                      28,
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [cs.primary, cs.tertiary],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: cs.primary.withAlpha(60),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.access_time_filled_rounded,
-                          size: 32,
-                          color: cs.onPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      if (_selectedDate != null)
-                        Text(
-                          DateFormat(
-                            'yyyy-MM-dd HH:mm:ss',
-                          ).format(_selectedDate!),
-                          style: tt.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                            fontFamily: 'monospace',
-                            letterSpacing: 0.5,
+                            child: Icon(
+                              Icons.access_time_filled_rounded,
+                              size: 32,
+                              color: cs.onPrimary,
+                            ),
                           ),
-                        ),
-                    ],
+                          const SizedBox(height: 8),
+                          if (_selectedDate != null)
+                            Text(
+                              DateFormat(
+                                'yyyy-MM-dd HH:mm:ss',
+                              ).format(_selectedDate!),
+                              style: tt.bodySmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                fontFamily: 'monospace',
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),

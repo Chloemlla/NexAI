@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class ToolHeroChipData {
@@ -50,10 +52,45 @@ class ToolPageHeroSliver extends StatelessWidget {
     final mq = MediaQuery.of(context);
     final bottomHeight = bottom?.preferredSize.height ?? 0;
     final hasLeading = ModalRoute.of(context)?.canPop ?? false;
+    final actionCount = actions?.length ?? 0;
     final titleBottom = bottomHeight + 14;
     final titleLeft = hasLeading ? (kToolbarHeight + 20) : 20.0;
-    final effectiveExpandedHeight =
+    final titleRight = 16.0 + (actionCount > 0 ? actionCount * 52.0 : 0.0);
+    final heroContentWidth = math.min(mq.size.width - 48, 560.0);
+    final titleStyle =
+        tt.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
+        const TextStyle(fontSize: 16, fontWeight: FontWeight.w600);
+    final subtitleStyle =
+        tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant, height: 1.45) ??
+        TextStyle(fontSize: 14, height: 1.45, color: cs.onSurfaceVariant);
+    final titleHeight = _measureTextHeight(
+      text: title,
+      style: titleStyle,
+      maxWidth: math.max(120, mq.size.width - titleLeft - titleRight),
+      maxLines: 1,
+    );
+    final subtitleHeight = _measureTextHeight(
+      text: subtitle,
+      style: subtitleStyle,
+      maxWidth: heroContentWidth,
+    );
+    final chipsHeight = _measureChipWrapHeight(
+      chips: chips,
+      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      maxWidth: heroContentWidth,
+    );
+    final heroTopPadding = mq.padding.top + kToolbarHeight + 16;
+    final heroBottomPadding = bottomHeight + titleHeight + 26;
+    final heroContentHeight =
+        64 + 12 + subtitleHeight + (chips.isEmpty ? 0 : 14 + chipsHeight);
+    final minimumExpandedHeight =
+        heroTopPadding + heroContentHeight + heroBottomPadding;
+    final baseExpandedHeight =
         expandedHeight + bottomHeight + (mq.size.width < 600 ? 28 : 0);
+    final effectiveExpandedHeight = math.max(
+      baseExpandedHeight,
+      minimumExpandedHeight,
+    );
 
     return SliverAppBar(
       pinned: true,
@@ -66,12 +103,12 @@ class ToolPageHeroSliver extends StatelessWidget {
         collapseMode: CollapseMode.parallax,
         titlePadding: EdgeInsets.only(
           left: titleLeft,
-          right: 16,
+          right: titleRight,
           bottom: titleBottom,
         ),
         title: Text(
           title,
-          style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: titleStyle,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -127,10 +164,7 @@ class ToolPageHeroSliver extends StatelessWidget {
                       Text(
                         subtitle,
                         textAlign: TextAlign.center,
-                        style: tt.bodyMedium?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          height: 1.45,
-                        ),
+                        style: subtitleStyle,
                       ),
                       if (chips.isNotEmpty) ...[
                         const SizedBox(height: 14),
@@ -156,6 +190,78 @@ class ToolPageHeroSliver extends StatelessWidget {
       ),
     );
   }
+}
+
+double _measureTextHeight({
+  required String text,
+  required TextStyle style,
+  required double maxWidth,
+  int? maxLines,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    maxLines: maxLines,
+    ellipsis: maxLines == null ? null : '…',
+  )..layout(maxWidth: maxWidth);
+  return painter.size.height;
+}
+
+double _measureChipWrapHeight({
+  required List<ToolHeroChipData> chips,
+  required TextStyle textStyle,
+  required double maxWidth,
+}) {
+  if (chips.isEmpty) return 0;
+
+  final sampleHeight = _measureTextHeight(
+    text: '示例',
+    style: textStyle,
+    maxWidth: maxWidth,
+    maxLines: 1,
+  );
+  final chipHeight = sampleHeight + 16;
+  const spacing = 8.0;
+  double currentRowWidth = 0;
+  int rows = 1;
+
+  for (final chip in chips) {
+    final labelWidth = _measureTextWidth(
+      text: chip.label,
+      style: textStyle,
+      maxWidth: maxWidth,
+    );
+    final chipWidth = math.min(maxWidth, labelWidth + 46);
+
+    if (currentRowWidth == 0) {
+      currentRowWidth = chipWidth;
+      continue;
+    }
+
+    final nextWidth = currentRowWidth + spacing + chipWidth;
+    if (nextWidth > maxWidth) {
+      rows++;
+      currentRowWidth = chipWidth;
+    } else {
+      currentRowWidth = nextWidth;
+    }
+  }
+
+  return rows * chipHeight + (rows - 1) * spacing;
+}
+
+double _measureTextWidth({
+  required String text,
+  required TextStyle style,
+  required double maxWidth,
+}) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+    ellipsis: '…',
+  )..layout(maxWidth: maxWidth);
+  return painter.size.width;
 }
 
 class ToolQuickActionsBar extends StatelessWidget {

@@ -7,6 +7,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import 'package:gal/gal.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/file_access_helper.dart';
+import '../widgets/tool_page_style.dart';
 
 class VideoCompressorPage extends StatefulWidget {
   const VideoCompressorPage({super.key});
@@ -172,7 +173,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                FaIcon(
+                  FontAwesomeIcons.circleCheck,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 SizedBox(width: 8),
                 Text('压缩完成！'),
               ],
@@ -183,13 +188,15 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                FaIcon(FontAwesomeIcons.circleXmark, size: 16, color: Colors.white),
+                FaIcon(
+                  FontAwesomeIcons.circleXmark,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 SizedBox(width: 8),
                 Expanded(child: Text('压缩失败: $e')),
               ],
@@ -215,10 +222,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('需要相册权限才能保存视频'),
-              action: SnackBarAction(
-                label: '去设置',
-                onPressed: () => Gal.open(),
-              ),
+              action: SnackBarAction(label: '去设置', onPressed: () => Gal.open()),
             ),
           );
         }
@@ -235,7 +239,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                FaIcon(
+                  FontAwesomeIcons.circleCheck,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 SizedBox(width: 8),
                 Text('已保存到相册'),
               ],
@@ -351,111 +359,182 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final mq = MediaQuery.of(context);
+    final isNarrow = mq.size.width < 600;
+    final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('视频压缩')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // 选择视频按钮
-          FilledButton.icon(
-            onPressed: _isCompressing ? null : _pickVideo,
-            icon: const Icon(Icons.video_library_rounded),
-            label: const Text('选择视频'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+      backgroundColor: cs.surface,
+      body: CustomScrollView(
+        slivers: [
+          ToolPageHeroSliver(
+            title: '视频压缩',
+            subtitle: '统一首屏信息层级后，用户可以先看素材状态，再决定压缩质量和是否打开高级设置。',
+            icon: Icons.video_file_rounded,
+            chips: [
+              ToolHeroChipData(
+                icon: Icons.compress_rounded,
+                label: '质量 ${_selectedQuality.name}',
+              ),
+              ToolHeroChipData(
+                icon: _isCompressing
+                    ? Icons.sync_rounded
+                    : (_compressionResult != null
+                          ? Icons.check_circle_rounded
+                          : Icons.hourglass_empty_rounded),
+                label: _isCompressing
+                    ? '${(_progress * 100).toInt()}%'
+                    : (_compressionResult != null ? '压缩完成' : '等待素材'),
+              ),
+              ToolHeroChipData(
+                icon: Icons.tune_rounded,
+                label: _showAdvancedSettings ? '高级设置展开' : '支持高级设置',
+              ),
+            ],
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
+            sliver: SliverToBoxAdapter(
+              child: ToolQuickActionsBar(
+                actions: [
+                  ToolQuickActionData(
+                    icon: Icons.video_library_rounded,
+                    label: '选择视频',
+                    backgroundColor: cs.primaryContainer,
+                    iconColor: cs.onPrimaryContainer,
+                    onTap: _isCompressing ? null : _pickVideo,
+                  ),
+                  ToolQuickActionData(
+                    icon: Icons.compress_rounded,
+                    label: '开始压缩',
+                    backgroundColor: cs.secondaryContainer,
+                    iconColor: cs.onSecondaryContainer,
+                    onTap: _videoInfo == null || _isCompressing
+                        ? null
+                        : _compressVideo,
+                  ),
+                  ToolQuickActionData(
+                    icon: Icons.save_alt_rounded,
+                    label: '保存结果',
+                    backgroundColor: cs.tertiaryContainer,
+                    iconColor: cs.onTertiaryContainer,
+                    onTap: _compressionResult == null ? null : _saveVideo,
+                  ),
+                ],
+              ),
             ),
           ),
-
-          if (_isLoadingInfo) ...[
-            const SizedBox(height: 24),
-            const Center(child: CircularProgressIndicator()),
-          ],
-
-          // 视频信息卡片
-          if (_videoInfo != null) ...[
-            const SizedBox(height: 24),
-            _buildInfoCard(
-              context,
-              title: '原视频信息',
-              icon: Icons.info_outline_rounded,
-              children: [
-                _buildInfoRow('时长', _videoInfo!.durationFormatted),
-                _buildInfoRow(
-                  '分辨率',
-                  '${_videoInfo!.width}x${_videoInfo!.height}',
-                ),
-                _buildInfoRow('文件大小', _videoInfo!.fileSizeFormatted),
-              ],
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 40),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                if (_isLoadingInfo) ...[
+                  const ToolSectionTitle(
+                    icon: Icons.sync_rounded,
+                    title: '读取素材信息',
+                  ),
+                  const SizedBox(height: 12),
+                  const ToolPanel(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 20),
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                if (_videoInfo == null && !_isLoadingInfo)
+                  const ToolEmptyStateCard(
+                    icon: Icons.video_library_outlined,
+                    title: '还没有选中视频',
+                    description: '先选择一个视频文件，再配置压缩质量和高级参数。',
+                  )
+                else ...[
+                  const ToolSectionTitle(
+                    icon: Icons.info_outline_rounded,
+                    title: '原视频信息',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoCard(
+                    context,
+                    title: '原视频信息',
+                    icon: Icons.info_outline_rounded,
+                    children: [
+                      _buildInfoRow('时长', _videoInfo!.durationFormatted),
+                      _buildInfoRow(
+                        '分辨率',
+                        '${_videoInfo!.width}x${_videoInfo!.height}',
+                      ),
+                      _buildInfoRow('文件大小', _videoInfo!.fileSizeFormatted),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const ToolSectionTitle(
+                    icon: Icons.high_quality_rounded,
+                    title: '压缩参数',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildQualitySelector(cs),
+                  const SizedBox(height: 12),
+                  _buildAdvancedSettingsToggle(cs),
+                  if (_showAdvancedSettings) ...[
+                    const SizedBox(height: 12),
+                    _buildAdvancedSettingsPanel(cs),
+                  ],
+                ],
+                if (_isCompressing) ...[
+                  const SizedBox(height: 20),
+                  const ToolSectionTitle(
+                    icon: Icons.equalizer_rounded,
+                    title: '压缩进度',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildProgressCard(cs),
+                ],
+                if (_compressionResult != null) ...[
+                  const SizedBox(height: 20),
+                  const ToolSectionTitle(
+                    icon: Icons.check_circle_outline_rounded,
+                    title: '压缩结果',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoCard(
+                    context,
+                    title: '压缩结果',
+                    icon: Icons.check_circle_outline_rounded,
+                    children: [
+                      _buildInfoRow(
+                        '原大小',
+                        _compressionResult!.originalSizeFormatted,
+                      ),
+                      _buildInfoRow(
+                        '压缩后',
+                        _compressionResult!.compressedSizeFormatted,
+                      ),
+                      _buildInfoRow(
+                        '节省空间',
+                        _compressionResult!.spaceSavedFormatted,
+                      ),
+                    ],
+                  ),
+                  if (_videoController != null) ...[
+                    const SizedBox(height: 12),
+                    _buildVideoPlayer(cs),
+                  ],
+                  const SizedBox(height: 12),
+                  FilledButton.tonalIcon(
+                    onPressed: _saveVideo,
+                    icon: const Icon(Icons.save_rounded),
+                    label: const Text('保存到相册'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ],
+              ]),
             ),
-
-            // 质量选择
-            const SizedBox(height: 16),
-            _buildQualitySelector(cs),
-
-            // 高级设置开关
-            const SizedBox(height: 16),
-            _buildAdvancedSettingsToggle(cs),
-
-            // 高级设置面板
-            if (_showAdvancedSettings) ...[
-              const SizedBox(height: 16),
-              _buildAdvancedSettingsPanel(cs),
-            ],
-
-            // 压缩按钮
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _isCompressing ? null : _compressVideo,
-              icon: const Icon(Icons.compress_rounded),
-              label: const Text('开始压缩'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: cs.primary,
-              ),
-            ),
-          ],
-
-          // 压缩进度
-          if (_isCompressing) ...[
-            const SizedBox(height: 24),
-            _buildProgressCard(cs),
-          ],
-
-          // 压缩结果
-          if (_compressionResult != null) ...[
-            const SizedBox(height: 24),
-            _buildInfoCard(
-              context,
-              title: '压缩结果',
-              icon: Icons.check_circle_outline_rounded,
-              children: [
-                _buildInfoRow('原大小', _compressionResult!.originalSizeFormatted),
-                _buildInfoRow(
-                  '压缩后',
-                  _compressionResult!.compressedSizeFormatted,
-                ),
-                _buildInfoRow('节省空间', _compressionResult!.spaceSavedFormatted),
-              ],
-            ),
-
-            // Video player
-            if (_videoController != null) ...[
-              const SizedBox(height: 16),
-              _buildVideoPlayer(cs),
-            ],
-
-            // 保存按钮
-            const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: _saveVideo,
-              icon: const Icon(Icons.save_rounded),
-              label: const Text('保存到相册'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );

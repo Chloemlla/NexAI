@@ -10,6 +10,7 @@ import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:path/path.dart' as p;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/file_access_helper.dart';
+import '../widgets/tool_page_style.dart';
 
 enum AudioFormat { mp3, aac, flac, wav, ogg }
 
@@ -202,7 +203,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
             content: Row(
               children: [
                 FaIcon(
-                  _failedCount == 0 ? FontAwesomeIcons.circleCheck : FontAwesomeIcons.triangleExclamation,
+                  _failedCount == 0
+                      ? FontAwesomeIcons.circleCheck
+                      : FontAwesomeIcons.triangleExclamation,
                   size: 16,
                   color: Colors.white,
                 ),
@@ -329,9 +332,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
 
       if (savePath == null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('取消保存')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('取消保存')));
         }
         return;
       }
@@ -344,7 +347,11 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(FontAwesomeIcons.circleCheck, size: 16, color: Colors.white),
+                FaIcon(
+                  FontAwesomeIcons.circleCheck,
+                  size: 16,
+                  color: Colors.white,
+                ),
                 SizedBox(width: 8),
                 Text('已保存'),
               ],
@@ -378,92 +385,108 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final mq = MediaQuery.of(context);
+    final isNarrow = mq.size.width < 600;
+    final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('视频转音频'),
-        actions: [
-          if (_tasks.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.cleaning_services_rounded),
-              tooltip: '清除已完成',
-              onPressed: _clearCompleted,
-            ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Pick videos button
-          FilledButton.icon(
-            onPressed: _isProcessing ? null : _pickVideos,
-            icon: const Icon(Icons.video_library_rounded),
-            label: const Text('选择视频（可多选）'),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
+      backgroundColor: cs.surface,
+      body: CustomScrollView(
+        slivers: [
+          ToolPageHeroSliver(
+            title: '视频转音频',
+            subtitle: '把批量选择、格式设置、转换进度和保存操作收敛成统一流程，减少任务处理中断后的查找成本。',
+            icon: Icons.audiotrack_rounded,
+            chips: [
+              ToolHeroChipData(
+                icon: Icons.queue_music_rounded,
+                label: '输出 ${_selectedFormat.label}',
+              ),
+              ToolHeroChipData(
+                icon: _isProcessing
+                    ? Icons.sync_rounded
+                    : Icons.playlist_add_check_circle_rounded,
+                label: _tasks.isEmpty ? '暂无任务' : '${_tasks.length} 个任务',
+              ),
+              ToolHeroChipData(
+                icon: Icons.done_all_rounded,
+                label: '完成 $_completedCount / 失败 $_failedCount',
+              ),
+            ],
           ),
-
-          const SizedBox(height: 16),
-
-          // Format selector
-          _buildFormatSelector(cs),
-
-          // Overall progress
-          if (_isProcessing) ...[
-            const SizedBox(height: 16),
-            _buildOverallProgress(cs),
-          ],
-
-          // Action buttons
-          if (_tasks.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isProcessing ? null : _startBatchConversion,
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text(
-                      '开始转换 (${_tasks.where((t) => t.status != TaskStatus.success).length})',
-                    ),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: cs.primary,
-                    ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
+            sliver: SliverToBoxAdapter(
+              child: ToolQuickActionsBar(
+                actions: [
+                  ToolQuickActionData(
+                    icon: Icons.video_library_rounded,
+                    label: '选择视频',
+                    backgroundColor: cs.primaryContainer,
+                    iconColor: cs.onPrimaryContainer,
+                    onTap: _isProcessing ? null : _pickVideos,
                   ),
-                ),
-                if (_isProcessing) ...[
-                  const SizedBox(width: 12),
-                  FilledButton.tonalIcon(
-                    onPressed: _cancelAll,
-                    icon: const Icon(Icons.stop_rounded),
-                    label: const Text('取消'),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
+                  ToolQuickActionData(
+                    icon: _isProcessing
+                        ? Icons.stop_rounded
+                        : Icons.play_arrow_rounded,
+                    label: _isProcessing ? '取消转换' : '开始批量转换',
+                    backgroundColor: cs.secondaryContainer,
+                    iconColor: cs.onSecondaryContainer,
+                    onTap: _isProcessing
+                        ? _cancelAll
+                        : (_tasks.isEmpty ? null : _startBatchConversion),
+                  ),
+                  ToolQuickActionData(
+                    icon: Icons.cleaning_services_rounded,
+                    label: '清理已完成',
+                    backgroundColor: cs.tertiaryContainer,
+                    iconColor: cs.onTertiaryContainer,
+                    onTap: _tasks.isEmpty ? null : _clearCompleted,
                   ),
                 ],
-              ],
-            ),
-          ],
-
-          // Task list
-          if (_tasks.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text(
-              '任务列表 (${_tasks.length})',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
               ),
             ),
-            const SizedBox(height: 12),
-            ..._tasks.asMap().entries.map(
-              (entry) => _buildTaskCard(cs, entry.key, entry.value),
+          ),
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 40),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const ToolSectionTitle(
+                  icon: Icons.library_music_rounded,
+                  title: '输出格式',
+                ),
+                const SizedBox(height: 12),
+                _buildFormatSelector(cs),
+                if (_isProcessing) ...[
+                  const SizedBox(height: 20),
+                  const ToolSectionTitle(
+                    icon: Icons.equalizer_rounded,
+                    title: '批量进度',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildOverallProgress(cs),
+                ],
+                const SizedBox(height: 20),
+                ToolSectionTitle(
+                  icon: Icons.queue_play_next_rounded,
+                  title: '任务列表',
+                  trailing: '${_tasks.length} 项',
+                ),
+                const SizedBox(height: 12),
+                if (_tasks.isEmpty)
+                  const ToolEmptyStateCard(
+                    icon: Icons.video_library_outlined,
+                    title: '还没有待处理视频',
+                    description: '先选择一个或多个视频文件，再开始批量提取音频。',
+                  )
+                else
+                  ..._tasks.asMap().entries.map(
+                    (entry) => _buildTaskCard(cs, entry.key, entry.value),
+                  ),
+              ]),
             ),
-          ],
+          ),
         ],
       ),
     );

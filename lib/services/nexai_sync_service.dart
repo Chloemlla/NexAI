@@ -1,5 +1,7 @@
 /// NexAI Cloud Sync API Service
 /// Handles all communication with the NexAI backend sync endpoints
+library;
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'pinned_http_client.dart';
@@ -107,7 +109,8 @@ class NexaiSyncApi {
   }
 
   /// Check if status code indicates success (2xx range)
-  static bool _isSuccess(int statusCode) => statusCode >= 200 && statusCode < 300;
+  static bool _isSuccess(int statusCode) =>
+      statusCode >= 200 && statusCode < 300;
 
   /// Safely decode JSON body, returning null on parse errors
   static Map<String, dynamic>? _tryDecode(String body) {

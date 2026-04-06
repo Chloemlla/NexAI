@@ -8,10 +8,7 @@ import '../providers/settings_provider.dart';
 class StartupLoadingDialog extends StatefulWidget {
   final Stream<String> logStream;
 
-  const StartupLoadingDialog({
-    super.key,
-    required this.logStream,
-  });
+  const StartupLoadingDialog({super.key, required this.logStream});
 
   @override
   State<StartupLoadingDialog> createState() => _StartupLoadingDialogState();
@@ -78,10 +75,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                   height: 40,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [
-                        colorScheme.primary,
-                        colorScheme.secondary,
-                      ],
+                      colors: [colorScheme.primary, colorScheme.secondary],
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -126,9 +120,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: colorScheme.outlineVariant,
-                  ),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 padding: const EdgeInsets.all(16),
                 child: ListView.builder(
@@ -212,10 +204,7 @@ class _TypewriterTextState extends State<_TypewriterText>
     _characterCount = StepTween(
       begin: 0,
       end: widget.text.length,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Start animation after delay
     Future.delayed(widget.delay, () {
@@ -254,7 +243,7 @@ class _TypewriterTextState extends State<_TypewriterText>
                 size: 16,
                 color: _characterCount.value == widget.text.length
                     ? colorScheme.primary
-                    : colorScheme.outline.withOpacity(0.3),
+                    : colorScheme.outline.withValues(alpha: 0.3),
               ),
               const SizedBox(width: 8),
               Expanded(

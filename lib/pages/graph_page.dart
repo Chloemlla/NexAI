@@ -27,6 +27,7 @@ class _GraphPageState extends State<GraphPage>
   // Force-directed layout state
   late GraphData _graphData;
   bool _layoutDone = false;
+  String _layoutSignature = '';
 
   @override
   void initState() {
@@ -133,6 +134,16 @@ class _GraphPageState extends State<GraphPage>
     _layoutDone = true;
   }
 
+  String _computeLayoutSignature(GraphData graphData) {
+    final nodeIds = graphData.nodes.map((node) => node.id).toList()..sort();
+    final edges =
+        graphData.edges
+            .map((edge) => '${edge.sourceId}->${edge.targetId}')
+            .toList()
+          ..sort();
+    return '${nodeIds.join('|')}::${edges.join('|')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -141,6 +152,16 @@ class _GraphPageState extends State<GraphPage>
       tagFilter: _tagFilter,
       starredOnly: _starredOnly ? true : null,
     );
+    final layoutSignature = _computeLayoutSignature(_graphData);
+    if (layoutSignature != _layoutSignature) {
+      _layoutSignature = layoutSignature;
+      _layoutDone = false;
+      _transformController.value = Matrix4.identity();
+      if (_highlightedNodeId != null &&
+          !_graphData.nodes.any((node) => node.id == _highlightedNodeId)) {
+        _highlightedNodeId = null;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(

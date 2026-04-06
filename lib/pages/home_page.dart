@@ -184,6 +184,21 @@ class _HomePageState extends State<HomePage> with WindowListener {
     return _buildDesktopLayout(context);
   }
 
+  int get _desktopPageIndex {
+    switch (_currentPage) {
+      case 'notes':
+        return 1;
+      case 'tools':
+        return 2;
+      case 'settings':
+        return 3;
+      case 'about':
+        return 4;
+      default:
+        return 0;
+    }
+  }
+
   // ─── Android: Material 3 layout ───
   Widget _buildAndroidLayout(BuildContext context) {
     final chat = context.watch<ChatProvider>();
@@ -294,6 +309,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       final note = await context
                           .read<NotesProvider>()
                           .createNote();
+                      if (!context.mounted) return;
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => NoteDetailPage(noteId: note.id),
@@ -322,33 +338,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
             ),
       body: Stack(
         children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position:
-                      Tween<Offset>(
-                        begin: const Offset(0.05, 0),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutCubic,
-                        ),
-                      ),
-                  child: child,
-                ),
-              );
-            },
-            child: KeyedSubtree(
-              key: ValueKey(_androidNavIndex),
-              child: pages[_androidNavIndex],
-            ),
-          ),
+          IndexedStack(index: _androidNavIndex, children: pages),
           if (fullScreen)
             Positioned(
               top: MediaQuery.of(context).padding.top + 10,
@@ -594,6 +584,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
               FilledButton.icon(
                 onPressed: () async {
                   await chat.newConversation();
+                  if (!ctx.mounted) return;
                   Navigator.of(ctx).pop();
                 },
                 icon: const Icon(Icons.add_rounded, size: 20),
@@ -651,6 +642,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
           },
           onDismissed: (_) async {
             await chat.deleteConversation(idx);
+            if (!ctx.mounted) return;
             if (chat.conversations.isEmpty) Navigator.of(ctx).pop();
           },
           child: ListTile(
@@ -837,32 +829,18 @@ class _HomePageState extends State<HomePage> with WindowListener {
     final chat = context.watch<ChatProvider>();
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    const pages = <Widget>[
+      ChatPage(),
+      NotesPage(),
+      ToolsPage(),
+      SettingsPage(),
+      AboutPage(),
+    ];
     final filteredConversationEntries = chat.conversations
         .asMap()
         .entries
         .where((entry) => _matchesConversationSearch(entry.value))
         .toList();
-
-    // Determine which page body to show
-    Widget body;
-
-    switch (_currentPage) {
-      case 'notes':
-        body = const NotesPage();
-        break;
-      case 'tools':
-        body = const ToolsPage();
-        break;
-      case 'settings':
-        body = const SettingsPage();
-        break;
-      case 'about':
-        body = const AboutPage();
-        break;
-      default: // 'chat'
-        body = const ChatPage();
-        break;
-    }
 
     Widget titleWidget = Align(
       alignment: AlignmentDirectional.centerStart,
@@ -1329,7 +1307,12 @@ class _HomePageState extends State<HomePage> with WindowListener {
                   ),
                 ),
                 // Page body
-                Expanded(child: body),
+                Expanded(
+                  child: IndexedStack(
+                    index: _desktopPageIndex,
+                    children: pages,
+                  ),
+                ),
               ],
             ),
           ),

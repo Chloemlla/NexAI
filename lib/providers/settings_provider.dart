@@ -69,8 +69,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Getters - return current mode's settings
   String get baseUrl => _apiMode == 'OpenAI' ? _openaiBaseUrl : '';
-  String get apiKey =>
-      _apiMode == 'OpenAI' ? _openaiApiKey : _vertexApiKey;
+  String get apiKey => _apiMode == 'OpenAI' ? _openaiApiKey : _vertexApiKey;
   List<String> get models =>
       _apiMode == 'OpenAI' ? _openaiModels : _vertexModels;
   String get selectedModel => _selectedModel;
@@ -113,84 +112,90 @@ class SettingsProvider extends ChangeNotifier {
   // AI title generation setting
   bool _aiTitleGeneration = true;
   bool get aiTitleGeneration => _aiTitleGeneration;
+  bool _loaded = false;
+  bool get loaded => _loaded;
 
-  bool get isConfigured =>
-      _apiMode == 'OpenAI' ? _openaiApiKey.isNotEmpty : _vertexApiKey.isNotEmpty;
+  bool get isConfigured => _apiMode == 'OpenAI'
+      ? _openaiApiKey.isNotEmpty
+      : _vertexApiKey.isNotEmpty;
 
   Future<void> loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    try {
+      final prefs = await SharedPreferences.getInstance();
 
-    // ── Migrate legacy plaintext secrets to secure storage (one-time) ──────
-    await _migrateLegacySecrets(prefs);
+      // ── Migrate legacy plaintext secrets to secure storage (one-time) ──────
+      await _migrateLegacySecrets(prefs);
 
-    // ── Read sensitive fields from FlutterSecureStorage ────────────────────
-    _openaiApiKey = await _secure.read(key: _kSecApiKey) ?? '';
-    _webdavPassword = await _secure.read(key: _kSecWebdavPass) ?? '';
-    _upstashToken = await _secure.read(key: _kSecUpstashToken) ?? '';
-    _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
+      // ── Read sensitive fields from FlutterSecureStorage ────────────────────
+      _openaiApiKey = await _secure.read(key: _kSecApiKey) ?? '';
+      _webdavPassword = await _secure.read(key: _kSecWebdavPass) ?? '';
+      _upstashToken = await _secure.read(key: _kSecUpstashToken) ?? '';
+      _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
 
-    // ── Read non-sensitive fields from SharedPreferences ───────────────────
-    _openaiBaseUrl = prefs.getString('openaiBaseUrl') ?? _openaiBaseUrl;
-    _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
-    _vertexLocation = prefs.getString('vertexLocation') ?? 'global';
+      // ── Read non-sensitive fields from SharedPreferences ───────────────────
+      _openaiBaseUrl = prefs.getString('openaiBaseUrl') ?? _openaiBaseUrl;
+      _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
+      _vertexLocation = prefs.getString('vertexLocation') ?? 'global';
 
-    _selectedModel = prefs.getString('selectedModel') ?? _selectedModel;
-    _temperature = prefs.getDouble('temperature') ?? _temperature;
-    _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
-    _systemPrompt = prefs.getString('systemPrompt') ?? _systemPrompt;
-    _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
-    _aiTitleGeneration =
-        prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
+      _selectedModel = prefs.getString('selectedModel') ?? _selectedModel;
+      _temperature = prefs.getDouble('temperature') ?? _temperature;
+      _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
+      _systemPrompt = prefs.getString('systemPrompt') ?? _systemPrompt;
+      _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
+      _aiTitleGeneration =
+          prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
 
-    _fontSize = prefs.getDouble('fontSize') ?? 14.0;
-    _fontFamily = prefs.getString('fontFamily') ?? 'vivoSans';
-    _borderlessMode = prefs.getBool('borderlessMode') ?? false;
-    _fullScreenMode = prefs.getBool('fullScreenMode') ?? false;
-    _smartAutoScroll = prefs.getBool('smartAutoScroll') ?? true;
+      _fontSize = prefs.getDouble('fontSize') ?? 14.0;
+      _fontFamily = prefs.getString('fontFamily') ?? 'vivoSans';
+      _borderlessMode = prefs.getBool('borderlessMode') ?? false;
+      _fullScreenMode = prefs.getBool('fullScreenMode') ?? false;
+      _smartAutoScroll = prefs.getBool('smartAutoScroll') ?? true;
 
-    _syncEnabled = prefs.getBool('syncEnabled') ?? false;
-    _syncMethod = prefs.getString('syncMethod') ?? 'WebDAV';
-    _webdavServer = prefs.getString('webdavServer') ?? '';
-    _webdavUser = prefs.getString('webdavUser') ?? '';
-    _upstashUrl = prefs.getString('upstashUrl') ?? '';
+      _syncEnabled = prefs.getBool('syncEnabled') ?? false;
+      _syncMethod = prefs.getString('syncMethod') ?? 'WebDAV';
+      _webdavServer = prefs.getString('webdavServer') ?? '';
+      _webdavUser = prefs.getString('webdavUser') ?? '';
+      _upstashUrl = prefs.getString('upstashUrl') ?? '';
 
-    _apiMode = prefs.getString('apiMode') ?? 'OpenAI';
+      _apiMode = prefs.getString('apiMode') ?? 'OpenAI';
 
-    final accentVal = prefs.getInt('accentColorValue');
-    _accentColorValue = accentVal;
+      final accentVal = prefs.getInt('accentColorValue');
+      _accentColorValue = accentVal;
 
-    // Load OpenAI models
-    final openaiModelsStr = prefs.getString('openaiModels');
-    if (openaiModelsStr != null && openaiModelsStr.isNotEmpty) {
-      _openaiModels = openaiModelsStr
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
+      // Load OpenAI models
+      final openaiModelsStr = prefs.getString('openaiModels');
+      if (openaiModelsStr != null && openaiModelsStr.isNotEmpty) {
+        _openaiModels = openaiModelsStr
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+
+      // Load Vertex models
+      final vertexModelsStr = prefs.getString('vertexModels');
+      if (vertexModelsStr != null && vertexModelsStr.isNotEmpty) {
+        _vertexModels = vertexModelsStr
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      }
+
+      // Ensure selectedModel exists in the current mode's models list
+      if (models.isNotEmpty && !models.contains(_selectedModel)) {
+        _selectedModel = models.first;
+      }
+
+      final themeModeStr = prefs.getString('themeMode') ?? 'system';
+      _themeMode = ThemeMode.values.firstWhere(
+        (e) => e.name == themeModeStr,
+        orElse: () => ThemeMode.system,
+      );
+    } finally {
+      _loaded = true;
+      notifyListeners();
     }
-
-    // Load Vertex models
-    final vertexModelsStr = prefs.getString('vertexModels');
-    if (vertexModelsStr != null && vertexModelsStr.isNotEmpty) {
-      _vertexModels = vertexModelsStr
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-    }
-
-    // Ensure selectedModel exists in the current mode's models list
-    if (models.isNotEmpty && !models.contains(_selectedModel)) {
-      _selectedModel = models.first;
-    }
-
-    final themeModeStr = prefs.getString('themeMode') ?? 'system';
-    _themeMode = ThemeMode.values.firstWhere(
-      (e) => e.name == themeModeStr,
-      orElse: () => ThemeMode.system,
-    );
-
-    notifyListeners();
   }
 
   /// One-time migration: move legacy plaintext secrets from SharedPreferences

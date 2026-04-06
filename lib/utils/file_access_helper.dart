@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -47,9 +46,7 @@ class FileAccessHelper {
   /// 选择单个文件（自定义扩展名）
   ///
   /// [allowedExtensions] 允许的文件扩展名列表，如 ['json', 'txt']
-  static Future<String?> pickFile({
-    List<String>? allowedExtensions,
-  }) async {
+  static Future<String?> pickFile({List<String>? allowedExtensions}) async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: allowedExtensions != null ? FileType.custom : FileType.any,

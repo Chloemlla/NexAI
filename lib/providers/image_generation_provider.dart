@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 enum ImageGenerationMode {
   chat, // v1/chat/completions
@@ -21,6 +25,26 @@ class GeneratedImage {
     required this.timestamp,
     required this.mode,
   });
+
+  Map<String, dynamic> toJson() => {
+    'url': url,
+    'b64Json': b64Json,
+    'prompt': prompt,
+    'timestamp': timestamp.toIso8601String(),
+    'mode': mode.name,
+  };
+
+  factory GeneratedImage.fromJson(Map<String, dynamic> json) => GeneratedImage(
+    url: json['url'] as String? ?? '',
+    b64Json: json['b64Json'] as String?,
+    prompt: json['prompt'] as String? ?? '',
+    timestamp:
+        DateTime.tryParse(json['timestamp'] as String? ?? '') ?? DateTime.now(),
+    mode: ImageGenerationMode.values.firstWhere(
+      (value) => value.name == (json['mode'] as String? ?? 'chat'),
+      orElse: () => ImageGenerationMode.chat,
+    ),
+  );
 }
 
 class ImageGenerationProvider extends ChangeNotifier {
@@ -41,11 +65,50 @@ class ImageGenerationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  Future<File> _getFile() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return File('${dir.path}/nexai_generated_images.json');
+  }
+
+  Future<void> loadHistory() async {
+    try {
+      final file = await _getFile();
+      if (!await file.exists()) return;
+
+      final jsonStr = await file.readAsString();
+      if (jsonStr.isEmpty) return;
+
+      final decoded = jsonDecode(jsonStr) as List<dynamic>;
+      _images
+        ..clear()
+        ..addAll(
+          decoded.map((item) {
+            return GeneratedImage.fromJson(item as Map<String, dynamic>);
+          }),
+        );
+      notifyListeners();
+    } catch (e) {
+      debugPrint('NexAI: error loading image history: $e');
+    }
+  }
+
+  Future<void> _saveHistory() async {
+    try {
+      final file = await _getFile();
+      await file.writeAsString(
+        jsonEncode(_images.map((image) => image.toJson()).toList()),
+      );
+    } catch (e) {
+      debugPrint('NexAI: error saving image history: $e');
+    }
+  }
+
   void _addImage(GeneratedImage image) {
     _images.insert(0, image);
     if (_images.length > _maxImages) {
       _images.removeRange(_maxImages, _images.length);
     }
+    _saveHistory();
   }
 
   /// Chat-based image generation (v1/chat/completions)
@@ -329,6 +392,7 @@ class ImageGenerationProvider extends ChangeNotifier {
     if (index >= 0 && index < _images.length) {
       _images.removeAt(index);
       notifyListeners();
+      _saveHistory();
     }
   }
 

@@ -1,5 +1,7 @@
 /// NexAI Artifacts API Service
 /// Handles all communication with the NexAI backend artifacts endpoints
+library;
+
 import 'dart:convert';
 import '../models/artifact.dart';
 import 'pinned_http_client.dart';
@@ -112,12 +114,12 @@ class NexaiArtifactsApi {
       'title': title,
       'content_type': contentType,
       'content': encodedContent,
-      if (language != null) 'language': language,
+      'language': ?language,
       'visibility': visibility,
-      if (password != null) 'password': password,
-      if (description != null) 'description': description,
-      if (tags != null) 'tags': tags,
-      if (expiresInDays != null) 'expires_in_days': expiresInDays,
+      'password': ?password,
+      'description': ?description,
+      'tags': ?tags,
+      'expires_in_days': ?expiresInDays,
     };
 
     final response = await _Http.post(

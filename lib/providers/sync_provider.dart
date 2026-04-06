@@ -1,5 +1,7 @@
 /// NexAI Cloud Sync Provider
 /// Orchestrates syncing local data to/from the cloud backend
+library;
+
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -377,8 +379,9 @@ class SyncProvider extends ChangeNotifier {
           return json;
         })
         .toList();
-    if (changedPasswords.isNotEmpty)
+    if (changedPasswords.isNotEmpty) {
       result['savedPasswords'] = changedPasswords;
+    }
 
     // 短链接：按 createdAt 过滤
     final changedUrls = shortUrlProvider.history
@@ -485,39 +488,51 @@ class SyncProvider extends ChangeNotifier {
     if (s['baseUrl'] != null) await sp.setBaseUrl(s['baseUrl']);
     if (s['apiKey'] != null) await sp.setApiKey(s['apiKey']);
     if (s['models'] != null) await sp.setModels(s['models']);
-    if (s['selectedModel'] != null)
+    if (s['selectedModel'] != null) {
       await sp.setSelectedModel(s['selectedModel']);
-    if (s['temperature'] != null)
+    }
+    if (s['temperature'] != null) {
       await sp.setTemperature((s['temperature'] as num).toDouble());
+    }
     if (s['maxTokens'] != null) await sp.setMaxTokens(s['maxTokens'] as int);
     if (s['systemPrompt'] != null) await sp.setSystemPrompt(s['systemPrompt']);
-    if (s['fontSize'] != null)
+    if (s['fontSize'] != null) {
       await sp.setFontSize((s['fontSize'] as num).toDouble());
+    }
     if (s['fontFamily'] != null) await sp.setFontFamily(s['fontFamily']);
-    if (s['borderlessMode'] != null)
+    if (s['borderlessMode'] != null) {
       await sp.setBorderlessMode(s['borderlessMode']);
-    if (s['fullScreenMode'] != null)
+    }
+    if (s['fullScreenMode'] != null) {
       await sp.setFullScreenMode(s['fullScreenMode']);
-    if (s['smartAutoScroll'] != null)
+    }
+    if (s['smartAutoScroll'] != null) {
       await sp.setSmartAutoScroll(s['smartAutoScroll']);
+    }
     if (s['vertexApiKey'] != null) await sp.setVertexApiKey(s['vertexApiKey']);
     if (s['apiMode'] != null) await sp.setApiMode(s['apiMode']);
-    if (s['vertexProjectId'] != null)
+    if (s['vertexProjectId'] != null) {
       await sp.setVertexProjectId(s['vertexProjectId']);
-    if (s['vertexLocation'] != null)
+    }
+    if (s['vertexLocation'] != null) {
       await sp.setVertexLocation(s['vertexLocation']);
-    if (s['notesAutoSave'] != null)
+    }
+    if (s['notesAutoSave'] != null) {
       await sp.setNotesAutoSave(s['notesAutoSave']);
-    if (s['aiTitleGeneration'] != null)
+    }
+    if (s['aiTitleGeneration'] != null) {
       await sp.setAiTitleGeneration(s['aiTitleGeneration']);
-    if (s.containsKey('accentColorValue'))
+    }
+    if (s.containsKey('accentColorValue')) {
       await sp.setAccentColor(s['accentColorValue'] as int?);
+    }
     if (s['syncEnabled'] != null) await sp.setSyncEnabled(s['syncEnabled']);
     if (s['syncMethod'] != null) await sp.setSyncMethod(s['syncMethod']);
     if (s['webdavServer'] != null) await sp.setWebdavServer(s['webdavServer']);
     if (s['webdavUser'] != null) await sp.setWebdavUser(s['webdavUser']);
-    if (s['webdavPassword'] != null)
+    if (s['webdavPassword'] != null) {
       await sp.setWebdavPassword(s['webdavPassword']);
+    }
     if (s['upstashUrl'] != null) await sp.setUpstashUrl(s['upstashUrl']);
     if (s['upstashToken'] != null) await sp.setUpstashToken(s['upstashToken']);
   }

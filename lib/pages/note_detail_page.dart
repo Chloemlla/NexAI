@@ -768,6 +768,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         break;
       case 'delete':
         await context.read<NotesProvider>().deleteNote(widget.noteId);
+        if (!mounted) return;
         Navigator.of(context).pop();
         break;
     }
@@ -1360,6 +1361,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       trailing: FilledButton.tonal(
         onPressed: () async {
           await provider.addLinkToNote(widget.noteId, note.title);
+          if (!mounted) return;
           // Refresh the content controller
           final updatedNote = provider.notes
               .where((n) => n.id == widget.noteId)

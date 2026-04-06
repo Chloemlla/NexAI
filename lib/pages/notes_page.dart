@@ -694,6 +694,7 @@ class _NotesPageState extends State<NotesPage>
               if (newTag.isNotEmpty && newTag != oldTag) {
                 await context.read<NotesProvider>().renameTag(oldTag, newTag);
               }
+              if (!ctx.mounted) return;
               Navigator.of(ctx).pop();
             },
             child: const Text('重命名'),
@@ -718,7 +719,9 @@ class _NotesPageState extends State<NotesPage>
           FilledButton(
             onPressed: () async {
               await context.read<NotesProvider>().deleteTag(tag);
+              if (!ctx.mounted) return;
               Navigator.of(ctx).pop();
+              if (!mounted) return;
               setState(() => _selectedTag = null);
             },
             style: FilledButton.styleFrom(backgroundColor: cs.error),
@@ -811,6 +814,7 @@ class _NotesPageState extends State<NotesPage>
 
   void _createAndOpen(BuildContext context, NotesProvider provider) async {
     final note = await provider.createNote();
+    if (!context.mounted) return;
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)));
@@ -969,6 +973,7 @@ class _NoteCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: () async {
           await context.read<NotesProvider>().markViewed(note.id);
+          if (!context.mounted) return;
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)),
           );
@@ -1252,6 +1257,7 @@ class _NoteCard extends StatelessWidget {
           FilledButton(
             onPressed: () async {
               await context.read<NotesProvider>().deleteNote(note.id);
+              if (!ctx.mounted) return;
               Navigator.of(ctx).pop();
             },
             style: FilledButton.styleFrom(backgroundColor: cs.error),

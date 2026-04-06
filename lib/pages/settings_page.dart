@@ -26,6 +26,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  late final SettingsProvider _settingsProvider;
   late TextEditingController _baseUrlController;
   late TextEditingController _apiKeyController;
   late TextEditingController _modelsController;
@@ -44,6 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   bool _showApiKey = false;
   bool _isDirty = false;
+  bool _isSyncingControllers = false;
   String _version = '';
 
   String _formatSyncTime(DateTime dt) {
@@ -58,7 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    final settings = context.read<SettingsProvider>();
+    final settings = _settingsProvider = context.read<SettingsProvider>();
     _baseUrlController = TextEditingController(text: settings.baseUrl);
     _apiKeyController = TextEditingController(text: settings.apiKey);
     _modelsController = TextEditingController(text: settings.models.join(', '));
@@ -96,9 +98,51 @@ class _SettingsPageState extends State<SettingsPage> {
       _vertexProjectIdController,
       _vertexLocationController,
     ]) {
-      c.addListener(() => setState(() => _isDirty = true));
+      c.addListener(_markDirty);
     }
+    _settingsProvider.addListener(_handleSettingsChanged);
     _loadVersion();
+  }
+
+  void _markDirty() {
+    if (_isSyncingControllers || _isDirty || !mounted) return;
+    setState(() => _isDirty = true);
+  }
+
+  void _handleSettingsChanged() {
+    if (!mounted || !_settingsProvider.loaded || _isDirty) return;
+    _syncControllersFromSettings(_settingsProvider);
+  }
+
+  void _syncControllersFromSettings(
+    SettingsProvider settings, {
+    bool resetDirty = false,
+  }) {
+    _isSyncingControllers = true;
+    try {
+      _baseUrlController.text = settings.baseUrl;
+      _apiKeyController.text = settings.apiKey;
+      _modelsController.text = settings.models.join(', ');
+      _systemPromptController.text = settings.systemPrompt;
+      _webdavServerController.text = settings.webdavServer;
+      _webdavUserController.text = settings.webdavUser;
+      _webdavPasswordController.text = settings.webdavPassword;
+      _upstashUrlController.text = settings.upstashUrl;
+      _upstashTokenController.text = settings.upstashToken;
+      _vertexApiKeyController.text = settings.vertexApiKey;
+      _vertexProjectIdController.text = settings.vertexProjectId;
+      _vertexLocationController.text = settings.vertexLocation;
+    } finally {
+      _isSyncingControllers = false;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _currentApiMode = settings.apiMode;
+      if (resetDirty) {
+        _isDirty = false;
+      }
+    });
   }
 
   Future<void> _loadVersion() async {
@@ -109,6 +153,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
+    _settingsProvider.removeListener(_handleSettingsChanged);
     _baseUrlController.dispose();
     _apiKeyController.dispose();
     _modelsController.dispose();
@@ -135,6 +180,25 @@ class _SettingsPageState extends State<SettingsPage> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
+    if (!settings.loaded) {
+      return Scaffold(
+        backgroundColor: cs.surface,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                '正在加载设置...',
+                style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     Future<void> saveAll() async {
       try {
         await settings.setApiMode(_currentApiMode);
@@ -144,7 +208,7 @@ class _SettingsPageState extends State<SettingsPage> {
         await settings.setSystemPrompt(_systemPromptController.text);
         await settings.setVertexProjectId(_vertexProjectIdController.text);
         await settings.setVertexLocation(_vertexLocationController.text);
-        setState(() => _isDirty = false);
+        _syncControllersFromSettings(settings, resetDirty: true);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -929,8 +993,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                                   ],
                                                 ),
                                               );
-                                          if (confirmed != true || !ctx.mounted)
+                                          if (confirmed != true ||
+                                              !ctx.mounted) {
                                             return;
+                                          }
                                           final chatProv = ctx
                                               .read<ChatProvider>();
                                           final notesProv = ctx
@@ -1129,8 +1195,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                         ],
                                       ),
                                     );
-                                    if (confirmed != true || !ctx.mounted)
+                                    if (confirmed != true || !ctx.mounted) {
                                       return;
+                                    }
                                     final ok = await sync.clearCloudData(
                                       authProvider: auth,
                                     );
@@ -1817,8 +1884,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildPasskeyCard(BuildContext context, ColorScheme cs, TextTheme tt) {
     final auth = context.watch<AuthProvider>();
-    if (!auth.isLoggedIn || auth.currentUser == null)
+    if (!auth.isLoggedIn || auth.currentUser == null) {
       return const SizedBox.shrink();
+    }
 
     return _SettingsCard(
       cs: cs,

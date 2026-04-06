@@ -62,8 +62,9 @@ class AuthDebugDialog extends StatelessWidget {
     if (debugContext['backendResponse'] != null) {
       buffer.writeln('=== Backend Response ===');
       try {
-        final formatted = JsonEncoder.withIndent('  ')
-            .convert(debugContext['backendResponse']);
+        final formatted = JsonEncoder.withIndent(
+          '  ',
+        ).convert(debugContext['backendResponse']);
         buffer.writeln(formatted);
       } catch (e) {
         buffer.writeln(debugContext['backendResponse'].toString());
@@ -75,8 +76,9 @@ class AuthDebugDialog extends StatelessWidget {
     if (debugContext['rawOptions'] != null) {
       buffer.writeln('=== Raw Options from Backend ===');
       try {
-        final formatted = JsonEncoder.withIndent('  ')
-            .convert(debugContext['rawOptions']);
+        final formatted = JsonEncoder.withIndent(
+          '  ',
+        ).convert(debugContext['rawOptions']);
         buffer.writeln(formatted);
       } catch (e) {
         buffer.writeln(debugContext['rawOptions'].toString());
@@ -88,8 +90,9 @@ class AuthDebugDialog extends StatelessWidget {
     if (debugContext['sanitizedOptions'] != null) {
       buffer.writeln('=== Sanitized Options ===');
       try {
-        final formatted = JsonEncoder.withIndent('  ')
-            .convert(debugContext['sanitizedOptions']);
+        final formatted = JsonEncoder.withIndent(
+          '  ',
+        ).convert(debugContext['sanitizedOptions']);
         buffer.writeln(formatted);
       } catch (e) {
         buffer.writeln(debugContext['sanitizedOptions'].toString());
@@ -170,7 +173,9 @@ class AuthDebugDialog extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        debugContext['errorDetails'] ?? debugContext['error'] ?? '',
+                        debugContext['errorDetails'] ??
+                            debugContext['error'] ??
+                            '',
                         style: TextStyle(
                           color: theme.colorScheme.onErrorContainer,
                         ),
@@ -188,15 +193,12 @@ class AuthDebugDialog extends StatelessWidget {
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: theme.colorScheme.outline.withOpacity(0.3),
+                    color: theme.colorScheme.outline.withValues(alpha: 0.3),
                   ),
                 ),
                 child: SelectableText(
                   formattedContext,
-                  style: const TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
                 ),
               ),
             ],
@@ -208,9 +210,9 @@ class AuthDebugDialog extends StatelessWidget {
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: formattedContext));
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('已复制到剪贴板')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
             }
           },
           icon: const Icon(Icons.copy),
@@ -227,8 +229,6 @@ class AuthDebugDialog extends StatelessWidget {
 
 /// Legacy alias for backward compatibility
 class PasskeyDebugDialog extends AuthDebugDialog {
-  const PasskeyDebugDialog({
-    super.key,
-    required super.debugContext,
-  }) : super(title: 'Passkey 调试信息');
+  const PasskeyDebugDialog({super.key, required super.debugContext})
+    : super(title: 'Passkey 调试信息');
 }

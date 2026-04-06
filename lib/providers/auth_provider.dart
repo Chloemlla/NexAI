@@ -1,5 +1,7 @@
 /// NexAI Auth State Provider
 /// Manages authentication state, token persistence, and auto-refresh
+library;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -232,11 +234,12 @@ class AuthProvider extends ChangeNotifier {
       final auth = await account.authentication;
       debugContext['hasAccessToken'] = auth.accessToken != null;
       debugContext['hasIdToken'] = auth.idToken != null;
-      debugContext['hasServerAuthCode'] = auth.serverAuthCode != null;
+      debugContext['hasServerAuthCode'] = account.serverAuthCode != null;
 
       final idToken = auth.idToken;
       if (idToken == null) {
-        _error = '无法获取 Google ID Token\n'
+        _error =
+            '无法获取 Google ID Token\n'
             '这通常是因为 Google Client ID 配置不正确\n'
             '请确保使用的是 Web Application 类型的 Client ID';
         debugContext['error'] = _error;
@@ -394,7 +397,8 @@ class AuthProvider extends ChangeNotifier {
 
       final idToken = auth.idToken;
       if (idToken == null) {
-        _error = '无法获取 Google ID Token\n'
+        _error =
+            '无法获取 Google ID Token\n'
             '这通常是因为 Google Client ID 配置不正确\n'
             '请确保使用的是 Web Application 类型的 Client ID';
         debugContext['error'] = _error;
@@ -559,7 +563,9 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[NexAI Passkey] Authentication options: $optionsMap');
 
       // 2. Convert JSON to AuthenticateRequestType with comprehensive null safety
-      final sanitizedOptions = _sanitizePasskeyAuthenticationOptions(optionsMap);
+      final sanitizedOptions = _sanitizePasskeyAuthenticationOptions(
+        optionsMap,
+      );
 
       debugContext['sanitizedOptions'] = sanitizedOptions;
       debugPrint('[NexAI Passkey] Sanitized auth options: $sanitizedOptions');
@@ -698,7 +704,8 @@ class AuthProvider extends ChangeNotifier {
             credMap['type'] = 'public-key';
           }
           // Add empty transports array if missing - passkeys package may expect this
-          if (!credMap.containsKey('transports') || credMap['transports'] == null) {
+          if (!credMap.containsKey('transports') ||
+              credMap['transports'] == null) {
             credMap['transports'] = <String>[];
           }
           return credMap;
@@ -733,7 +740,7 @@ class AuthProvider extends ChangeNotifier {
     if (sanitized['pubKeyCredParams'] == null) {
       // Provide default algorithms if missing
       sanitized['pubKeyCredParams'] = [
-        {'type': 'public-key', 'alg': -7},  // ES256
+        {'type': 'public-key', 'alg': -7}, // ES256
         {'type': 'public-key', 'alg': -257}, // RS256
       ];
     }
@@ -752,7 +759,9 @@ class AuthProvider extends ChangeNotifier {
     if (sanitized['extensions'] == null) {
       sanitized['extensions'] = {};
     } else if (sanitized['extensions'] is Map) {
-      final ext = Map<String, dynamic>.from(sanitized['extensions'] as Map<String, dynamic>);
+      final ext = Map<String, dynamic>.from(
+        sanitized['extensions'] as Map<String, dynamic>,
+      );
       // Remove credProps as it may cause issues with some authenticators
       ext.remove('credProps');
       sanitized['extensions'] = ext;
@@ -797,7 +806,8 @@ class AuthProvider extends ChangeNotifier {
             credMap['type'] = 'public-key';
           }
           // Add empty transports array if missing
-          if (!credMap.containsKey('transports') || credMap['transports'] == null) {
+          if (!credMap.containsKey('transports') ||
+              credMap['transports'] == null) {
             credMap['transports'] = <String>[];
           }
           return credMap;

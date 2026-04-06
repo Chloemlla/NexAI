@@ -120,7 +120,7 @@ Future<void> clearCertPin() => _clearPin();
 
 class _ToFuClient extends http.BaseClient {
   final IOClient _inner = IOClient(
-    HttpClient()..badCertificateCallback = (_, __, ___) => false,
+    HttpClient()..badCertificateCallback = (_, _, _) => false,
   );
   bool _probeStarted = false;
 

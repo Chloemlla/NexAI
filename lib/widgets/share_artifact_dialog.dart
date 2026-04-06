@@ -1,5 +1,7 @@
 /// Share Artifact Dialog Widget
 /// Allows users to share content as artifacts
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -71,7 +73,7 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _visibility,
+                initialValue: _visibility,
                 decoration: const InputDecoration(
                   labelText: '可见性',
                   border: OutlineInputBorder(),
@@ -125,10 +127,7 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
                   ),
                   child: SelectableText(
                     _shareUrl!,
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.blue, fontSize: 12),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -137,9 +136,9 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
                   label: const Text('复制链接'),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: _shareUrl!));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已复制到剪贴板')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
                   },
                 ),
               ],
@@ -169,16 +168,16 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
 
   Future<void> _createArtifact() async {
     if (_titleController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入标题')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入标题')));
       return;
     }
 
     if (_visibility == 'password' && _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入密码')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入密码')));
       return;
     }
 
@@ -225,9 +224,9 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
         _loading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建失败: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('创建失败: $e')));
       }
     }
   }

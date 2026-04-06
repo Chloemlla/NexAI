@@ -1,5 +1,7 @@
 /// NexAI Artifacts State Provider
 /// Manages artifacts sharing state and operations
+library;
+
 import 'package:flutter/foundation.dart';
 import '../services/nexai_artifacts_service.dart';
 import '../models/artifact.dart';
@@ -94,10 +96,7 @@ class ArtifactsProvider extends ChangeNotifier {
   }
 
   /// Get artifact by short ID
-  Future<Artifact?> getArtifact(
-    String shortId, {
-    String? password,
-  }) async {
+  Future<Artifact?> getArtifact(String shortId, {String? password}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -182,10 +181,7 @@ class ArtifactsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await NexaiArtifactsApi.deleteArtifact(
-        shortId,
-        accessToken: accessToken,
-      );
+      await NexaiArtifactsApi.deleteArtifact(shortId, accessToken: accessToken);
 
       // Remove from local list
       _artifacts.removeWhere((a) => a.shortId == shortId);

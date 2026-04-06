@@ -1,5 +1,7 @@
 /// NexAI Auth API Service
 /// Handles all communication with the NexAI backend auth endpoints
+library;
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'pinned_http_client.dart';
@@ -68,33 +70,6 @@ class _NexaiHttp {
     );
     return (await _get()).put(url, headers: signed, body: body);
   }
-
-  static Future<http.Response> patch(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    final bodyStr = body is String ? body : (body?.toString() ?? '');
-    final signed = await signRequest(
-      method: 'PATCH',
-      path: url.path,
-      headers: _base(headers),
-      body: bodyStr,
-    );
-    return (await _get()).patch(url, headers: signed, body: body);
-  }
-
-  static Future<http.Response> delete(
-    Uri url, {
-    Map<String, String>? headers,
-  }) async {
-    final signed = await signRequest(
-      method: 'DELETE',
-      path: url.path,
-      headers: _base(headers),
-    );
-    return (await _get()).delete(url, headers: signed);
-  }
 }
 
 const String _nexaiBaseUrl = 'https://api.951100.xyz/api/nexai';
@@ -133,7 +108,7 @@ class NexaiAuthApi {
         'username': username,
         'email': email,
         'password': password,
-        if (displayName != null) 'displayName': displayName,
+        'displayName': ?displayName,
       }),
     );
     return AuthResponse.fromResponse(res);
@@ -225,9 +200,9 @@ class NexaiAuthApi {
         'Authorization': 'Bearer $accessToken',
       },
       body: jsonEncode({
-        if (displayName != null) 'displayName': displayName,
-        if (username != null) 'username': username,
-        if (avatarUrl != null) 'avatarUrl': avatarUrl,
+        'displayName': ?displayName,
+        'username': ?username,
+        'avatarUrl': ?avatarUrl,
       }),
     );
     return AuthResponse.fromResponse(res);
@@ -297,7 +272,9 @@ class NexaiAuthApi {
       final json = _decodeBody(response.body);
       if (json != null) {
         final data = json['data'] ?? json;
-        return OAuthConfigResponse.fromJson(data is Map<String, dynamic> ? data : {});
+        return OAuthConfigResponse.fromJson(
+          data is Map<String, dynamic> ? data : {},
+        );
       }
     }
 
@@ -493,22 +470,27 @@ class AuthResponse {
     if (body == null) {
       return AuthResponse(
         success: res.statusCode >= 200 && res.statusCode < 300,
-        error: res.statusCode >= 400 ? 'Server returned non-JSON response' : null,
+        error: res.statusCode >= 400
+            ? 'Server returned non-JSON response'
+            : null,
         statusCode: res.statusCode,
       );
     }
 
     // Try multiple locations for user/token data (data.user, user, data)
     final dataField = body['data'];
-    final userData = dataField is Map<String, dynamic> && dataField['user'] != null
+    final userData =
+        dataField is Map<String, dynamic> && dataField['user'] != null
         ? dataField['user']
         : body['user'];
 
-    final accessToken = dataField is Map<String, dynamic> && dataField['accessToken'] != null
+    final accessToken =
+        dataField is Map<String, dynamic> && dataField['accessToken'] != null
         ? dataField['accessToken']
         : body['accessToken'];
 
-    final refreshToken = dataField is Map<String, dynamic> && dataField['refreshToken'] != null
+    final refreshToken =
+        dataField is Map<String, dynamic> && dataField['refreshToken'] != null
         ? dataField['refreshToken']
         : body['refreshToken'];
 
@@ -521,7 +503,11 @@ class AuthResponse {
           : null,
       accessToken: accessToken as String?,
       refreshToken: refreshToken as String?,
-      isNewUser: (dataField is Map<String, dynamic> ? dataField['isNewUser'] : body['isNewUser']) as bool?,
+      isNewUser:
+          (dataField is Map<String, dynamic>
+                  ? dataField['isNewUser']
+                  : body['isNewUser'])
+              as bool?,
       statusCode: res.statusCode,
     );
   }

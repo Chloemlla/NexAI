@@ -233,7 +233,7 @@ class _MessageFooter extends StatelessWidget {
     );
   }
 
-  void _showShareMenu(BuildContext context, ColorScheme cs) {
+  Future<void> _showShareMenu(BuildContext context, ColorScheme cs) async {
     if (isAndroid) {
       showModalBottomSheet(
         context: context,
@@ -284,7 +284,7 @@ class _MessageFooter extends StatelessWidget {
         ),
         Offset.zero & overlay.size,
       );
-      showMenu<String>(
+      final selectedValue = await showMenu<String>(
         context: context,
         position: position,
         items: [
@@ -293,23 +293,22 @@ class _MessageFooter extends StatelessWidget {
           const PopupMenuItem(value: 'sharegpt', child: Text('分享到 ShareGPT')),
           const PopupMenuItem(value: 'artifact', child: Text('生成独立分享页面')),
         ],
-      ).then((selectedValue) {
-        if (selectedValue == null) return;
-        switch (selectedValue) {
-          case 'markdown':
-            _exportMarkdown(context);
-            break;
-          case 'image':
-            _exportImage(context);
-            break;
-          case 'sharegpt':
-            _shareToShareGPT(context);
-            break;
-          case 'artifact':
-            _generateArtifact(context);
-            break;
-        }
-      });
+      );
+      if (!context.mounted || selectedValue == null) return;
+      switch (selectedValue) {
+        case 'markdown':
+          _exportMarkdown(context);
+          break;
+        case 'image':
+          _exportImage(context);
+          break;
+        case 'sharegpt':
+          _shareToShareGPT(context);
+          break;
+        case 'artifact':
+          _generateArtifact(context);
+          break;
+      }
     }
   }
 
@@ -686,7 +685,9 @@ class _MessageFooter extends StatelessWidget {
                     title: title,
                     content: message.content,
                   );
+                  if (!ctx.mounted) return;
                   Navigator.of(ctx).pop();
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Row(
@@ -765,8 +766,13 @@ class _MessageFooter extends StatelessWidget {
                           style: const TextStyle(fontSize: 14),
                         ),
                         onTap: () async {
-                          await notesProvider.appendToNote(note.id, message.content);
+                          await notesProvider.appendToNote(
+                            note.id,
+                            message.content,
+                          );
+                          if (!ctx.mounted) return;
                           Navigator.of(ctx).pop();
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Row(

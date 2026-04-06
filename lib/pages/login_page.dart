@@ -1,5 +1,7 @@
 /// NexAI Login / Register Page
 /// Material Design 3 styled authentication page
+library;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -476,9 +478,9 @@ class _LoginPageState extends State<LoginPage>
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(auth.error ?? 'Google 登录失败')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Google 登录失败')));
         }
       }
     }
@@ -504,14 +506,13 @@ class _LoginPageState extends State<LoginPage>
         if (auth.lastPasskeyDebugContext != null) {
           showDialog(
             context: context,
-            builder: (context) => PasskeyDebugDialog(
-              debugContext: auth.lastPasskeyDebugContext!,
-            ),
+            builder: (context) =>
+                PasskeyDebugDialog(debugContext: auth.lastPasskeyDebugContext!),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(auth.error ?? 'Passkey 登录失败')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Passkey 登录失败')));
         }
       }
     }

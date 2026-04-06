@@ -7,6 +7,7 @@ import 'password_generator_page.dart';
 import 'short_url_page.dart';
 import 'translation_page.dart';
 import 'artifacts_page.dart';
+import 'image_generation_page.dart';
 
 class ToolsPage extends StatelessWidget {
   const ToolsPage({super.key});
@@ -313,6 +314,21 @@ class ToolsPage extends StatelessWidget {
                   ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const TranslationPage()),
+                  ),
+                ),
+                _ToolCard(
+                  icon: Icons.brush_rounded,
+                  title: 'AI 绘图',
+                  description: '仅支持 happyapi.org 端点',
+                  gradient: LinearGradient(
+                    colors: [cs.tertiaryContainer, cs.secondaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ImageGenerationPage(),
+                    ),
                   ),
                 ),
               ]),

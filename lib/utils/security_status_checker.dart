@@ -4,7 +4,6 @@
 library;
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../services/nexai_security_service.dart';
 
@@ -50,7 +49,9 @@ class SecurityStatusChecker {
     SecurityStatusResponse status,
     BuildContext context,
   ) {
-    debugPrint('SecurityStatusChecker: Status=${status.status}, Risk=${status.riskLevel}');
+    debugPrint(
+      'SecurityStatusChecker: Status=${status.status}, Risk=${status.riskLevel}',
+    );
 
     switch (status.status) {
       case 'blocked':
@@ -74,10 +75,7 @@ class SecurityStatusChecker {
     }
   }
 
-  void _handleRestrictions(
-    List<String> restrictions,
-    BuildContext context,
-  ) {
+  void _handleRestrictions(List<String> restrictions, BuildContext context) {
     if (restrictions.isEmpty) return;
 
     debugPrint('SecurityStatusChecker: Restrictions applied: $restrictions');

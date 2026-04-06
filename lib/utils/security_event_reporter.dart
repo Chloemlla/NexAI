@@ -26,15 +26,17 @@ class SecurityEventReporter {
           details: {
             'signature_valid': signatureValid,
             'hash_valid': hashValid,
-            if (expectedHash != null) 'expected_hash': expectedHash,
-            if (actualHash != null) 'actual_hash': actualHash,
+            'expected_hash': ?expectedHash,
+            'actual_hash': ?actualHash,
           },
           timestamp: DateTime.now().toIso8601String(),
         ),
       );
       debugPrint('SecurityEventReporter: Integrity failure reported');
     } catch (e) {
-      debugPrint('SecurityEventReporter: Failed to report integrity failure: $e');
+      debugPrint(
+        'SecurityEventReporter: Failed to report integrity failure: $e',
+      );
     }
   }
 
@@ -44,9 +46,7 @@ class SecurityEventReporter {
       await _service.reportSecurityEvent(
         SecurityEventRequest(
           eventType: 'root_detected',
-          details: {
-            'detection_method': 'su_binary',
-          },
+          details: {'detection_method': 'su_binary'},
           timestamp: DateTime.now().toIso8601String(),
         ),
       );
@@ -67,7 +67,9 @@ class SecurityEventReporter {
       );
       debugPrint('SecurityEventReporter: Debugger detection reported');
     } catch (e) {
-      debugPrint('SecurityEventReporter: Failed to report debugger detection: $e');
+      debugPrint(
+        'SecurityEventReporter: Failed to report debugger detection: $e',
+      );
     }
   }
 
@@ -82,7 +84,9 @@ class SecurityEventReporter {
       );
       debugPrint('SecurityEventReporter: Emulator detection reported');
     } catch (e) {
-      debugPrint('SecurityEventReporter: Failed to report emulator detection: $e');
+      debugPrint(
+        'SecurityEventReporter: Failed to report emulator detection: $e',
+      );
     }
   }
 
@@ -112,7 +116,9 @@ class SecurityEventReporter {
       );
       debugPrint('SecurityEventReporter: Xposed detection reported');
     } catch (e) {
-      debugPrint('SecurityEventReporter: Failed to report Xposed detection: $e');
+      debugPrint(
+        'SecurityEventReporter: Failed to report Xposed detection: $e',
+      );
     }
   }
 

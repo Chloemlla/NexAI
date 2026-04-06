@@ -115,7 +115,7 @@ class ChatProvider extends ChangeNotifier {
       0,
       Conversation(
         id: _newId(),
-        title: 'New Chat',
+        title: '新对话',
         messages: [],
         createdAt: DateTime.now(),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../main.dart' show isAndroid;
@@ -24,6 +25,8 @@ class _ChatPageState extends State<ChatPage> {
   bool _hasText = false;
   bool _isAtBottom = true;
   bool _forceScroll = false;
+  String? _activeConversationId;
+  int _observedMessageCount = 0;
 
   // Image generation controllers
   final _imagePromptController = TextEditingController();
@@ -68,26 +71,71 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _syncVisibleConversation(ChatProvider chat) {
+    final conversationId = chat.currentConversation?.id;
+    final messageCount = chat.messages.length;
+    final conversationChanged = conversationId != _activeConversationId;
+    final messageCountChanged = messageCount != _observedMessageCount;
+
+    _activeConversationId = conversationId;
+    _observedMessageCount = messageCount;
+
+    if (conversationChanged) {
+      _isAtBottom = true;
+      if (messageCount > 0) {
+        _scrollToBottom(animate: false, ignoreScrollPosition: true);
+      }
+      return;
+    }
+
+    if (messageCountChanged || chat.isLoading || _forceScroll) {
+      _scrollToBottom(animate: _forceScroll);
+    }
+  }
+
+  void _scrollToBottom({
+    bool animate = true,
+    bool ignoreScrollPosition = false,
+  }) {
     final settings = context.read<SettingsProvider>();
-    if (!settings.smartAutoScroll && !_forceScroll) return;
+    if (!settings.smartAutoScroll && !_forceScroll && !ignoreScrollPosition) {
+      return;
+    }
 
     // If not at bottom and not forced, don't scroll
-    if (!_isAtBottom && !_forceScroll) return;
+    if (!_isAtBottom && !_forceScroll && !ignoreScrollPosition) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_scrollController.hasClients) {
         try {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-          );
+          final target = _scrollController.position.maxScrollExtent;
+          final distance = (target - _scrollController.position.pixels).abs();
+
+          if (distance < 1) {
+            _forceScroll = false;
+            return;
+          }
+
+          if (animate && distance > 32) {
+            _scrollController.animateTo(
+              target,
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+            );
+          } else {
+            _scrollController.jumpTo(target);
+          }
+
           _forceScroll = false;
         } catch (_) {}
       }
     });
+  }
+
+  void _jumpToLatestMessage() {
+    _forceScroll = true;
+    _scrollToBottom(ignoreScrollPosition: true);
   }
 
   Future<void> _send() async {
@@ -97,7 +145,9 @@ class _ChatPageState extends State<ChatPage> {
     final settings = context.read<SettingsProvider>();
     if (!settings.isConfigured) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
         SnackBar(
           content: const Row(
             children: [
@@ -105,6 +155,10 @@ class _ChatPageState extends State<ChatPage> {
               SizedBox(width: 10),
               Expanded(child: Text('请在设置中配置您的 API 密钥。')),
             ],
+          ),
+          action: SnackBarAction(
+            label: '去设置',
+            onPressed: NavigationHelper.goToSettings,
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -888,7 +942,7 @@ class _ChatPageState extends State<ChatPage> {
     final isWide = screenWidth > 600;
     final horizontalPad = isWide ? screenWidth * 0.1 : 14.0;
 
-    if (messages.isNotEmpty) _scrollToBottom();
+    _syncVisibleConversation(chat);
 
     return Column(
       children: [
@@ -898,42 +952,55 @@ class _ChatPageState extends State<ChatPage> {
 
         // ── Message list ──
         Expanded(
-          child: messages.isEmpty
-              ? const WelcomeView()
-              : GestureDetector(
-                  onTap: () => _focusNode.unfocus(),
-                  child: Scrollbar(
-                    controller: _scrollController,
-                    thumbVisibility: false,
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      // Keyboard pushes content up via resizeToAvoidBottomInset
-                      keyboardDismissBehavior:
-                          ScrollViewKeyboardDismissBehavior.onDrag,
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPad,
-                        10,
-                        horizontalPad,
-                        10,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: messages.isEmpty
+                    ? const WelcomeView()
+                    : GestureDetector(
+                        onTap: () => _focusNode.unfocus(),
+                        child: Scrollbar(
+                          controller: _scrollController,
+                          thumbVisibility: false,
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            // Keyboard pushes content up via resizeToAvoidBottomInset
+                            keyboardDismissBehavior:
+                                ScrollViewKeyboardDismissBehavior.onDrag,
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPad,
+                              10,
+                              horizontalPad,
+                              10,
+                            ),
+                            itemCount:
+                                messages.length + (chat.isLoading ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == messages.length && chat.isLoading) {
+                                return _buildThinkingIndicator(cs);
+                              }
+                              return RepaintBoundary(
+                                key: ValueKey(
+                                  'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
+                                ),
+                                child: MessageBubble(
+                                  message: messages[index],
+                                  messageIndex: index,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                      itemCount: messages.length + (chat.isLoading ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == messages.length && chat.isLoading) {
-                          return _buildThinkingIndicator(cs);
-                        }
-                        return RepaintBoundary(
-                          key: ValueKey(
-                            'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
-                          ),
-                          child: MessageBubble(
-                            message: messages[index],
-                            messageIndex: index,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+              ),
+              if (messages.isNotEmpty && !_isAtBottom)
+                Positioned(
+                  right: isWide ? horizontalPad : 16,
+                  bottom: 16,
+                  child: _buildScrollToBottomButton(cs),
                 ),
+            ],
+          ),
         ),
 
         // ── Preview bubble ──
@@ -1095,6 +1162,52 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
+  Widget _buildScrollToBottomButton(ColorScheme cs) {
+    return FloatingActionButton.small(
+      heroTag: 'chat_scroll_to_bottom',
+      onPressed: _jumpToLatestMessage,
+      backgroundColor: cs.surface,
+      foregroundColor: cs.primary,
+      elevation: 2,
+      tooltip: '跳到最新消息',
+      child: const Icon(Icons.keyboard_arrow_down_rounded),
+    );
+  }
+
+  Widget _buildDesktopStatusPill(
+    ColorScheme cs, {
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    required Color foregroundColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foregroundColor),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: foregroundColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickSettingsBar(ColorScheme cs, SettingsProvider settings) {
     if (!settings.isConfigured) {
       return Container(
@@ -1214,6 +1327,17 @@ class _ChatPageState extends State<ChatPage> {
               ],
             ),
           ),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: NavigationHelper.goToSettings,
+            tooltip: '聊天设置',
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              Icons.tune_rounded,
+              size: 18,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );
@@ -1317,60 +1441,75 @@ class _ChatPageState extends State<ChatPage> {
   // ─── Desktop: Material Design ───
   Widget _buildDesktop(BuildContext context) {
     final chat = context.watch<ChatProvider>();
+    final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
     final messages = chat.messages;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
-    if (messages.isNotEmpty) _scrollToBottom();
+    _syncVisibleConversation(chat);
 
     return Column(
       children: [
         Expanded(
-          child: messages.isEmpty
-              ? const WelcomeView()
-              : ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  addAutomaticKeepAlives: true,
-                  itemCount: messages.length + (chat.isLoading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == messages.length && chat.isLoading) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Row(
-                          children: [
-                            const SizedBox(width: 48),
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: cs.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '思考中...',
-                              style: TextStyle(color: cs.onSurfaceVariant),
-                            ),
-                          ],
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: messages.isEmpty
+                    ? const WelcomeView()
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
                         ),
-                      );
-                    }
-                    return RepaintBoundary(
-                      key: ValueKey(
-                        'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
+                        addAutomaticKeepAlives: true,
+                        itemCount: messages.length + (chat.isLoading ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == messages.length && chat.isLoading) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Row(
+                                children: [
+                                  const SizedBox(width: 48),
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: cs.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '思考中...',
+                                    style: TextStyle(
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return RepaintBoundary(
+                            key: ValueKey(
+                              'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
+                            ),
+                            child: MessageBubble(
+                              message: messages[index],
+                              messageIndex: index,
+                            ),
+                          );
+                        },
                       ),
-                      child: MessageBubble(
-                        message: messages[index],
-                        messageIndex: index,
-                      ),
-                    );
-                  },
+              ),
+              if (messages.isNotEmpty && !_isAtBottom)
+                Positioned(
+                  right: 24,
+                  bottom: 16,
+                  child: _buildScrollToBottomButton(cs),
                 ),
+            ],
+          ),
         ),
         Container(
           decoration: BoxDecoration(
@@ -1380,60 +1519,153 @@ class _ChatPageState extends State<ChatPage> {
             ),
           ),
           padding: EdgeInsets.fromLTRB(24, 12, 24, 12 + bottomPadding),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  decoration: InputDecoration(
-                    hintText: '输入您的消息...',
-                    filled: true,
-                    fillColor: cs.surfaceContainerHighest.withAlpha(200),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: cs.outlineVariant.withAlpha(80),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: cs.primary.withAlpha(100),
-                        width: 1.5,
-                      ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          child: _buildDesktopStatusPill(
+                            cs,
+                            icon: Icons.smart_toy_outlined,
+                            label: settings.selectedModel,
+                            backgroundColor: cs.primaryContainer.withAlpha(140),
+                            foregroundColor: cs.primary,
+                          ),
+                        ),
+                        _buildDesktopStatusPill(
+                          cs,
+                          icon: Icons.hub_outlined,
+                          label: settings.apiMode,
+                          backgroundColor: cs.secondaryContainer.withAlpha(160),
+                          foregroundColor: cs.secondary,
+                        ),
+                        _buildDesktopStatusPill(
+                          cs,
+                          icon: Icons.thermostat_rounded,
+                          label: settings.temperature.toStringAsFixed(1),
+                          backgroundColor: cs.tertiaryContainer.withAlpha(160),
+                          foregroundColor: cs.tertiary,
+                        ),
+                      ],
                     ),
                   ),
-                  maxLines: 6,
-                  minLines: 1,
-                  onSubmitted: (_) => _send(),
-                  style: const TextStyle(fontSize: 14),
-                ),
+                  TextButton.icon(
+                    onPressed: NavigationHelper.goToSettings,
+                    icon: const Icon(Icons.tune_rounded, size: 16),
+                    label: const Text('聊天设置'),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: FilledButton(
-                  onPressed: chat.isLoading ? null : _send,
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 10),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.image_outlined,
+                        color: cs.primary,
+                        size: 22,
+                      ),
+                      onPressed: () => _showImageGenerationDialog(context),
+                      tooltip: '生成图片',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                     ),
                   ),
-                  child: const Icon(Icons.send_rounded, size: 18),
+                  Expanded(
+                    child: CallbackShortcuts(
+                      bindings: {
+                        const SingleActivator(
+                          LogicalKeyboardKey.enter,
+                          control: true,
+                        ): _send,
+                        const SingleActivator(
+                          LogicalKeyboardKey.enter,
+                          meta: true,
+                        ): _send,
+                      },
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        decoration: InputDecoration(
+                          hintText: '输入您的消息...',
+                          filled: true,
+                          fillColor: cs.surfaceContainerHighest.withAlpha(200),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: cs.outlineVariant.withAlpha(80),
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(
+                              color: cs.primary.withAlpha(100),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                        maxLines: 8,
+                        minLines: 1,
+                        textInputAction: TextInputAction.newline,
+                        keyboardType: TextInputType.multiline,
+                        style: const TextStyle(fontSize: 14, height: 1.45),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  FilledButton.icon(
+                    onPressed: chat.isLoading ? null : _send,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    icon: chat.isLoading
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: cs.onPrimary,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded, size: 18),
+                    label: Text(chat.isLoading ? '发送中' : '发送'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Ctrl / Command + Enter 发送',
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                 ),
               ),
             ],

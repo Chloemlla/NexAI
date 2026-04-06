@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../providers/chat_provider.dart';
+import '../providers/settings_provider.dart';
+import '../utils/navigation_helper.dart';
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
@@ -13,6 +18,7 @@ class WelcomeView extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWide = screenWidth > 600;
     final cardWidth = isWide ? 180.0 : (screenWidth - 52) / 2;
+    final settings = context.watch<SettingsProvider>();
 
     return Center(
       child: SingleChildScrollView(
@@ -23,7 +29,7 @@ class WelcomeView extends StatelessWidget {
             Image.asset('assets/icon.png', width: 80, height: 80),
             const SizedBox(height: 28),
             Text(
-              'Welcome to NexAI',
+              '开始与 NexAI 对话',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.5,
@@ -31,8 +37,42 @@ class WelcomeView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Your intelligent AI assistant',
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15),
+              settings.isConfigured
+                  ? '支持 Markdown、代码、公式与多模态内容。'
+                  : '先完成 API 配置，再开始你的第一轮对话。',
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontSize: 15,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              alignment: WrapAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: settings.isConfigured
+                      ? () async {
+                          await context.read<ChatProvider>().newConversation();
+                        }
+                      : NavigationHelper.goToSettings,
+                  icon: Icon(
+                    settings.isConfigured
+                        ? Icons.add_comment_rounded
+                        : Icons.tune_rounded,
+                  ),
+                  label: Text(settings.isConfigured ? '开始新对话' : '前往设置'),
+                ),
+                if (settings.isConfigured)
+                  OutlinedButton.icon(
+                    onPressed: NavigationHelper.goToSettings,
+                    icon: const Icon(Icons.tune_rounded),
+                    label: const Text('调整模型'),
+                  ),
+              ],
             ),
             const SizedBox(height: 40),
             Wrap(
@@ -43,29 +83,29 @@ class WelcomeView extends StatelessWidget {
                 _welcomeCard(
                   cs,
                   Icons.chat_rounded,
-                  'Chat',
-                  'Ask anything',
+                  '对话',
+                  '任何问题都可以直接发问',
                   cardWidth,
                 ),
                 _welcomeCard(
                   cs,
                   Icons.functions_rounded,
-                  'Math',
-                  'LaTeX formulas',
+                  '数学',
+                  '自动渲染 LaTeX 公式',
                   cardWidth,
                 ),
                 _welcomeCard(
                   cs,
                   Icons.science_rounded,
-                  'Chemistry',
-                  'Equations',
+                  '化学',
+                  '方程式与结构式表达',
                   cardWidth,
                 ),
                 _welcomeCard(
                   cs,
                   Icons.code_rounded,
-                  'Code',
-                  'Syntax highlight',
+                  '代码',
+                  '支持高亮与结构化展示',
                   cardWidth,
                 ),
               ],

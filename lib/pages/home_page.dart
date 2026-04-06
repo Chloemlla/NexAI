@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../main.dart' show isDesktop, isAndroid;
+import '../models/message.dart';
 import '../models/search_result.dart';
 import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
@@ -31,6 +32,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
   int _androidNavIndex = 0;
   String _currentPage = 'chat';
   SecurityStatusChecker? _securityChecker;
+  final TextEditingController _desktopConversationSearchController =
+      TextEditingController();
+  String _desktopConversationSearchQuery = '';
 
   @override
   void didChangeDependencies() {
@@ -127,9 +131,50 @@ class _HomePageState extends State<HomePage> with WindowListener {
   @override
   void dispose() {
     if (isDesktop) windowManager.removeListener(this);
+    _desktopConversationSearchController.dispose();
     NavigationHelper.navigateToSettings = null; // Clean up callback
     _securityChecker?.dispose();
     super.dispose();
+  }
+
+  Future<bool> _confirmDeleteConversation(
+    BuildContext context,
+    Conversation conversation,
+    ColorScheme colorScheme,
+  ) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogCtx) => AlertDialog(
+            icon: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
+            title: const Text('删除对话'),
+            content: Text('确认删除 “${conversation.title}”？此操作无法撤销。'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(false),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: colorScheme.error,
+                ),
+                child: const Text('删除'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  bool _matchesConversationSearch(Conversation conversation) {
+    final query = _desktopConversationSearchQuery.trim().toLowerCase();
+    if (query.isEmpty) return true;
+
+    final lastMessage = conversation.messages.isNotEmpty
+        ? conversation.messages.last.content
+        : '';
+    final haystack = '${conversation.title}\n$lastMessage'.toLowerCase();
+    return haystack.contains(query);
   }
 
   @override
@@ -245,7 +290,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 if (_androidNavIndex == 1) ...[
                   FilledButton.tonalIcon(
                     onPressed: () async {
-                      final note = await context.read<NotesProvider>().createNote();
+                      final note = await context
+                          .read<NotesProvider>()
+                          .createNote();
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => NoteDetailPage(noteId: note.id),
@@ -778,9 +825,13 @@ class _HomePageState extends State<HomePage> with WindowListener {
   // ─── Desktop: Material Design NavigationRail layout ───
   Widget _buildDesktopLayout(BuildContext context) {
     final chat = context.watch<ChatProvider>();
-    final notes = context.watch<NotesProvider>();
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final filteredConversationEntries = chat.conversations
+        .asMap()
+        .entries
+        .where((entry) => _matchesConversationSearch(entry.value))
+        .toList();
 
     // Determine which page body to show
     Widget body;
@@ -877,101 +928,309 @@ class _HomePageState extends State<HomePage> with WindowListener {
                   ),
                   child: Column(
                     children: [
-                      // Conversation list
-                      Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 8,
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                        child: Column(
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                left: 12,
-                                bottom: 8,
-                                top: 4,
-                              ),
-                              child: Text(
-                                '对话',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.onSurfaceVariant,
-                                  letterSpacing: 0.5,
+                            Row(
+                              children: [
+                                Text(
+                                  '对话',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: cs.onSurface,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cs.primaryContainer.withAlpha(140),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    '${chat.conversations.length}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: cs.primary,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                FilledButton.tonalIcon(
+                                  onPressed: () async {
+                                    await chat.newConversation();
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _currentPage = 'chat';
+                                    });
+                                  },
+                                  icon: const Icon(Icons.add_rounded, size: 16),
+                                  label: const Text('新建'),
+                                  style: FilledButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _desktopConversationSearchController,
+                              onChanged: (value) {
+                                setState(() {
+                                  _desktopConversationSearchQuery = value;
+                                });
+                              },
+                              textInputAction: TextInputAction.search,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: '搜索对话或最后一条消息',
+                                prefixIcon: const Icon(
+                                  Icons.search_rounded,
+                                  size: 18,
+                                ),
+                                suffixIcon:
+                                    _desktopConversationSearchQuery.isEmpty
+                                    ? null
+                                    : IconButton(
+                                        tooltip: '清空搜索',
+                                        onPressed: () {
+                                          _desktopConversationSearchController
+                                              .clear();
+                                          setState(() {
+                                            _desktopConversationSearchQuery =
+                                                '';
+                                          });
+                                        },
+                                        icon: const Icon(
+                                          Icons.close_rounded,
+                                          size: 18,
+                                        ),
+                                      ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
                                 ),
                               ),
                             ),
-                            ...chat.conversations.asMap().entries.map((entry) {
-                              final idx = entry.key;
-                              final conv = entry.value;
-                              final isActive =
-                                  _currentPage == 'chat' &&
-                                  idx == chat.currentIndex;
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: ListTile(
-                                  dense: true,
-                                  visualDensity: VisualDensity.compact,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  selected: isActive,
-                                  selectedTileColor: cs.secondaryContainer
-                                      .withAlpha(180),
-                                  leading: Icon(
-                                    isActive
-                                        ? Icons.chat_rounded
-                                        : Icons.chat_outlined,
-                                    size: 18,
-                                    color: isActive
-                                        ? cs.primary
-                                        : cs.onSurfaceVariant,
-                                  ),
-                                  title: Text(
-                                    conv.title,
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: isActive
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                    ),
-                                  ),
-                                  trailing: IconButton(
-                                    icon: Icon(
-                                      Icons.close_rounded,
-                                      size: 14,
-                                      color: cs.onSurfaceVariant.withAlpha(120),
-                                    ),
-                                    onPressed: () async {
-                                      await chat.deleteConversation(idx);
-                                      if (chat.conversations.isEmpty) {
-                                        setState(
-                                          () => _currentPage = 'settings',
-                                        );
-                                      } else {
-                                        setState(() {});
-                                      }
-                                    },
-                                    visualDensity: VisualDensity.compact,
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(
-                                      minWidth: 24,
-                                      minHeight: 24,
-                                    ),
-                                  ),
-                                  onTap: () {
-                                    setState(() {
-                                      _currentPage = 'chat';
-                                      chat.selectConversation(idx);
-                                    });
-                                  },
-                                ),
-                              );
-                            }),
                           ],
                         ),
+                      ),
+                      Expanded(
+                        child: chat.conversations.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 64,
+                                        height: 64,
+                                        decoration: BoxDecoration(
+                                          color: cs.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.chat_bubble_outline_rounded,
+                                          color: cs.onSurfaceVariant,
+                                          size: 28,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        '还没有对话',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: cs.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '从这里开始一个新的聊天。',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: cs.onSurfaceVariant,
+                                          height: 1.4,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : filteredConversationEntries.isEmpty
+                            ? Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.search_off_rounded,
+                                        color: cs.outline,
+                                        size: 30,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        '没有匹配结果',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: cs.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      TextButton(
+                                        onPressed: () {
+                                          _desktopConversationSearchController
+                                              .clear();
+                                          setState(() {
+                                            _desktopConversationSearchQuery =
+                                                '';
+                                          });
+                                        },
+                                        child: const Text('清空搜索'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                                itemCount: filteredConversationEntries.length,
+                                itemBuilder: (context, entryIndex) {
+                                  final entry =
+                                      filteredConversationEntries[entryIndex];
+                                  final idx = entry.key;
+                                  final conv = entry.value;
+                                  final isActive =
+                                      _currentPage == 'chat' &&
+                                      idx == chat.currentIndex;
+                                  final preview = conv.messages.isNotEmpty
+                                      ? conv.messages.last.content
+                                      : '还没有消息';
+
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: ListTile(
+                                      dense: true,
+                                      minLeadingWidth: 0,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      selected: isActive,
+                                      selectedTileColor: cs.secondaryContainer
+                                          .withAlpha(180),
+                                      leading: Container(
+                                        width: 34,
+                                        height: 34,
+                                        decoration: BoxDecoration(
+                                          gradient: isActive
+                                              ? LinearGradient(
+                                                  colors: [
+                                                    cs.primary,
+                                                    cs.tertiary,
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                )
+                                              : null,
+                                          color: isActive
+                                              ? null
+                                              : cs.surfaceContainerHighest,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Icon(
+                                          isActive
+                                              ? Icons.chat_rounded
+                                              : Icons.chat_outlined,
+                                          size: 18,
+                                          color: isActive
+                                              ? cs.onPrimary
+                                              : cs.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      title: Text(
+                                        conv.title,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: isActive
+                                              ? FontWeight.w700
+                                              : FontWeight.w500,
+                                        ),
+                                      ),
+                                      subtitle: Padding(
+                                        padding: const EdgeInsets.only(top: 3),
+                                        child: Text(
+                                          preview,
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 2,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            height: 1.35,
+                                            color: isActive
+                                                ? cs.onSecondaryContainer
+                                                : cs.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ),
+                                      trailing: IconButton(
+                                        icon: Icon(
+                                          Icons.delete_outline_rounded,
+                                          size: 18,
+                                          color: cs.onSurfaceVariant,
+                                        ),
+                                        tooltip: '删除对话',
+                                        onPressed: () async {
+                                          final confirmed =
+                                              await _confirmDeleteConversation(
+                                                context,
+                                                conv,
+                                                cs,
+                                              );
+                                          if (!confirmed || !mounted) return;
+
+                                          await chat.deleteConversation(idx);
+                                        },
+                                        visualDensity: VisualDensity.compact,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 28,
+                                          minHeight: 28,
+                                        ),
+                                      ),
+                                      onTap: () {
+                                        setState(() {
+                                          _currentPage = 'chat';
+                                          chat.selectConversation(idx);
+                                        });
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                       // Footer nav items
                       const Divider(height: 1),

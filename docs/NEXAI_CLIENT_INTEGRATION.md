@@ -11,8 +11,8 @@
 ### 基础 URL
 
 ```
-生产环境: https://api.951100.xyz/api/nexai
-开发环境: https://api.951100.xyz/api/nexai
+生产环境: https://tts.chloemlla.com/api/nexai
+开发环境: https://tts.chloemlla.com/api/nexai
 ```
 
 ## 安全请求头规范

@@ -10,7 +10,7 @@ import '../utils/request_signer.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
-const String _nexaiBaseUrl = 'https://api.951100.xyz/api/nexai';
+const String _nexaiBaseUrl = 'https://tts.chloemlla.com/api/nexai';
 
 // ─── Signed + Pinned HTTP wrapper (mirrors nexai_auth_service.dart) ───────────
 

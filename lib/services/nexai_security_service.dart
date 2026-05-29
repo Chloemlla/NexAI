@@ -8,7 +8,7 @@ import 'package:dio/dio.dart';
 
 class NexAISecurityService {
   final Dio _dio;
-  static const String baseUrl = 'https://api.951100.xyz/api/nexai';
+  static const String baseUrl = 'https://tts.chloemlla.com/api/nexai';
 
   NexAISecurityService(this._dio);
 

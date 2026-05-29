@@ -6,7 +6,7 @@
 
 ## API 基础信息
 
-- **Base URL**: `https://api.951100.xyz/api/nexai`
+- **Base URL**: `https://tts.chloemlla.com/api/nexai`
 - **认证方式**: Bearer Token (JWT)
 - **Content-Type**: `application/json`
 

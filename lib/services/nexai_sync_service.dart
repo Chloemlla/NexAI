@@ -99,7 +99,7 @@ class _NexaiHttp {
   }
 }
 
-const String _defaultBaseUrl = 'https://api.951100.xyz/api/nexai';
+const String _defaultBaseUrl = 'https://tts.chloemlla.com/api/nexai';
 
 class NexaiSyncApi {
   static String _baseUrl = _defaultBaseUrl;

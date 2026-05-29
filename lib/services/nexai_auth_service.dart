@@ -72,7 +72,7 @@ class _NexaiHttp {
   }
 }
 
-const String _nexaiBaseUrl = 'https://api.951100.xyz/api/nexai';
+const String _nexaiBaseUrl = 'https://tts.chloemlla.com/api/nexai';
 
 class NexaiAuthApi {
   static String _baseUrl = _nexaiBaseUrl;

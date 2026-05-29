@@ -7,7 +7,7 @@ CERTIFICATE_VERIFY_FAILED: unable to get local issuer certificate)
 ```
 
 ### 原因
-NexAI 使用了证书固定（Certificate Pinning）技术来防止中间人攻击。当访问 `api.951100.xyz` 时，如果：
+NexAI 使用了证书固定（Certificate Pinning）技术来防止中间人攻击。当访问 `tts.chloemlla.com` 时，如果：
 1. 首次访问（TOFU 模式）
 2. 证书已过期
 3. 证书被更换
@@ -97,7 +97,7 @@ flutter run --dart-define=DEVELOPMENT=true
 
 #### 方法 5：信任自签名证书（仅开发环境）
 
-如果 `api.951100.xyz` 使用自签名证书：
+如果 `tts.chloemlla.com` 使用自签名证书：
 
 ```dart
 class _ToFuClient extends http.BaseClient {

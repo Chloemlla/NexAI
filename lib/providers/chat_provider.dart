@@ -46,6 +46,108 @@ class ChatProvider extends ChangeNotifier {
 
   List<Message> get messages => currentConversation?.messages ?? [];
 
+  static bool _isSensitiveKey(String key) {
+    final lower = key.toLowerCase();
+    return lower == 'authorization' ||
+        lower == 'proxy-authorization' ||
+        lower == 'key' ||
+        lower.contains('apikey') ||
+        lower.contains('api_key') ||
+        lower.contains('token') ||
+        lower.contains('password') ||
+        lower.contains('secret');
+  }
+
+  static String _redactString(String value) {
+    var redacted = value.replaceAll(
+      RegExp(r'Bearer\s+\S+', caseSensitive: false),
+      'Bearer <redacted>',
+    );
+    redacted = redacted.replaceAllMapped(
+      RegExp(
+        r'([?&](?:key|api_key|apikey|access_token|token|password|secret)=)[^&\s]+',
+        caseSensitive: false,
+      ),
+      (match) => '${match.group(1)}<redacted>',
+    );
+    redacted = redacted.replaceAll(
+      RegExp(r'sk-[A-Za-z0-9_-]{12,}'),
+      'sk-<redacted>',
+    );
+    redacted = redacted.replaceAll(
+      RegExp(r'AIza[0-9A-Za-z_-]{20,}'),
+      'AIza<redacted>',
+    );
+    return redacted;
+  }
+
+  static dynamic _redactSensitive(dynamic value) {
+    if (value is Map) {
+      return value.map((key, mapValue) {
+        final keyString = key.toString();
+        return MapEntry(
+          keyString,
+          _isSensitiveKey(keyString)
+              ? '<redacted>'
+              : _redactSensitive(mapValue),
+        );
+      });
+    }
+    if (value is Iterable) {
+      return value.map(_redactSensitive).toList();
+    }
+    if (value is String) {
+      return _redactString(value);
+    }
+    return value;
+  }
+
+  static String _encodeDiagnostic(dynamic data) {
+    try {
+      return const JsonEncoder.withIndent('  ').convert(_redactSensitive(data));
+    } catch (_) {
+      return _redactString(data.toString());
+    }
+  }
+
+  static String _redactedUri(Uri uri) {
+    if (uri.queryParameters.isEmpty) return _redactString(uri.toString());
+
+    final queryParameters = uri.queryParameters.map((key, value) {
+      return MapEntry(
+        key,
+        _isSensitiveKey(key) ? '<redacted>' : _redactString(value),
+      );
+    });
+
+    return uri.replace(queryParameters: queryParameters).toString();
+  }
+
+  static String _buildRequestDiagnostics(RequestOptions options) {
+    final details = {
+      'url': _redactedUri(options.uri),
+      'method': options.method,
+      'headers': _redactSensitive(options.headers),
+    };
+
+    return '''
+**Request Summary:**
+```json
+${_encodeDiagnostic(details)}
+```''';
+  }
+
+  static String _buildResponseDiagnostics(dynamic data) {
+    if (data == null) return '';
+
+    return '''
+
+**Response Data:**
+```json
+${_encodeDiagnostic(data)}
+```''';
+  }
+
   // ─── Persistence ───
 
   Future<File> _getFile() async {
@@ -328,30 +430,14 @@ class ChatProvider extends ChangeNotifier {
       String errorMsg;
       String requestDetails = '';
 
-      String safeEncode(dynamic data) {
-        if (data == null) return 'null';
-        try {
-          if (data is String) {
-            try {
-              final parsed = jsonDecode(data);
-              return const JsonEncoder.withIndent('  ').convert(parsed);
-            } catch (_) {
-              return '"$data"';
-            }
-          }
-          return const JsonEncoder.withIndent('  ').convert(data);
-        } catch (_) {
-          return '"${data.toString()}"';
-        }
-      }
-
       if (e.response != null) {
         try {
           final errorData = e.response!.data;
           if (errorData is Map) {
-            errorMsg =
-                errorData['error']?['message'] ??
-                'HTTP ${e.response!.statusCode}';
+            final message = errorData['error']?['message']?.toString();
+            errorMsg = message != null && message.isNotEmpty
+                ? _redactString(message)
+                : 'HTTP ${e.response!.statusCode}';
           } else {
             errorMsg = 'HTTP ${e.response!.statusCode}';
           }
@@ -360,34 +446,11 @@ class ChatProvider extends ChangeNotifier {
         }
 
         requestDetails =
-            '''\n
-**Request Details:**
-```json
-{
-  "url": "${e.requestOptions.uri}",
-  "method": "${e.requestOptions.method}",
-  "headers": ${safeEncode(e.requestOptions.headers)},
-  "data": ${safeEncode(e.requestOptions.data)}
-}
-```
-
-**Response Data:**
-```json
-${safeEncode(e.response!.data)}
-```''';
+            '\n${_buildRequestDiagnostics(e.requestOptions)}'
+            '${_buildResponseDiagnostics(e.response!.data)}';
       } else {
-        errorMsg = e.message ?? 'Connection error';
-        requestDetails =
-            '''\n
-**Request Details:**
-```json
-{
-  "url": "${e.requestOptions.uri}",
-  "method": "${e.requestOptions.method}",
-  "headers": ${safeEncode(e.requestOptions.headers)},
-  "data": ${safeEncode(e.requestOptions.data)}
-}
-```''';
+        errorMsg = _redactString(e.message ?? 'Connection error');
+        requestDetails = '\n${_buildRequestDiagnostics(e.requestOptions)}';
       }
       conversation.messages.add(
         Message(
@@ -401,7 +464,7 @@ ${safeEncode(e.response!.data)}
       conversation.messages.add(
         Message(
           role: 'assistant',
-          content: 'Connection error: $e',
+          content: 'Connection error: ${_redactString(e.toString())}',
           timestamp: DateTime.now(),
           isError: true,
         ),

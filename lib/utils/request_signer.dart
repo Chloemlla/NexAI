@@ -1,6 +1,6 @@
 /// HMAC-SHA256 request signing for NexAI backend API.
 ///
-/// Each request to api.951100.xyz is signed with a key derived from:
+/// Each request to tts.chloemlla.com is signed with a key derived from:
 ///   device_id (unpredictable, hardware-bound) + timestamp_window
 ///
 /// This prevents API scraping: even if an attacker extracts the algorithm

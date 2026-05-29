@@ -2,7 +2,6 @@
 /// Orchestrates syncing local data to/from the cloud backend
 library;
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -366,22 +365,8 @@ class SyncProvider extends ChangeNotifier {
         .toList();
     if (changedTrans.isNotEmpty) result['translationHistory'] = changedTrans;
 
-    // 保存的密码：按 createdAt 过滤
-    final changedPasswords = passwordProvider.passwords
-        .where((p) {
-          final json = p.toJson();
-          final ts = json['createdAt'] as String? ?? '';
-          return ts.compareTo(since) > 0;
-        })
-        .map((p) {
-          final json = p.toJson();
-          json['updatedAt'] = json['createdAt']; // 补充 updatedAt
-          return json;
-        })
-        .toList();
-    if (changedPasswords.isNotEmpty) {
-      result['savedPasswords'] = changedPasswords;
-    }
+    // 保存的密码不得通过旧版明文同步接口上传。
+    // 等后端 /sync/v2 端到端加密接口可用后，再启用密码同步。
 
     // 短链接：按 createdAt 过滤
     final changedUrls = shortUrlProvider.history
@@ -404,7 +389,6 @@ class SyncProvider extends ChangeNotifier {
   Map<String, dynamic> _collectSettings(SettingsProvider s) {
     return {
       'baseUrl': s.baseUrl,
-      'apiKey': s.apiKey,
       'models': s.models.join(','),
       'selectedModel': s.selectedModel,
       'themeMode': s.themeMode.name,
@@ -421,10 +405,7 @@ class SyncProvider extends ChangeNotifier {
       'syncMethod': s.syncMethod,
       'webdavServer': s.webdavServer,
       'webdavUser': s.webdavUser,
-      'webdavPassword': s.webdavPassword,
       'upstashUrl': s.upstashUrl,
-      'upstashToken': s.upstashToken,
-      'vertexApiKey': s.vertexApiKey,
       'apiMode': s.apiMode,
       'vertexProjectId': s.vertexProjectId,
       'vertexLocation': s.vertexLocation,
@@ -468,11 +449,7 @@ class SyncProvider extends ChangeNotifier {
       );
     }
 
-    // 合并密码
-    if (changes['savedPasswords'] is List &&
-        (changes['savedPasswords'] as List).isNotEmpty) {
-      await passwordProvider.mergeItems(changes['savedPasswords'] as List);
-    }
+    // 旧版云同步不再恢复服务端保存的明文密码。
 
     // 合并短链接
     if (changes['shortUrls'] is List &&
@@ -486,7 +463,6 @@ class SyncProvider extends ChangeNotifier {
     SettingsProvider sp,
   ) async {
     if (s['baseUrl'] != null) await sp.setBaseUrl(s['baseUrl']);
-    if (s['apiKey'] != null) await sp.setApiKey(s['apiKey']);
     if (s['models'] != null) await sp.setModels(s['models']);
     if (s['selectedModel'] != null) {
       await sp.setSelectedModel(s['selectedModel']);
@@ -509,7 +485,6 @@ class SyncProvider extends ChangeNotifier {
     if (s['smartAutoScroll'] != null) {
       await sp.setSmartAutoScroll(s['smartAutoScroll']);
     }
-    if (s['vertexApiKey'] != null) await sp.setVertexApiKey(s['vertexApiKey']);
     if (s['apiMode'] != null) await sp.setApiMode(s['apiMode']);
     if (s['vertexProjectId'] != null) {
       await sp.setVertexProjectId(s['vertexProjectId']);
@@ -530,11 +505,7 @@ class SyncProvider extends ChangeNotifier {
     if (s['syncMethod'] != null) await sp.setSyncMethod(s['syncMethod']);
     if (s['webdavServer'] != null) await sp.setWebdavServer(s['webdavServer']);
     if (s['webdavUser'] != null) await sp.setWebdavUser(s['webdavUser']);
-    if (s['webdavPassword'] != null) {
-      await sp.setWebdavPassword(s['webdavPassword']);
-    }
     if (s['upstashUrl'] != null) await sp.setUpstashUrl(s['upstashUrl']);
-    if (s['upstashToken'] != null) await sp.setUpstashToken(s['upstashToken']);
   }
 
   // ── 内部: 收集本地数据 ──
@@ -548,11 +519,10 @@ class SyncProvider extends ChangeNotifier {
     required ShortUrlProvider shortUrlProvider,
   }) {
     return {
-      'settings': {
-        'baseUrl': settingsProvider.baseUrl,
-        'apiKey': settingsProvider.apiKey,
-        'models': settingsProvider.models.join(','),
-        'selectedModel': settingsProvider.selectedModel,
+        'settings': {
+          'baseUrl': settingsProvider.baseUrl,
+          'models': settingsProvider.models.join(','),
+          'selectedModel': settingsProvider.selectedModel,
         'themeMode': settingsProvider.themeMode.name,
         'temperature': settingsProvider.temperature,
         'maxTokens': settingsProvider.maxTokens,
@@ -564,15 +534,12 @@ class SyncProvider extends ChangeNotifier {
         'fullScreenMode': settingsProvider.fullScreenMode,
         'smartAutoScroll': settingsProvider.smartAutoScroll,
         'syncEnabled': settingsProvider.syncEnabled,
-        'syncMethod': settingsProvider.syncMethod,
-        'webdavServer': settingsProvider.webdavServer,
-        'webdavUser': settingsProvider.webdavUser,
-        'webdavPassword': settingsProvider.webdavPassword,
-        'upstashUrl': settingsProvider.upstashUrl,
-        'upstashToken': settingsProvider.upstashToken,
-        'vertexApiKey': settingsProvider.vertexApiKey,
-        'apiMode': settingsProvider.apiMode,
-        'vertexProjectId': settingsProvider.vertexProjectId,
+          'syncMethod': settingsProvider.syncMethod,
+          'webdavServer': settingsProvider.webdavServer,
+          'webdavUser': settingsProvider.webdavUser,
+          'upstashUrl': settingsProvider.upstashUrl,
+          'apiMode': settingsProvider.apiMode,
+          'vertexProjectId': settingsProvider.vertexProjectId,
         'vertexLocation': settingsProvider.vertexLocation,
         'notesAutoSave': settingsProvider.notesAutoSave,
         'aiTitleGeneration': settingsProvider.aiTitleGeneration,
@@ -582,9 +549,6 @@ class SyncProvider extends ChangeNotifier {
           .map((c) => c.toJson())
           .toList(),
       'translationHistory': translationProvider.exportToJsonList(),
-      'savedPasswords': passwordProvider.passwords
-          .map((p) => p.toJson())
-          .toList(),
       'shortUrls': shortUrlProvider.exportToJsonList(),
     };
   }
@@ -604,7 +568,6 @@ class SyncProvider extends ChangeNotifier {
     if (data['settings'] is Map<String, dynamic>) {
       final s = data['settings'] as Map<String, dynamic>;
       if (s['baseUrl'] != null) await settingsProvider.setBaseUrl(s['baseUrl']);
-      if (s['apiKey'] != null) await settingsProvider.setApiKey(s['apiKey']);
       if (s['models'] != null) await settingsProvider.setModels(s['models']);
       if (s['selectedModel'] != null) {
         await settingsProvider.setSelectedModel(s['selectedModel']);
@@ -635,9 +598,6 @@ class SyncProvider extends ChangeNotifier {
       if (s['smartAutoScroll'] != null) {
         await settingsProvider.setSmartAutoScroll(s['smartAutoScroll']);
       }
-      if (s['vertexApiKey'] != null) {
-        await settingsProvider.setVertexApiKey(s['vertexApiKey']);
-      }
       if (s['apiMode'] != null) await settingsProvider.setApiMode(s['apiMode']);
       if (s['vertexProjectId'] != null) {
         await settingsProvider.setVertexProjectId(s['vertexProjectId']);
@@ -666,14 +626,8 @@ class SyncProvider extends ChangeNotifier {
       if (s['webdavUser'] != null) {
         await settingsProvider.setWebdavUser(s['webdavUser']);
       }
-      if (s['webdavPassword'] != null) {
-        await settingsProvider.setWebdavPassword(s['webdavPassword']);
-      }
       if (s['upstashUrl'] != null) {
         await settingsProvider.setUpstashUrl(s['upstashUrl']);
-      }
-      if (s['upstashToken'] != null) {
-        await settingsProvider.setUpstashToken(s['upstashToken']);
       }
     }
 
@@ -694,13 +648,7 @@ class SyncProvider extends ChangeNotifier {
       );
     }
 
-    // 恢复密码
-    if (data['savedPasswords'] is List) {
-      final passwordsList = (data['savedPasswords'] as List)
-          .map((e) => e as Map<String, dynamic>)
-          .toList();
-      await passwordProvider.importFromJson(jsonEncode(passwordsList));
-    }
+    // 旧版云同步不再恢复服务端保存的明文密码。
 
     // 恢复短链接
     if (data['shortUrls'] is List) {

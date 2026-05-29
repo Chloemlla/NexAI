@@ -1,4 +1,4 @@
-/// Certificate pinning for api.951100.xyz using TOFU + FlutterSecureStorage.
+/// Certificate pinning for tts.chloemlla.com using TOFU + FlutterSecureStorage.
 ///
 /// Lifecycle:
 ///   First run      → system CA verifies TLS; stores cert fingerprint + expiry
@@ -21,7 +21,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
-const String _pinnedHost = 'api.951100.xyz';
+const String _pinnedHost = 'tts.chloemlla.com';
 
 /// Storage keys
 const String _pinKey = 'nexai.cert.sha256.v1';

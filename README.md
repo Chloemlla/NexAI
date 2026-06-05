@@ -81,12 +81,14 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 For Android release signing, also add:
 
 - `KEYSTORE_BASE64` — Base64-encoded `.jks` keystore
-- `KEY_ALIAS`, `KEY_PASSWORD`, `STORE_PASSWORD`
+- `KEY_ALIAS`, `KEY_PASSWORD`, `KEYSTORE_PASSWORD`
 
 ### Local Development
 
 ```bash
 flutter pub get
+flutter config --enable-windows-desktop
+flutter create --platforms windows .  # Required if the Windows platform folder is missing
 flutter run -d windows   # Desktop
 flutter run -d android   # Android
 flutter run -d chrome    # Web

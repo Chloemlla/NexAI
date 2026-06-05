@@ -284,31 +284,19 @@ Future<bool> _verifyStoredPin(String storedFp) async {
 ///   · When the stored pin is within [_renewWithinDays] of expiry (silent renewal).
 Future<void> _probeAndPin(String host, int port) async {
   try {
-    // Use a permissive SecurityContext so we can read the cert DER bytes
-    // regardless of CA trust. We only want the fingerprint, not TLS auth.
-    final ctx = SecurityContext(withTrustedRoots: false);
-    X509Certificate? cert;
-
-    final httpClient = HttpClient(context: ctx)
-      ..badCertificateCallback = (X509Certificate c, String h, int p) {
-        cert = c; // capture cert before accepting
-        return true; // accept to complete the handshake
-      };
-
-    try {
-      final req = await httpClient.getUrl(
-        Uri(scheme: 'https', host: host, port: port, path: '/'),
-      );
-      await req.close();
-    } catch (_) {
-      // Response errors are irrelevant; we only care about the cert.
-    } finally {
-      httpClient.close(force: true);
-    }
+    // Only pin certificates from a TLS connection that passed system CA
+    // validation. A failed validation must not yield a new stored pin.
+    final socket = await SecureSocket.connect(
+      host,
+      port,
+      timeout: const Duration(seconds: 10),
+    );
+    final cert = socket.peerCertificate;
+    socket.destroy();
 
     if (cert != null) {
-      final fp = _sha256Hex(cert!.der);
-      final expiry = cert!.endValidity;
+      final fp = _sha256Hex(cert.der);
+      final expiry = cert.endValidity;
 
       await _storage.write(key: _pinKey, value: fp);
       await _storage.write(key: _pinExpiryKey, value: expiry.toIso8601String());

@@ -110,6 +110,12 @@ class AppSecurity {
 
   Future<void> _checkApkFileHash() async {
     if (!Platform.isAndroid) return;
+    if (kDebugMode) {
+      debugPrint('AppSecurity: APK hash check skipped in debug mode');
+      return;
+    }
+
+    isApkHashValid = false;
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
@@ -117,7 +123,7 @@ class AppSecurity {
       // Extract commit hash from version (e.g., "1.0.7-e19d98d36")
       final parts = currentVersion.split('-');
       if (parts.length < 2) {
-        debugPrint('AppSecurity: version format missing commit hash');
+        _markApkHashInvalid('version format missing commit hash');
         return;
       }
 
@@ -126,7 +132,7 @@ class AppSecurity {
       // Fetch release data from GitHub
       final releaseData = await _fetchReleaseByTag(versionTag);
       if (releaseData == null) {
-        debugPrint('AppSecurity: release not found on GitHub');
+        _markApkHashInvalid('release not found on GitHub: $versionTag');
         return;
       }
 
@@ -137,14 +143,16 @@ class AppSecurity {
       // Find matching APK asset and expected hash
       final expectedHash = await _findExpectedHash(releaseData, supportedAbis);
       if (expectedHash == null) {
-        debugPrint('AppSecurity: no matching APK hash found in release');
+        _markApkHashInvalid('no matching APK hash found in release');
         return;
       }
 
       // Get installed APK hash from native code
-      final installedHash = await _channel.invokeMethod<String>('getApkFileSha256');
+      final installedHash = await _channel.invokeMethod<String>(
+        'getApkFileSha256',
+      );
       if (installedHash == null || installedHash.isEmpty) {
-        debugPrint('AppSecurity: failed to calculate APK hash');
+        _markApkHashInvalid('failed to calculate APK hash');
         return;
       }
 
@@ -161,7 +169,14 @@ class AppSecurity {
       }
     } catch (e) {
       debugPrint('AppSecurity: APK hash check error: $e');
+      _markApkHashInvalid('APK hash check error');
     }
+  }
+
+  void _markApkHashInvalid(String reason) {
+    debugPrint('AppSecurity: APK HASH NOT VERIFIED ($reason)');
+    isApkHashValid = false;
+    isCompromised = true;
   }
 
   Future<Map<String, dynamic>?> _fetchReleaseByTag(String tag) async {
@@ -197,6 +212,10 @@ class AppSecurity {
           // Extract SHA256 from release body
           return _extractHashFromBody(body, name);
         }
+        final abiRaw = abi.toLowerCase();
+        if (abiRaw != abiLower && name.contains(abiRaw)) {
+          return _extractHashFromBody(body, name);
+        }
       }
     }
 
@@ -211,12 +230,14 @@ class AppSecurity {
       final line = lines[i];
 
       // Check if this line contains the asset name
-      if (line.contains(assetName)) {
+      if (line.toLowerCase().contains(assetName.toLowerCase())) {
         // Look for sha256 in nearby lines (within 5 lines)
         for (int j = i; j < i + 5 && j < lines.length; j++) {
           final hashLine = lines[j];
-          final match = RegExp(r'sha256:([a-f0-9]{64})', caseSensitive: false)
-              .firstMatch(hashLine);
+          final match = RegExp(
+            r'sha256:([a-f0-9]{64})',
+            caseSensitive: false,
+          ).firstMatch(hashLine);
 
           if (match != null) {
             return match.group(1);
@@ -264,7 +285,8 @@ class AppSecurity {
   Future<void> _checkDebugger() async {
     if (!Platform.isAndroid) return;
     try {
-      final attached = await _channel.invokeMethod<bool>('isDebuggerAttached') ?? false;
+      final attached =
+          await _channel.invokeMethod<bool>('isDebuggerAttached') ?? false;
       if (attached) {
         debugPrint('AppSecurity: Debugger attached');
         isDebuggerAttached = true;

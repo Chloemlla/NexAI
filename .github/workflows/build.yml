@@ -75,29 +75,39 @@ jobs:
             [ -n "$(tail -c1 android/gradle.properties)" ] && echo "" >> android/gradle.properties
           fi
 
+          missing=()
           if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "⚠️ Warning: KEYSTORE_BASE64 secret not set, using debug signing"
-            printf 'NEXAI_USE_DEBUG_SIGNING=true\n' >> android/gradle.properties
-          else
-            echo "✓ Decoding keystore from secret..."
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks || {
-              echo "❌ Error: Failed to decode KEYSTORE_BASE64, using debug signing"
-              printf 'NEXAI_USE_DEBUG_SIGNING=true\n' >> android/gradle.properties
-              exit 0
-            }
-            
-            if [ -f "${{ github.workspace }}/nexai.jks" ]; then
-              echo "✓ Keystore file created successfully"
-              printf 'NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks\n' >> android/gradle.properties
-              printf 'NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}\n' >> android/gradle.properties
-              printf 'NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}\n' >> android/gradle.properties
-              printf 'NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}\n' >> android/gradle.properties
-              echo "✓ Release signing configured"
-            else
-              echo "❌ Error: Keystore file not created, using debug signing"
-              printf 'NEXAI_USE_DEBUG_SIGNING=true\n' >> android/gradle.properties
-            fi
+            missing+=("KEYSTORE_BASE64")
           fi
+          if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then
+            missing+=("KEYSTORE_PASSWORD")
+          fi
+          if [ -z "${{ secrets.KEY_ALIAS }}" ]; then
+            missing+=("KEY_ALIAS")
+          fi
+          if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then
+            missing+=("KEY_PASSWORD")
+          fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing Android release signing secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          echo "✓ Decoding keystore from secret..."
+          if ! echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks; then
+            echo "::error::Failed to decode KEYSTORE_BASE64"
+            exit 1
+          fi
+          if [ ! -s "${{ github.workspace }}/nexai.jks" ]; then
+            echo "::error::Keystore file not created"
+            exit 1
+          fi
+
+          printf 'NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks\n' >> android/gradle.properties
+          printf 'NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}\n' >> android/gradle.properties
+          printf 'NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}\n' >> android/gradle.properties
+          printf 'NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}\n' >> android/gradle.properties
+          echo "✓ Release signing configured"
 
           echo "=== gradle.properties content (masked) ==="
           grep -v "PASSWORD\|ALIAS" android/gradle.properties || true
@@ -138,19 +148,34 @@ jobs:
           echo "=== Renamed APK files ==="
           ls -lh build/app/outputs/flutter-apk/NexAI_android_*.apk
 
+      - name: Generate APK checksums
+        run: |
+          cd build/app/outputs/flutter-apk
+          sha256sum NexAI_android_*.apk > APK_SHA256SUMS.txt
+          {
+            echo "## NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
+            echo ""
+            echo "### APK SHA256"
+            while read -r hash file; do
+              echo "- \`$file\`"
+              echo "  - sha256:$hash"
+            done < APK_SHA256SUMS.txt
+          } > ${{ github.workspace }}/RELEASE_NOTES.md
+
       - name: Automatic release
-        if: success()
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: softprops/action-gh-release@master
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           make_latest: true
-          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
           tag_name: "v${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           prerelease: false
           name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
           files: |
             build/app/outputs/flutter-apk/NexAI_android_*.apk
+            build/app/outputs/flutter-apk/APK_SHA256SUMS.txt
 
       # - name: Rename AAB output
       #   run: |

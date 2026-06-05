@@ -437,6 +437,23 @@ class NexaiUser {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'username': username,
+    'email': email,
+    'displayName': displayName,
+    'avatarUrl': avatarUrl,
+    'authProvider': authProvider,
+    'emailVerified': emailVerified,
+    'role': role,
+    'googleId': googleId,
+    'googleEmail': googleEmail,
+    'githubId': githubId,
+    'githubUsername': githubUsername,
+    'lastLoginAt': lastLoginAt?.toIso8601String(),
+    'loginCount': loginCount,
+  };
+
   bool get hasGoogle => googleId != null && googleId!.isNotEmpty;
   bool get hasGithub => githubId != null && githubId!.isNotEmpty;
   bool get hasPassword => authProvider.contains('local');

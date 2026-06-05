@@ -83,16 +83,24 @@ android {
     }
 
     // Signing config for release builds (CI injects via gradle.properties)
-    def nexaiStoreFile = project.hasProperty('NEXAI_STORE_FILE') ? project.property('NEXAI_STORE_FILE') : null
+    def nexaiStoreFile = project.findProperty('NEXAI_STORE_FILE')
+    def nexaiStorePassword = project.findProperty('NEXAI_STORE_PASSWORD')
+    def nexaiKeyAlias = project.findProperty('NEXAI_KEY_ALIAS')
+    def nexaiKeyPassword = project.findProperty('NEXAI_KEY_PASSWORD')
+    def hasReleaseSigning = nexaiStoreFile != null &&
+        nexaiStorePassword != null &&
+        nexaiKeyAlias != null &&
+        nexaiKeyPassword != null &&
+        file(nexaiStoreFile).exists()
     def useDebugSigning = project.hasProperty('NEXAI_USE_DEBUG_SIGNING') && project.property('NEXAI_USE_DEBUG_SIGNING') == 'true'
     
-    if (nexaiStoreFile != null) {
+    if (hasReleaseSigning) {
         signingConfigs {
             release {
                 storeFile file(nexaiStoreFile)
-                storePassword project.property('NEXAI_STORE_PASSWORD')
-                keyAlias project.property('NEXAI_KEY_ALIAS')
-                keyPassword project.property('NEXAI_KEY_PASSWORD')
+                storePassword nexaiStorePassword
+                keyAlias nexaiKeyAlias
+                keyPassword nexaiKeyPassword
             }
         }
         logger.lifecycle("✓ Using RELEASE signing configuration")
@@ -104,9 +112,9 @@ android {
 
     buildTypes {
         release {
-            if (nexaiStoreFile != null) {
+            if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
-            } else {
+            } else if (useDebugSigning) {
                 signingConfig signingConfigs.debug
                 // Add debug suffix to version name to distinguish from release builds
                 versionNameSuffix "-debug"
@@ -122,6 +130,15 @@ android {
         debug {
             signingConfig signingConfigs.debug
             versionNameSuffix "-debug"
+        }
+    }
+
+    gradle.taskGraph.whenReady { graph ->
+        def hasReleaseTask = graph.allTasks.any { task ->
+            task.name.toLowerCase().contains('release')
+        }
+        if (hasReleaseTask && !hasReleaseSigning && !useDebugSigning) {
+            throw new GradleException("Release signing config is required. Set NEXAI_STORE_FILE, NEXAI_STORE_PASSWORD, NEXAI_KEY_ALIAS, and NEXAI_KEY_PASSWORD.")
         }
     }
 

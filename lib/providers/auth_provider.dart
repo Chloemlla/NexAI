@@ -2,6 +2,8 @@
 /// Manages authentication state, token persistence, and auto-refresh
 library;
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -14,6 +16,7 @@ class AuthProvider extends ChangeNotifier {
   static const _keyAccessToken = 'nexai_access_token';
   static const _keyRefreshToken = 'nexai_refresh_token';
   static const _keyUserId = 'nexai_user_id';
+  static const _keyUserJson = 'nexai_user_json';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -67,6 +70,8 @@ class AuthProvider extends ChangeNotifier {
       _refreshToken = await _storage.read(key: _keyRefreshToken);
 
       if (_accessToken != null) {
+        _currentUser = await _readCachedUser();
+
         // Try to get current user with stored token
         try {
           final res = await NexaiAuthApi.getCurrentUser(
@@ -74,6 +79,7 @@ class AuthProvider extends ChangeNotifier {
           );
           if (res.success && res.user != null) {
             _currentUser = res.user;
+            await _saveCachedUser(res.user!);
           } else if (_refreshToken != null) {
             // Access token expired, try refresh
             await _tryRefreshToken();
@@ -341,6 +347,7 @@ class AuthProvider extends ChangeNotifier {
 
       if (res.success && res.user != null) {
         _currentUser = res.user;
+        await _saveCachedUser(res.user!);
         notifyListeners();
         return true;
       } else {
@@ -424,6 +431,7 @@ class AuthProvider extends ChangeNotifier {
 
       if (res.success && res.user != null) {
         _currentUser = res.user;
+        await _saveCachedUser(res.user!);
         debugContext['success'] = true;
         notifyListeners();
         return true;
@@ -458,6 +466,7 @@ class AuthProvider extends ChangeNotifier {
 
       if (res.success && res.user != null) {
         _currentUser = res.user;
+        await _saveCachedUser(res.user!);
         notifyListeners();
         return true;
       } else {
@@ -861,6 +870,7 @@ class AuthProvider extends ChangeNotifier {
       await _storage.write(key: _keyRefreshToken, value: refreshToken);
     }
     await _storage.write(key: _keyUserId, value: user.id);
+    await _saveCachedUser(user);
   }
 
   Future<void> _clearTokens() async {
@@ -871,6 +881,26 @@ class AuthProvider extends ChangeNotifier {
     await _storage.delete(key: _keyAccessToken);
     await _storage.delete(key: _keyRefreshToken);
     await _storage.delete(key: _keyUserId);
+    await _storage.delete(key: _keyUserJson);
+  }
+
+  Future<void> _saveCachedUser(NexaiUser user) async {
+    await _storage.write(key: _keyUserJson, value: jsonEncode(user.toJson()));
+  }
+
+  Future<NexaiUser?> _readCachedUser() async {
+    final cached = await _storage.read(key: _keyUserJson);
+    if (cached == null || cached.isEmpty) return null;
+
+    try {
+      final decoded = jsonDecode(cached);
+      if (decoded is Map<String, dynamic>) {
+        return NexaiUser.fromJson(decoded);
+      }
+    } catch (e) {
+      debugPrint('[NexAI Auth] Cached user parse error: $e');
+    }
+    return null;
   }
 
   Future<void> _tryRefreshToken() async {
@@ -894,6 +924,7 @@ class AuthProvider extends ChangeNotifier {
         );
         if (userRes.success && userRes.user != null) {
           _currentUser = userRes.user;
+          await _saveCachedUser(userRes.user!);
         }
       } else {
         await _clearTokens();

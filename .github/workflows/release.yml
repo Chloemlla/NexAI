@@ -69,29 +69,39 @@ jobs:
 
       - name: Write signing config
         run: |
+          missing=()
           if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "⚠️ Warning: KEYSTORE_BASE64 secret not set, using debug signing"
-            echo "NEXAI_USE_DEBUG_SIGNING=true" >> android/gradle.properties
-          else
-            echo "✓ Decoding keystore from secret..."
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks || {
-              echo "❌ Error: Failed to decode KEYSTORE_BASE64, using debug signing"
-              echo "NEXAI_USE_DEBUG_SIGNING=true" >> android/gradle.properties
-              exit 0
-            }
-            
-            if [ -f "${{ github.workspace }}/nexai.jks" ]; then
-              echo "✓ Keystore file created successfully"
-              echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> android/gradle.properties
-              echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
-              echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
-              echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
-              echo "✓ Release signing configured"
-            else
-              echo "❌ Error: Keystore file not created, using debug signing"
-              echo "NEXAI_USE_DEBUG_SIGNING=true" >> android/gradle.properties
-            fi
+            missing+=("KEYSTORE_BASE64")
           fi
+          if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then
+            missing+=("KEYSTORE_PASSWORD")
+          fi
+          if [ -z "${{ secrets.KEY_ALIAS }}" ]; then
+            missing+=("KEY_ALIAS")
+          fi
+          if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then
+            missing+=("KEY_PASSWORD")
+          fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing Android release signing secrets: ${missing[*]}"
+            exit 1
+          fi
+
+          echo "✓ Decoding keystore from secret..."
+          if ! echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > ${{ github.workspace }}/nexai.jks; then
+            echo "::error::Failed to decode KEYSTORE_BASE64"
+            exit 1
+          fi
+          if [ ! -s "${{ github.workspace }}/nexai.jks" ]; then
+            echo "::error::Keystore file not created"
+            exit 1
+          fi
+
+          echo "NEXAI_STORE_FILE=${{ github.workspace }}/nexai.jks" >> android/gradle.properties
+          echo "NEXAI_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "NEXAI_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
+          echo "NEXAI_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+          echo "✓ Release signing configured"
 
       - name: Accept Android SDK licenses
         run: yes | flutter doctor --android-licenses || true
@@ -274,6 +284,8 @@ jobs:
           # Package all android outputs for debugging
           zip -r release-assets/android-outputs-${{ github.ref_name }}.zip android-outputs
 
+          sha256sum release-assets/NexAI_android_*.apk > release-assets/APK_SHA256SUMS.txt
+
       - name: Generate release notes
         run: |
           echo "## NexAI ${{ github.ref_name }}" > RELEASE_NOTES.md
@@ -282,6 +294,13 @@ jobs:
           echo "- **Android APK** (multiple architectures available)" >> RELEASE_NOTES.md
           echo "- **Web**: \`NexAI-Web-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
           echo "- **Windows**: \`NexAI-Windows-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "### APK SHA256" >> RELEASE_NOTES.md
+          while read -r hash file; do
+            name=$(basename "$file")
+            echo "- \`$name\`" >> RELEASE_NOTES.md
+            echo "  - sha256:$hash" >> RELEASE_NOTES.md
+          done < release-assets/APK_SHA256SUMS.txt
           echo "" >> RELEASE_NOTES.md
           echo "### APK Architecture Guide" >> RELEASE_NOTES.md
           echo "- \`arm64-v8a\`: Modern 64-bit ARM devices (recommended for most users)" >> RELEASE_NOTES.md
@@ -309,6 +328,7 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'rc') }}
           files: |
             release-assets/NexAI_android_*.apk
+            release-assets/APK_SHA256SUMS.txt
             release-assets/NexAI-Web-${{ github.ref_name }}.zip
             release-assets/NexAI-Windows-${{ github.ref_name }}.zip
             release-assets/android-outputs-${{ github.ref_name }}.zip

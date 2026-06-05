@@ -1337,7 +1337,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          '• 所有密码仅存储在本地设备\n• 不会上传或同步到任何服务器\n• 支持导出和加密备份\n• 您的数据完全由您掌控',
+                          '• 所有密码仅存储在本地设备\n• 不会上传或同步到任何服务器\n• 支持导出和可校验备份\n• 您的数据完全由您掌控',
                           style: TextStyle(
                             fontSize: 13,
                             color: cs.onTertiaryContainer,

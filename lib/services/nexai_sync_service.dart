@@ -29,21 +29,6 @@ class _NexaiHttp {
     return h;
   }
 
-  static Future<http.Response> post(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    final bodyStr = body is String ? body : (body?.toString() ?? '');
-    final signed = await signRequest(
-      method: 'POST',
-      path: url.path,
-      headers: _base(headers),
-      body: bodyStr,
-    );
-    return (await _get()).post(url, headers: signed, body: body);
-  }
-
   static Future<http.Response> get(
     Uri url, {
     Map<String, String>? headers,
@@ -69,21 +54,6 @@ class _NexaiHttp {
       body: bodyStr,
     );
     return (await _get()).put(url, headers: signed, body: body);
-  }
-
-  static Future<http.Response> patch(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    final bodyStr = body is String ? body : (body?.toString() ?? '');
-    final signed = await signRequest(
-      method: 'PATCH',
-      path: url.path,
-      headers: _base(headers),
-      body: bodyStr,
-    );
-    return (await _get()).patch(url, headers: signed, body: body);
   }
 
   static Future<http.Response> delete(
@@ -123,12 +93,12 @@ class NexaiSyncApi {
     }
   }
 
-  /// GET /sync — 获取全部同步数据
-  static Future<Map<String, dynamic>?> getSyncData({
+  /// GET /sync/v2 — 获取端到端加密同步数据
+  static Future<Map<String, dynamic>?> getSyncDataV2({
     required String accessToken,
   }) async {
     final response = await _NexaiHttp.get(
-      Uri.parse('$_baseUrl/sync'),
+      Uri.parse('$_baseUrl/sync/v2'),
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
@@ -144,53 +114,33 @@ class NexaiSyncApi {
     return null;
   }
 
-  /// PUT /sync — 全量上传同步数据
-  static Future<bool> putSyncData({
+  /// PUT /sync/v2 — 全量上传端到端加密同步数据
+  static Future<Map<String, dynamic>?> putSyncDataV2({
     required String accessToken,
-    required Map<String, dynamic> data,
+    required Map<String, dynamic> snapshot,
   }) async {
     final response = await _NexaiHttp.put(
-      Uri.parse('$_baseUrl/sync'),
+      Uri.parse('$_baseUrl/sync/v2'),
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode(data),
+      body: jsonEncode(snapshot),
     );
 
     if (_isSuccess(response.statusCode)) {
       final body = _tryDecode(response.body);
-      return body?['success'] == true;
+      if (body?['success'] == true) {
+        return body?['data'] as Map<String, dynamic>? ?? {};
+      }
     }
-    return false;
+    return null;
   }
 
-  /// PATCH /sync/:category — 按类别局部更新
-  static Future<bool> patchSyncData({
-    required String accessToken,
-    required String category,
-    required dynamic data,
-  }) async {
-    final response = await _NexaiHttp.patch(
-      Uri.parse('$_baseUrl/sync/$category'),
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'data': data}),
-    );
-
-    if (_isSuccess(response.statusCode)) {
-      final body = _tryDecode(response.body);
-      return body?['success'] == true;
-    }
-    return false;
-  }
-
-  /// DELETE /sync — 清除同步数据
-  static Future<bool> deleteSyncData({required String accessToken}) async {
+  /// DELETE /sync/v2 — 清除端到端加密同步数据
+  static Future<bool> deleteSyncDataV2({required String accessToken}) async {
     final response = await _NexaiHttp.delete(
-      Uri.parse('$_baseUrl/sync'),
+      Uri.parse('$_baseUrl/sync/v2'),
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
@@ -204,62 +154,16 @@ class NexaiSyncApi {
     return false;
   }
 
-  /// GET /sync/meta — 获取同步元信息
-  static Future<Map<String, dynamic>?> getSyncMeta({
+  /// GET /sync/v2/meta — 获取端到端加密同步元信息
+  static Future<Map<String, dynamic>?> getSyncMetaV2({
     required String accessToken,
   }) async {
     final response = await _NexaiHttp.get(
-      Uri.parse('$_baseUrl/sync/meta'),
+      Uri.parse('$_baseUrl/sync/v2/meta'),
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
       },
-    );
-
-    if (_isSuccess(response.statusCode)) {
-      final body = _tryDecode(response.body);
-      if (body?['success'] == true) {
-        return body?['data'] as Map<String, dynamic>?;
-      }
-    }
-    return null;
-  }
-
-  /// GET /sync/changes?since=ISO8601 — 增量拉取变更
-  static Future<Map<String, dynamic>?> getChangesSince({
-    required String accessToken,
-    required String since,
-  }) async {
-    final response = await _NexaiHttp.get(
-      Uri.parse('$_baseUrl/sync/changes?since=${Uri.encodeComponent(since)}'),
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-      },
-    );
-
-    if (_isSuccess(response.statusCode)) {
-      final body = _tryDecode(response.body);
-      if (body?['success'] == true) {
-        return body?['data'] as Map<String, dynamic>?;
-      }
-    }
-    return null;
-  }
-
-  /// POST /sync/incremental — 增量同步（上传本地变更 + 拉取服务端变更）
-  static Future<Map<String, dynamic>?> postIncrementalSync({
-    required String accessToken,
-    required String lastSyncedAt,
-    required Map<String, dynamic> data,
-  }) async {
-    final response = await _NexaiHttp.post(
-      Uri.parse('$_baseUrl/sync/incremental'),
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'lastSyncedAt': lastSyncedAt, 'data': data}),
     );
 
     if (_isSuccess(response.statusCode)) {

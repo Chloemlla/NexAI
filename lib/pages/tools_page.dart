@@ -320,7 +320,7 @@ class _ToolsPageState extends State<ToolsPage> {
                   '按任务而不是按记忆找工具。',
                   style: tt.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
+                    letterSpacing: 0,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -600,7 +600,7 @@ class _SectionHeader extends StatelessWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: cs.onSurface,
-                    letterSpacing: -0.2,
+                    letterSpacing: 0,
                   ),
                 ),
                 Text(
@@ -690,7 +690,7 @@ class _ToolCard extends StatelessWidget {
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
-                  letterSpacing: -0.2,
+                  letterSpacing: 0,
                   height: 1.2,
                 ),
                 textAlign: TextAlign.center,

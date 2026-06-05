@@ -103,7 +103,7 @@ class _AboutPageState extends State<AboutPage> {
                                 'NexAI',
                                 style: tt.headlineSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.5,
+                                  letterSpacing: 0,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -306,7 +306,7 @@ class _AboutPageState extends State<AboutPage> {
                   title,
                   style: tt.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
+                    letterSpacing: 0,
                   ),
                 ),
               ],

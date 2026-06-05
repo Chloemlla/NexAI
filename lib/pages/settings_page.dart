@@ -2159,7 +2159,7 @@ class _SectionHeader extends StatelessWidget {
           label,
           style: tt.titleSmall?.copyWith(
             fontWeight: FontWeight.w700,
-            letterSpacing: -0.1,
+            letterSpacing: 0,
             color: cs.onSurface,
           ),
         ),

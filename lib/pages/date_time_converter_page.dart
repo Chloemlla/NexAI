@@ -379,7 +379,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                       '转换结果',
                       style: tt.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        letterSpacing: -0.2,
+                        letterSpacing: 0,
                       ),
                     ),
                     const Spacer(),
@@ -444,7 +444,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                   '输入',
                   style: tt.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
-                    letterSpacing: -0.2,
+                    letterSpacing: 0,
                   ),
                 ),
               ],

@@ -32,7 +32,7 @@ class WelcomeView extends StatelessWidget {
               '开始与 NexAI 对话',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
+                letterSpacing: 0,
               ),
             ),
             const SizedBox(height: 8),

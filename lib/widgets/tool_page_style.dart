@@ -338,7 +338,7 @@ class ToolSectionTitle extends StatelessWidget {
           title,
           style: tt.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
+            letterSpacing: 0,
           ),
         ),
         if (trailing != null) ...[

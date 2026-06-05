@@ -1,0 +1,32 @@
+# Repository Guidelines
+
+## Project Structure & Module Organization
+
+NexAI is a Flutter/Dart client for OpenAI-compatible APIs. Core app code lives in `lib/`: `main.dart` and `app.dart` bootstrap the app, `pages/` contains screens, `providers/` owns state and API-facing logic, `models/` defines data objects, `services/` handles backend/security integrations, `utils/` contains shared helpers, and `widgets/` holds reusable UI. Tests are under `test/`, with widget tests in `test/widgets/`. Static assets, fonts, Markdown CSS, and icons are in `assets/`. Platform code is in `android/`, `web/`, and `windows/`; project docs are in `docs/`.
+
+## Build, Test, and Development Commands
+
+- `flutter pub get` installs dependencies from `pubspec.yaml`.
+- `flutter run -d windows`, `flutter run -d android`, or `flutter run -d chrome` runs the app locally on the target platform.
+- `flutter analyze` runs the Dart analyzer with `flutter_lints`.
+- `dart format lib test` formats source and tests.
+- `flutter test` runs all unit and widget tests.
+- `flutter build apk --release` and `flutter build web` create release builds.
+- `pwsh scripts/build.ps1 -Arg android` updates Android release metadata; it rewrites `pubspec.yaml` and `nexai_release.json`.
+- `scripts\generate-icons.cmd` regenerates Android launcher icons from `assets/icon.png` and requires ImageMagick.
+
+## Coding Style & Naming Conventions
+
+Use two-space Dart formatting via `dart format`. Follow `flutter_lints`; this repo disables `prefer_const_constructors`, `prefer_const_literals_to_create_immutables`, and `avoid_print` in `analysis_options.yaml`. Use `PascalCase` for classes/widgets, `camelCase` for members, and `snake_case.dart` filenames. Keep UI in `pages/` or `widgets/`, state in `providers/`, and network/security behavior in `services/` or `utils/`.
+
+## Testing Guidelines
+
+Name tests `*_test.dart` and mirror the feature path when practical, for example `test/widgets/markdown_renderer_test.dart`. Add focused tests for parser, rendering, update-checking, provider, and utility changes. Run `flutter test` before submitting and `flutter analyze` for shared logic.
+
+## Commit & Pull Request Guidelines
+
+Git history uses Conventional Commits such as `fix: harden backend sync and diagnostics`, `feat: refine chat and tools interactions`, and `chore: clean analyzer issues`. Keep commits scoped and imperative. Pull requests should include a summary, affected platforms, test results, linked issues, and screenshots or recordings for UI changes.
+
+## Security & Configuration Tips
+
+Do not commit API keys, keystores, signing passwords, or local certificate material. Android signing uses GitHub Actions secrets and `android/gradle.properties`; prefer release flows over hardcoded credentials. Review `docs/SERVER_API_SECURITY.md` and related contracts before changing request signing, certificate pinning, sync, or device security code.

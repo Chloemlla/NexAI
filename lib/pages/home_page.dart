@@ -14,7 +14,6 @@ import '../utils/app_security.dart';
 import '../utils/security_status_checker.dart';
 import '../utils/security_headers_interceptor.dart';
 import '../services/nexai_security_service.dart';
-import '../widgets/flux_glass_dock.dart';
 import 'chat_page.dart';
 import 'notes_page.dart';
 import 'note_detail_page.dart';
@@ -367,30 +366,32 @@ class _HomePageState extends State<HomePage> with WindowListener {
       ),
       bottomNavigationBar: fullScreen
           ? null
-          : FluxGlassDock(
+          : NavigationBar(
               selectedIndex: _androidNavIndex,
-              onDestinationSelected: (i) {
-                setState(() => _androidNavIndex = i);
-              },
-              items: const [
-                FluxGlassDockItem(
-                  icon: Icons.chat_outlined,
-                  selectedIcon: Icons.chat_rounded,
+              onDestinationSelected: (i) =>
+                  setState(() => _androidNavIndex = i),
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              animationDuration: const Duration(milliseconds: 400),
+              elevation: 3,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.chat_outlined),
+                  selectedIcon: Icon(Icons.chat_rounded),
                   label: '聊天',
                 ),
-                FluxGlassDockItem(
-                  icon: Icons.note_alt_outlined,
-                  selectedIcon: Icons.note_alt_rounded,
+                NavigationDestination(
+                  icon: Icon(Icons.note_alt_outlined),
+                  selectedIcon: Icon(Icons.note_alt_rounded),
                   label: '笔记',
                 ),
-                FluxGlassDockItem(
-                  icon: Icons.build_outlined,
-                  selectedIcon: Icons.build_rounded,
+                NavigationDestination(
+                  icon: Icon(Icons.build_outlined),
+                  selectedIcon: Icon(Icons.build_rounded),
                   label: '工具',
                 ),
-                FluxGlassDockItem(
-                  icon: Icons.tune_outlined,
-                  selectedIcon: Icons.tune_rounded,
+                NavigationDestination(
+                  icon: Icon(Icons.tune_outlined),
+                  selectedIcon: Icon(Icons.tune_rounded),
                   label: '设置',
                 ),
               ],

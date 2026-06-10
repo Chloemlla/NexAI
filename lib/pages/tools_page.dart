@@ -129,7 +129,7 @@ class _ToolsPageState extends State<ToolsPage> {
     ),
     _ToolEntry(
       title: 'AI 绘图',
-      description: '仅支持 happyapi.org 端点',
+      description: '使用 NexAI API 端点生成图片',
       keywords: const ['图片', '图像', '生成', 'AI', '绘图'],
       category: _ToolCategory.ai,
       icon: Icons.brush_rounded,

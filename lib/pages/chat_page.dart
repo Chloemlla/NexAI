@@ -369,7 +369,7 @@ class _ChatPageState extends State<ChatPage> {
                         size: 24,
                       ),
                       onPressed: () => _openImageGenerationPage(context),
-                      tooltip: '打开绘图页面（仅 happyapi.org）',
+                      tooltip: '打开绘图页面',
                       style: IconButton.styleFrom(
                         backgroundColor: cs.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(
@@ -1012,7 +1012,7 @@ class _ChatPageState extends State<ChatPage> {
                         size: 22,
                       ),
                       onPressed: () => _openImageGenerationPage(context),
-                      tooltip: '打开绘图页面（仅 happyapi.org）',
+                      tooltip: '打开绘图页面',
                       style: IconButton.styleFrom(
                         backgroundColor: cs.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(

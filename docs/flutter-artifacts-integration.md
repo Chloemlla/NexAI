@@ -395,7 +395,7 @@ class Pagination {
 
 ```dart
 final service = ArtifactsService(
-  baseUrl: 'https://your-domain.com/api/nexai',
+  baseUrl: 'https://tts.chloemlla.com/api/nexai',
   accessToken: 'your_jwt_token',
 );
 
@@ -671,7 +671,7 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
 
     try {
       final service = ArtifactsService(
-        baseUrl: 'https://your-domain.com/api/nexai',
+        baseUrl: 'https://tts.chloemlla.com/api/nexai',
         accessToken: 'your_jwt_token', // 从存储中获取
       );
 

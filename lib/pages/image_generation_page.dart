@@ -49,16 +49,21 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     super.dispose();
   }
 
-  bool _supportsHappyApiEndpoint(SettingsProvider settings) {
+  bool _supportsImageEndpoint(SettingsProvider settings) {
     if (settings.apiMode != 'OpenAI') return false;
 
     final uri = Uri.tryParse(settings.baseUrl);
     final host = uri?.host.toLowerCase() ?? '';
-    return host == 'happyapi.org' || host.endsWith('.happyapi.org');
+    final path = uri?.path.toLowerCase() ?? '';
+    final isNexaiApi =
+        host == 'tts.chloemlla.com' &&
+        (path == '/api/nexai' || path.startsWith('/api/nexai/'));
+    final isHappyApi = host == 'happyapi.org' || host.endsWith('.happyapi.org');
+    return isNexaiApi || isHappyApi;
   }
 
   bool _canGenerate(SettingsProvider settings) {
-    return _supportsHappyApiEndpoint(settings) && settings.isConfigured;
+    return _supportsImageEndpoint(settings) && settings.isConfigured;
   }
 
   String _currentEndpointLabel(SettingsProvider settings) {
@@ -73,8 +78,8 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     ImageGenerationProvider provider,
   ) {
     if (provider.isLoading) return '生成中...';
-    if (!_supportsHappyApiEndpoint(settings)) {
-      return '仅支持 happyapi.org 端点';
+    if (!_supportsImageEndpoint(settings)) {
+      return '请配置 NexAI API 端点';
     }
     if (!settings.isConfigured) return '请先配置 API 密钥';
     return '生成图片';
@@ -161,8 +166,8 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     if (prompt.isEmpty) return;
 
     final settings = context.read<SettingsProvider>();
-    if (!_supportsHappyApiEndpoint(settings)) {
-      _showError('绘图页仅支持 happyapi.org 端点，请先到设置中切换接口');
+    if (!_supportsImageEndpoint(settings)) {
+      _showError('绘图页仅支持 NexAI API 端点，请先到设置中切换接口');
       return;
     }
     if (!settings.isConfigured) {
@@ -263,7 +268,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                 child: FilledButton.tonalIcon(
                   onPressed: _openSettings,
                   icon: const Icon(Icons.settings_rounded),
-                  label: const Text('前往设置 happyapi.org 端点'),
+                  label: const Text('前往设置 NexAI API 端点'),
                 ),
               ),
             )
@@ -273,7 +278,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
   Widget _buildEndpointNotice(BuildContext context, SettingsProvider settings) {
     final cs = Theme.of(context).colorScheme;
-    final supported = _supportsHappyApiEndpoint(settings);
+    final supported = _supportsImageEndpoint(settings);
 
     return Container(
       width: double.infinity,
@@ -302,7 +307,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  supported ? '当前端点可用于绘图' : '仅支持 happyapi.org 端点接入',
+                  supported ? '当前端点可用于绘图' : '请接入 NexAI API 端点',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -318,7 +323,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
           Text(
             supported
                 ? '当前端点：${_currentEndpointLabel(settings)}\n生成记录会自动保存在本地，单张图片可手动保存到相册或文件。'
-                : '请在设置中将 API 模式切换为 OpenAI，并把 Base URL 设置为 happyapi.org 的兼容接口。\n当前：${_currentEndpointLabel(settings)}',
+                : '请在设置中将 API 模式切换为 OpenAI，并把 Base URL 设置为 ${SettingsProvider.defaultOpenaiBaseUrl}。\n当前：${_currentEndpointLabel(settings)}',
             style: TextStyle(
               fontSize: 12,
               height: 1.45,

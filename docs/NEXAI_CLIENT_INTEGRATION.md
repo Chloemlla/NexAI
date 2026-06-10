@@ -354,7 +354,7 @@ val okHttpClient = OkHttpClient.Builder()
     .build()
 
 val retrofit = Retrofit.Builder()
-    .baseUrl("https://your-domain.com/api/")
+    .baseUrl("https://tts.chloemlla.com/api/nexai/")
     .client(okHttpClient)
     .addConverterFactory(GsonConverterFactory.create())
     .build()

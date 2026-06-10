@@ -327,7 +327,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         controller: _baseUrlController,
                         decoration: InputDecoration(
                           labelText: '基础 URL',
-                          hintText: 'https://api.openai.com/v1',
+                          hintText: SettingsProvider.defaultOpenaiBaseUrl,
                           prefixIcon: const Icon(Icons.link_rounded, size: 20),
                           helperText: 'OpenAI 兼容端点',
                         ),

@@ -3,6 +3,10 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
+  static const String defaultOpenaiBaseUrl =
+      'https://tts.chloemlla.com/api/nexai';
+  static const String _legacyOpenaiBaseUrl = 'https://api.openai.com/v1';
+
   // ── Available font families (from pubspec.yaml) ──────────────────────────
   static const List<String> availableFonts = [
     'vivoSans',
@@ -29,7 +33,7 @@ class SettingsProvider extends ChangeNotifier {
   int? _accentColorValue;
 
   // OpenAI specific settings
-  String _openaiBaseUrl = 'https://api.openai.com/v1';
+  String _openaiBaseUrl = defaultOpenaiBaseUrl;
   String _openaiApiKey = '';
   List<String> _openaiModels = [
     'gpt-4o',
@@ -119,6 +123,13 @@ class SettingsProvider extends ChangeNotifier {
       ? _openaiApiKey.isNotEmpty
       : _vertexApiKey.isNotEmpty;
 
+  static String _normalizeBaseUrl(String url) {
+    final trimmed = url.trim();
+    return trimmed.endsWith('/')
+        ? trimmed.substring(0, trimmed.length - 1)
+        : trimmed;
+  }
+
   Future<void> loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -133,7 +144,18 @@ class SettingsProvider extends ChangeNotifier {
       _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
 
       // ── Read non-sensitive fields from SharedPreferences ───────────────────
-      _openaiBaseUrl = prefs.getString('openaiBaseUrl') ?? _openaiBaseUrl;
+      final savedOpenaiBaseUrl = prefs.getString('openaiBaseUrl');
+      final normalizedOpenaiBaseUrl = savedOpenaiBaseUrl == null
+          ? defaultOpenaiBaseUrl
+          : _normalizeBaseUrl(savedOpenaiBaseUrl);
+      _openaiBaseUrl =
+          normalizedOpenaiBaseUrl.isEmpty ||
+              normalizedOpenaiBaseUrl == _legacyOpenaiBaseUrl
+          ? defaultOpenaiBaseUrl
+          : normalizedOpenaiBaseUrl;
+      if (savedOpenaiBaseUrl != _openaiBaseUrl) {
+        await prefs.setString('openaiBaseUrl', _openaiBaseUrl);
+      }
       _vertexProjectId = prefs.getString('vertexProjectId') ?? '';
       _vertexLocation = prefs.getString('vertexLocation') ?? 'global';
 
@@ -290,9 +312,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setBaseUrl(String url) async {
-    final normalized = url.trimRight().endsWith('/')
-        ? url.trimRight().substring(0, url.trimRight().length - 1)
-        : url.trim();
+    final normalized = _normalizeBaseUrl(url);
     if (_apiMode == 'OpenAI') {
       _openaiBaseUrl = normalized;
     }

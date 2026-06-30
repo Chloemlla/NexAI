@@ -13,11 +13,10 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-const _channel = MethodChannel('com.chloemlla.nexai/security');
+import '../services/android_native/android_fingerprint_service.dart';
 
 const _storage = FlutterSecureStorage(
   aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -53,6 +52,19 @@ class DeviceFingerprint {
 
   /// Generate comprehensive device fingerprint
   Future<String> _generateFingerprint() async {
+    if (Platform.isAndroid) {
+      try {
+        final result = await AndroidFingerprintService()
+            .getFingerprintSnapshot();
+        final fingerprint = result.data?.derivedSha256;
+        if (result.ok && fingerprint != null && fingerprint.isNotEmpty) {
+          return fingerprint;
+        }
+      } catch (e) {
+        debugPrint('DeviceFingerprint: native snapshot error: $e');
+      }
+    }
+
     final components = <String, dynamic>{};
 
     // Layer 1: Basic device info
@@ -125,8 +137,8 @@ class DeviceFingerprint {
     if (!Platform.isAndroid) return {};
 
     try {
-      final hardware = await _channel.invokeMethod<Map>('getHardwareInfo');
-      return Map<String, dynamic>.from(hardware ?? {});
+      final result = await AndroidFingerprintService().getHardwareInfo();
+      return result.data ?? {};
     } catch (e) {
       debugPrint('DeviceFingerprint: hardware info error: $e');
       return {};
@@ -138,8 +150,8 @@ class DeviceFingerprint {
     if (!Platform.isAndroid) return {};
 
     try {
-      final software = await _channel.invokeMethod<Map>('getSoftwareInfo');
-      return Map<String, dynamic>.from(software ?? {});
+      final result = await AndroidFingerprintService().getSoftwareInfo();
+      return result.data ?? {};
     } catch (e) {
       debugPrint('DeviceFingerprint: software info error: $e');
       return {};
@@ -151,8 +163,8 @@ class DeviceFingerprint {
     if (!Platform.isAndroid) return {};
 
     try {
-      final storage = await _channel.invokeMethod<Map>('getStorageInfo');
-      return Map<String, dynamic>.from(storage ?? {});
+      final result = await AndroidFingerprintService().getStorageInfo();
+      return result.data ?? {};
     } catch (e) {
       debugPrint('DeviceFingerprint: storage info error: $e');
       return {};
@@ -164,8 +176,8 @@ class DeviceFingerprint {
     if (!Platform.isAndroid) return {};
 
     try {
-      final sensors = await _channel.invokeMethod<Map>('getSensorFingerprint');
-      return Map<String, dynamic>.from(sensors ?? {});
+      final result = await AndroidFingerprintService().getSensorFingerprint();
+      return result.data ?? {};
     } catch (e) {
       debugPrint('DeviceFingerprint: sensor fingerprint error: $e');
       return {};
@@ -177,8 +189,8 @@ class DeviceFingerprint {
     if (!Platform.isAndroid) return {};
 
     try {
-      final network = await _channel.invokeMethod<Map>('getNetworkInfo');
-      return Map<String, dynamic>.from(network ?? {});
+      final result = await AndroidFingerprintService().getNetworkInfo();
+      return result.data ?? {};
     } catch (e) {
       debugPrint('DeviceFingerprint: network info error: $e');
       return {};
@@ -188,8 +200,8 @@ class DeviceFingerprint {
   /// Layer 7: System properties (Android Build.PROP)
   Future<Map<String, dynamic>> _getSystemProperties() async {
     try {
-      final props = await _channel.invokeMethod<Map>('getSystemProperties');
-      return Map<String, dynamic>.from(props ?? {});
+      final result = await AndroidFingerprintService().getSystemProperties();
+      return result.data ?? {};
     } catch (e) {
       debugPrint('DeviceFingerprint: system properties error: $e');
       return {};

@@ -2,6 +2,8 @@ package com.chloemlla.nexai
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.os.Build
@@ -21,6 +23,14 @@ class DeviceFingerprint(private val context: Context) {
 
     fun getHardwareInfo(): Map<String, Any> {
         val info = mutableMapOf<String, Any>()
+
+        info["brand"] = Build.BRAND
+        info["manufacturer"] = Build.MANUFACTURER
+        info["model"] = Build.MODEL
+        info["device"] = Build.DEVICE
+        info["product"] = Build.PRODUCT
+        info["board"] = Build.BOARD
+        info["hardware"] = Build.HARDWARE
 
         // CPU information
         info["cpuAbi"] = Build.SUPPORTED_ABIS.joinToString(",")
@@ -75,6 +85,13 @@ class DeviceFingerprint(private val context: Context) {
     fun getSoftwareInfo(): Map<String, Any> {
         val info = mutableMapOf<String, Any>()
 
+        info["androidVersion"] = Build.VERSION.RELEASE ?: "unknown"
+        info["sdkInt"] = Build.VERSION.SDK_INT
+        info["buildFingerprint"] = Build.FINGERPRINT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            info["securityPatch"] = Build.VERSION.SECURITY_PATCH ?: "unknown"
+        }
+
         // Installed apps hash (privacy-preserving)
         val installedApps = context.packageManager.getInstalledApplications(0)
         val appPackages = installedApps
@@ -117,7 +134,9 @@ class DeviceFingerprint(private val context: Context) {
         val internalPath = Environment.getDataDirectory()
         val internalStat = StatFs(internalPath.path)
         info["internalTotalBytes"] = internalStat.totalBytes
+        info["internalAvailableBytes"] = internalStat.availableBytes
         info["internalBlockSize"] = internalStat.blockSizeLong
+        info["externalStorageState"] = Environment.getExternalStorageState()
 
         // External storage
         if (Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED) {
@@ -147,6 +166,16 @@ class DeviceFingerprint(private val context: Context) {
         val info = mutableMapOf<String, Any>()
 
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val sensors = sensorManager.getSensorList(Sensor.TYPE_ALL)
+        info["sensorCount"] = sensors.size
+        info["sensorSummary"] = sensors.map {
+            mapOf(
+                "name" to it.name,
+                "vendor" to it.vendor,
+                "version" to it.version,
+                "type" to it.type,
+            )
+        }
 
         // Accelerometer characteristics
         val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
@@ -202,6 +231,25 @@ class DeviceFingerprint(private val context: Context) {
             // Ignore
         }
 
+        try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val network = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) cm.activeNetwork else null
+            val capabilities = if (network != null) cm.getNetworkCapabilities(network) else null
+            info["networkType"] = when {
+                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> "wifi"
+                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> "cellular"
+                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> "ethernet"
+                capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true -> "vpn"
+                else -> "unknown"
+            }
+            info["vpnActive"] = capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+            info["httpProxyHost"] = System.getProperty("http.proxyHost") ?: ""
+            info["httpProxyPort"] = System.getProperty("http.proxyPort") ?: ""
+        } catch (e: Exception) {
+            info["networkType"] = "unknown"
+            info["vpnActive"] = false
+        }
+
         return info
     }
 
@@ -246,6 +294,36 @@ class DeviceFingerprint(private val context: Context) {
         return info
     }
 
+    fun getFingerprintSnapshot(): Map<String, Any?> {
+        val errors = mutableMapOf<String, String>()
+
+        fun collect(key: String, block: () -> Map<String, Any>): Map<String, Any> =
+            try {
+                block()
+            } catch (e: Exception) {
+                errors[key] = "native_failure"
+                emptyMap()
+            }
+
+        val snapshot = mapOf(
+            "hardware" to collect("hardware") { getHardwareInfo() },
+            "software" to collect("software") { getSoftwareInfo() },
+            "storage" to collect("storage") { getStorageInfo() },
+            "sensors" to collect("sensors") { getSensorFingerprint() },
+            "network" to collect("network") { getNetworkInfo() },
+            "systemProperties" to collect("systemProperties") { getSystemProperties() },
+        )
+        val derivedSha256 = hashString(snapshot.toSortedString())
+
+        return mapOf(
+            "snapshot" to snapshot,
+            "derivedSha256" to derivedSha256,
+            "checkedAt" to System.currentTimeMillis(),
+            "source" to "android_kotlin_native",
+            "errors" to errors,
+        )
+    }
+
     // ── DEX File Hash ─────────────────────────────────────────────────────────
 
     fun getDexFileHash(): String? {
@@ -278,5 +356,18 @@ class DeviceFingerprint(private val context: Context) {
         val digest = MessageDigest.getInstance("SHA-256")
         val hash = digest.digest(input.toByteArray())
         return hash.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun Any?.toSortedString(): String {
+        return when (this) {
+            null -> "null"
+            is Map<*, *> -> entries
+                .sortedBy { it.key.toString() }
+                .joinToString(prefix = "{", postfix = "}") {
+                    "${it.key}:${it.value.toSortedString()}"
+                }
+            is Iterable<*> -> joinToString(prefix = "[", postfix = "]") { it.toSortedString() }
+            else -> toString()
+        }
     }
 }

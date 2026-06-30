@@ -12,13 +12,12 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
-const _channel = MethodChannel('com.chloemlla.nexai/security');
+import '../services/android_native/android_security_service.dart';
 
 const _storage = FlutterSecureStorage(
   aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -56,9 +55,12 @@ class AppSecurity {
   /// DEX file hash (for runtime integrity check)
   String? dexHash;
 
+  AndroidSecuritySnapshot? _nativeSnapshot;
+
   /// Initialise security checks. Call once in [main] before [runApp].
   Future<void> init() async {
     if (kIsWeb) return;
+    await _loadNativeSnapshot();
     await Future.wait([
       _checkApkSignature(),
       _checkRootStatus(),
@@ -70,14 +72,28 @@ class AppSecurity {
     ]);
   }
 
+  Future<void> _loadNativeSnapshot() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final result = await AndroidSecurityService().getSecuritySnapshot();
+      if (result.ok) {
+        _nativeSnapshot = result.data;
+      } else {
+        debugPrint(
+          'AppSecurity: security snapshot unavailable: ${result.error?.code}',
+        );
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: security snapshot error: $e');
+    }
+  }
+
   // ── APK Signature (TOFU) ────────────────────────────────────────────────────
 
   Future<void> _checkApkSignature() async {
     if (!Platform.isAndroid) return;
     try {
-      final current = await _channel.invokeMethod<String>(
-        'getApkSignatureFingerprint',
-      );
+      final current = _nativeSnapshot?.signatureSha256;
       if (current == null || current.isEmpty) return;
 
       final stored = await _storage.read(key: _sigPinKey);
@@ -148,9 +164,7 @@ class AppSecurity {
       }
 
       // Get installed APK hash from native code
-      final installedHash = await _channel.invokeMethod<String>(
-        'getApkFileSha256',
-      );
+      final installedHash = _nativeSnapshot?.apkSha256;
       if (installedHash == null || installedHash.isEmpty) {
         _markApkHashInvalid('failed to calculate APK hash');
         return;
@@ -255,7 +269,7 @@ class AppSecurity {
     if (!Platform.isAndroid && !Platform.isIOS) return;
     try {
       if (Platform.isAndroid) {
-        final rooted = await _channel.invokeMethod<bool>('isRooted') ?? false;
+        final rooted = _nativeSnapshot?.rooted ?? false;
         if (rooted) {
           debugPrint('AppSecurity: Root indicators detected');
           isCompromised = true;
@@ -274,7 +288,7 @@ class AppSecurity {
   Future<void> setSecureScreen({required bool enable}) async {
     if (!Platform.isAndroid) return;
     try {
-      await _channel.invokeMethod<void>('setSecureScreen', {'enable': enable});
+      await AndroidSecurityService().setSecureScreen(enable: enable);
     } catch (e) {
       debugPrint('AppSecurity: setSecureScreen error: $e');
     }
@@ -285,8 +299,7 @@ class AppSecurity {
   Future<void> _checkDebugger() async {
     if (!Platform.isAndroid) return;
     try {
-      final attached =
-          await _channel.invokeMethod<bool>('isDebuggerAttached') ?? false;
+      final attached = _nativeSnapshot?.debuggerAttached ?? false;
       if (attached) {
         debugPrint('AppSecurity: Debugger attached');
         isDebuggerAttached = true;
@@ -302,7 +315,7 @@ class AppSecurity {
   Future<void> _checkEmulator() async {
     if (!Platform.isAndroid) return;
     try {
-      final emulator = await _channel.invokeMethod<bool>('isEmulator') ?? false;
+      final emulator = _nativeSnapshot?.emulator ?? false;
       if (emulator) {
         debugPrint('AppSecurity: Running on emulator');
         isEmulator = true;
@@ -318,7 +331,7 @@ class AppSecurity {
   Future<void> _checkVpn() async {
     if (!Platform.isAndroid) return;
     try {
-      final vpn = await _channel.invokeMethod<bool>('isVpnActive') ?? false;
+      final vpn = _nativeSnapshot?.vpnActive ?? false;
       if (vpn) {
         debugPrint('AppSecurity: VPN connection detected');
         isVpnActive = true;
@@ -357,7 +370,7 @@ class AppSecurity {
   Future<void> _checkDexIntegrity() async {
     if (!Platform.isAndroid) return;
     try {
-      final hash = await _channel.invokeMethod<String>('getDexHash');
+      final hash = _nativeSnapshot?.dexSha256;
       if (hash != null && hash.isNotEmpty) {
         dexHash = hash;
         debugPrint('AppSecurity: DEX hash: ${hash.substring(0, 16)}...');
@@ -381,7 +394,8 @@ class AppSecurity {
   Future<bool> verifyDexIntegrity() async {
     if (!Platform.isAndroid) return true;
     try {
-      final currentHash = await _channel.invokeMethod<String>('getDexHash');
+      final result = await AndroidSecurityService().getSecuritySnapshot();
+      final currentHash = result.data?.dexSha256;
       if (currentHash == null) return false;
 
       final stored = await _storage.read(key: 'nexai.dex.hash.v1');

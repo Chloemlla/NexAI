@@ -44,10 +44,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.gradle/caches
+            ~/.gradle/caches/modules-2
+            ~/.gradle/caches/jars-*
             ~/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/*.gradle*', 'android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties', 'pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -56,7 +56,7 @@ jobs:
         with:
           path: |
             ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -236,7 +236,7 @@ jobs:
         with:
           path: |
             ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -274,7 +274,7 @@ jobs:
         with:
           path: |
             ~\AppData\Local\Pub\Cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.yaml') }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -286,6 +286,9 @@ jobs:
 
       - name: Recreate Windows directory
         run: flutter create --platforms windows .
+
+      - name: Configure Windows native build
+        run: pwsh scripts/configure_windows_native_build.ps1
 
       - name: Run build.ps1 (version control)
         run: pwsh scripts/build.ps1

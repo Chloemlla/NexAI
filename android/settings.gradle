@@ -1,4 +1,14 @@
 pluginManagement {
+    def kotlinPluginVersion = "2.3.21"
+
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id.startsWith("org.jetbrains.kotlin.")) {
+                useVersion(kotlinPluginVersion)
+            }
+        }
+    }
+
     def flutterSdkPath = {
         def properties = new Properties()
         file("local.properties").withInputStream { properties.load(it) }

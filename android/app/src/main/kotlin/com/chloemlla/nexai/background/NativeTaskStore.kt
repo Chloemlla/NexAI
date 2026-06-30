@@ -24,7 +24,7 @@ class NativeTaskStore(context: Context) {
 
     fun updateStatus(taskId: String, status: String, message: String? = null) {
         val existing: MutableMap<String, Any?> =
-            get(taskId)?.toMutableMap() ?: mutableMapOf("taskId" to taskId)
+            get(taskId)?.toMutableMap() ?: mutableMapOf<String, Any?>("taskId" to taskId)
         existing["status"] = status
         existing["updatedAt"] = System.currentTimeMillis()
         if (message != null) existing["message"] = message

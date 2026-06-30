@@ -31,6 +31,7 @@ class AuthProvider extends ChangeNotifier {
   bool _initialized = false;
   Map<String, dynamic>? _lastPasskeyDebugContext;
   Map<String, dynamic>? _lastGoogleDebugContext;
+  Map<String, dynamic>? _lastOAuthConfigDebugContext;
 
   // OAuth config from server
   bool _googleEnabled = false;
@@ -57,6 +58,8 @@ class AuthProvider extends ChangeNotifier {
       defaultTargetPlatform == TargetPlatform.iOS;
   Map<String, dynamic>? get lastPasskeyDebugContext => _lastPasskeyDebugContext;
   Map<String, dynamic>? get lastGoogleDebugContext => _lastGoogleDebugContext;
+  Map<String, dynamic>? get lastOAuthConfigDebugContext =>
+      _lastOAuthConfigDebugContext;
 
   /// Initialize: load persisted tokens and try to restore session
   Future<void> init() async {
@@ -109,13 +112,32 @@ class AuthProvider extends ChangeNotifier {
 
   /// Load OAuth config from server
   Future<void> _loadOAuthConfig() async {
+    final debugContext = <String, dynamic>{
+      'timestamp': DateTime.now().toIso8601String(),
+      'operation': 'loadOAuthConfig',
+      'request': {
+        'method': 'GET',
+        'url': NexaiAuthApi.oauthConfigUrl,
+      },
+    };
+
     try {
       final config = await NexaiAuthApi.getOAuthConfig();
       _googleEnabled = config.googleEnabled;
       _googleClientId = config.googleClientId;
       _githubEnabled = config.githubEnabled;
       _githubClientId = config.githubClientId;
+      debugContext.addAll(config.toDebugMap());
+      _lastOAuthConfigDebugContext = debugContext;
     } catch (e) {
+      if (e is OAuthConfigRequestException) {
+        debugContext.addAll(e.toDebugMap());
+      } else {
+        debugContext['error'] = e.toString();
+        debugContext['errorType'] = e.runtimeType.toString();
+        debugContext['errorDetails'] = _extractErrorDetails(e);
+      }
+      _lastOAuthConfigDebugContext = debugContext;
       debugPrint('[NexAI Auth] Failed to load OAuth config: $e');
     } finally {
       _oauthConfigLoaded = true;

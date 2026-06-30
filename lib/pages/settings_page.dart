@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -1921,6 +1923,7 @@ class _SettingsPageState extends State<SettingsPage> {
         cs: cs,
         icon: Icons.info_outline_rounded,
         message: '当前服务器未启用 Google 快速登录。',
+        details: _formatOAuthConfigDebugInfo(auth.lastOAuthConfigDebugContext),
       );
     }
 
@@ -1954,6 +1957,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required ColorScheme cs,
     required IconData icon,
     required String message,
+    String? details,
   }) {
     return Container(
       width: double.infinity,
@@ -1968,14 +1972,43 @@ class _SettingsPageState extends State<SettingsPage> {
           Icon(icon, size: 18, color: cs.onSurfaceVariant),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              message,
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  message,
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+                if (details != null && details.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SelectableText(
+                      details,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  String? _formatOAuthConfigDebugInfo(Map<String, dynamic>? debugContext) {
+    if (debugContext == null || debugContext.isEmpty) return null;
+    try {
+      return '开发信息:\n${const JsonEncoder.withIndent('  ').convert(debugContext)}';
+    } catch (_) {
+      return '开发信息:\n$debugContext';
+    }
   }
 
   Widget _buildPasskeyCard(BuildContext context, ColorScheme cs, TextTheme tt) {

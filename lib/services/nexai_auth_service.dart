@@ -82,6 +82,7 @@ class NexaiAuthApi {
   }
 
   static String get baseUrl => _baseUrl;
+  static String get oauthConfigUrl => '$_baseUrl/auth/oauth-config';
 
   /// Safely decode JSON body, returning null on parse errors or empty body
   static Map<String, dynamic>? _decodeBody(String body) {
@@ -264,21 +265,32 @@ class NexaiAuthApi {
 
   // / GET /auth/oauth-config
   static Future<OAuthConfigResponse> getOAuthConfig() async {
-    final response = await _NexaiHttp.get(
-      Uri.parse('$_baseUrl/auth/oauth-config'),
-    );
+    final requestUrl = oauthConfigUrl;
+    final response = await _NexaiHttp.get(Uri.parse(requestUrl));
+    final decoded = _decodeBody(response.body);
 
     if (response.statusCode == 200) {
-      final json = _decodeBody(response.body);
-      if (json != null) {
-        final data = json['data'] ?? json;
+      if (decoded != null) {
+        final data = decoded['data'] ?? decoded;
         return OAuthConfigResponse.fromJson(
           data is Map<String, dynamic> ? data : {},
+          requestUrl: requestUrl,
+          statusCode: response.statusCode,
+          rawBody: response.body,
+          rawJson: decoded,
         );
       }
     }
 
-    throw Exception('Failed to load OAuth config');
+    throw OAuthConfigRequestException(
+      requestUrl: requestUrl,
+      statusCode: response.statusCode,
+      rawBody: response.body,
+      decodedBody: decoded,
+      message: decoded?['error']?.toString() ??
+          decoded?['message']?.toString() ??
+          'Failed to load OAuth config',
+    );
   }
 
   // ========== WebAuthn (Passkeys) API ==========
@@ -543,12 +555,49 @@ class AuthResponse {
   }
 }
 
+class OAuthConfigRequestException implements Exception {
+  final String requestUrl;
+  final int statusCode;
+  final String rawBody;
+  final Map<String, dynamic>? decodedBody;
+  final String message;
+
+  OAuthConfigRequestException({
+    required this.requestUrl,
+    required this.statusCode,
+    required this.rawBody,
+    required this.decodedBody,
+    required this.message,
+  });
+
+  Map<String, dynamic> toDebugMap() => {
+        'request': {
+          'method': 'GET',
+          'url': requestUrl,
+        },
+        'response': {
+          'statusCode': statusCode,
+          'body': rawBody,
+          if (decodedBody != null) 'json': decodedBody,
+        },
+        'message': message,
+      };
+
+  @override
+  String toString() =>
+      'OAuthConfigRequestException($statusCode): $message; body=$rawBody';
+}
+
 class OAuthConfigResponse {
   final bool success;
   final bool googleEnabled;
   final String googleClientId;
   final bool githubEnabled;
   final String githubClientId;
+  final String requestUrl;
+  final int statusCode;
+  final String rawBody;
+  final Map<String, dynamic>? rawJson;
 
   OAuthConfigResponse({
     required this.success,
@@ -556,9 +605,19 @@ class OAuthConfigResponse {
     required this.googleClientId,
     required this.githubEnabled,
     required this.githubClientId,
+    required this.requestUrl,
+    required this.statusCode,
+    required this.rawBody,
+    required this.rawJson,
   });
 
-  factory OAuthConfigResponse.fromJson(Map<String, dynamic> json) {
+  factory OAuthConfigResponse.fromJson(
+    Map<String, dynamic> json, {
+    String requestUrl = '',
+    int statusCode = 200,
+    String rawBody = '',
+    Map<String, dynamic>? rawJson,
+  }) {
     // Handle nested structure from API documentation:
     // { "google": { "enabled": true, "clientId": "..." }, "github": { ... } }
     final google = json['google'] as Map<String, dynamic>?;
@@ -570,6 +629,29 @@ class OAuthConfigResponse {
       googleClientId: google?['clientId'] as String? ?? '',
       githubEnabled: github?['enabled'] == true,
       githubClientId: github?['clientId'] as String? ?? '',
+      requestUrl: requestUrl,
+      statusCode: statusCode,
+      rawBody: rawBody,
+      rawJson: rawJson,
     );
   }
+
+  Map<String, dynamic> toDebugMap() => {
+        'request': {
+          'method': 'GET',
+          'url': requestUrl,
+        },
+        'response': {
+          'statusCode': statusCode,
+          'body': rawBody,
+          if (rawJson != null) 'json': rawJson,
+        },
+        'parsed': {
+          'success': success,
+          'googleEnabled': googleEnabled,
+          'googleClientId': googleClientId,
+          'githubEnabled': githubEnabled,
+          'githubClientId': githubClientId,
+        },
+      };
 }

@@ -1717,7 +1717,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: Image.asset(
-                        'assets/icon.png',
+                        'assets/app_icon_runtime.png',
                         width: 40,
                         height: 40,
                       ),

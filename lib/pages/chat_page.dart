@@ -827,7 +827,7 @@ class _ChatPageState extends State<ChatPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset('assets/icon.png', width: 30, height: 30),
+          Image.asset('assets/app_icon_runtime.png', width: 30, height: 30),
           const SizedBox(width: 10),
           Flexible(
             child: Container(

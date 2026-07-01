@@ -54,7 +54,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
     final colorScheme = theme.colorScheme;
     // Try to get settings, but use defaults if not available
     final settings = context.watch<SettingsProvider?>();
-    final fontFamily = settings?.fontFamily ?? 'vivoSans';
+    final fontFamily = settings?.effectiveFontFamily;
     final fontSize = settings?.fontSize ?? 14.0;
 
     return Dialog(
@@ -174,7 +174,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
 class _TypewriterText extends StatefulWidget {
   final String text;
   final Duration delay;
-  final String fontFamily;
+  final String? fontFamily;
   final double fontSize;
 
   const _TypewriterText({

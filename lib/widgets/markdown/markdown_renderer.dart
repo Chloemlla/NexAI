@@ -173,7 +173,7 @@ class MarkdownRendererStyles {
 
     final baseBodyStyle = TextStyle(
       fontSize: settings.fontSize,
-      fontFamily: settings.fontFamily,
+      fontFamily: settings.effectiveFontFamily,
       color: baseTextColor,
       height: 1.65,
       letterSpacing: 0.1,
@@ -182,7 +182,7 @@ class MarkdownRendererStyles {
     final themedBodyStyle = sanitizeMarkdownBodyStyle(
       resolveCssTextStyle(cssTheme, '.markdown-body', baseBodyStyle).copyWith(
         fontSize: settings.fontSize,
-        fontFamily: settings.fontFamily,
+        fontFamily: settings.effectiveFontFamily,
         color: baseTextColor,
         height: 1.65,
         letterSpacing: 0.1,

@@ -231,7 +231,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       child: Center(
                         child: _androidNavIndex == 0
                             ? Image.asset(
-                                'assets/icon.png',
+                                'assets/app_icon_runtime.png',
                                 width: 32,
                                 height: 32,
                               )
@@ -848,7 +848,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       alignment: AlignmentDirectional.centerStart,
       child: Row(
         children: [
-          Image.asset('assets/icon.png', width: 28, height: 28),
+          Image.asset('assets/app_icon_runtime.png', width: 28, height: 28),
           const SizedBox(width: 10),
           const Text(
             'NexAI',

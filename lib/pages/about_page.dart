@@ -107,7 +107,7 @@ class _AboutPageState extends State<AboutPage> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Image.asset(
-                                      'assets/icon.png',
+                                      'assets/app_icon_runtime.png',
                                       width: 76,
                                       height: 76,
                                     ),

@@ -3,7 +3,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
@@ -88,11 +87,15 @@ class _LoginPageState extends State<LoginPage>
                   const SizedBox(height: 16),
 
                   // Logo & Title
-                  Image.asset('assets/icon.png', width: 64, height: 64),
+                  Image.asset(
+                    'assets/app_icon_runtime.png',
+                    width: 64,
+                    height: 64,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'NexAI',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
                       color: colorScheme.onSurface,
@@ -163,7 +166,7 @@ class _LoginPageState extends State<LoginPage>
                       indicatorPadding: const EdgeInsets.all(3),
                       labelColor: colorScheme.onPrimaryContainer,
                       unselectedLabelColor: colorScheme.onSurfaceVariant,
-                      labelStyle: GoogleFonts.inter(
+                      labelStyle: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -535,9 +538,9 @@ class _LoginPageState extends State<LoginPage>
             ),
           );
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Google 快速登录失败')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(auth.error ?? 'Google 快速登录失败')),
+          );
         }
       }
     }

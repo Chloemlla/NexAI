@@ -8,9 +8,6 @@ environment:
   flutter: ">=3.41.0"
 
 dependencies:
-  # Google Cloud
-  gcloud: ^0.9.0
-
   # 网络
   dio: ^5.9.1
   cookie_jar: ^4.0.8
@@ -18,11 +15,6 @@ dependencies:
   dio_http2_adapter: ^2.5.3
   # 图标
   font_awesome_flutter: ^10.12.0
-  # material_design_icons_flutter: ^7.0.7296
-  material_design_icons_flutter:
-    git:
-      url: https://github.com/bggRGjQaUbCoE/material_design_icons_flutter.git
-      ref: const
   # toast
   flutter_smart_dialog:
     ^4.9.8+5
@@ -45,11 +37,9 @@ dependencies:
   flutter_math_fork: ">=0.7.4"
   gpt_markdown_chloemlla: ^2.0.1
   provider: ^6.1.5
-  google_fonts: ^8.0.2
   url_launcher: ^6.3.2
   window_manager: ^0.5.1
   dynamic_color: ">=1.8.1"
-  fluent_ui: ^4.14.0
   package_info_plus: ^8.3.0
   device_info_plus: ^11.5.0
   v_video_compressor: ^2.0.0
@@ -84,52 +74,11 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
+    - assets/app_icon_runtime.png
+    - assets/github-markdown.css
+    - assets/github-markdown-dark.css
 
   fonts:
-    # vivo Sans 简体 - 主要字体（包含完整中文字符）
-    - family: vivoSans
-      fonts:
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Thin.ttf
-          weight: 100
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-ExtraLight.ttf
-          weight: 200
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Light.ttf
-          weight: 300
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Regular.ttf
-          weight: 400
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Medium.ttf
-          weight: 500
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-DemiBold.ttf
-          weight: 600
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Bold.ttf
-          weight: 700
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-ExtraBold.ttf
-          weight: 800
-        - asset: assets/vivo Sans/Brand/vivo Sans简体/vivoSans-Heavy.ttf
-          weight: 900
-
-    # HarmonyOS Sans SC - 鸿蒙简体中文字体
-    - family: HarmonyOS_Sans_SC
-      fonts:
-        - asset: assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Thin.ttf
-          weight: 100
-        - asset: assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Light.ttf
-          weight: 300
-        - asset: assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Regular.ttf
-          weight: 400
-        - asset: assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Medium.ttf
-          weight: 500
-        - asset: assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Bold.ttf
-          weight: 700
-        - asset: assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Black.ttf
-          weight: 900
-
-    # OPPO Sans 4.0 - 可变字体（Variable Font）
-    - family: OPPO_Sans
-      fonts:
-        - asset: assets/OPPO_Sans_4.0/OPPO Sans 4.0.ttf
-
     # JetBrains Mono NexAI - ASCII 子集，仅用于计时器、看板与开发者日志
     - family: JetBrainsMonoNexAI
       fonts:

@@ -9,11 +9,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String monospaceFontFamily = 'JetBrainsMonoNexAI';
 
   // ── Available font families (from pubspec.yaml) ──────────────────────────
-  static const List<String> availableFonts = [
-    'vivoSans',
-    'HarmonyOS_Sans_SC',
-    'OPPO_Sans',
-  ];
+  static const List<String> availableFonts = ['System'];
 
   // ── Secure storage (Android Keystore / iOS Keychain) ─────────────────────
   static const _secure = FlutterSecureStorage(
@@ -55,7 +51,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Appearance
   double _fontSize = 14.0;
-  String _fontFamily = 'vivoSans';
+  String _fontFamily = 'System';
   bool _borderlessMode = false;
   bool _fullScreenMode = false;
   bool _smartAutoScroll = true;
@@ -87,6 +83,8 @@ class SettingsProvider extends ChangeNotifier {
 
   double get fontSize => _fontSize;
   String get fontFamily => _fontFamily;
+  String? get effectiveFontFamily =>
+      _fontFamily == 'System' ? null : _fontFamily;
   bool get borderlessMode => _borderlessMode;
   bool get fullScreenMode => _fullScreenMode;
   bool get smartAutoScroll => _smartAutoScroll;
@@ -171,7 +169,7 @@ class SettingsProvider extends ChangeNotifier {
           prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
 
       _fontSize = prefs.getDouble('fontSize') ?? 14.0;
-      _fontFamily = prefs.getString('fontFamily') ?? 'vivoSans';
+      _fontFamily = _normalizeFontFamily(prefs.getString('fontFamily'));
       _borderlessMode = prefs.getBool('borderlessMode') ?? false;
       _fullScreenMode = prefs.getBool('fullScreenMode') ?? false;
       _smartAutoScroll = prefs.getBool('smartAutoScroll') ?? true;
@@ -296,8 +294,13 @@ class SettingsProvider extends ChangeNotifier {
     await _save();
   }
 
+  static String _normalizeFontFamily(String? family) {
+    if (family == null || family.isEmpty) return 'System';
+    return availableFonts.contains(family) ? family : 'System';
+  }
+
   Future<void> setFontFamily(String family) async {
-    _fontFamily = family;
+    _fontFamily = _normalizeFontFamily(family);
     notifyListeners();
     await _save();
   }

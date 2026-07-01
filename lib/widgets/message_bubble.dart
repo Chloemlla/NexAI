@@ -63,7 +63,7 @@ class _MessageBubbleState extends State<MessageBubble> {
             children: [
               if (!isUser) ...[
                 Image.asset(
-                  'assets/icon.png',
+                  'assets/app_icon_runtime.png',
                   width: isWide ? 36 : 30,
                   height: isWide ? 36 : 30,
                 ),
@@ -113,9 +113,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                             widget.message.content,
                             style: TextStyle(
                               fontSize: settings.fontSize + 1,
-                              fontFamily: settings.fontFamily == 'System'
-                                  ? null
-                                  : settings.fontFamily,
+                              fontFamily: settings.effectiveFontFamily,
                               color: settings.borderlessMode
                                   ? cs.onSurface
                                   : cs.onPrimaryContainer,

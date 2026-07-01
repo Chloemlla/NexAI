@@ -56,7 +56,11 @@ class _WelcomeViewState extends State<WelcomeView> {
             children: [
               Row(
                 children: [
-                  Image.asset('assets/icon.png', width: 52, height: 52),
+                  Image.asset(
+                    'assets/app_icon_runtime.png',
+                    width: 52,
+                    height: 52,
+                  ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(

@@ -70,12 +70,12 @@ class NexAIApp extends StatelessWidget {
       useMaterial3: true,
       brightness: colorScheme.brightness,
       colorScheme: colorScheme,
-      fontFamily: settings.fontFamily,
+      fontFamily: settings.effectiveFontFamily,
       splashFactory: InkSparkle.splashFactory,
       visualDensity: VisualDensity.compact,
     );
     final textTheme = base.textTheme.apply(
-      fontFamily: settings.fontFamily,
+      fontFamily: settings.effectiveFontFamily,
       bodyColor: colorScheme.onSurface,
       displayColor: colorScheme.onSurface,
     );
@@ -93,7 +93,7 @@ class NexAIApp extends StatelessWidget {
           TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            fontFamily: settings.fontFamily,
+            fontFamily: settings.effectiveFontFamily,
             letterSpacing: 0,
           ),
         ),

@@ -4,13 +4,18 @@ library;
 
 import 'dart:convert';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:passkeys/authenticator.dart';
+import 'package:passkeys/exceptions.dart' as passkey_exceptions;
 import 'package:passkeys/types.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/nexai_auth_service.dart';
+import '../utils/build_config.dart';
 
 class AuthProvider extends ChangeNotifier {
   static const _keyAccessToken = 'nexai_access_token';
@@ -521,48 +526,85 @@ class AuthProvider extends ChangeNotifier {
       'operation': 'bindPasskey',
       'userId': _currentUser?.id,
       'username': _currentUser?.username,
+      'accountEmail': _currentUser?.email,
+      'apiBaseUrl': NexaiAuthApi.baseUrl,
+      'steps': <Map<String, dynamic>>[],
     };
 
+    void markStep(String step) {
+      debugContext['lastStep'] = step;
+      (debugContext['steps'] as List<Map<String, dynamic>>).add({
+        'step': step,
+        'at': DateTime.now().toIso8601String(),
+      });
+      debugPrint('[NexAI Passkey] bindPasskey step: $step');
+    }
+
     try {
+      markStep('collect_environment');
+      debugContext.addAll(await _buildPasskeyEnvironmentContext());
+
+      markStep('create_authenticator');
       final passkeyAuth = PasskeyAuthenticator();
 
       // 1. Get options from backend
+      markStep('request_registration_options');
       final optionsMap = await NexaiAuthApi.generatePasskeyRegistrationOptions(
         accessToken: _accessToken!,
       );
 
       debugContext['rawOptions'] = optionsMap;
+      debugContext['rawOptionsDiagnostics'] =
+          _buildRegistrationOptionsDiagnostics(optionsMap);
       debugPrint('[NexAI Passkey] Registration options: $optionsMap');
 
       // 2. Convert JSON to RegisterRequestType with comprehensive null safety
+      markStep('sanitize_registration_options');
       final sanitizedOptions = _sanitizePasskeyRegistrationOptions(optionsMap);
 
       debugContext['sanitizedOptions'] = sanitizedOptions;
+      debugContext['sanitizedOptionsDiagnostics'] =
+          _buildRegistrationOptionsDiagnostics(sanitizedOptions);
       debugPrint('[NexAI Passkey] Sanitized options: $sanitizedOptions');
 
+      markStep('parse_register_request');
       final registerRequest = RegisterRequestType.fromJson(sanitizedOptions);
+      debugContext['registerRequestParsed'] = true;
 
       // 3. Prompt user to create passkey using PasskeyAuthenticator
+      markStep('invoke_platform_register');
       final credential = await passkeyAuth.register(registerRequest);
 
+      markStep('platform_register_completed');
       debugContext['credentialId'] = credential.id;
+      debugContext['credentialResponseSummary'] =
+          _summarizePasskeyResponse(credential.toJson());
 
       // 4. Send credential to backend to verify (convert to JSON)
+      markStep('verify_registration_with_backend');
       await NexaiAuthApi.verifyPasskeyRegistration(
         accessToken: _accessToken!,
         responseInfo: credential.toJson(),
       );
 
+      markStep('registration_verified');
       debugContext['success'] = true;
       return true;
     } catch (e, stackTrace) {
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
       debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['errorDiagnostics'] = _buildErrorDiagnostics(e, stackTrace);
+      debugContext['errorHints'] = _buildPasskeyErrorHints(e, debugContext);
       debugContext['stackTrace'] = stackTrace.toString();
 
       debugPrint('[NexAI Passkey] Bind error: $e');
       debugPrint('[NexAI Passkey] Error type: ${e.runtimeType}');
+      debugPrint('[NexAI Passkey] Last step: ${debugContext['lastStep']}');
+      debugPrint(
+        '[NexAI Passkey] Error diagnostics: '
+        '${debugContext['errorDiagnostics']}',
+      );
       debugPrint('[NexAI Passkey] Stack trace: $stackTrace');
 
       _error = '绑定 Passkey 失败: ${_extractErrorDetails(e)}';
@@ -652,34 +694,361 @@ class AuthProvider extends ChangeNotifier {
 
   // ========== Internal Methods ==========
 
+  Future<Map<String, dynamic>> _buildPasskeyEnvironmentContext() async {
+    final context = <String, dynamic>{
+      'platform': defaultTargetPlatform.toString(),
+      'isWeb': kIsWeb,
+      'buildMode': kReleaseMode
+          ? 'release'
+          : kProfileMode
+          ? 'profile'
+          : 'debug',
+      'dartProductMode': const bool.fromEnvironment('dart.vm.product'),
+      'nexaiBuild': {
+        'versionName': BuildConfig.versionName,
+        'versionCode': BuildConfig.versionCode,
+        'buildTime': BuildConfig.buildTime,
+        'commitHash': BuildConfig.commitHash,
+        'shortHash': BuildConfig.shortHash,
+        'fullVersion': BuildConfig.fullVersion,
+      },
+    };
+
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      context['packageInfo'] = {
+        'appName': packageInfo.appName,
+        'packageName': packageInfo.packageName,
+        'version': packageInfo.version,
+        'buildNumber': packageInfo.buildNumber,
+        'buildSignature': packageInfo.buildSignature,
+        'installerStore': packageInfo.installerStore,
+      };
+    } catch (e) {
+      context['packageInfoError'] = e.toString();
+    }
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        final android = await DeviceInfoPlugin().androidInfo;
+        context['androidDevice'] = {
+          'sdkInt': android.version.sdkInt,
+          'release': android.version.release,
+          'previewSdkInt': android.version.previewSdkInt,
+          'codename': android.version.codename,
+          'brand': android.brand,
+          'manufacturer': android.manufacturer,
+          'model': android.model,
+          'device': android.device,
+          'product': android.product,
+          'hardware': android.hardware,
+          'supportedAbis': android.supportedAbis,
+          'isPhysicalDevice': android.isPhysicalDevice,
+        };
+      } catch (e) {
+        context['androidDeviceError'] = e.toString();
+      }
+    }
+
+    return context;
+  }
+
+  Map<String, dynamic> _buildRegistrationOptionsDiagnostics(
+    Map<String, dynamic> options,
+  ) {
+    final rp = options['rp'] is Map
+        ? Map<String, dynamic>.from(options['rp'] as Map)
+        : <String, dynamic>{};
+    final user = options['user'] is Map
+        ? Map<String, dynamic>.from(options['user'] as Map)
+        : <String, dynamic>{};
+    final pubKeyCredParams = options['pubKeyCredParams'] is List
+        ? options['pubKeyCredParams'] as List
+        : const [];
+    final excludeCredentials = options['excludeCredentials'] is List
+        ? options['excludeCredentials'] as List
+        : const [];
+    final authSelection = options['authenticatorSelection'] is Map
+        ? Map<String, dynamic>.from(options['authenticatorSelection'] as Map)
+        : <String, dynamic>{};
+    final extensions = options['extensions'] is Map
+        ? Map<String, dynamic>.from(options['extensions'] as Map)
+        : <String, dynamic>{};
+    final warnings = <String>[];
+
+    final rpId = rp['id']?.toString() ?? '';
+    final userName = user['name']?.toString() ?? '';
+    final userDisplayName = user['displayName']?.toString() ?? '';
+    if (rpId.isEmpty) warnings.add('rp.id is empty or missing');
+    if (userName.isEmpty) warnings.add('user.name is empty or missing');
+    if (userDisplayName.isEmpty) {
+      warnings.add('user.displayName is empty or missing');
+    }
+    if (pubKeyCredParams.isEmpty) {
+      warnings.add('pubKeyCredParams is empty or missing');
+    }
+    if (authSelection['authenticatorAttachment'] == 'platform' &&
+        !kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android) {
+      warnings.add(
+        'authenticatorAttachment=platform requires an enabled Android '
+        'credential provider and a Google account on many devices',
+      );
+    }
+
+    return {
+      'rp': {
+        'name': rp['name'],
+        'id': rpId,
+        'idLength': rpId.length,
+      },
+      'user': {
+        'name': userName,
+        'nameLength': userName.length,
+        'displayName': userDisplayName,
+        'displayNameLength': userDisplayName.length,
+        'id': _base64UrlDiagnostics(user['id']),
+      },
+      'challenge': _base64UrlDiagnostics(options['challenge']),
+      'pubKeyCredParams': pubKeyCredParams.map((param) {
+        if (param is Map) {
+          final map = Map<String, dynamic>.from(param);
+          return {'type': map['type'], 'alg': map['alg']};
+        }
+        return {'raw': param.toString(), 'type': param.runtimeType.toString()};
+      }).toList(),
+      'timeout': options['timeout'],
+      'attestation': options['attestation'],
+      'excludeCredentialCount': excludeCredentials.length,
+      'excludeCredentials': excludeCredentials.map((credential) {
+        if (credential is Map) {
+          final map = Map<String, dynamic>.from(credential);
+          return {
+            'type': map['type'],
+            'id': _base64UrlDiagnostics(map['id']),
+            'transports': map['transports'],
+          };
+        }
+        return {
+          'raw': credential.toString(),
+          'type': credential.runtimeType.toString(),
+        };
+      }).toList(),
+      'authenticatorSelection': authSelection,
+      'extensionKeys': extensions.keys.toList(),
+      'hintsType': options['hints']?.runtimeType.toString(),
+      'hintsLength': options['hints'] is List
+          ? (options['hints'] as List).length
+          : null,
+      'warnings': warnings,
+    };
+  }
+
+  Map<String, dynamic> _base64UrlDiagnostics(dynamic value) {
+    final text = value?.toString();
+    final diagnostics = <String, dynamic>{
+      'present': value != null,
+      'type': value?.runtimeType.toString(),
+      'length': text?.length ?? 0,
+      'hasPadding': text?.contains('=') ?? false,
+      'charsetLooksBase64Url': text == null
+          ? false
+          : RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(text),
+    };
+
+    if (text == null || text.isEmpty) {
+      diagnostics['validBase64Url'] = false;
+      diagnostics['decodeError'] = 'empty';
+      return diagnostics;
+    }
+
+    try {
+      final bytes = base64Url.decode(base64Url.normalize(text));
+      diagnostics['validBase64Url'] = true;
+      diagnostics['decodedByteLength'] = bytes.length;
+      diagnostics['decodedUtf8Preview'] = _tryDecodeUtf8Preview(bytes);
+    } catch (e) {
+      diagnostics['validBase64Url'] = false;
+      diagnostics['decodeError'] = e.toString();
+    }
+
+    return diagnostics;
+  }
+
+  String? _tryDecodeUtf8Preview(List<int> bytes) {
+    try {
+      final text = utf8.decode(bytes);
+      if (text.runes.any((rune) => rune < 0x20 && rune != 0x0a)) {
+        return null;
+      }
+      return text.length > 80 ? '${text.substring(0, 80)}...' : text;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Map<String, dynamic> _summarizePasskeyResponse(
+    Map<String, dynamic> response,
+  ) {
+    final rawId = response['rawId']?.toString();
+    final authenticatorResponse = response['response'] is Map
+        ? Map<String, dynamic>.from(response['response'] as Map)
+        : <String, dynamic>{};
+
+    return {
+      'idLength': response['id']?.toString().length,
+      'rawId': _base64UrlDiagnostics(rawId),
+      'type': response['type'],
+      'clientExtensionResults': response['clientExtensionResults'],
+      'responseFieldLengths': authenticatorResponse.map(
+        (key, value) => MapEntry(key, value?.toString().length),
+      ),
+    };
+  }
+
+  Map<String, dynamic> _buildErrorDiagnostics(
+    Object error,
+    StackTrace? stackTrace,
+  ) {
+    final diagnostics = <String, dynamic>{
+      'runtimeType': error.runtimeType.toString(),
+      'toString': error.toString(),
+      'hashCode': error.hashCode,
+      'isPlatformException': error is PlatformException,
+      'isPasskeysAuthenticatorException':
+          error is passkey_exceptions.AuthenticatorException,
+      'isPasskeysUnhandledException':
+          error is passkey_exceptions.UnhandledAuthenticatorException,
+    };
+
+    if (error is PlatformException) {
+      diagnostics['platformException'] = {
+        'code': error.code,
+        'message': error.message,
+        'details': error.details,
+        'stacktrace': error.stacktrace,
+      };
+    }
+
+    if (error is passkey_exceptions.UnhandledAuthenticatorException) {
+      diagnostics['passkeysUnhandledException'] = {
+        'code': error.code,
+        'message': error.message,
+        'details': error.details,
+      };
+    }
+
+    final dynamic errorObj = error;
+    final fields = <String, dynamic>{};
+    void readField(String key, dynamic Function() read) {
+      try {
+        final value = read();
+        if (value != null) fields[key] = value.toString();
+      } catch (_) {}
+    }
+
+    readField('code', () => errorObj.code);
+    readField('message', () => errorObj.message);
+    readField('details', () => errorObj.details);
+    readField('cause', () => errorObj.cause);
+    readField('error', () => errorObj.error);
+    readField('exception', () => errorObj.exception);
+    readField('localizedMessage', () => errorObj.localizedMessage);
+    readField('statusCode', () => errorObj.statusCode);
+    readField('stacktrace', () => errorObj.stacktrace);
+    diagnostics['readableFields'] = fields;
+
+    if (stackTrace != null) {
+      final firstFrames = stackTrace
+          .toString()
+          .split('\n')
+          .where((line) => line.trim().isNotEmpty)
+          .take(8)
+          .toList();
+      diagnostics['firstStackFrames'] = firstFrames;
+    }
+
+    return diagnostics;
+  }
+
+  List<String> _buildPasskeyErrorHints(
+    Object error,
+    Map<String, dynamic> debugContext,
+  ) {
+    final hints = <String>[];
+    final errorType = error.runtimeType.toString();
+    final lastStep = debugContext['lastStep']?.toString();
+
+    if (lastStep == 'invoke_platform_register') {
+      hints.add(
+        'The request was parsed and failed inside the platform passkey '
+        'registration call.',
+      );
+    }
+    if (error is passkey_exceptions.MissingGoogleSignInException) {
+      hints.add('Android device is not signed in to a Google account.');
+    }
+    if (error is passkey_exceptions.NoCreateOptionException) {
+      hints.add(
+        'No credential provider could create the passkey. Check Android '
+        'Credential Manager and passkey provider settings.',
+      );
+    }
+    if (error is passkey_exceptions.DomainNotAssociatedException) {
+      hints.add(
+        'The relying party domain may not be associated with this app. '
+        'Check assetlinks.json for the package name and signing certificate.',
+      );
+    }
+    if (error is passkey_exceptions.MalformedBase64Url) {
+      hints.add(
+        'At least one WebAuthn field is not valid base64url. Compare the '
+        'Raw/Sanitized Options diagnostics.',
+      );
+    }
+    if (error is passkey_exceptions.UnhandledAuthenticatorException) {
+      hints.add(
+        'The passkeys package surfaced an unhandled platform exception. '
+        'Use code/message/details in Error Diagnostics.',
+      );
+    }
+    if (errorType == 'wOa' || error.toString() == "Instance of 'wOa'") {
+      hints.add(
+        'The exception class name is obfuscated in the release build. '
+        'Use Last Step, Error Diagnostics, device info, and Android logcat '
+        'around the same timestamp to identify the Credential Manager error.',
+      );
+    }
+
+    return hints;
+  }
+
   /// Extract detailed error information from exception
   String _extractErrorDetails(dynamic error) {
     if (error == null) return 'Unknown error';
 
-    // Try to get meaningful error message
+    final diagnostics = _buildErrorDiagnostics(error as Object, null);
+    final readableFields = diagnostics['readableFields'];
+    if (readableFields is Map && readableFields.isNotEmpty) {
+      final message = readableFields['message'];
+      final code = readableFields['code'];
+      final details = readableFields['details'];
+      return [
+        if (code != null) 'code=$code',
+        if (message != null) 'message=$message',
+        if (details != null) 'details=$details',
+      ].join(', ');
+    }
+
     final errorStr = error.toString();
+    if (error is passkey_exceptions.AuthenticatorException &&
+        errorStr.isNotEmpty &&
+        !errorStr.startsWith('Instance of ')) {
+      return errorStr;
+    }
 
-    // If it's just "Instance of 'ClassName'", try to extract more info
     if (errorStr.startsWith('Instance of ')) {
-      final buffer = StringBuffer();
-      buffer.write(errorStr);
-
-      // Try to access common error properties
-      try {
-        if (error is Error) {
-          buffer.write(' - ${error.stackTrace}');
-        }
-      } catch (_) {}
-
-      try {
-        // Try to get message property if it exists
-        final dynamic errorObj = error;
-        if (errorObj.message != null) {
-          buffer.write(' - Message: ${errorObj.message}');
-        }
-      } catch (_) {}
-
-      return buffer.toString();
+      return '$errorStr (no public message field; see Passkey 调试信息)';
     }
 
     return errorStr;

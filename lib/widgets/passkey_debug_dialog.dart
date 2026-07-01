@@ -13,6 +13,18 @@ class AuthDebugDialog extends StatelessWidget {
     this.title = '调试信息',
   });
 
+  void _writeJsonSection(StringBuffer buffer, String title, dynamic value) {
+    if (value == null) return;
+    buffer.writeln('=== $title ===');
+    try {
+      final formatted = const JsonEncoder.withIndent('  ').convert(value);
+      buffer.writeln(formatted);
+    } catch (_) {
+      buffer.writeln(value.toString());
+    }
+    buffer.writeln();
+  }
+
   String _formatContext() {
     final buffer = StringBuffer();
     final operation = debugContext['operation'] ?? 'Unknown';
@@ -35,6 +47,18 @@ class AuthDebugDialog extends StatelessWidget {
     if (debugContext['accountEmail'] != null) {
       buffer.writeln('Account Email: ${debugContext['accountEmail']}');
     }
+    if (debugContext['apiBaseUrl'] != null) {
+      buffer.writeln('API Base URL: ${debugContext['apiBaseUrl']}');
+    }
+    if (debugContext['platform'] != null) {
+      buffer.writeln('Platform: ${debugContext['platform']}');
+    }
+    if (debugContext['buildMode'] != null) {
+      buffer.writeln('Build Mode: ${debugContext['buildMode']}');
+    }
+    if (debugContext['lastStep'] != null) {
+      buffer.writeln('Last Step: ${debugContext['lastStep']}');
+    }
     buffer.writeln();
 
     // Error info
@@ -46,6 +70,32 @@ class AuthDebugDialog extends StatelessWidget {
         buffer.writeln('Details: ${debugContext['errorDetails']}');
       }
       buffer.writeln();
+    }
+
+    _writeJsonSection(
+      buffer,
+      'Error Diagnostics',
+      debugContext['errorDiagnostics'],
+    );
+    _writeJsonSection(
+      buffer,
+      'Likely Causes / Hints',
+      debugContext['errorHints'],
+    );
+    _writeJsonSection(buffer, 'Step Timeline', debugContext['steps']);
+    _writeJsonSection(buffer, 'NexAI Build Info', debugContext['nexaiBuild']);
+    _writeJsonSection(buffer, 'Package Info', debugContext['packageInfo']);
+    _writeJsonSection(
+      buffer,
+      'Android Device Info',
+      debugContext['androidDevice'],
+    );
+    if (debugContext['packageInfoError'] != null ||
+        debugContext['androidDeviceError'] != null) {
+      _writeJsonSection(buffer, 'Environment Collection Errors', {
+        'packageInfoError': debugContext['packageInfoError'],
+        'androidDeviceError': debugContext['androidDeviceError'],
+      });
     }
 
     // Google-specific info
@@ -85,6 +135,11 @@ class AuthDebugDialog extends StatelessWidget {
       }
       buffer.writeln();
     }
+    _writeJsonSection(
+      buffer,
+      'Raw Options Diagnostics',
+      debugContext['rawOptionsDiagnostics'],
+    );
 
     // Sanitized options (for Passkey)
     if (debugContext['sanitizedOptions'] != null) {
@@ -99,6 +154,11 @@ class AuthDebugDialog extends StatelessWidget {
       }
       buffer.writeln();
     }
+    _writeJsonSection(
+      buffer,
+      'Sanitized Options Diagnostics',
+      debugContext['sanitizedOptionsDiagnostics'],
+    );
 
     // Credential info (for Passkey)
     if (debugContext['credentialId'] != null) {
@@ -107,6 +167,11 @@ class AuthDebugDialog extends StatelessWidget {
       buffer.writeln('Type: ${debugContext['credentialType']}');
       buffer.writeln();
     }
+    _writeJsonSection(
+      buffer,
+      'Credential Response Summary',
+      debugContext['credentialResponseSummary'],
+    );
 
     // Stack trace
     if (debugContext['stackTrace'] != null) {
@@ -160,7 +225,7 @@ class AuthDebugDialog extends StatelessWidget {
                         debugContext['errorType'] ?? 'Unknown',
                         style: TextStyle(
                           color: theme.colorScheme.onErrorContainer,
-                          fontFamily: 'monospace',
+                          fontFamily: 'JetBrainsMonoNexAI',
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -180,6 +245,24 @@ class AuthDebugDialog extends StatelessWidget {
                           color: theme.colorScheme.onErrorContainer,
                         ),
                       ),
+                      if (debugContext['lastStep'] != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '失败阶段',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          debugContext['lastStep'].toString(),
+                          style: TextStyle(
+                            color: theme.colorScheme.onErrorContainer,
+                            fontFamily: 'JetBrainsMonoNexAI',
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -198,7 +281,10 @@ class AuthDebugDialog extends StatelessWidget {
                 ),
                 child: SelectableText(
                   formattedContext,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  style: const TextStyle(
+                    fontFamily: 'JetBrainsMonoNexAI',
+                    fontSize: 12,
+                  ),
                 ),
               ),
             ],

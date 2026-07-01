@@ -255,15 +255,22 @@ class _SettingsPageState extends State<SettingsPage> {
     return Scaffold(
       backgroundColor: cs.surface,
       // FAB-style save button that appears when dirty
-      floatingActionButton: AnimatedScale(
-        scale: _isDirty ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOutBack,
-        child: FloatingActionButton.extended(
-          onPressed: saveAll,
-          icon: const Icon(Icons.save_rounded),
-          label: const Text('保存'),
-          elevation: 3,
+      floatingActionButton: IgnorePointer(
+        ignoring: !_isDirty,
+        child: AnimatedOpacity(
+          opacity: _isDirty ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 180),
+          child: AnimatedScale(
+            scale: _isDirty ? 1.0 : 0.92,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOutBack,
+            child: FloatingActionButton.extended(
+              onPressed: saveAll,
+              icon: const Icon(Icons.save_rounded),
+              label: const Text('保存'),
+              elevation: 3,
+            ),
+          ),
         ),
       ),
       body: CustomScrollView(

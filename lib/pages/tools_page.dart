@@ -629,7 +629,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _ToolCard extends StatelessWidget {
+class _ToolCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final String description;
@@ -645,72 +645,104 @@ class _ToolCard extends StatelessWidget {
   });
 
   @override
+  State<_ToolCard> createState() => _ToolCardState();
+}
+
+class _ToolCardState extends State<_ToolCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: cs.outlineVariant.withAlpha(40),
-              width: 1,
-            ),
+    return Semantics(
+      button: true,
+      label: '打开${widget.title}',
+      child: AnimatedScale(
+        scale: _hovered ? 1.015 : 1,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOutCubic,
+        child: Card(
+          color: _hovered ? cs.surfaceContainer : cs.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: cs.primary.withAlpha(35),
-                      blurRadius: 14,
-                      offset: const Offset(0, 5),
+          child: InkWell(
+            onTap: widget.onTap,
+            onHover: (value) => setState(() => _hovered = value),
+            borderRadius: BorderRadius.circular(20),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _hovered
+                      ? cs.primary.withAlpha(90)
+                      : cs.outlineVariant.withAlpha(50),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: widget.gradient,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: cs.primary.withAlpha(_hovered ? 55 : 30),
+                          blurRadius: _hovered ? 16 : 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                child: Icon(icon, size: 32, color: cs.onPrimaryContainer),
+                    child: Icon(
+                      widget.icon,
+                      size: 30,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    widget.title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onSurface,
+                      letterSpacing: 0,
+                      height: 1.2,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurfaceVariant,
+                      height: 1.4,
+                      letterSpacing: 0.1,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 10),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 16,
+                    color: _hovered ? cs.primary : cs.outline,
+                  ),
+                ],
               ),
-              const Spacer(),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: cs.onSurface,
-                  letterSpacing: 0,
-                  height: 1.2,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 5),
-              Text(
-                description,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: cs.onSurfaceVariant,
-                  height: 1.4,
-                  letterSpacing: 0.1,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            ),
           ),
         ),
       ),

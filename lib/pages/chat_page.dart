@@ -1072,7 +1072,7 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   const SizedBox(width: 10),
                   FilledButton.icon(
-                    onPressed: chat.isLoading ? null : _send,
+                    onPressed: chat.isLoading || !_hasText ? null : _send,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,

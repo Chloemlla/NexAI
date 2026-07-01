@@ -191,10 +191,20 @@ class _MessageFooter extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         if (isUser) ...[
-          _footerIcon(Icons.edit_outlined, () => _showEditDialog(context), cs),
-          _footerIcon(Icons.refresh_rounded, () => _resendMessage(context), cs),
+          _footerIcon(
+            Icons.edit_outlined,
+            '编辑并重新发送',
+            () => _showEditDialog(context),
+            cs,
+          ),
+          _footerIcon(
+            Icons.refresh_rounded,
+            '重新发送',
+            () => _resendMessage(context),
+            cs,
+          ),
         ] else ...[
-          _footerIcon(Icons.copy_rounded, () {
+          _footerIcon(Icons.copy_rounded, '复制回复', () {
             Clipboard.setData(ClipboardData(text: message.content));
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -206,12 +216,14 @@ class _MessageFooter extends StatelessWidget {
         ],
         _footerIcon(
           Icons.ios_share_rounded,
+          '分享或导出',
           () => _showShareMenu(context, cs),
           cs,
         ),
         if (!isUser)
           _footerIcon(
             Icons.note_add_outlined,
+            '保存到笔记',
             () => _showSaveToNoteSheet(context),
             cs,
           ),
@@ -219,15 +231,23 @@ class _MessageFooter extends StatelessWidget {
     );
   }
 
-  Widget _footerIcon(IconData icon, VoidCallback onTap, ColorScheme cs) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Icon(icon, size: 14, color: cs.outline.withAlpha(180)),
+  Widget _footerIcon(
+    IconData icon,
+    String tooltip,
+    VoidCallback onTap,
+    ColorScheme cs,
+  ) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: Icon(icon, size: 14, color: cs.outline.withAlpha(190)),
+          ),
         ),
       ),
     );

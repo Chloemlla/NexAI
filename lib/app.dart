@@ -52,132 +52,163 @@ class NexAIApp extends StatelessWidget {
           )
         : darkScheme;
 
-    final lightTextTheme = ThemeData.light().textTheme.apply(
-      fontFamily: settings.fontFamily,
-    );
-    final darkTextTheme = ThemeData.dark().textTheme.apply(
-      fontFamily: settings.fontFamily,
-    );
-
     return MaterialApp(
       title: 'NexAI',
       debugShowCheckedModeBanner: false,
       themeMode: settings.themeMode,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: effectiveLight,
-        fontFamily: settings.fontFamily,
-        textTheme: lightTextTheme,
-        navigationBarTheme: NavigationBarThemeData(
-          elevation: 0,
-          indicatorColor: effectiveLight.secondaryContainer,
-          labelTextStyle: WidgetStatePropertyAll(
-            TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              fontFamily: settings.fontFamily,
-            ),
-          ),
-          height: 72,
-        ),
-        appBarTheme: AppBarTheme(
-          centerTitle: false,
-          scrolledUnderElevation: 2,
-          backgroundColor: effectiveLight.surface,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          clipBehavior: Clip.antiAlias,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: effectiveLight.surfaceContainerHighest.withAlpha(180),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: effectiveLight.primary, width: 1.5),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: effectiveDark,
-        fontFamily: settings.fontFamily,
-        textTheme: darkTextTheme,
-        navigationBarTheme: NavigationBarThemeData(
-          elevation: 0,
-          indicatorColor: effectiveDark.secondaryContainer,
-          labelTextStyle: WidgetStatePropertyAll(
-            TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              fontFamily: settings.fontFamily,
-            ),
-          ),
-          height: 72,
-        ),
-        appBarTheme: AppBarTheme(
-          centerTitle: false,
-          scrolledUnderElevation: 2,
-          backgroundColor: effectiveDark.surface,
-        ),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          clipBehavior: Clip.antiAlias,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: effectiveDark.surfaceContainerHighest.withAlpha(180),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide.none,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: effectiveDark.primary, width: 1.5),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 14,
-          ),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
+      theme: _buildTheme(settings, effectiveLight),
+      darkTheme: _buildTheme(settings, effectiveDark),
       home: const HomePage(),
       builder: FlutterSmartDialog.init(),
       navigatorObservers: [FlutterSmartDialog.observer],
+    );
+  }
+
+  ThemeData _buildTheme(SettingsProvider settings, ColorScheme colorScheme) {
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: colorScheme.brightness,
+      colorScheme: colorScheme,
+      fontFamily: settings.fontFamily,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+    );
+    final textTheme = base.textTheme.apply(
+      fontFamily: settings.fontFamily,
+      bodyColor: colorScheme.onSurface,
+      displayColor: colorScheme.onSurface,
+    );
+    final rounded16 = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+    );
+
+    return base.copyWith(
+      scaffoldBackgroundColor: colorScheme.surface,
+      textTheme: textTheme,
+      navigationBarTheme: NavigationBarThemeData(
+        elevation: 0,
+        indicatorColor: colorScheme.secondaryContainer,
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            fontFamily: settings.fontFamily,
+            letterSpacing: 0,
+          ),
+        ),
+        height: 72,
+      ),
+      appBarTheme: AppBarTheme(
+        centerTitle: false,
+        scrolledUnderElevation: 1,
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: colorScheme.surfaceTint,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: colorScheme.surfaceContainerLow,
+        surfaceTintColor: colorScheme.surfaceTint,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        clipBehavior: Clip.antiAlias,
+        margin: EdgeInsets.zero,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest.withAlpha(180),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(
+            color: colorScheme.outlineVariant.withAlpha(70),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        elevation: 6,
+        backgroundColor: colorScheme.inverseSurface,
+        contentTextStyle: TextStyle(color: colorScheme.onInverseSurface),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          shape: rounded16,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          side: BorderSide(color: colorScheme.outlineVariant),
+          shape: rounded16,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(44, 40),
+          shape: rounded16,
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(40, 40),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        side: BorderSide(color: colorScheme.outlineVariant.withAlpha(100)),
+        labelStyle: textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
+      ),
+      searchBarTheme: SearchBarThemeData(
+        elevation: const WidgetStatePropertyAll(0),
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 14),
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        backgroundColor: WidgetStatePropertyAll(
+          colorScheme.surfaceContainerHighest.withAlpha(170),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surfaceContainerLow,
+        surfaceTintColor: colorScheme.surfaceTint,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      ),
+      tooltipTheme: TooltipThemeData(
+        waitDuration: const Duration(milliseconds: 450),
+        showDuration: const Duration(milliseconds: 1800),
+        decoration: BoxDecoration(
+          color: colorScheme.inverseSurface,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        textStyle: TextStyle(color: colorScheme.onInverseSurface),
+      ),
     );
   }
 }

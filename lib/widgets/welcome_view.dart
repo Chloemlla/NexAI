@@ -19,6 +19,29 @@ class WelcomeView extends StatelessWidget {
     final isWide = screenWidth > 600;
     final cardWidth = isWide ? 180.0 : (screenWidth - 52) / 2;
     final settings = context.watch<SettingsProvider>();
+    final chat = context.watch<ChatProvider>();
+    final suggestions = const [
+      _PromptSuggestion(
+        icon: Icons.auto_awesome_rounded,
+        title: '整理思路',
+        prompt: '帮我把下面的想法整理成清晰的行动清单：',
+      ),
+      _PromptSuggestion(
+        icon: Icons.code_rounded,
+        title: '解释代码',
+        prompt: '请用简洁步骤解释这段代码的作用，并指出潜在风险：',
+      ),
+      _PromptSuggestion(
+        icon: Icons.school_rounded,
+        title: '学习计划',
+        prompt: '为我制定一个 7 天入门学习计划，主题是：',
+      ),
+      _PromptSuggestion(
+        icon: Icons.edit_note_rounded,
+        title: '润色文本',
+        prompt: '请润色下面这段文字，使其更清晰、自然、专业：',
+      ),
+    ];
 
     return Center(
       child: SingleChildScrollView(
@@ -54,11 +77,15 @@ class WelcomeView extends StatelessWidget {
               alignment: WrapAlignment.center,
               children: [
                 FilledButton.icon(
-                  onPressed: settings.isConfigured
-                      ? () async {
-                          await context.read<ChatProvider>().newConversation();
-                        }
-                      : NavigationHelper.goToSettings,
+                  onPressed: chat.isLoading
+                      ? null
+                      : settings.isConfigured
+                          ? () async {
+                              await context
+                                  .read<ChatProvider>()
+                                  .newConversation();
+                            }
+                          : NavigationHelper.goToSettings,
                   icon: Icon(
                     settings.isConfigured
                         ? Icons.add_comment_rounded
@@ -74,41 +101,28 @@ class WelcomeView extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 40),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              alignment: WrapAlignment.center,
-              children: [
-                _welcomeCard(
-                  cs,
-                  Icons.chat_rounded,
-                  '对话',
-                  '任何问题都可以直接发问',
-                  cardWidth,
-                ),
-                _welcomeCard(
-                  cs,
-                  Icons.functions_rounded,
-                  '数学',
-                  '自动渲染 LaTeX 公式',
-                  cardWidth,
-                ),
-                _welcomeCard(
-                  cs,
-                  Icons.science_rounded,
-                  '化学',
-                  '方程式与结构式表达',
-                  cardWidth,
-                ),
-                _welcomeCard(
-                  cs,
-                  Icons.code_rounded,
-                  '代码',
-                  '支持高亮与结构化展示',
-                  cardWidth,
-                ),
-              ],
+            const SizedBox(height: 30),
+            _buildStatusPanel(context, cs, settings, chat.isLoading),
+            const SizedBox(height: 18),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 820),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.center,
+                children: suggestions
+                    .map(
+                      (item) => _suggestionCard(
+                        context,
+                        cs,
+                        item,
+                        cardWidth,
+                        settings,
+                        chat.isLoading,
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
           ],
         ),
@@ -116,52 +130,195 @@ class WelcomeView extends StatelessWidget {
     );
   }
 
-  Widget _welcomeCard(
+  Widget _buildStatusPanel(
+    BuildContext context,
     ColorScheme cs,
-    IconData icon,
-    String title,
-    String subtitle,
+    SettingsProvider settings,
+    bool isLoading,
+  ) {
+    final tt = Theme.of(context).textTheme;
+    final statusTitle = settings.isConfigured
+        ? settings.selectedModel
+        : '需要完成 API 配置';
+    final String statusDetail;
+    if (isLoading) {
+      statusDetail = 'NexAI 正在生成回复';
+    } else if (settings.isConfigured) {
+      statusDetail =
+          '${settings.apiMode} · 温度 '
+          '${settings.temperature.toStringAsFixed(1)} · '
+          '${settings.maxTokens} tokens';
+    } else {
+      statusDetail = '配置完成后即可使用示例提示和多模态能力';
+    }
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 720),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: cs.outlineVariant.withAlpha(70)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: settings.isConfigured
+                    ? cs.primaryContainer
+                    : cs.errorContainer.withAlpha(160),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                settings.isConfigured
+                    ? Icons.check_circle_rounded
+                    : Icons.warning_amber_rounded,
+                color: settings.isConfigured
+                    ? cs.onPrimaryContainer
+                    : cs.onErrorContainer,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    statusTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: tt.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    statusDetail,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: NavigationHelper.goToSettings,
+              tooltip: '打开设置',
+              icon: const Icon(Icons.tune_rounded, size: 20),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _suggestionCard(
+    BuildContext context,
+    ColorScheme cs,
+    _PromptSuggestion item,
     double width,
+    SettingsProvider settings,
+    bool isLoading,
   ) {
     return SizedBox(
       width: width,
       child: Card(
-        elevation: 0,
-        color: cs.surfaceContainerHighest.withAlpha(200),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
-          child: Column(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(14),
+        color: cs.surfaceContainerHighest.withAlpha(160),
+        child: InkWell(
+          onTap: isLoading
+              ? null
+              : () => _sendPrompt(context, settings, item.prompt),
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+            child: Column(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      item.icon,
+                      size: 22,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
                 ),
-                child: Center(
-                  child: Icon(icon, size: 22, color: cs.onPrimaryContainer),
+                const SizedBox(height: 12),
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    letterSpacing: 0,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                const SizedBox(height: 6),
+                Text(
+                  item.prompt,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurfaceVariant,
+                    height: 1.35,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  Future<void> _sendPrompt(
+    BuildContext context,
+    SettingsProvider settings,
+    String prompt,
+  ) async {
+    if (!settings.isConfigured) {
+      NavigationHelper.goToSettings();
+      return;
+    }
+
+    await context.read<ChatProvider>().sendMessage(
+      content: prompt,
+      apiMode: settings.apiMode,
+      baseUrl: settings.baseUrl,
+      apiKey: settings.apiKey,
+      model: settings.selectedModel,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      systemPrompt: settings.systemPrompt,
+      vertexProjectId: settings.vertexProjectId,
+      vertexLocation: settings.vertexLocation,
+    );
+  }
+}
+
+class _PromptSuggestion {
+  final IconData icon;
+  final String title;
+  final String prompt;
+
+  const _PromptSuggestion({
+    required this.icon,
+    required this.title,
+    required this.prompt,
+  });
 }

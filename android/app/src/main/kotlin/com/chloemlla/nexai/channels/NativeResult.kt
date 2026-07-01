@@ -11,6 +11,7 @@ object NativeResult {
         code: String,
         message: String,
         recoverable: Boolean = true,
+        details: Any? = null,
     ): Map<String, Any?> = mapOf(
         "ok" to false,
         "data" to null,
@@ -18,6 +19,7 @@ object NativeResult {
             "code" to code,
             "message" to message,
             "recoverable" to recoverable,
+            "details" to details,
         ),
     )
 

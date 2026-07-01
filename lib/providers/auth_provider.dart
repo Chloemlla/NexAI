@@ -9,13 +9,32 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:passkeys/authenticator.dart';
-import 'package:passkeys/exceptions.dart' as passkey_exceptions;
-import 'package:passkeys/types.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../services/android_native/android_native_result.dart';
+import '../services/android_native/android_passkey_service.dart';
 import '../services/nexai_auth_service.dart';
 import '../utils/build_config.dart';
+
+class AndroidPasskeyNativeException implements Exception {
+  AndroidPasskeyNativeException({
+    required this.operation,
+    required this.code,
+    required this.message,
+    required this.details,
+  });
+
+  final String operation;
+  final String code;
+  final String message;
+  final Map<String, dynamic> details;
+
+  @override
+  String toString() {
+    return 'AndroidPasskeyNativeException('
+        'operation=$operation, code=$code, message=$message)';
+  }
+}
 
 class AuthProvider extends ChangeNotifier {
   static const _keyAccessToken = 'nexai_access_token';
@@ -27,6 +46,7 @@ class AuthProvider extends ChangeNotifier {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     wOptions: WindowsOptions(useBackwardCompatibility: false),
   );
+  final AndroidPasskeyService _androidPasskeyService = AndroidPasskeyService();
 
   NexaiUser? _currentUser;
   String? _accessToken;
@@ -544,8 +564,11 @@ class AuthProvider extends ChangeNotifier {
       markStep('collect_environment');
       debugContext.addAll(await _buildPasskeyEnvironmentContext());
 
-      markStep('create_authenticator');
-      final passkeyAuth = PasskeyAuthenticator();
+      if (!_isAndroidPasskeyNativePlatform) {
+        throw UnsupportedError(
+          'Passkey 目前仅支持 Android 原生 Credential Manager',
+        );
+      }
 
       // 1. Get options from backend
       markStep('request_registration_options');
@@ -558,7 +581,7 @@ class AuthProvider extends ChangeNotifier {
           _buildRegistrationOptionsDiagnostics(optionsMap);
       debugPrint('[NexAI Passkey] Registration options: $optionsMap');
 
-      // 2. Convert JSON to RegisterRequestType with comprehensive null safety
+      // 2. Normalize the backend WebAuthn JSON before sending it native.
       markStep('sanitize_registration_options');
       final sanitizedOptions = _sanitizePasskeyRegistrationOptions(optionsMap);
 
@@ -567,24 +590,35 @@ class AuthProvider extends ChangeNotifier {
           _buildRegistrationOptionsDiagnostics(sanitizedOptions);
       debugPrint('[NexAI Passkey] Sanitized options: $sanitizedOptions');
 
-      markStep('parse_register_request');
-      final registerRequest = RegisterRequestType.fromJson(sanitizedOptions);
-      debugContext['registerRequestParsed'] = true;
+      // 3. Prompt user to create passkey through Android Credential Manager
+      markStep('invoke_native_register');
+      final nativeResult = await _androidPasskeyService.register(
+        options: sanitizedOptions,
+      );
+      debugContext['nativeRegisterResult'] =
+          _summarizeAndroidNativeResult(nativeResult);
+      if (!nativeResult.ok || nativeResult.data == null) {
+        throw _buildAndroidPasskeyNativeException(
+          'register',
+          nativeResult.error,
+        );
+      }
+      final credential = _extractNativePasskeyResponse(
+        nativeResult.data!,
+        'registration',
+      );
 
-      // 3. Prompt user to create passkey using PasskeyAuthenticator
-      markStep('invoke_platform_register');
-      final credential = await passkeyAuth.register(registerRequest);
-
-      markStep('platform_register_completed');
-      debugContext['credentialId'] = credential.id;
+      markStep('native_register_completed');
+      debugContext['credentialId'] = credential['id'];
+      debugContext['credentialType'] = credential['type'];
       debugContext['credentialResponseSummary'] =
-          _summarizePasskeyResponse(credential.toJson());
+          _summarizePasskeyResponse(credential);
 
       // 4. Send credential to backend to verify (convert to JSON)
       markStep('verify_registration_with_backend');
       await NexaiAuthApi.verifyPasskeyRegistration(
         accessToken: _accessToken!,
-        responseInfo: credential.toJson(),
+        responseInfo: credential,
       );
 
       markStep('registration_verified');
@@ -626,12 +660,30 @@ class AuthProvider extends ChangeNotifier {
       'timestamp': DateTime.now().toIso8601String(),
       'operation': 'loginWithPasskey',
       'identifier': identifier,
+      'steps': <Map<String, dynamic>>[],
     };
 
+    void markStep(String step) {
+      debugContext['lastStep'] = step;
+      (debugContext['steps'] as List<Map<String, dynamic>>).add({
+        'step': step,
+        'at': DateTime.now().toIso8601String(),
+      });
+      debugPrint('[NexAI Passkey] loginWithPasskey step: $step');
+    }
+
     try {
-      final passkeyAuth = PasskeyAuthenticator();
+      markStep('collect_environment');
+      debugContext.addAll(await _buildPasskeyEnvironmentContext());
+
+      if (!_isAndroidPasskeyNativePlatform) {
+        throw UnsupportedError(
+          'Passkey 目前仅支持 Android 原生 Credential Manager',
+        );
+      }
 
       // 1. Get options from backend
+      markStep('request_authentication_options');
       final optionsMap =
           await NexaiAuthApi.generatePasskeyAuthenticationOptions(
             identifier: identifier,
@@ -640,7 +692,7 @@ class AuthProvider extends ChangeNotifier {
       debugContext['rawOptions'] = optionsMap;
       debugPrint('[NexAI Passkey] Authentication options: $optionsMap');
 
-      // 2. Convert JSON to AuthenticateRequestType with comprehensive null safety
+      // 2. Normalize the backend WebAuthn JSON before sending it native.
       final sanitizedOptions = _sanitizePasskeyAuthenticationOptions(
         optionsMap,
       );
@@ -648,21 +700,40 @@ class AuthProvider extends ChangeNotifier {
       debugContext['sanitizedOptions'] = sanitizedOptions;
       debugPrint('[NexAI Passkey] Sanitized auth options: $sanitizedOptions');
 
-      final authRequest = AuthenticateRequestType.fromJson(sanitizedOptions);
+      // 3. Prompt user to authenticate through Android Credential Manager
+      markStep('invoke_native_authenticate');
+      final nativeResult = await _androidPasskeyService.authenticate(
+        options: sanitizedOptions,
+      );
+      debugContext['nativeAuthenticateResult'] =
+          _summarizeAndroidNativeResult(nativeResult);
+      if (!nativeResult.ok || nativeResult.data == null) {
+        throw _buildAndroidPasskeyNativeException(
+          'authenticate',
+          nativeResult.error,
+        );
+      }
+      final assertion = _extractNativePasskeyResponse(
+        nativeResult.data!,
+        'authentication',
+      );
 
-      // 3. Prompt user to authenticate
-      final assertion = await passkeyAuth.authenticate(authRequest);
-
-      debugContext['assertionId'] = assertion.id;
+      markStep('native_authenticate_completed');
+      debugContext['assertionId'] = assertion['id'];
+      debugContext['assertionType'] = assertion['type'];
+      debugContext['assertionResponseSummary'] =
+          _summarizePasskeyResponse(assertion);
 
       // 4. Send assertion to backend to verify (convert to JSON)
+      markStep('verify_authentication_with_backend');
       final res = await NexaiAuthApi.verifyPasskeyAuthentication(
         identifier: identifier,
-        responseInfo: assertion.toJson(),
+        responseInfo: assertion,
       );
 
       if (res.success && res.accessToken != null && res.user != null) {
         await _saveSession(res.user!, res.accessToken!, res.refreshToken);
+        markStep('authentication_verified');
         debugContext['success'] = true;
         debugContext['userId'] = res.user!.id;
         return true;
@@ -875,6 +946,65 @@ class AuthProvider extends ChangeNotifier {
     return diagnostics;
   }
 
+  bool get _isAndroidPasskeyNativePlatform =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  AndroidPasskeyNativeException _buildAndroidPasskeyNativeException(
+    String operation,
+    AndroidNativeError? error,
+  ) {
+    return AndroidPasskeyNativeException(
+      operation: operation,
+      code: error?.code ?? 'native_failure',
+      message: error?.message ?? 'Android native passkey operation failed',
+      details: error?.details ?? const <String, dynamic>{},
+    );
+  }
+
+  Map<String, dynamic> _summarizeAndroidNativeResult(
+    AndroidNativeResult<Map<String, dynamic>> result,
+  ) {
+    final data = result.data;
+    return {
+      'ok': result.ok,
+      'error': result.error?.toDebugMap(),
+      if (data != null) ...{
+        'responseJsonLength': data['responseJson']?.toString().length,
+        'responseType': data['responseType'],
+        'credentialType': data['credentialType'],
+        'hasResponseInfo': data['responseInfo'] is Map,
+      },
+    };
+  }
+
+  Map<String, dynamic> _extractNativePasskeyResponse(
+    Map<String, dynamic> nativeData,
+    String operation,
+  ) {
+    final responseInfo = nativeData['responseInfo'];
+    if (responseInfo is Map) {
+      return Map<String, dynamic>.from(responseInfo);
+    }
+
+    final responseJson = nativeData['responseJson']?.toString();
+    if (responseJson != null && responseJson.isNotEmpty) {
+      final decoded = jsonDecode(responseJson);
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+    }
+
+    throw AndroidPasskeyNativeException(
+      operation: operation,
+      code: 'invalid_native_response',
+      message: 'Android native passkey response is missing responseInfo',
+      details: {
+        'nativeDataKeys': nativeData.keys.toList(),
+        'responseJsonLength': responseJson?.length,
+      },
+    );
+  }
+
   String? _tryDecodeUtf8Preview(List<int> bytes) {
     try {
       final text = utf8.decode(bytes);
@@ -915,10 +1045,8 @@ class AuthProvider extends ChangeNotifier {
       'toString': error.toString(),
       'hashCode': error.hashCode,
       'isPlatformException': error is PlatformException,
-      'isPasskeysAuthenticatorException':
-          error is passkey_exceptions.AuthenticatorException,
-      'isPasskeysUnhandledException':
-          error is passkey_exceptions.UnhandledAuthenticatorException,
+      'isAndroidPasskeyNativeException':
+          error is AndroidPasskeyNativeException,
     };
 
     if (error is PlatformException) {
@@ -930,8 +1058,9 @@ class AuthProvider extends ChangeNotifier {
       };
     }
 
-    if (error is passkey_exceptions.UnhandledAuthenticatorException) {
-      diagnostics['passkeysUnhandledException'] = {
+    if (error is AndroidPasskeyNativeException) {
+      diagnostics['androidPasskeyNativeException'] = {
+        'operation': error.operation,
         'code': error.code,
         'message': error.message,
         'details': error.details,
@@ -979,40 +1108,48 @@ class AuthProvider extends ChangeNotifier {
     final errorType = error.runtimeType.toString();
     final lastStep = debugContext['lastStep']?.toString();
 
-    if (lastStep == 'invoke_platform_register') {
+    if (lastStep == 'invoke_native_register' ||
+        lastStep == 'invoke_native_authenticate') {
       hints.add(
-        'The request was parsed and failed inside the platform passkey '
-        'registration call.',
+        'The request reached the Kotlin Credential Manager layer and failed '
+        'inside the native Android API.',
       );
     }
-    if (error is passkey_exceptions.MissingGoogleSignInException) {
-      hints.add('Android device is not signed in to a Google account.');
-    }
-    if (error is passkey_exceptions.NoCreateOptionException) {
+
+    if (error is AndroidPasskeyNativeException) {
+      final nativeType = error.details['type']?.toString() ?? '';
+      final nativeClass = error.details['exceptionClass']?.toString() ?? '';
+      final nativeCode = error.code.toLowerCase();
       hints.add(
-        'No credential provider could create the passkey. Check Android '
-        'Credential Manager and passkey provider settings.',
+        'Native Credential Manager error: ${error.code}; see details.type '
+        'and exceptionClass in Passkey 调试信息.',
       );
+      if (nativeCode.contains('no_credential') ||
+          nativeCode.contains('no_create_option') ||
+          nativeType.contains('NO_CREDENTIAL')) {
+        hints.add(
+          'No Android credential provider could satisfy the request. Check '
+          'device Credential Manager/passkey provider setup and Google account.',
+        );
+      }
+      if (nativeClass.contains('DomException') ||
+          nativeType.contains('DOM_EXCEPTION') ||
+          nativeType.contains('INVALID_STATE')) {
+        hints.add(
+          'The relying party domain may not be associated with this app. '
+          'Check assetlinks.json for package name and signing certificate.',
+        );
+      }
+      if (nativeCode.contains('user_canceled') ||
+          nativeType.contains('USER_CANCELED')) {
+        hints.add('The native passkey prompt was cancelled by the user.');
+      }
     }
-    if (error is passkey_exceptions.DomainNotAssociatedException) {
-      hints.add(
-        'The relying party domain may not be associated with this app. '
-        'Check assetlinks.json for the package name and signing certificate.',
-      );
-    }
-    if (error is passkey_exceptions.MalformedBase64Url) {
-      hints.add(
-        'At least one WebAuthn field is not valid base64url. Compare the '
-        'Raw/Sanitized Options diagnostics.',
-      );
-    }
-    if (error is passkey_exceptions.UnhandledAuthenticatorException) {
-      hints.add(
-        'The passkeys package surfaced an unhandled platform exception. '
-        'Use code/message/details in Error Diagnostics.',
-      );
-    }
-    if (errorType == 'wOa' || error.toString() == "Instance of 'wOa'") {
+
+    if (errorType == 'wOa' ||
+        errorType == 'tOa' ||
+        error.toString() == "Instance of 'wOa'" ||
+        error.toString() == "Instance of 'tOa'") {
       hints.add(
         'The exception class name is obfuscated in the release build. '
         'Use Last Step, Error Diagnostics, device info, and Android logcat '
@@ -1026,6 +1163,15 @@ class AuthProvider extends ChangeNotifier {
   /// Extract detailed error information from exception
   String _extractErrorDetails(dynamic error) {
     if (error == null) return 'Unknown error';
+
+    if (error is AndroidPasskeyNativeException) {
+      final nativeType = error.details['type'];
+      return [
+        'code=${error.code}',
+        'message=${error.message}',
+        if (nativeType != null) 'type=$nativeType',
+      ].join(', ');
+    }
 
     final diagnostics = _buildErrorDiagnostics(error as Object, null);
     final readableFields = diagnostics['readableFields'];
@@ -1041,12 +1187,6 @@ class AuthProvider extends ChangeNotifier {
     }
 
     final errorStr = error.toString();
-    if (error is passkey_exceptions.AuthenticatorException &&
-        errorStr.isNotEmpty &&
-        !errorStr.startsWith('Instance of ')) {
-      return errorStr;
-    }
-
     if (errorStr.startsWith('Instance of ')) {
       return '$errorStr (no public message field; see Passkey 调试信息)';
     }
@@ -1060,9 +1200,7 @@ class AuthProvider extends ChangeNotifier {
   ) {
     final sanitized = Map<String, dynamic>.from(options);
 
-    // Handle challenge - ensure it's properly formatted
-    // The passkeys package expects challenge as-is from the server
-    // (server should send base64url-encoded string)
+    // Handle challenge - the server should send base64url-encoded string.
     if (sanitized['challenge'] == null) {
       throw Exception('Missing required field: challenge');
     }
@@ -1108,7 +1246,7 @@ class AuthProvider extends ChangeNotifier {
           if (credMap['type'] == null) {
             credMap['type'] = 'public-key';
           }
-          // Add empty transports array if missing - passkeys package may expect this
+          // Add empty transports array if missing for WebAuthn compatibility.
           if (!credMap.containsKey('transports') ||
               credMap['transports'] == null) {
             credMap['transports'] = <String>[];
@@ -1119,21 +1257,30 @@ class AuthProvider extends ChangeNotifier {
       }).toList();
     }
 
+    final isAndroidRegistration =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
     // Handle authenticatorSelection
     if (sanitized['authenticatorSelection'] != null) {
       final authSelection = Map<String, dynamic>.from(
         sanitized['authenticatorSelection'] as Map<String, dynamic>,
       );
 
-      // Remove null authenticatorAttachment or keep it if it has a value
-      if (authSelection['authenticatorAttachment'] == null) {
+      // Android Credential Manager should be allowed to select the configured
+      // passkey provider. Forcing platform-only creation fails on some OEM
+      // Android builds even when the request is otherwise valid.
+      if (isAndroidRegistration ||
+          authSelection['authenticatorAttachment'] == null) {
         authSelection.remove('authenticatorAttachment');
       }
 
-      // Set defaults for other fields if missing
-      if (authSelection['requireResidentKey'] == null) {
+      if (isAndroidRegistration) {
+        authSelection.remove('requireResidentKey');
+        authSelection['residentKey'] = 'preferred';
+      } else if (authSelection['requireResidentKey'] == null) {
         authSelection['requireResidentKey'] = false;
       }
+
       if (authSelection['userVerification'] == null) {
         authSelection['userVerification'] = 'preferred';
       }
@@ -1148,6 +1295,21 @@ class AuthProvider extends ChangeNotifier {
         {'type': 'public-key', 'alg': -7}, // ES256
         {'type': 'public-key', 'alg': -257}, // RS256
       ];
+    } else if (isAndroidRegistration && sanitized['pubKeyCredParams'] is List) {
+      final params = sanitized['pubKeyCredParams'] as List;
+      final filtered = <Map<String, dynamic>>[];
+      for (final alg in [-7, -257]) {
+        final match = _findPublicKeyCredentialParam(params, alg);
+        if (match != null) {
+          filtered.add(match);
+        }
+      }
+      sanitized['pubKeyCredParams'] = filtered.isEmpty
+          ? [
+              {'type': 'public-key', 'alg': -7},
+              {'type': 'public-key', 'alg': -257},
+            ]
+          : filtered;
     }
 
     // Handle attestation
@@ -1179,6 +1341,16 @@ class AuthProvider extends ChangeNotifier {
     }
 
     return sanitized;
+  }
+
+  Map<String, dynamic>? _findPublicKeyCredentialParam(List params, int alg) {
+    for (final param in params) {
+      if (param is! Map) continue;
+      if (param['type'] == 'public-key' && param['alg'] == alg) {
+        return Map<String, dynamic>.from(param);
+      }
+    }
+    return null;
   }
 
   /// Sanitize passkey authentication options to handle null values and encoding

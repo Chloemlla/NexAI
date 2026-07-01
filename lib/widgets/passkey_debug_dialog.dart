@@ -159,6 +159,16 @@ class AuthDebugDialog extends StatelessWidget {
       'Sanitized Options Diagnostics',
       debugContext['sanitizedOptionsDiagnostics'],
     );
+    _writeJsonSection(
+      buffer,
+      'Native Register Result',
+      debugContext['nativeRegisterResult'],
+    );
+    _writeJsonSection(
+      buffer,
+      'Native Authenticate Result',
+      debugContext['nativeAuthenticateResult'],
+    );
 
     // Credential info (for Passkey)
     if (debugContext['credentialId'] != null) {
@@ -171,6 +181,11 @@ class AuthDebugDialog extends StatelessWidget {
       buffer,
       'Credential Response Summary',
       debugContext['credentialResponseSummary'],
+    );
+    _writeJsonSection(
+      buffer,
+      'Assertion Response Summary',
+      debugContext['assertionResponseSummary'],
     );
 
     // Stack trace

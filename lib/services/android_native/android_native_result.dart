@@ -5,19 +5,34 @@ class AndroidNativeError {
     required this.code,
     required this.message,
     required this.recoverable,
+    this.details = const <String, dynamic>{},
   });
 
   final String code;
   final String message;
   final bool recoverable;
+  final Map<String, dynamic> details;
 
   factory AndroidNativeError.fromMap(Map<dynamic, dynamic> map) {
     return AndroidNativeError(
       code: map['code']?.toString() ?? 'native_failure',
       message: map['message']?.toString() ?? 'Native operation failed',
       recoverable: map['recoverable'] == true,
+      details: asStringMap(map['details']),
     );
   }
+
+  Map<String, dynamic> toDebugMap() {
+    return {
+      'code': code,
+      'message': message,
+      'recoverable': recoverable,
+      'details': details,
+    };
+  }
+
+  @override
+  String toString() => 'code=$code, message=$message';
 }
 
 class AndroidNativeResult<T> {
@@ -34,6 +49,7 @@ class AndroidNativeResult<T> {
     String code,
     String message, {
     bool recoverable = true,
+    Map<String, dynamic> details = const <String, dynamic>{},
   }) {
     return AndroidNativeResult._(
       ok: false,
@@ -41,6 +57,7 @@ class AndroidNativeResult<T> {
         code: code,
         message: message,
         recoverable: recoverable,
+        details: details,
       ),
     );
   }
@@ -64,10 +81,11 @@ class AndroidNativeResult<T> {
       error: error is Map
           ? AndroidNativeError.fromMap(error)
           : const AndroidNativeError(
-              code: 'native_failure',
-              message: 'Native operation failed',
-              recoverable: true,
-            ),
+            code: 'native_failure',
+            message: 'Native operation failed',
+            recoverable: true,
+            details: <String, dynamic>{},
+          ),
     );
   }
 }

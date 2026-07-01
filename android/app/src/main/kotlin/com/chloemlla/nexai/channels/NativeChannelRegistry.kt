@@ -43,6 +43,9 @@ class NativeChannelRegistry(
         MethodChannel(messenger, "com.chloemlla.nexai/update").setMethodCallHandler(
             UpdateChannel(activity, securitySignals),
         )
+        MethodChannel(messenger, "com.chloemlla.nexai/passkeys").setMethodCallHandler(
+            PasskeyChannel(activity),
+        )
         EventChannel(messenger, "com.chloemlla.nexai/native_task_events").setStreamHandler(taskEvents)
     }
 

@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../main.dart' show isAndroid, isDesktop;
 import '../models/message.dart';
@@ -395,8 +394,8 @@ class _MessageFooter extends StatelessWidget {
             SnackBar(
               content: Row(
                 children: [
-                  FaIcon(
-                    FontAwesomeIcons.circleCheck,
+                  Icon(
+                    Icons.check_circle_rounded,
                     size: 16,
                     color: Colors.white,
                   ),
@@ -411,8 +410,8 @@ class _MessageFooter extends StatelessWidget {
             SnackBar(
               content: Row(
                 children: [
-                  FaIcon(
-                    FontAwesomeIcons.triangleExclamation,
+                  Icon(
+                    Icons.warning_amber_rounded,
                     size: 16,
                     color: Colors.white,
                   ),
@@ -436,8 +435,8 @@ class _MessageFooter extends StatelessWidget {
             SnackBar(
               content: Row(
                 children: [
-                  FaIcon(
-                    FontAwesomeIcons.circleCheck,
+                  Icon(
+                    Icons.check_circle_rounded,
                     size: 16,
                     color: Colors.white,
                   ),
@@ -454,11 +453,7 @@ class _MessageFooter extends StatelessWidget {
         SnackBar(
           content: Row(
             children: [
-              FaIcon(
-                FontAwesomeIcons.circleXmark,
-                size: 16,
-                color: Colors.white,
-              ),
+              Icon(Icons.cancel_rounded, size: 16, color: Colors.white),
               SizedBox(width: 8),
               Expanded(child: Text('保存失败: $e')),
             ],

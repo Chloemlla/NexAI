@@ -8,7 +8,6 @@ import 'package:ffmpeg_kit_flutter_new/log.dart';
 import 'package:ffmpeg_kit_flutter_new/session.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:path/path.dart' as p;
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
 
@@ -202,10 +201,10 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(
+                Icon(
                   _failedCount == 0
-                      ? FontAwesomeIcons.circleCheck
-                      : FontAwesomeIcons.triangleExclamation,
+                      ? Icons.check_circle_rounded
+                      : Icons.warning_amber_rounded,
                   size: 16,
                   color: Colors.white,
                 ),
@@ -347,11 +346,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(
-                  FontAwesomeIcons.circleCheck,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                 SizedBox(width: 8),
                 Text('已保存'),
               ],

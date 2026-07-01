@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
@@ -917,12 +916,12 @@ class _SettingsPageState extends State<SettingsPage> {
                                               SnackBar(
                                                 content: Row(
                                                   children: [
-                                                    FaIcon(
+                                                    Icon(
                                                       ok
-                                                          ? FontAwesomeIcons
-                                                                .circleCheck
-                                                          : FontAwesomeIcons
-                                                                .circleXmark,
+                                                          ? Icons
+                                                                .check_circle_rounded
+                                                          : Icons
+                                                                .cancel_rounded,
                                                       size: 16,
                                                       color: Colors.white,
                                                     ),
@@ -1041,12 +1040,12 @@ class _SettingsPageState extends State<SettingsPage> {
                                               SnackBar(
                                                 content: Row(
                                                   children: [
-                                                    FaIcon(
+                                                    Icon(
                                                       ok
-                                                          ? FontAwesomeIcons
-                                                                .circleCheck
-                                                          : FontAwesomeIcons
-                                                                .circleXmark,
+                                                          ? Icons
+                                                                .check_circle_rounded
+                                                          : Icons
+                                                                .cancel_rounded,
                                                       size: 16,
                                                       color: Colors.white,
                                                     ),
@@ -1133,12 +1132,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                           SnackBar(
                                             content: Row(
                                               children: [
-                                                FaIcon(
+                                                Icon(
                                                   ok
-                                                      ? FontAwesomeIcons
-                                                            .circleCheck
-                                                      : FontAwesomeIcons
-                                                            .circleXmark,
+                                                      ? Icons
+                                                            .check_circle_rounded
+                                                      : Icons.cancel_rounded,
                                                   size: 16,
                                                   color: Colors.white,
                                                 ),
@@ -1224,12 +1222,10 @@ class _SettingsPageState extends State<SettingsPage> {
                                         SnackBar(
                                           content: Row(
                                             children: [
-                                              FaIcon(
+                                              Icon(
                                                 ok
-                                                    ? FontAwesomeIcons
-                                                          .circleCheck
-                                                    : FontAwesomeIcons
-                                                          .circleXmark,
+                                                    ? Icons.check_circle_rounded
+                                                    : Icons.cancel_rounded,
                                                 size: 16,
                                                 color: Colors.white,
                                               ),
@@ -1582,8 +1578,8 @@ class _SettingsPageState extends State<SettingsPage> {
                               SnackBar(
                                 content: Row(
                                   children: [
-                                    FaIcon(
-                                      FontAwesomeIcons.circleCheck,
+                                    Icon(
+                                      Icons.check_circle_rounded,
                                       size: 16,
                                       color: Colors.white,
                                     ),
@@ -1610,8 +1606,8 @@ class _SettingsPageState extends State<SettingsPage> {
                               SnackBar(
                                 content: Row(
                                   children: [
-                                    FaIcon(
-                                      FontAwesomeIcons.circleXmark,
+                                    Icon(
+                                      Icons.cancel_rounded,
                                       size: 16,
                                       color: Colors.white,
                                     ),

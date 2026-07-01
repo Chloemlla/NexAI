@@ -5,7 +5,6 @@ import 'package:v_video_compressor/v_video_compressor.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:gal/gal.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
 
@@ -173,11 +172,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(
-                  FontAwesomeIcons.circleCheck,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                 SizedBox(width: 8),
                 Text('压缩完成！'),
               ],
@@ -192,11 +187,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(
-                  FontAwesomeIcons.circleXmark,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                Icon(Icons.cancel_rounded, size: 16, color: Colors.white),
                 SizedBox(width: 8),
                 Expanded(child: Text('压缩失败: $e')),
               ],
@@ -239,11 +230,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(
-                  FontAwesomeIcons.circleCheck,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                 SizedBox(width: 8),
                 Text('已保存到相册'),
               ],

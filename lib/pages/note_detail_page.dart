@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 import '../models/note.dart';
 import '../providers/notes_provider.dart';
@@ -846,11 +845,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(
-                  FontAwesomeIcons.circleCheck,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                 SizedBox(width: 8),
                 Expanded(child: Text('导出成功: $path')),
               ],
@@ -869,11 +864,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           SnackBar(
             content: Row(
               children: [
-                FaIcon(
-                  FontAwesomeIcons.circleXmark,
-                  size: 16,
-                  color: Colors.white,
-                ),
+                Icon(Icons.cancel_rounded, size: 16, color: Colors.white),
                 SizedBox(width: 8),
                 Expanded(child: Text('导出失败: $e')),
               ],

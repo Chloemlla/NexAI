@@ -126,8 +126,10 @@ class NexAIApp extends StatelessWidget {
         color: colorScheme.surfaceContainerLow,
         surfaceTintColor: colorScheme.surfaceTint,
         shadowColor: colorScheme.shadow.withAlpha(55),
-        side: BorderSide(color: colorScheme.outlineVariant.withAlpha(110)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: colorScheme.outlineVariant.withAlpha(110)),
+        ),
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
       ),

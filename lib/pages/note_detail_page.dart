@@ -1682,7 +1682,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           fontSize: 14,
           color: cs.onSurface,
           height: 1.7,
-          fontFamily: 'monospace',
+          fontFamily: 'JetBrainsMonoNexAI',
         ),
         decoration: InputDecoration(
           hintText:
@@ -1931,7 +1931,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                           fontSize: 16,
                           color: cs.onSurface,
                           height: 1.8,
-                          fontFamily: 'monospace',
+                          fontFamily: 'JetBrainsMonoNexAI',
                         ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,

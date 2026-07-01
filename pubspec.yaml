@@ -129,3 +129,9 @@ flutter:
     - family: OPPO_Sans
       fonts:
         - asset: assets/OPPO_Sans_4.0/OPPO Sans 4.0.ttf
+
+    # JetBrains Mono NexAI - ASCII 子集，仅用于计时器、看板与开发者日志
+    - family: JetBrainsMonoNexAI
+      fonts:
+        - asset: assets/fonts/jetbrains_mono/JetBrainsMonoNexAI-Regular.ttf
+          weight: 400

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -70,7 +71,8 @@ class NexAIApp extends StatelessWidget {
       brightness: colorScheme.brightness,
       colorScheme: colorScheme,
       fontFamily: settings.fontFamily,
-      visualDensity: VisualDensity.adaptivePlatformDensity,
+      splashFactory: InkSparkle.splashFactory,
+      visualDensity: VisualDensity.compact,
     );
     final textTheme = base.textTheme.apply(
       fontFamily: settings.fontFamily,
@@ -102,6 +104,17 @@ class NexAIApp extends StatelessWidget {
         scrolledUnderElevation: 1,
         backgroundColor: colorScheme.surface,
         surfaceTintColor: colorScheme.surfaceTint,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: colorScheme.surface,
+          statusBarIconBrightness: colorScheme.brightness == Brightness.dark
+              ? Brightness.light
+              : Brightness.dark,
+          systemNavigationBarIconBrightness:
+              colorScheme.brightness == Brightness.dark
+              ? Brightness.light
+              : Brightness.dark,
+        ),
         titleTextStyle: textTheme.titleLarge?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w700,
@@ -112,7 +125,9 @@ class NexAIApp extends StatelessWidget {
         elevation: 0,
         color: colorScheme.surfaceContainerLow,
         surfaceTintColor: colorScheme.surfaceTint,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shadowColor: colorScheme.shadow.withAlpha(55),
+        side: BorderSide(color: colorScheme.outlineVariant.withAlpha(110)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
       ),

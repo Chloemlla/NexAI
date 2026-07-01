@@ -6,6 +6,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String defaultOpenaiBaseUrl =
       'https://tts.chloemlla.com/api/nexai';
   static const String _legacyOpenaiBaseUrl = 'https://api.openai.com/v1';
+  static const String monospaceFontFamily = 'JetBrainsMonoNexAI';
 
   // ── Available font families (from pubspec.yaml) ──────────────────────────
   static const List<String> availableFonts = [
@@ -58,6 +59,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _borderlessMode = false;
   bool _fullScreenMode = false;
   bool _smartAutoScroll = true;
+  bool _developerDebugModeUnlocked = false;
 
   // Cloud Sync
   bool _syncEnabled = false;
@@ -88,6 +90,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get borderlessMode => _borderlessMode;
   bool get fullScreenMode => _fullScreenMode;
   bool get smartAutoScroll => _smartAutoScroll;
+  bool get developerDebugModeUnlocked => _developerDebugModeUnlocked;
 
   bool get syncEnabled => _syncEnabled;
   String get syncMethod => _syncMethod;
@@ -172,6 +175,8 @@ class SettingsProvider extends ChangeNotifier {
       _borderlessMode = prefs.getBool('borderlessMode') ?? false;
       _fullScreenMode = prefs.getBool('fullScreenMode') ?? false;
       _smartAutoScroll = prefs.getBool('smartAutoScroll') ?? true;
+      _developerDebugModeUnlocked =
+          prefs.getBool('developerDebugModeUnlocked') ?? false;
 
       _syncEnabled = prefs.getBool('syncEnabled') ?? false;
       _syncMethod = prefs.getString('syncMethod') ?? 'WebDAV';
@@ -263,6 +268,10 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool('borderlessMode', _borderlessMode);
     await prefs.setBool('fullScreenMode', _fullScreenMode);
     await prefs.setBool('smartAutoScroll', _smartAutoScroll);
+    await prefs.setBool(
+      'developerDebugModeUnlocked',
+      _developerDebugModeUnlocked,
+    );
 
     await prefs.setBool('syncEnabled', _syncEnabled);
     await prefs.setString('syncMethod', _syncMethod);
@@ -307,6 +316,13 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setSmartAutoScroll(bool value) async {
     _smartAutoScroll = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> unlockDeveloperDebugMode() async {
+    if (_developerDebugModeUnlocked) return;
+    _developerDebugModeUnlocked = true;
     notifyListeners();
     await _save();
   }

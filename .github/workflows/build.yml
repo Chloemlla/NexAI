@@ -63,6 +63,9 @@ jobs:
       - name: Clean stale pub git cache
         run: rm -rf ~/.pub-cache/git/
 
+      - name: Subset JetBrains Mono font
+        run: python scripts/subset_jetbrains_mono.py
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -240,6 +243,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pub-
 
+      - name: Subset JetBrains Mono font
+        run: python scripts/subset_jetbrains_mono.py
+
       - name: Install dependencies
         run: flutter pub get
 
@@ -277,6 +283,9 @@ jobs:
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
+
+      - name: Subset JetBrains Mono font
+        run: python scripts/subset_jetbrains_mono.py
 
       - name: Install dependencies
         run: flutter pub get

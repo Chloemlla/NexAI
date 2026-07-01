@@ -288,7 +288,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                               ).format(_selectedDate!),
                               style: tt.bodySmall?.copyWith(
                                 color: cs.onSurfaceVariant,
-                                fontFamily: 'monospace',
+                                fontFamily: 'JetBrainsMonoNexAI',
                                 letterSpacing: 0.5,
                               ),
                             ),
@@ -509,7 +509,10 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                   vertical: 14,
                 ),
               ),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+              style: const TextStyle(
+                fontFamily: 'JetBrainsMonoNexAI',
+                fontSize: 14,
+              ),
               onChanged: _onInputChanged,
             ),
           ],
@@ -583,7 +586,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                           style: TextStyle(
                             fontSize: 13,
                             color: cs.onSurfaceVariant,
-                            fontFamily: 'monospace',
+                            fontFamily: 'JetBrainsMonoNexAI',
                             height: 1.3,
                           ),
                         ),
@@ -668,7 +671,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                     style: TextStyle(
                       fontSize: 13,
                       color: cs.onSurfaceVariant,
-                      fontFamily: 'monospace',
+                      fontFamily: 'JetBrainsMonoNexAI',
                     ),
                   ),
                 ),

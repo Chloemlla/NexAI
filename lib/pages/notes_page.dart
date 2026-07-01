@@ -250,7 +250,7 @@ class _NotesPageState extends State<NotesPage>
               syntax,
               style: TextStyle(
                 fontSize: 12,
-                fontFamily: 'monospace',
+                fontFamily: 'JetBrainsMonoNexAI',
                 color: cs.primary,
                 fontWeight: FontWeight.w600,
               ),

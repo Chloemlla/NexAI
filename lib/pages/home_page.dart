@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -368,8 +369,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
           ? null
           : NavigationBar(
               selectedIndex: _androidNavIndex,
-              onDestinationSelected: (i) =>
-                  setState(() => _androidNavIndex = i),
+              onDestinationSelected: (i) {
+                HapticFeedback.selectionClick();
+                setState(() => _androidNavIndex = i);
+              },
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               animationDuration: const Duration(milliseconds: 400),
               elevation: 3,
@@ -1239,7 +1242,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                               : cs.onSurfaceVariant,
                         ),
                         title: const Text('笔记', style: TextStyle(fontSize: 13)),
-                        onTap: () => setState(() => _currentPage = 'notes'),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _currentPage = 'notes');
+                        },
                       ),
                       ListTile(
                         dense: true,
@@ -1259,7 +1265,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                               : cs.onSurfaceVariant,
                         ),
                         title: const Text('工具', style: TextStyle(fontSize: 13)),
-                        onTap: () => setState(() => _currentPage = 'tools'),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _currentPage = 'tools');
+                        },
                       ),
                       ListTile(
                         dense: true,
@@ -1279,7 +1288,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                               : cs.onSurfaceVariant,
                         ),
                         title: const Text('设置', style: TextStyle(fontSize: 13)),
-                        onTap: () => setState(() => _currentPage = 'settings'),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _currentPage = 'settings');
+                        },
                       ),
                       ListTile(
                         dense: true,
@@ -1299,7 +1311,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                               : cs.onSurfaceVariant,
                         ),
                         title: const Text('关于', style: TextStyle(fontSize: 13)),
-                        onTap: () => setState(() => _currentPage = 'about'),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _currentPage = 'about');
+                        },
                       ),
                       const SizedBox(height: 8),
                     ],

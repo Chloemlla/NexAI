@@ -301,7 +301,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
-                                    fontFamily: 'monospace',
+                                    fontFamily: 'JetBrainsMonoNexAI',
                                     color: cs.primary,
                                   ),
                                 ),

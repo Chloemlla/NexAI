@@ -220,7 +220,7 @@ class MarkdownRendererStyles {
       cssTheme,
       '.markdown-body code',
       themedBodyStyle.copyWith(
-        fontFamily: 'monospace',
+        fontFamily: 'JetBrainsMonoNexAI',
         fontSize: (themedBodyStyle.fontSize ?? settings.fontSize) * 0.92,
         height: 1.55,
       ),

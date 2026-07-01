@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -19,6 +20,7 @@ import '../utils/google_font_paint.dart';
 import '../services/pinned_http_client.dart';
 import '../widgets/passkey_debug_dialog.dart';
 import 'about_page.dart';
+import 'developer_debug_page.dart';
 import 'login_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -265,7 +267,10 @@ class _SettingsPageState extends State<SettingsPage> {
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutBack,
             child: FloatingActionButton.extended(
-              onPressed: saveAll,
+              onPressed: () async {
+                HapticFeedback.selectionClick();
+                await saveAll();
+              },
               icon: const Icon(Icons.save_rounded),
               label: const Text('保存'),
               elevation: 3,
@@ -559,7 +564,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       ],
                       selected: {settings.themeMode},
-                      onSelectionChanged: (s) => settings.setThemeMode(s.first),
+                      onSelectionChanged: (s) {
+                        HapticFeedback.selectionClick();
+                        settings.setThemeMode(s.first);
+                      },
                       style: ButtonStyle(
                         shape: WidgetStatePropertyAll(
                           RoundedRectangleBorder(
@@ -1647,6 +1655,54 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 20),
 
+                if (settings.developerDebugModeUnlocked) ...[
+                  // ── Developer ──
+                  _SectionHeader(
+                    icon: Icons.terminal_rounded,
+                    label: '开发者',
+                    cs: cs,
+                    tt: tt,
+                  ),
+                  const SizedBox(height: 10),
+                  _SettingsCard(
+                    cs: cs,
+                    children: [
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          Icons.data_object_rounded,
+                          color: cs.primary,
+                        ),
+                        title: Text(
+                          '开发者高级调试模式',
+                          style: tt.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '运行状态、日志流与调试快照',
+                          style: tt.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right_rounded,
+                          color: cs.outline,
+                        ),
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const DeveloperDebugPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+
                 // ── About ──
                 _SectionHeader(
                   icon: Icons.info_outline_rounded,
@@ -1682,6 +1738,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: cs.outline,
                       ),
                       onTap: () {
+                        HapticFeedback.selectionClick();
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const AboutPage()),
                         );
@@ -1995,7 +2052,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: TextStyle(
                         fontSize: 11,
                         color: cs.onSurfaceVariant,
-                        fontFamily: 'monospace',
+                        fontFamily: SettingsProvider.monospaceFontFamily,
                         height: 1.35,
                       ),
                     ),
@@ -2128,36 +2185,45 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Tooltip(
       message: label,
-      child: GestureDetector(
-        onTap: () => settings.setAccentColor(colorValue),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: displayColor,
-            shape: BoxShape.circle,
-            border: isSelected
-                ? Border.all(color: cs.onSurface, width: 3)
-                : Border.all(color: displayColor.withAlpha(60), width: 1.5),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: displayColor.withAlpha(100),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        child: InkResponse(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            settings.setAccentColor(colorValue);
+          },
+          containedInkWell: true,
+          customBorder: const CircleBorder(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: displayColor,
+              shape: BoxShape.circle,
+              border: isSelected
+                  ? Border.all(color: cs.onSurface, width: 3)
+                  : Border.all(color: displayColor.withAlpha(60), width: 1.5),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: displayColor.withAlpha(100),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: isSelected
+                ? Icon(
+                    Icons.check_rounded,
+                    size: 20,
+                    color: _contrastColor(displayColor),
+                  )
                 : null,
           ),
-          child: isSelected
-              ? Icon(
-                  Icons.check_rounded,
-                  size: 20,
-                  color: _contrastColor(displayColor),
-                )
-              : null,
         ),
       ),
     );
@@ -2218,9 +2284,9 @@ class _SettingsCard extends StatelessWidget {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: children,

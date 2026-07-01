@@ -258,7 +258,9 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                         readOnly: true,
                         minLines: 4,
                         maxLines: 6,
-                        style: const TextStyle(fontFamily: 'monospace'),
+                        style: const TextStyle(
+                          fontFamily: 'JetBrainsMonoNexAI',
+                        ),
                         decoration: InputDecoration(
                           labelText: '编码结果',
                           filled: true,
@@ -298,7 +300,9 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                         minLines: 4,
                         maxLines: 6,
                         onChanged: (_) => _decodeFromBase64(),
-                        style: const TextStyle(fontFamily: 'monospace'),
+                        style: const TextStyle(
+                          fontFamily: 'JetBrainsMonoNexAI',
+                        ),
                         decoration: InputDecoration(
                           labelText: 'Base64 内容',
                           hintText: '输入待解码的 Base64 或 URL Safe Base64',

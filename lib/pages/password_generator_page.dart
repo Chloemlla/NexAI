@@ -775,7 +775,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
-                      fontFamily: 'monospace',
+                      fontFamily: 'JetBrainsMonoNexAI',
                       color: cs.onPrimaryContainer,
                       letterSpacing: 1.8,
                     ),
@@ -1238,7 +1238,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                 title: Text(
                   password,
                   style: const TextStyle(
-                    fontFamily: 'monospace',
+                    fontFamily: 'JetBrainsMonoNexAI',
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.2,
                   ),
@@ -1439,7 +1439,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                           child: Text(
                             password.password,
                             style: const TextStyle(
-                              fontFamily: 'monospace',
+                              fontFamily: 'JetBrainsMonoNexAI',
                               letterSpacing: 1.2,
                             ),
                             maxLines: 1,

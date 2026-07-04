@@ -5,6 +5,27 @@
 -keepattributes *Annotation*,InnerClasses,EnclosingMethod,Signature
 -allowaccessmodification
 -adaptclassstrings
+-overloadaggressively
+-repackageclasses com.chloemlla.nexai.o
+-printusage build/outputs/mapping/release/usage.txt
+
+# Release diagnostics should not keep logging call sites alive.
+-assumenosideeffects class android.util.Log {
+    public static *** v(...);
+    public static *** d(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+    public static *** wtf(...);
+}
+-assumenosideeffects class io.flutter.Log {
+    public static *** v(...);
+    public static *** d(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+    public static *** wtf(...);
+}
 
 # Android framework instantiates manifest components by name. Keep only the
 # lifecycle entry points while allowing R8 to optimize their bodies.

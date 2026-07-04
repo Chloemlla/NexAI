@@ -119,6 +119,7 @@ jobs:
         run: |
           flutter build apk --release --split-per-abi \
             --obfuscate \
+            --tree-shake-icons \
             --split-debug-info=debug_symbols/android \
             --dart-define-from-file=nexai_release.json \
             --build-number=${{ env.VERSION_CODE }}

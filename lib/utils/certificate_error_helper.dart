@@ -20,7 +20,7 @@ class CertificateErrorHelper {
     CrashBreadcrumbs.record('HandshakeException detected in API request');
 
     try {
-      await FlutterSmartDialog.show<void>(
+      await SmartDialog.show(
         builder: (context) {
           final cs = Theme.of(context).colorScheme;
           return AlertDialog(
@@ -32,7 +32,7 @@ class CertificateErrorHelper {
             ),
             actions: [
               TextButton(
-                onPressed: () => FlutterSmartDialog.dismiss(),
+                onPressed: () => SmartDialog.dismiss(),
                 child: const Text('稍后处理'),
               ),
               FilledButton(
@@ -48,7 +48,7 @@ class CertificateErrorHelper {
                       );
                     }
                   } finally {
-                    await FlutterSmartDialog.dismiss();
+                    await SmartDialog.dismiss();
                   }
                 },
                 child: const Text('清除证书缓存'),

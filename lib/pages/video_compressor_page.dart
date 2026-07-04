@@ -286,7 +286,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         _isLoadingInfo = true;
       });
 
-      final info = await _compressor.getVideoInfo(_videoPath!);
+      final info = await _compressor.getVideoInfo(videoPath);
 
       if (!mounted) return;
 
@@ -527,6 +527,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     final mq = MediaQuery.of(context);
     final isNarrow = mq.size.width < 600;
     final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
+    final videoInfo = _videoInfo;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -609,13 +610,13 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                   ),
                   const SizedBox(height: 20),
                 ],
-                if (_videoInfo == null && !_isLoadingInfo)
+                if (videoInfo == null && !_isLoadingInfo)
                   const ToolEmptyStateCard(
                     icon: Icons.video_library_outlined,
                     title: '还没有选中视频',
                     description: '先选择一个视频文件，再配置压缩质量和高级参数。',
                   )
-                else ...[
+                else if (videoInfo != null) ...[
                   const ToolSectionTitle(
                     icon: Icons.info_outline_rounded,
                     title: '原视频信息',
@@ -626,12 +627,12 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                     title: '原视频信息',
                     icon: Icons.info_outline_rounded,
                     children: [
-                      _buildInfoRow('时长', _videoInfo!.durationFormatted),
+                      _buildInfoRow('时长', videoInfo.durationFormatted),
                       _buildInfoRow(
                         '分辨率',
-                        '${_videoInfo!.width}x${_videoInfo!.height}',
+                        '${videoInfo.width}x${videoInfo.height}',
                       ),
-                      _buildInfoRow('文件大小', _videoInfo!.fileSizeFormatted),
+                      _buildInfoRow('文件大小', videoInfo.fileSizeFormatted),
                     ],
                   ),
                   const SizedBox(height: 20),

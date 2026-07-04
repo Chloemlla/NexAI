@@ -1,26 +1,37 @@
 package com.chloemlla.nexai.background
 
 import android.content.Context
+import com.chloemlla.nexai.core.mmkv.NexAIMmkv
 import org.json.JSONObject
 
 class NativeTaskStore(context: Context) {
-    private val prefs = context.getSharedPreferences("nexai_native_tasks", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val mmkv = NexAIMmkv.mmkvWithId(STORE_ID)
+
+    init {
+        migrateLegacySharedPreferences()
+    }
 
     fun put(task: Map<String, Any?>) {
         val taskId = task["taskId"] as? String ?: return
-        prefs.edit().putString(taskId, JSONObject(task).toString()).apply()
+        mmkv.encode(taskId, JSONObject(task).toString())
     }
 
     fun get(taskId: String): Map<String, Any?>? {
-        val raw = prefs.getString(taskId, null) ?: return null
+        val raw = mmkv.decodeString(taskId) ?: return null
         return jsonToMap(JSONObject(raw))
     }
 
     fun list(): List<Map<String, Any?>> =
-        prefs.all.values.mapNotNull { value ->
-            val raw = value as? String ?: return@mapNotNull null
-            runCatching { jsonToMap(JSONObject(raw)) }.getOrNull()
-        }.sortedByDescending { it["updatedAt"] as? Long ?: 0L }
+        mmkv.allKeys()?.asSequence()
+            ?.filter { key -> key != KEY_MMKV_MIGRATION_COMPLETE }
+            ?.mapNotNull { key ->
+                val raw = mmkv.decodeString(key) ?: return@mapNotNull null
+                runCatching { jsonToMap(JSONObject(raw)) }.getOrNull()
+            }
+            ?.sortedByDescending { it["updatedAt"] as? Long ?: 0L }
+            ?.toList()
+            ?: emptyList()
 
     fun updateStatus(taskId: String, status: String, message: String? = null) {
         val existing: MutableMap<String, Any?> =
@@ -29,6 +40,24 @@ class NativeTaskStore(context: Context) {
         existing["updatedAt"] = System.currentTimeMillis()
         if (message != null) existing["message"] = message
         put(existing)
+    }
+
+    private fun migrateLegacySharedPreferences() {
+        if (mmkv.decodeBool(KEY_MMKV_MIGRATION_COMPLETE, false)) return
+        synchronized(migrationLock) {
+            if (mmkv.decodeBool(KEY_MMKV_MIGRATION_COMPLETE, false)) return
+            val legacyPrefs = appContext.getSharedPreferences(
+                LEGACY_PREFS_NAME,
+                Context.MODE_PRIVATE,
+            )
+            legacyPrefs.all.forEach { (key, value) ->
+                val raw = value as? String ?: return@forEach
+                if (raw.isBlank() || mmkv.containsKey(key)) return@forEach
+                mmkv.encode(key, raw)
+            }
+            mmkv.encode(KEY_MMKV_MIGRATION_COMPLETE, true)
+            legacyPrefs.edit().clear().apply()
+        }
     }
 
     private fun jsonToMap(json: JSONObject): Map<String, Any?> {
@@ -40,5 +69,12 @@ class NativeTaskStore(context: Context) {
             result[key] = if (value == JSONObject.NULL) null else value
         }
         return result
+    }
+
+    private companion object {
+        val migrationLock = Any()
+        const val STORE_ID = "nexai_native_tasks"
+        const val LEGACY_PREFS_NAME = "nexai_native_tasks"
+        const val KEY_MMKV_MIGRATION_COMPLETE = "__mmkv_migration_complete"
     }
 }

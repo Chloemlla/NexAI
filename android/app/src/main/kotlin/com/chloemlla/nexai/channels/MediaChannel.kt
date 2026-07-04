@@ -14,7 +14,7 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.concurrent.thread
+import java.util.concurrent.Executors
 
 class MediaChannel(
     private val context: Context,
@@ -22,6 +22,10 @@ class MediaChannel(
     private val events: NativeTaskEvents,
 ) : MethodChannel.MethodCallHandler {
     private val cancelledTasks = ConcurrentHashMap.newKeySet<String>()
+    private val activeTasks = ConcurrentHashMap.newKeySet<String>()
+    private val executor = Executors.newFixedThreadPool(MAX_ACTIVE_AUDIO_TASKS) { runnable ->
+        Thread(runnable, "nexai-audio-extract").apply { isDaemon = true }
+    }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
@@ -97,6 +101,16 @@ class MediaChannel(
         }
 
         val taskId = call.argument<String>("taskId") ?: "media-audio-${UUID.randomUUID()}"
+        taskStore.pruneTerminalTasks()
+        if (activeTasks.size >= MAX_ACTIVE_AUDIO_TASKS) {
+            return result.success(
+                NativeResult.error(
+                    "too_many_tasks",
+                    "Audio extraction is already running. Please wait for an active task to finish.",
+                ),
+            )
+        }
+        activeTasks.add(taskId)
         val output = File(context.cacheDir, "$taskId.m4a")
         val task = mapOf(
             "taskId" to taskId,
@@ -111,8 +125,13 @@ class MediaChannel(
         emit(taskId, "started", 0.0, "queued")
         result.success(NativeResult.ok(task))
 
-        thread(name = "nexai-audio-extract-$taskId") {
-            extractAudio(taskId, source, output)
+        executor.execute {
+            try {
+                extractAudio(taskId, source, output)
+            } finally {
+                activeTasks.remove(taskId)
+                taskStore.pruneTerminalTasks()
+            }
         }
     }
 
@@ -263,5 +282,9 @@ class MediaChannel(
                 "payload" to payload,
             ),
         )
+    }
+
+    private companion object {
+        const val MAX_ACTIVE_AUDIO_TASKS = 2
     }
 }

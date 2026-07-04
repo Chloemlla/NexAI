@@ -18,30 +18,29 @@ on:
           - all
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-android:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'android' || github.event.inputs.build_target == 'all' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: "zulu"
           java-version: "21"
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: "3.41.0"
           channel: "stable"
           cache: true
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -52,7 +51,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.pub-cache
@@ -68,6 +67,12 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
 
       - name: Write signing config
         run: |
@@ -155,6 +160,24 @@ jobs:
         run: |
           cd build/app/outputs/flutter-apk
           sha256sum NexAI_android_*.apk > APK_SHA256SUMS.txt
+          python - <<'PY'
+          import hashlib, json, pathlib, os
+          tag = "v${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
+          assets = []
+          for path in sorted(pathlib.Path(".").glob("NexAI_android_*.apk")):
+              data = path.read_bytes()
+              assets.append({
+                  "name": path.name,
+                  "sha256": hashlib.sha256(data).hexdigest(),
+                  "size": len(data),
+              })
+          pathlib.Path("release-manifest.json").write_text(json.dumps({
+              "schemaVersion": 1,
+              "tag": tag,
+              "generatedAt": "${{ github.run_id }}",
+              "assets": assets,
+          }, indent=2), encoding="utf-8")
+          PY
           {
             echo "## NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
             echo ""
@@ -167,7 +190,7 @@ jobs:
 
       - name: Automatic release
         if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
@@ -179,6 +202,7 @@ jobs:
           files: |
             build/app/outputs/flutter-apk/NexAI_android_*.apk
             build/app/outputs/flutter-apk/APK_SHA256SUMS.txt
+            build/app/outputs/flutter-apk/release-manifest.json
 
       # - name: Rename AAB output
       #   run: |
@@ -192,19 +216,19 @@ jobs:
       #     echo "=== AAB files ==="
       #     ls -lh build/app/outputs/bundle/release/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-debug-symbols
           path: debug_symbols/
           retention-days: 90
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NexAI-Android-APK
           path: build/app/outputs/flutter-apk/*.apk
           retention-days: 30
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-outputs
           path: build/app/outputs/
@@ -217,25 +241,21 @@ jobs:
       #     git diff --cached --quiet || git commit -m "ci: generate android build files [skip ci]"
       #     git push || true
       #   env:
-      #     GITHUB_TOKEN: ${{ secrets.USER_PAT }}
-
+      #     GITHUB_
   build-web:
     # if: false  # Disabled - Web build not needed
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'web' || github.event.inputs.build_target == 'all' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
-      - uses: subosito/flutter-action@main
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: "3.41.0"
           channel: "stable"
           cache: true
 
       - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.pub-cache
@@ -249,13 +269,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
+
       - name: Run build.ps1 (version control)
         run: pwsh scripts/build.ps1
 
       - name: Build Web
         run: flutter build web --release --dart-define-from-file=nexai_release.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NexAI-Web
           path: build/web/
@@ -265,18 +291,15 @@ jobs:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'windows' || github.event.inputs.build_target == 'all' }}
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: '3.41.0'
           channel: 'stable'
           cache: true
 
       - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~\AppData\Local\Pub\Cache
@@ -289,6 +312,12 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
 
       - name: Enable Windows Desktop
         run: flutter config --enable-windows-desktop
@@ -311,13 +340,13 @@ jobs:
             --split-debug-info=debug_symbols\windows `
             --dart-define-from-file=nexai_release.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-debug-symbols
           path: debug_symbols\windows
           retention-days: 90
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NexAI-Windows
           path: build/windows/x64/runner/Release/

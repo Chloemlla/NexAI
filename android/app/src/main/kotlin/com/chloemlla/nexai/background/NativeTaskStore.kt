@@ -1,7 +1,9 @@
 package com.chloemlla.nexai.background
 
 import android.content.Context
+import android.net.Uri
 import com.chloemlla.nexai.core.mmkv.NexAIMmkv
+import java.io.File
 import org.json.JSONObject
 
 class NativeTaskStore(context: Context) {
@@ -42,6 +44,23 @@ class NativeTaskStore(context: Context) {
         put(existing)
     }
 
+    fun pruneTerminalTasks(
+        maxRecords: Int = 100,
+        terminalRetentionMillis: Long = 7L * 24L * 60L * 60L * 1000L,
+    ) {
+        val now = System.currentTimeMillis()
+        val terminal = list()
+            .filter { task -> task["status"] in TERMINAL_STATUSES }
+            .sortedByDescending { task -> task["updatedAt"] as? Long ?: 0L }
+
+        terminal.forEachIndexed { index, task ->
+            val updatedAt = task["updatedAt"] as? Long ?: 0L
+            if (index >= maxRecords || now - updatedAt > terminalRetentionMillis) {
+                deleteTask(task)
+            }
+        }
+    }
+
     private fun migrateLegacySharedPreferences() {
         if (mmkv.decodeBool(KEY_MMKV_MIGRATION_COMPLETE, false)) return
         synchronized(migrationLock) {
@@ -71,10 +90,34 @@ class NativeTaskStore(context: Context) {
         return result
     }
 
+    private fun deleteTask(task: Map<String, Any?>) {
+        val taskId = task["taskId"] as? String ?: return
+        deleteOutput(task["outputUri"] as? String)
+        mmkv.removeValueForKey(taskId)
+    }
+
+    private fun deleteOutput(outputUri: String?) {
+        if (outputUri.isNullOrBlank()) return
+        runCatching {
+            val parsed = Uri.parse(outputUri)
+            val file = if (parsed.scheme == "file") {
+                File(parsed.path ?: return@runCatching)
+            } else if (parsed.scheme.isNullOrBlank()) {
+                File(outputUri)
+            } else {
+                return@runCatching
+            }
+            val cachePath = appContext.cacheDir.canonicalPath
+            val outputPath = file.canonicalPath
+            if (outputPath.startsWith(cachePath)) file.delete()
+        }
+    }
+
     private companion object {
         val migrationLock = Any()
         const val STORE_ID = "nexai_native_tasks"
         const val LEGACY_PREFS_NAME = "nexai_native_tasks"
         const val KEY_MMKV_MIGRATION_COMPLETE = "__mmkv_migration_complete"
+        val TERMINAL_STATUSES = setOf("succeeded", "failed", "cancelled")
     }
 }

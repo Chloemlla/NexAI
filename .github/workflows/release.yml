@@ -6,29 +6,26 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-java@1bcf9fb12cf4aa7d266a90ae39939e61372fe520 # v5
         with:
           distribution: 'zulu'
           java-version: '21'
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: '3.41.0'
           channel: 'stable'
           cache: true
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.gradle/caches/modules-2
@@ -39,7 +36,7 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.pub-cache
@@ -52,6 +49,12 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
 
       - name: Generate app icons
         run: |
@@ -120,7 +123,7 @@ jobs:
             --dart-define-from-file=nexai_release.json \
             --build-number=${{ env.VERSION_CODE }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-debug-symbols
           path: debug_symbols/
@@ -136,13 +139,13 @@ jobs:
             fi
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NexAI-Android-APK
           path: build/app/outputs/flutter-apk/NexAI_android_*.apk
           retention-days: 7
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-outputs
           path: build/app/outputs/
@@ -151,18 +154,15 @@ jobs:
   build-web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: '3.41.0'
           channel: 'stable'
           cache: true
 
       - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.pub-cache
@@ -176,13 +176,19 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
+
       - name: Run build.ps1 (version control)
         run: pwsh scripts/build.ps1
 
       - name: Build Web
         run: flutter build web --release --web-renderer canvaskit --dart-define-from-file=nexai_release.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NexAI-Web
           path: build/web/
@@ -191,18 +197,15 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: '3.41.0'
           channel: 'stable'
           cache: true
 
       - name: Cache Flutter pub dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~\AppData\Local\Pub\Cache
@@ -215,6 +218,12 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        run: flutter test
 
       - name: Enable Windows Desktop
         run: flutter config --enable-windows-desktop
@@ -237,7 +246,7 @@ jobs:
             --split-debug-info=debug_symbols\windows `
             --dart-define-from-file=nexai_release.json
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-debug-symbols
           path: debug_symbols\windows
@@ -246,7 +255,7 @@ jobs:
       - name: Compress Windows Build
         run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath NexAI-Windows.zip
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NexAI-Windows
           path: NexAI-Windows.zip
@@ -254,27 +263,28 @@ jobs:
 
   release:
     needs: [build-android, build-web, build-windows]
-    permissions: write-all
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: NexAI-Android-APK
           path: android-apk
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: NexAI-Web
           path: web-build
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: NexAI-Windows
           path: windows-build
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: android-outputs
           path: android-outputs
@@ -299,6 +309,25 @@ jobs:
           zip -r release-assets/android-outputs-${{ github.ref_name }}.zip android-outputs
 
           sha256sum release-assets/NexAI_android_*.apk > release-assets/APK_SHA256SUMS.txt
+          python - <<'PY'
+          import hashlib, json, pathlib, os
+          assets = []
+          for path in sorted(pathlib.Path("release-assets").iterdir()):
+              if not path.is_file():
+                  continue
+              data = path.read_bytes()
+              assets.append({
+                  "name": path.name,
+                  "sha256": hashlib.sha256(data).hexdigest(),
+                  "size": len(data),
+              })
+          pathlib.Path("release-assets/release-manifest.json").write_text(json.dumps({
+              "schemaVersion": 1,
+              "tag": "${{ github.ref_name }}",
+              "generatedAt": "${{ github.run_id }}",
+              "assets": assets,
+          }, indent=2), encoding="utf-8")
+          PY
 
       - name: Generate release notes
         run: |
@@ -308,6 +337,7 @@ jobs:
           echo "- **Android APK** (multiple architectures available)" >> RELEASE_NOTES.md
           echo "- **Web**: \`NexAI-Web-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
           echo "- **Windows**: \`NexAI-Windows-${{ github.ref_name }}.zip\`" >> RELEASE_NOTES.md
+          echo "- **Manifest**: \`release-manifest.json\`" >> RELEASE_NOTES.md
           echo "" >> RELEASE_NOTES.md
           echo "### APK SHA256" >> RELEASE_NOTES.md
           while read -r hash file; do
@@ -331,9 +361,9 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         env:
-          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref_name }}
           name: NexAI ${{ github.ref_name }}
@@ -343,6 +373,7 @@ jobs:
           files: |
             release-assets/NexAI_android_*.apk
             release-assets/APK_SHA256SUMS.txt
+            release-assets/release-manifest.json
             release-assets/NexAI-Web-${{ github.ref_name }}.zip
             release-assets/NexAI-Windows-${{ github.ref_name }}.zip
             release-assets/android-outputs-${{ github.ref_name }}.zip

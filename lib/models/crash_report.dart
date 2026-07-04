@@ -123,7 +123,11 @@ class CrashReport {
     return <String>[
       'App version: ${BuildConfig.versionName} (${BuildConfig.versionCode})',
       'Commit: ${BuildConfig.shortHash}',
-      'Flutter mode: ${kReleaseMode ? 'release' : kProfileMode ? 'profile' : 'debug'}',
+      'Flutter mode: ${kReleaseMode
+          ? 'release'
+          : kProfileMode
+          ? 'profile'
+          : 'debug'}',
       'Platform: ${defaultTargetPlatform.name}',
       'Build time: ${BuildConfig.buildTime}',
     ].join('\n');
@@ -147,11 +151,31 @@ class CrashReport {
   }
 
   static String _sanitize(String value) {
-    return value
+    var sanitized = value
         .replaceAll(RegExp(r'[A-Za-z]:\\Users\\[^\\\s]+'), '[user-home]')
         .replaceAll(RegExp(r'/home/[^/\s]+'), '[user-home]')
         .replaceAll(RegExp(r'/Users/[^/\s]+'), '[user-home]')
         .replaceAll(RegExp(r'content://[^\s]+'), '[content-uri]')
         .replaceAll(RegExp(r'file://[^\s]+'), '[file-uri]');
+    sanitized = sanitized.replaceAll(
+      RegExp(r'Bearer\s+[A-Za-z0-9._~+/=-]+', caseSensitive: false),
+      'Bearer [redacted]',
+    );
+    sanitized = sanitized.replaceAllMapped(
+      RegExp(
+        r'([?&](?:key|api_key|apikey|access_token|refresh_token|token|password|secret)=)[^&\s]+',
+        caseSensitive: false,
+      ),
+      (match) => '${match.group(1)}[redacted]',
+    );
+    sanitized = sanitized.replaceAll(
+      RegExp(r'sk-[A-Za-z0-9_-]{12,}'),
+      'sk-[redacted]',
+    );
+    sanitized = sanitized.replaceAll(
+      RegExp(r'AIza[0-9A-Za-z_-]{20,}'),
+      'AIza[redacted]',
+    );
+    return sanitized;
   }
 }

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'message.dart' show asStringMap;
+
 /// Regex to extract #tags (including nested like #category/subcategory)
 /// Avoids matching inside code blocks or frontmatter
 final tagPattern = RegExp(
@@ -106,13 +108,13 @@ class Note {
   };
 
   factory Note.fromJson(Map<String, dynamic> json) => Note(
-    id: json['id'] as String,
-    title: json['title'] as String,
-    content: json['content'] as String,
-    createdAt: DateTime.parse(json['createdAt'] as String),
-    updatedAt: DateTime.parse(json['updatedAt'] as String),
+    id: _stringValue(json, 'id'),
+    title: _stringValue(json, 'title'),
+    content: _stringValue(json, 'content'),
+    createdAt: _dateTimeValue(json, 'createdAt'),
+    updatedAt: _dateTimeValue(json, 'updatedAt'),
     lastViewedAt: json['lastViewedAt'] != null
-        ? DateTime.parse(json['lastViewedAt'] as String)
+        ? _dateTimeValue(json, 'lastViewedAt')
         : null,
     isStarred: json['isStarred'] as bool? ?? false,
   );
@@ -121,9 +123,24 @@ class Note {
       jsonEncode(notes.map((n) => n.toJson()).toList());
 
   static List<Note> decodeList(String jsonStr) {
-    final list = jsonDecode(jsonStr) as List;
-    return list.map((e) => Note.fromJson(e as Map<String, dynamic>)).toList();
+    final decoded = jsonDecode(jsonStr);
+    if (decoded is! List) {
+      throw const FormatException('Expected notes JSON array');
+    }
+    return decoded.map((e) => Note.fromJson(asStringMap(e, 'note'))).toList();
   }
+}
+
+String _stringValue(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value is String) return value;
+  throw FormatException('Expected "$key" to be a string');
+}
+
+DateTime _dateTimeValue(Map<String, dynamic> json, String key) {
+  final parsed = DateTime.tryParse(_stringValue(json, key));
+  if (parsed != null) return parsed;
+  throw FormatException('Expected "$key" to be an ISO-8601 timestamp');
 }
 
 /// Parsed wiki-link: [[target]], [[target|alias]], [[target#heading]], [[target#^blockId]]

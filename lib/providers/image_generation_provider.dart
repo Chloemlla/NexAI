@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../utils/atomic_file_writer.dart';
 import '../utils/certificate_error_helper.dart';
+import '../utils/model_request_budget.dart';
 
 enum ImageGenerationMode {
   chat, // v1/chat/completions
@@ -98,7 +100,8 @@ class ImageGenerationProvider extends ChangeNotifier {
   Future<void> _saveHistory() async {
     try {
       final file = await _getFile();
-      await file.writeAsString(
+      await writeTextAtomically(
+        file,
         jsonEncode(_images.map((image) => image.toJson()).toList()),
       );
     } catch (e) {
@@ -133,6 +136,16 @@ class ImageGenerationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final budgetError =
+          ModelRequestBudget.validateImagePrompt(prompt) ??
+          ModelRequestBudget.validateImageBase64(imageBase64);
+      if (budgetError != null) {
+        _error = budgetError;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      imageCount = ModelRequestBudget.clampImageCount(imageCount);
       final messages = <Map<String, dynamic>>[];
 
       // Build prompt with Doubao parameters if it's a Doubao model
@@ -261,6 +274,14 @@ class ImageGenerationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final budgetError = ModelRequestBudget.validateImagePrompt(prompt);
+      if (budgetError != null) {
+        _error = budgetError;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+      imageCount = ModelRequestBudget.clampImageCount(imageCount);
       final requestData = <String, dynamic>{
         'model': model,
         'prompt': prompt,
@@ -350,6 +371,13 @@ class ImageGenerationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final budgetError = ModelRequestBudget.validateImagePrompt(prompt);
+      if (budgetError != null) {
+        _error = budgetError;
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
       final response = await _dio.post(
         '$baseUrl/images/edits',
         data: {

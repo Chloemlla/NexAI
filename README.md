@@ -53,9 +53,9 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 
 ### Sync & Settings
 
-- **Cloud sync** — WebDAV or Upstash Redis for conversation backup
+- **Cloud sync** — NexAI `/sync/v2` encrypted sync for settings, chats, notes, translation history, and short URL history
 - **Auto-update checker** — Checks GitHub Releases on startup
-- **Persistent settings** — All preferences saved via `SharedPreferences`
+- **Persistent settings** — Non-sensitive preferences use `SharedPreferences`; API keys, tokens, sync keys, and saved passwords use secure storage
 
 ### Security & Integrity
 
@@ -73,10 +73,9 @@ An AI chat client built with Flutter, supporting OpenAI-compatible APIs. Runs on
 ### Build via GitHub Actions
 
 1. Fork the repository
-2. Add a `USER_PAT` secret (Settings → Secrets → Actions)
-3. Go to **Actions → Build NexAI → Run workflow**
-4. Select target platform: `windows`, `android`, `web`, or `all`
-5. Download the artifact when the build completes
+2. Go to **Actions → Build NexAI → Run workflow**
+3. Select target platform: `windows`, `android`, `web`, or `all`
+4. Download the artifact when the build completes
 
 For Android release signing, also add:
 
@@ -84,6 +83,8 @@ For Android release signing, also add:
 - `KEY_ALIAS`, `KEY_PASSWORD`, `KEYSTORE_PASSWORD`
 
 ### Local Development
+
+Agents working under this repository's instructions must use GitHub Actions for build and test validation instead of running local build/test commands.
 
 ```bash
 flutter pub get
@@ -111,7 +112,8 @@ Open **Settings** in the app:
 | Font / Size       | Chat message typography       | System / 14px               |
 | Borderless Mode   | Remove chat bubbles           | Off                         |
 | Smart Auto-scroll | Follow streaming output       | On                          |
-| Cloud Sync        | WebDAV or Upstash             | Off                         |
+| Cloud Sync        | NexAI encrypted sync v2       | Off                         |
+| Sync Recovery Key | Export/import local sync key  | Settings → Sync             |
 | Certificate Cache | Clear certificate pinning     | Settings → Security         |
 
 ## Rendering Examples

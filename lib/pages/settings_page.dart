@@ -18,6 +18,7 @@ import '../utils/build_config.dart';
 import '../utils/google_font_paint.dart';
 import '../services/pinned_http_client.dart';
 import '../widgets/passkey_debug_dialog.dart';
+import '../widgets/sync_recovery_key_dialogs.dart';
 import 'about_page.dart';
 import 'developer_debug_page.dart';
 import 'login_page.dart';
@@ -1181,6 +1182,35 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                               ),
                             ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: sync.isSyncing
+                                      ? null
+                                      : () => showSyncRecoveryKeyDialog(ctx),
+                                  icon: const Icon(Icons.key_rounded, size: 18),
+                                  label: const Text('导出恢复密钥'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: sync.isSyncing
+                                      ? null
+                                      : () => showImportSyncRecoveryKeyDialog(
+                                          ctx,
+                                        ),
+                                  icon: const Icon(
+                                    Icons.input_rounded,
+                                    size: 18,
+                                  ),
+                                  label: const Text('导入恢复密钥'),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 10),
                           OutlinedButton.icon(

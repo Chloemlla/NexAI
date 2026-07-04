@@ -5,6 +5,8 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/message.dart';
+import '../models/note.dart';
 import '../services/nexai_sync_service.dart';
 import '../utils/sync_crypto.dart';
 import 'auth_provider.dart';
@@ -16,6 +18,15 @@ import 'translation_provider.dart';
 import 'short_url_provider.dart';
 
 enum SyncStatus { idle, uploading, downloading, success, error }
+
+class SyncRestoreException implements Exception {
+  SyncRestoreException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 class SyncProvider extends ChangeNotifier {
   static const _syncCrypto = SyncCrypto();
@@ -121,13 +132,6 @@ class SyncProvider extends ChangeNotifier {
       }
 
       final data = await _decryptSnapshot(snapshot);
-      if (data == null) {
-        _status = SyncStatus.error;
-        _errorMessage = '无法解密云端同步数据';
-        notifyListeners();
-        return false;
-      }
-
       await _restoreLocalData(
         data: data,
         settingsProvider: settingsProvider,
@@ -366,30 +370,41 @@ class SyncProvider extends ChangeNotifier {
     };
   }
 
-  Future<Map<String, dynamic>?> _decryptSnapshot(
+  @visibleForTesting
+  Future<Map<String, dynamic>> debugDecryptSnapshot(
+    Map<String, dynamic> snapshot,
+  ) => _decryptSnapshot(snapshot);
+
+  Future<Map<String, dynamic>> _decryptSnapshot(
     Map<String, dynamic> snapshot,
   ) async {
     final records = snapshot['records'];
-    if (records is! List) return null;
+    if (records is! List) {
+      throw SyncRestoreException('云端同步数据格式无效：records 不是列表');
+    }
 
     Map<String, dynamic>? settings;
     final notes = <Map<String, dynamic>>[];
     final conversations = <Map<String, dynamic>>[];
     final translations = <Map<String, dynamic>>[];
     final shortUrls = <Map<String, dynamic>>[];
-    var encryptedCount = 0;
-    var decryptedCount = 0;
 
     for (final item in records) {
-      if (item is! Map) continue;
-      encryptedCount++;
+      if (item is! Map) {
+        throw SyncRestoreException('云端同步数据包含无效记录');
+      }
+
+      final record = Map<String, dynamic>.from(item);
+      if (record['deleted'] == true) continue;
 
       try {
-        final record = Map<String, dynamic>.from(item);
         final payload = await _syncCrypto.decryptRecord(record);
-        if (payload == null) continue;
+        if (payload == null) {
+          throw SyncRestoreException(
+            '无法解密 ${record['category'] ?? 'unknown'} 记录',
+          );
+        }
 
-        decryptedCount++;
         switch (record['category']) {
           case 'settings':
             settings = payload;
@@ -406,13 +421,15 @@ class SyncProvider extends ChangeNotifier {
           case 'shortUrls':
             shortUrls.add(payload);
             break;
+          default:
+            throw SyncRestoreException('未知同步数据类别: ${record['category']}');
         }
       } catch (e) {
-        debugPrint('NexAI Sync: skipping undecryptable record: $e');
+        debugPrint('NexAI Sync: refusing partial restore: $e');
+        if (e is SyncRestoreException) rethrow;
+        throw SyncRestoreException('无法解密或验证云端同步记录: $e');
       }
     }
-
-    if (encryptedCount > 0 && decryptedCount == 0) return null;
 
     return {
       'settings': ?settings,
@@ -494,36 +511,125 @@ class SyncProvider extends ChangeNotifier {
     required TranslationProvider translationProvider,
     required ShortUrlProvider shortUrlProvider,
   }) async {
+    final settings = data['settings'];
+    if (settings != null) {
+      _validateSettingsPayload(settings);
+    }
+    final notes = _validatedList<Note>(
+      data['notes'],
+      'notes',
+      (json) => Note.fromJson(json),
+    );
+    final conversations = _validatedList<Conversation>(
+      data['conversations'],
+      'conversations',
+      (json) => Conversation.fromJson(json),
+    );
+    final translations = _validatedList<TranslationRecord>(
+      data['translationHistory'],
+      'translationHistory',
+      (json) => TranslationRecord.fromJson(json),
+    );
+    final shortUrls = _validatedList<ShortUrlRecord>(
+      data['shortUrls'],
+      'shortUrls',
+      (json) => ShortUrlRecord.fromJson(json),
+    );
+
     // 恢复设置
-    if (data['settings'] is Map<String, dynamic>) {
-      await _restoreSettings(
-        data['settings'] as Map<String, dynamic>,
-        settingsProvider,
-      );
+    if (settings is Map<String, dynamic>) {
+      await _restoreSettings(settings, settingsProvider);
     }
 
     // 恢复笔记
-    if (data['notes'] is List) {
-      await notesProvider.restoreFromList(data['notes'] as List);
-    }
+    await notesProvider.restoreFromList(
+      notes.map((note) => note.toJson()).toList(),
+    );
 
     // 恢复对话
-    if (data['conversations'] is List) {
-      await chatProvider.restoreFromList(data['conversations'] as List);
-    }
+    await chatProvider.restoreFromList(
+      conversations.map((conversation) => conversation.toJson()).toList(),
+    );
 
     // 恢复翻译历史
-    if (data['translationHistory'] is List) {
-      await translationProvider.restoreFromList(
-        data['translationHistory'] as List,
-      );
-    }
+    await translationProvider.restoreFromList(
+      translations.map((item) => item.toJson()).toList(),
+    );
 
     // 旧版云同步不再恢复服务端保存的明文密码。
 
     // 恢复短链接
-    if (data['shortUrls'] is List) {
-      await shortUrlProvider.restoreFromList(data['shortUrls'] as List);
+    await shortUrlProvider.restoreFromList(
+      shortUrls.map((item) => item.toJson()).toList(),
+    );
+  }
+
+  List<T> _validatedList<T>(
+    Object? raw,
+    String category,
+    T Function(Map<String, dynamic> json) parse,
+  ) {
+    if (raw == null) return <T>[];
+    if (raw is! List) {
+      throw SyncRestoreException('云端同步数据格式无效：$category 不是列表');
+    }
+    return raw
+        .map((item) => parse(asStringMap(item, category)))
+        .toList(growable: false);
+  }
+
+  void _validateSettingsPayload(Object settings) {
+    final map = asStringMap(settings, 'settings');
+    final stringKeys = {
+      'baseUrl',
+      'models',
+      'selectedModel',
+      'themeMode',
+      'systemPrompt',
+      'fontFamily',
+      'syncMethod',
+      'webdavServer',
+      'webdavUser',
+      'upstashUrl',
+      'apiMode',
+      'vertexProjectId',
+      'vertexLocation',
+    };
+    final boolKeys = {
+      'borderlessMode',
+      'fullScreenMode',
+      'smartAutoScroll',
+      'syncEnabled',
+      'notesAutoSave',
+      'aiTitleGeneration',
+    };
+    final numKeys = {'temperature', 'fontSize'};
+
+    for (final key in stringKeys) {
+      final value = map[key];
+      if (value != null && value is! String) {
+        throw SyncRestoreException('云端设置字段类型无效: $key');
+      }
+    }
+    for (final key in boolKeys) {
+      final value = map[key];
+      if (value != null && value is! bool) {
+        throw SyncRestoreException('云端设置字段类型无效: $key');
+      }
+    }
+    for (final key in numKeys) {
+      final value = map[key];
+      if (value != null && value is! num) {
+        throw SyncRestoreException('云端设置字段类型无效: $key');
+      }
+    }
+    final maxTokens = map['maxTokens'];
+    if (maxTokens != null && maxTokens is! int) {
+      throw SyncRestoreException('云端设置字段类型无效: maxTokens');
+    }
+    final accentColorValue = map['accentColorValue'];
+    if (accentColorValue != null && accentColorValue is! int) {
+      throw SyncRestoreException('云端设置字段类型无效: accentColorValue');
     }
   }
 }

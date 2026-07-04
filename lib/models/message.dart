@@ -1,5 +1,26 @@
 import 'dart:convert';
 
+Map<String, dynamic> asStringMap(Object? value, String label) {
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    return value.map((key, mapValue) => MapEntry(key.toString(), mapValue));
+  }
+  throw FormatException('Expected $label to be a JSON object');
+}
+
+String _stringValue(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value is String) return value;
+  throw FormatException('Expected "$key" to be a string');
+}
+
+DateTime _dateTimeValue(Map<String, dynamic> json, String key) {
+  final raw = _stringValue(json, key);
+  final parsed = DateTime.tryParse(raw);
+  if (parsed != null) return parsed;
+  throw FormatException('Expected "$key" to be an ISO-8601 timestamp');
+}
+
 class Message {
   final String role;
   String _content;
@@ -33,9 +54,9 @@ class Message {
   };
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
-    role: json['role'] as String,
-    content: json['content'] as String,
-    timestamp: DateTime.parse(json['timestamp'] as String),
+    role: _stringValue(json, 'role'),
+    content: _stringValue(json, 'content'),
+    timestamp: _dateTimeValue(json, 'timestamp'),
     isError: json['isError'] as bool? ?? false,
   );
 }
@@ -61,21 +82,29 @@ class Conversation {
   };
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
-    id: json['id'] as String? ?? json['createdAt'] as String,
-    title: json['title'] as String,
-    messages: (json['messages'] as List)
-        .map((m) => Message.fromJson(m as Map<String, dynamic>))
-        .toList(),
-    createdAt: DateTime.parse(json['createdAt'] as String),
+    id: json['id'] as String? ?? _stringValue(json, 'createdAt'),
+    title: _stringValue(json, 'title'),
+    messages: _messageList(
+      json['messages'],
+    ).map((m) => Message.fromJson(asStringMap(m, 'message'))).toList(),
+    createdAt: _dateTimeValue(json, 'createdAt'),
   );
 
   static String encodeList(List<Conversation> list) =>
       jsonEncode(list.map((c) => c.toJson()).toList());
 
   static List<Conversation> decodeList(String jsonStr) {
-    final list = jsonDecode(jsonStr) as List;
-    return list
-        .map((e) => Conversation.fromJson(e as Map<String, dynamic>))
+    final decoded = jsonDecode(jsonStr);
+    if (decoded is! List) {
+      throw const FormatException('Expected conversations JSON array');
+    }
+    return decoded
+        .map((e) => Conversation.fromJson(asStringMap(e, 'conversation')))
         .toList();
   }
+}
+
+List<dynamic> _messageList(Object? value) {
+  if (value is List) return value;
+  throw const FormatException('Expected "messages" to be a JSON array');
 }

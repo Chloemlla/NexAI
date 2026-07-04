@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -7,7 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
+import '../services/android_native/android_update_service.dart';
 import 'build_config.dart';
 
 class UpdateChecker {
@@ -260,35 +263,9 @@ class UpdateChecker {
 
       final assets = data['assets'] as List<dynamic>? ?? [];
       final htmlUrl = data['html_url'] as String? ?? _latestReleasePageUrl;
-      String? downloadUrl;
-      String? universalApkUrl;
+      final selected = selectAndroidApkAsset(assets, supportedAbis);
 
-      // Find matching APK for device architecture
-      for (final asset in assets) {
-        final name = (asset['name'] as String? ?? '').toLowerCase();
-        if (!name.endsWith('.apk')) continue;
-
-        // Check for universal APK as fallback
-        if (name.contains('universal') || name.contains('all')) {
-          universalApkUrl = asset['browser_download_url'] as String?;
-        }
-
-        // Try to match device ABI (check all supported ABIs in order)
-        for (final abi in supportedAbis) {
-          final abiLower = abi.toLowerCase().replaceAll('_', '-');
-          if (name.contains(abiLower)) {
-            downloadUrl = asset['browser_download_url'] as String?;
-            break;
-          }
-        }
-
-        if (downloadUrl != null) break;
-      }
-
-      // Use universal APK if no specific match found
-      downloadUrl ??= universalApkUrl;
-
-      if (downloadUrl == null) {
+      if (selected == null) {
         await _openReleasePage(htmlUrl);
         if (context.mounted) {
           _showErrorDialog(
@@ -299,14 +276,41 @@ class UpdateChecker {
         return;
       }
 
-      // Open download URL in browser
-      final uri = Uri.parse(downloadUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
+      final releaseBody = data['body'] as String? ?? '';
+      final expectedSha256 = extractSha256ForAsset(releaseBody, selected.name);
+      if (expectedSha256 == null) {
         await _openReleasePage(htmlUrl);
         if (context.mounted) {
-          _showErrorDialog(context, '无法直接打开下载链接，已跳转到 Release 页面');
+          _showErrorDialog(
+            context,
+            'Release 未提供 ${selected.name} 的 SHA256 校验值，已打开 Release 页面供手动核对。',
+          );
+        }
+        return;
+      }
+
+      final apkFile = await _downloadAssetToTemp(selected);
+      final updater = AndroidUpdateService();
+      final verified = await updater.verifyApkSha256(
+        uriOrPath: apkFile.path,
+        expectedSha256: expectedSha256,
+      );
+      final matches = verified.data?['matches'] == true;
+      if (!verified.success || !matches) {
+        if (context.mounted) {
+          _showErrorDialog(context, 'APK SHA256 校验失败，已取消安装。');
+        }
+        return;
+      }
+
+      final installed = await updater.installApk(uriOrPath: apkFile.path);
+      if (!installed.success) {
+        await updater.openUnknownSourcesSettings();
+        if (context.mounted) {
+          _showErrorDialog(
+            context,
+            '无法启动安装器：${installed.message ?? installed.code ?? '未知错误'}',
+          );
         }
       }
     } catch (e) {
@@ -394,4 +398,69 @@ class UpdateChecker {
     final minute = local.minute.toString().padLeft(2, '0');
     return '${local.year}-$month-$day $hour:$minute';
   }
+
+  @visibleForTesting
+  static AndroidApkAsset? selectAndroidApkAsset(
+    List<dynamic> assets,
+    List<String> supportedAbis,
+  ) {
+    AndroidApkAsset? universal;
+
+    for (final asset in assets) {
+      if (asset is! Map<String, dynamic>) continue;
+      final originalName = asset['name'] as String? ?? '';
+      final name = originalName.toLowerCase();
+      final url = asset['browser_download_url'] as String?;
+      if (!name.endsWith('.apk') || url == null || url.isEmpty) continue;
+
+      final candidate = AndroidApkAsset(name: originalName, downloadUrl: url);
+      if (name.contains('universal') || name.contains('all')) {
+        universal = candidate;
+      }
+
+      for (final abi in supportedAbis) {
+        final abiLower = abi.toLowerCase().replaceAll('_', '-');
+        if (name.contains(abiLower)) return candidate;
+      }
+    }
+
+    return universal;
+  }
+
+  @visibleForTesting
+  static String? extractSha256ForAsset(String releaseBody, String assetName) {
+    final escaped = RegExp.escape(assetName);
+    final blockMatch = RegExp(
+      '`$escaped`[\\s\\S]{0,160}?sha256:([a-fA-F0-9]{64})',
+    ).firstMatch(releaseBody);
+    if (blockMatch != null) return blockMatch.group(1)!.toLowerCase();
+
+    final sumLineMatch = RegExp(
+      '([a-fA-F0-9]{64})\\s+\\*?$escaped',
+    ).firstMatch(releaseBody);
+    return sumLineMatch?.group(1)?.toLowerCase();
+  }
+
+  static Future<File> _downloadAssetToTemp(AndroidApkAsset asset) async {
+    final uri = Uri.parse(asset.downloadUrl);
+    final response = await http
+        .get(uri, headers: _githubHeaders)
+        .timeout(const Duration(minutes: 3));
+    if (response.statusCode != 200) {
+      throw Exception('APK 下载失败（HTTP ${response.statusCode}）');
+    }
+
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/${asset.name}');
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+    return file;
+  }
+}
+
+@visibleForTesting
+class AndroidApkAsset {
+  const AndroidApkAsset({required this.name, required this.downloadUrl});
+
+  final String name;
+  final String downloadUrl;
 }

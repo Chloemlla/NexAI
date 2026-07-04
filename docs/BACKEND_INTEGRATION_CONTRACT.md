@@ -1072,7 +1072,28 @@ NexAI_android_1.0.7-4a1684455_armeabi-v7a.apk
 sha256:...
 ```
 
-发布工作流必须在上传 Release 前生成这些哈希。
+发布工作流必须在上传 Release 前生成这些哈希。当前客户端会选择匹配设备 ABI 的 APK，并且只有在 Release body 中找到该文件名对应的 `sha256:` 后，才会下载、校验并调用 Android 系统安装器。
+
+### 9.3 当前工作流 Release manifest
+
+GitHub Actions 还会随 Release 上传 `release-manifest.json`，格式为：
+
+```json
+{
+  "schemaVersion": 1,
+  "tag": "v1.0.7-4a1684455",
+  "generatedAt": "github-run-id",
+  "assets": [
+    {
+      "name": "NexAI_android_1.0.7-4a1684455_arm64-v8a.apk",
+      "sha256": "64-char-lowercase-hex",
+      "size": 12345678
+    }
+  ]
+}
+```
+
+该 manifest 是 Release 资产完整性清单；后续如接入后端 `/releases/:tag/manifest`，字段应保持向后兼容。
 
 ## 10. 数据库建议
 
@@ -1208,7 +1229,7 @@ CREATE INDEX idx_security_events_device
 - [ ] Artifacts 密码使用哈希保存。
 - [ ] HTML artifact 使用 sandbox 或安全渲染隔离。
 - [ ] 安全事件接口可接受并记录设备风险头。
-- [ ] 发布流程生成 APK SHA256，或实现 release manifest。
+- [x] 发布流程生成 APK SHA256 和 `release-manifest.json`。
 - [ ] 所有错误返回统一 JSON，不返回 HTML 错误页给客户端。
 - [ ] 有最小化集成测试覆盖 auth、sync、artifacts、security、release manifest。
 

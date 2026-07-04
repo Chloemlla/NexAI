@@ -4,73 +4,8 @@ library;
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'pinned_http_client.dart';
-import '../utils/app_security.dart';
-import '../utils/request_signer.dart';
 
-// ─── Pinned HTTP wrapper ──────────────────────────────────────────────────────
-// Lazily initialises a certificate-pinned client on first use.
-// Subsequent calls reuse the same instance (connection pool preserved).
-class _NexaiHttp {
-  static http.Client? _client;
-
-  static Future<http.Client> _get() async {
-    _client ??= await buildPinnedHttpClient();
-    return _client!;
-  }
-
-  /// Base headers: Content-Type + optional compromise honeypot flag.
-  static Map<String, String> _base([Map<String, String>? extra]) {
-    final h = <String, String>{...?extra};
-    // Honeypot: server sees this flag and can throttle/track compromised devices
-    if (AppSecurity.instance.isCompromised) {
-      h['X-NexAI-Device'] = 'flagged';
-    }
-    return h;
-  }
-
-  static Future<http.Response> post(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    final bodyStr = body is String ? body : (body?.toString() ?? '');
-    final signed = await signRequest(
-      method: 'POST',
-      path: url.path,
-      headers: _base(headers),
-      body: bodyStr,
-    );
-    return (await _get()).post(url, headers: signed, body: body);
-  }
-
-  static Future<http.Response> get(
-    Uri url, {
-    Map<String, String>? headers,
-  }) async {
-    final signed = await signRequest(
-      method: 'GET',
-      path: url.path,
-      headers: _base(headers),
-    );
-    return (await _get()).get(url, headers: signed);
-  }
-
-  static Future<http.Response> put(
-    Uri url, {
-    Map<String, String>? headers,
-    Object? body,
-  }) async {
-    final bodyStr = body is String ? body : (body?.toString() ?? '');
-    final signed = await signRequest(
-      method: 'PUT',
-      path: url.path,
-      headers: _base(headers),
-      body: bodyStr,
-    );
-    return (await _get()).put(url, headers: signed, body: body);
-  }
-}
+import 'nexai_backend_client.dart';
 
 const String _nexaiBaseUrl = 'https://tts.chloemlla.com/api/nexai';
 
@@ -102,7 +37,7 @@ class NexaiAuthApi {
     required String password,
     String? displayName,
   }) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
@@ -120,7 +55,7 @@ class NexaiAuthApi {
     required String identifier,
     required String password,
   }) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'identifier': identifier, 'password': password}),
@@ -130,7 +65,7 @@ class NexaiAuthApi {
 
   /// POST /auth/google — send Google idToken
   static Future<AuthResponse> googleAuth({required String idToken}) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/google'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'idToken': idToken}),
@@ -140,7 +75,7 @@ class NexaiAuthApi {
 
   /// POST /auth/github — send GitHub code
   static Future<AuthResponse> githubAuth({required String code}) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/github'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'code': code}),
@@ -152,7 +87,7 @@ class NexaiAuthApi {
   static Future<AuthResponse> getCurrentUser({
     required String accessToken,
   }) async {
-    final res = await _NexaiHttp.get(
+    final res = await NexaiBackendClient.get(
       Uri.parse('$_baseUrl/auth/me'),
       headers: {
         'Content-Type': 'application/json',
@@ -166,7 +101,7 @@ class NexaiAuthApi {
   static Future<AuthResponse> refreshToken({
     required String refreshToken,
   }) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/refresh'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'refreshToken': refreshToken}),
@@ -176,7 +111,7 @@ class NexaiAuthApi {
 
   /// POST /auth/logout
   static Future<AuthResponse> logout({required String accessToken}) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/logout'),
       headers: {
         'Content-Type': 'application/json',
@@ -194,7 +129,7 @@ class NexaiAuthApi {
     String? username,
     String? avatarUrl,
   }) async {
-    final res = await _NexaiHttp.put(
+    final res = await NexaiBackendClient.put(
       Uri.parse('$_baseUrl/auth/profile'),
       headers: {
         'Content-Type': 'application/json',
@@ -214,7 +149,7 @@ class NexaiAuthApi {
     required String accessToken,
     required String idToken,
   }) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/link-google'),
       headers: {
         'Content-Type': 'application/json',
@@ -229,7 +164,7 @@ class NexaiAuthApi {
   static Future<AuthResponse> unlinkGoogle({
     required String accessToken,
   }) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/unlink-google'),
       headers: {
         'Content-Type': 'application/json',
@@ -242,7 +177,7 @@ class NexaiAuthApi {
 
   /// POST /auth/forgot-password
   static Future<AuthResponse> forgotPassword({required String email}) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/forgot-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email}),
@@ -255,7 +190,7 @@ class NexaiAuthApi {
     required String token,
     required String newPassword,
   }) async {
-    final res = await _NexaiHttp.post(
+    final res = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/reset-password'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'token': token, 'newPassword': newPassword}),
@@ -266,7 +201,7 @@ class NexaiAuthApi {
   // / GET /auth/oauth-config
   static Future<OAuthConfigResponse> getOAuthConfig() async {
     final requestUrl = oauthConfigUrl;
-    final response = await _NexaiHttp.get(Uri.parse(requestUrl));
+    final response = await NexaiBackendClient.get(Uri.parse(requestUrl));
     final decoded = _decodeBody(response.body);
 
     if (response.statusCode == 200) {
@@ -299,7 +234,7 @@ class NexaiAuthApi {
   static Future<Map<String, dynamic>> generatePasskeyRegistrationOptions({
     required String accessToken,
   }) async {
-    final response = await _NexaiHttp.post(
+    final response = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/passkey/register/options'),
       headers: {
         'Content-Type': 'application/json',
@@ -325,7 +260,7 @@ class NexaiAuthApi {
     required String accessToken,
     required Map<String, dynamic> responseInfo,
   }) async {
-    final response = await _NexaiHttp.post(
+    final response = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/passkey/register/verify'),
       headers: {
         'Content-Type': 'application/json',
@@ -350,7 +285,7 @@ class NexaiAuthApi {
   static Future<Map<String, dynamic>> generatePasskeyAuthenticationOptions({
     required String identifier,
   }) async {
-    final response = await _NexaiHttp.post(
+    final response = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/passkey/login/options'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'identifier': identifier}),
@@ -373,7 +308,7 @@ class NexaiAuthApi {
     required String identifier,
     required Map<String, dynamic> responseInfo,
   }) async {
-    final response = await _NexaiHttp.post(
+    final response = await NexaiBackendClient.post(
       Uri.parse('$_baseUrl/auth/passkey/login/verify'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'identifier': identifier, 'response': responseInfo}),

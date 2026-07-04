@@ -9,11 +9,10 @@ permissions:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.USER_PAT }}
-
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - name: Install ImageMagick
         run: sudo apt-get install -y imagemagick
 
@@ -39,7 +38,7 @@ jobs:
             -fill white -draw "circle 512,170 512,200" \
             assets/icon_foreground.png
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: '3.24.0'
           channel: 'stable'
@@ -59,4 +58,4 @@ jobs:
           git commit -m "ci: generate app launcher icons" || true
           git push
         env:
-          GITHUB_TOKEN: ${{ secrets.USER_PAT }}
+          GITHUB_

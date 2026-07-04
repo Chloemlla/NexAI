@@ -16,6 +16,23 @@ class SyncCrypto {
 
   const SyncCrypto();
 
+  Future<String> exportRecoveryKey() async {
+    final key = await _getOrCreateKey();
+    return _base64UrlNoPadding(key.bytes);
+  }
+
+  Future<void> importRecoveryKey(String encoded) async {
+    final trimmed = encoded.trim();
+    final bytes = _base64UrlDecode(trimmed);
+    if (bytes.length != 32) {
+      throw const FormatException('Sync recovery key must decode to 32 bytes');
+    }
+    await _storage.write(
+      key: _keyStorageKey,
+      value: _base64UrlNoPadding(bytes),
+    );
+  }
+
   Future<Map<String, dynamic>> encryptRecord({
     required String id,
     required String category,
@@ -49,7 +66,9 @@ class SyncCrypto {
     };
   }
 
-  Future<Map<String, dynamic>?> decryptRecord(Map<String, dynamic> record) async {
+  Future<Map<String, dynamic>?> decryptRecord(
+    Map<String, dynamic> record,
+  ) async {
     final crypto = record['crypto'];
     if (crypto is! Map<String, dynamic>) return null;
     if (crypto['alg'] != algorithm) return null;
@@ -86,7 +105,10 @@ class SyncCrypto {
     }
 
     final key = enc.Key.fromSecureRandom(32);
-    await _storage.write(key: _keyStorageKey, value: _base64UrlNoPadding(key.bytes));
+    await _storage.write(
+      key: _keyStorageKey,
+      value: _base64UrlNoPadding(key.bytes),
+    );
     return key;
   }
 
@@ -94,7 +116,10 @@ class SyncCrypto {
       base64Url.encode(bytes).replaceAll('=', '');
 
   static Uint8List _base64UrlDecode(String value) {
-    final normalized = value.padRight(value.length + (4 - value.length % 4) % 4, '=');
+    final normalized = value.padRight(
+      value.length + (4 - value.length % 4) % 4,
+      '=',
+    );
     return Uint8List.fromList(base64Url.decode(normalized));
   }
 }

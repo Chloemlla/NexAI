@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
 import '../providers/translation_provider.dart';
+import '../utils/model_request_budget.dart';
 import '../widgets/tool_page_style.dart';
 
 class TranslationPage extends StatefulWidget {
@@ -45,6 +46,11 @@ class _TranslationPageState extends State<TranslationPage> {
   Future<void> _translate() async {
     final text = _sourceController.text.trim();
     if (text.isEmpty) return;
+    final budgetError = ModelRequestBudget.validateTranslationInput(text);
+    if (budgetError != null) {
+      _showMessage(budgetError);
+      return;
+    }
 
     final settings = context.read<SettingsProvider>();
     if (settings.vertexApiKey.isEmpty) {

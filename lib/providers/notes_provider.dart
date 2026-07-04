@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
 import '../models/note.dart';
+import '../utils/atomic_file_writer.dart';
 
 /// Generates a random UUID v4 without external dependencies.
 String _newId() {
@@ -232,7 +233,7 @@ class NotesProvider extends ChangeNotifier {
   Future<void> _save() async {
     try {
       final file = await _getFile();
-      await file.writeAsString(Note.encodeList(_notes));
+      await writeTextAtomically(file, Note.encodeList(_notes));
     } catch (e) {
       debugPrint('NexAI: error saving notes: $e');
     }
@@ -565,7 +566,7 @@ class NotesProvider extends ChangeNotifier {
 
   /// 从 JSON 列表恢复笔记（云同步用）
   Future<void> restoreFromList(List<dynamic> list) async {
-    _notes = list.map((e) => Note.fromJson(e as Map<String, dynamic>)).toList();
+    _notes = list.map((e) => Note.fromJson(asStringMap(e, 'note'))).toList();
     _notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     _rebuildBacklinks();
     notifyListeners();
@@ -575,7 +576,7 @@ class NotesProvider extends ChangeNotifier {
   /// 增量合并：按 id upsert，保留 updatedAt 较新的版本
   Future<void> mergeItems(List<dynamic> list) async {
     for (final item in list) {
-      final json = item as Map<String, dynamic>;
+      final json = asStringMap(item, 'note');
       final incoming = Note.fromJson(json);
       final idx = _notes.indexWhere((n) => n.id == incoming.id);
       if (idx == -1) {

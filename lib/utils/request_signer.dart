@@ -20,22 +20,38 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/// Adds HMAC-signing headers to the given [headers] map in-place.
-/// Safe to call on all platforms; returns unmodified headers on Web.
+class RequestSigningException implements Exception {
+  RequestSigningException(this.message, [this.cause]);
+
+  final String message;
+  final Object? cause;
+
+  @override
+  String toString() => cause == null
+      ? 'RequestSigningException: $message'
+      : 'RequestSigningException: $message ($cause)';
+}
+
+/// Adds HMAC-signing headers to the given [headers] map.
+/// Backend calls require signing; failures are surfaced to the caller.
 Future<Map<String, String>> signRequest({
   required String method,
   required String path,
   required Map<String, String> headers,
   String body = '',
 }) async {
-  if (kIsWeb) return headers;
+  if (kIsWeb) {
+    throw RequestSigningException('Request signing is not supported on Web');
+  }
   try {
     final ts = _nowSeconds();
     final sig = await _computeSignature(
@@ -47,13 +63,18 @@ Future<Map<String, String>> signRequest({
     return {...headers, 'X-NexAI-Ts': ts.toString(), 'X-NexAI-Sig': sig};
   } catch (e) {
     debugPrint('RequestSigner: signing error: $e');
-    return headers;
+    throw RequestSigningException('Unable to sign backend request', e);
   }
 }
 
 // ─── Internal ─────────────────────────────────────────────────────────────────
 
 String? _cachedDeviceId;
+const _storage = FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  wOptions: WindowsOptions(useBackwardCompatibility: false),
+);
+const _fallbackInstallIdKey = 'nexai.request_signer.install_id.v1';
 
 /// Returns a stable device identifier.
 /// Combines several hardware identifiers to maximise uniqueness; none are PII.
@@ -76,7 +97,7 @@ Future<String> _getDeviceId() async {
       raw = Platform.localHostname;
     }
   } catch (e) {
-    raw = 'nexai-fallback-id';
+    raw = await _getOrCreateInstallId();
   }
   _cachedDeviceId = sha256
       .convert(utf8.encode(raw))
@@ -84,6 +105,17 @@ Future<String> _getDeviceId() async {
       .map((b) => b.toRadixString(16).padLeft(2, '0'))
       .join();
   return _cachedDeviceId!;
+}
+
+Future<String> _getOrCreateInstallId() async {
+  final existing = await _storage.read(key: _fallbackInstallIdKey);
+  if (existing != null && existing.isNotEmpty) return existing;
+
+  final random = Random.secure();
+  final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+  final id = 'install_${base64Url.encode(bytes).replaceAll('=', '')}';
+  await _storage.write(key: _fallbackInstallIdKey, value: id);
+  return id;
 }
 
 Future<String> _computeSignature({

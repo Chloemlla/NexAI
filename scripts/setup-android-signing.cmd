@@ -248,16 +248,16 @@ echo 变量列表:
 echo   1. KEYSTORE_BASE64
 echo      长度: 
 powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); $OutputEncoding=[Console]::OutputEncoding; Write-Output ('      ' + '%KEYSTORE_BASE64%'.Length + ' 字符')"
-echo      预览: %KEYSTORE_BASE64:~0,60%...
+echo      值: [已隐藏]
 echo.
 echo   2. KEYSTORE_PASSWORD
-echo      值: %STORE_PASSWORD%
+echo      值: [已隐藏]
 echo.
 echo   3. KEY_ALIAS
 echo      值: %KEY_ALIAS%
 echo.
 echo   4. KEY_PASSWORD
-echo      值: %KEY_PASSWORD%
+echo      值: [已隐藏]
 echo.
 echo ========================================
 echo.

@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/message.dart';
 import '../models/search_result.dart';
+import '../utils/atomic_file_writer.dart';
 import '../utils/certificate_error_helper.dart';
 
 /// Generates a random UUID v4 without external dependencies.
@@ -176,7 +177,7 @@ ${_encodeDiagnostic(data)}
   Future<void> _save() async {
     try {
       final file = await _getFile();
-      await file.writeAsString(Conversation.encodeList(_conversations));
+      await writeTextAtomically(file, Conversation.encodeList(_conversations));
     } catch (e) {
       debugPrint('NexAI: error saving conversations: $e');
     }
@@ -702,10 +703,12 @@ ${_encodeDiagnostic(data)}
 
   /// 从 JSON 列表恢复对话（云同步用）
   Future<void> restoreFromList(List<dynamic> list) async {
-    _conversations.clear();
-    _conversations.addAll(
-      list.map((e) => Conversation.fromJson(e as Map<String, dynamic>)),
-    );
+    final restored = list
+        .map((e) => Conversation.fromJson(asStringMap(e, 'conversation')))
+        .toList();
+    _conversations
+      ..clear()
+      ..addAll(restored);
     if (_conversations.isNotEmpty) {
       _currentIndex = 0;
     } else {
@@ -718,7 +721,7 @@ ${_encodeDiagnostic(data)}
   /// 增量合并：按 id upsert 对话
   Future<void> mergeItems(List<dynamic> list) async {
     for (final item in list) {
-      final json = item as Map<String, dynamic>;
+      final json = asStringMap(item, 'conversation');
       final incoming = Conversation.fromJson(json);
       final idx = _conversations.indexWhere((c) => c.id == incoming.id);
       if (idx == -1) {

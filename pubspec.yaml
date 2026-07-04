@@ -15,7 +15,6 @@ dependencies:
   dio_http2_adapter: ^2.5.3
   # toast
   flutter_smart_dialog: ^4.9.8+5
-  media_kit: ^1.2.6
   # 加密
   crypto: ^3.0.6
   encrypt: ^5.0.3

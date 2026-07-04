@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -54,8 +53,6 @@ Future<void> _runMain() async {
   CrashReporter.install();
   CrashBreadcrumbs.record('Widgets binding initialized');
   await CrashReporter.loadStartupCrashReport();
-  MediaKit.ensureInitialized();
-  CrashBreadcrumbs.record('MediaKit initialized');
 
   if (isAndroid) {
     CrashBreadcrumbs.record('Android system UI configured');
@@ -150,11 +147,7 @@ Future<void> _bootstrapAppInBackground({
     ]);
     CrashBreadcrumbs.record('Background bootstrap completed');
   } catch (e, stackTrace) {
-    CrashReporter.recordError(
-      e,
-      stackTrace,
-      event: 'Startup bootstrap failed',
-    );
+    CrashReporter.recordError(e, stackTrace, event: 'Startup bootstrap failed');
     debugPrint('NexAI startup bootstrap failed: $e');
     debugPrintStack(stackTrace: stackTrace);
   }

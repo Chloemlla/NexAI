@@ -1,128 +1,68 @@
-# Flutter engine & embedding
--keep class io.flutter.** { *; }
--keep class io.flutter.plugins.** { *; }
--keep class io.flutter.plugin.** { *; }
--keep class io.flutter.embedding.** { *; }
+# NexAI release hardening for R8.
+# Dart code is compiled by Flutter AOT; these rules harden the Android/Kotlin
+# host layer, generated plugin registration, and Java/Kotlin dependencies.
 
-# Keep all Flutter plugin registrants (generated code)
--keep class io.flutter.plugins.GeneratedPluginRegistrant { *; }
+-keepattributes *Annotation*,InnerClasses,EnclosingMethod,Signature
+-allowaccessmodification
+-adaptclassstrings
 
-# Keep dynamic_color native integration
--keep class com.google.android.material.color.** { *; }
-
-# Keep AndroidX core (used by many plugins)
--keep class androidx.core.** { *; }
--keep class androidx.lifecycle.** { *; }
--keep class androidx.appcompat.** { *; }
-
-# ========== SharedPreferences (API Configuration Storage) ==========
-# Keep shared_preferences plugin
--keep class io.flutter.plugins.sharedpreferences.** { *; }
-
-# Keep Android SharedPreferences implementation
--keep class android.content.SharedPreferences { *; }
--keep class android.content.SharedPreferences$** { *; }
--keepclassmembers class android.content.SharedPreferences {
-    <methods>;
+# Android framework instantiates manifest components by name. Keep only the
+# lifecycle entry points while allowing R8 to optimize their bodies.
+-keep,allowoptimization class com.chloemlla.nexai.MainActivity {
+    public <init>();
+    public <methods>;
+    protected <methods>;
+}
+-keep,allowoptimization class com.chloemlla.nexai.NexAIApplication {
+    public <init>();
+    public <methods>;
+    protected <methods>;
 }
 
-# Keep preference data classes
--keep class androidx.preference.** { *; }
+# Flutter discovers the generated registrant reflectively and the embedding
+# requires stable public plugin APIs. App MethodChannel handlers are direct
+# references and remain free to be obfuscated.
+-keep class io.flutter.plugins.GeneratedPluginRegistrant {
+    public static void registerWith(io.flutter.embedding.engine.FlutterEngine);
+}
+-keep,allowoptimization class io.flutter.app.** { *; }
+-keep,allowoptimization class io.flutter.embedding.** { *; }
+-keep,allowoptimization class io.flutter.plugin.** { *; }
+-keep,allowoptimization class io.flutter.util.** { *; }
+-keep,allowoptimization class io.flutter.view.** { *; }
 
-# Keep ffmpeg_kit_flutter_new native classes
--keep class com.antonkarpenko.ffmpegkit.** { *; }
--keep class com.arthenica.ffmpegkit.** { *; }
+# JNI relies on exact native method names. Keep classes that expose native
+# methods and the native-backed libraries used by the Android host.
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+-keep,allowoptimization class com.tencent.mmkv.** { *; }
+-keep,allowoptimization class com.antonkarpenko.ffmpegkit.** { *; }
+-keep,allowoptimization class com.arthenica.ffmpegkit.** { *; }
 
-# Keep url_launcher plugin
--keep class io.flutter.plugins.urllauncher.** { *; }
+# Android platform and WebView callback entry points invoked by annotation.
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
 
-# Keep package_info_plus plugin
--keep class dev.fluttercommunity.plus.packageinfo.** { *; }
+# Passkey diagnostics compare Credential Manager exception names with backend
+# failure hints. Preserve external exception names without pinning app classes.
+-keepnames class androidx.credentials.exceptions.**
+-keepnames class com.google.android.gms.common.api.ApiException
 
-# Keep dynamic_color plugin
--keep class io.material.** { *; }
-
-# OkHttp / HTTP client (used by google_fonts)
--dontwarn okhttp3.**
--dontwarn okio.**
--dontwarn javax.annotation.**
--keep class okhttp3.** { *; }
--keep class okio.** { *; }
-
-# Kotlin
--keep class kotlin.** { *; }
--keep class kotlinx.** { *; }
--dontwarn kotlin.**
--dontwarn kotlinx.**
-
-# Prevent R8 from stripping annotations used by plugins
--keepattributes *Annotation*
--keepattributes Signature
--keepattributes InnerClasses
--keepattributes EnclosingMethod
-
-# Flutter Play Store split install (referenced by engine but not used)
+# Optional or desktop/JVM APIs referenced by transitive libraries but absent on
+# Android. These warnings do not imply code is packaged into the APK.
+-dontwarn androidx.compose.**
+-dontwarn androidx.lifecycle.**
+-dontwarn androidx.navigation.**
+-dontwarn androidx.room.**
 -dontwarn com.google.android.play.core.splitcompat.**
 -dontwarn com.google.android.play.core.splitinstall.**
 -dontwarn com.google.android.play.core.tasks.**
-
-# Suppress warnings for missing classes in R8 full mode
--dontwarn java.lang.invoke.StringConcatFactory
-
-# ========== Passkeys / WebAuthn (AndroidX Credential Manager) ==========
-# Keep native Credential Manager exception names readable in release diagnostics.
--keep class androidx.credentials.exceptions.** { *; }
--keepnames class androidx.credentials.exceptions.** { *; }
-
-# ========== Google Sign-In ==========
-# Keep Google Sign-In plugin classes
--keep class io.flutter.plugins.googlesignin.** { *; }
--keep class com.google.android.gms.auth.api.signin.** { *; }
--keep class com.google.android.gms.common.** { *; }
-
-# ========== Flutter Secure Storage ==========
-# Keep flutter_secure_storage plugin (used for token persistence)
--keep class com.it_nomads.fluttersecurestorage.** { *; }
-
-# Keep AndroidKeyStore (used by secure storage)
--keep class android.security.keystore.** { *; }
--keep class javax.crypto.** { *; }
--keep class java.security.** { *; }
-
-# ========== Dio HTTP Client (OpenAI API Calls) ==========
-# Keep Dio native adapter classes
--keep class io.flutter.plugins.connectivity.** { *; }
--keep class com.baseflow.connectivity_plus.** { *; }
-
-# Keep HTTP/2 adapter
--keep class com.baseflow.http2adapter.** { *; }
-
-# Keep cookie jar
--keep class io.flutter.plugins.cookiejar.** { *; }
-
-# ========== JSON Serialization (API Configuration & Data Models) ==========
-# Keep all JSON-related reflection for Dart models
--keepattributes *Annotation*
--keepattributes Signature
--keepattributes InnerClasses
--keepattributes EnclosingMethod
-
-# Keep all classes with toJson/fromJson methods (Dart models)
--keepclassmembers class * {
-    public <methods>;
-    public <fields>;
-}
-
-# Preserve line numbers for debugging stack traces
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SourceFile
-
-# ========== Apache Commons Imaging (AWT not available on Android) ==========
-# Suppress warnings for Java AWT classes (not available on Android)
 -dontwarn java.awt.**
+-dontwarn java.lang.invoke.StringConcatFactory
+-dontwarn javax.annotation.**
 -dontwarn javax.imageio.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
 -dontwarn org.apache.commons.imaging.**
-
-# Keep Apache Commons Imaging classes but ignore AWT dependencies
--keep class org.apache.commons.imaging.** { *; }
--keep interface org.apache.commons.imaging.** { *; }

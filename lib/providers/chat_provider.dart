@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../models/message.dart';
 import '../models/search_result.dart';
+import '../utils/certificate_error_helper.dart';
 
 /// Generates a random UUID v4 without external dependencies.
 String _newId() {
@@ -427,6 +428,11 @@ ${_encodeDiagnostic(data)}
         );
       }
     } on DioException catch (e) {
+      final isHandshakeError =
+          CertificateErrorHelper.isHandshakeCertificateError(e);
+      if (isHandshakeError) {
+        unawaited(CertificateErrorHelper.maybePromptToClearCertificateCache(e));
+      }
       String errorMsg;
       String requestDetails = '';
 
@@ -455,7 +461,10 @@ ${_encodeDiagnostic(data)}
       conversation.messages.add(
         Message(
           role: 'assistant',
-          content: 'Error: $errorMsg$requestDetails',
+          content:
+              'Error: $errorMsg'
+              '${isHandshakeError ? '\n\n${CertificateErrorHelper.handshakeUserMessage()}' : ''}'
+              '$requestDetails',
           timestamp: DateTime.now(),
           isError: true,
         ),

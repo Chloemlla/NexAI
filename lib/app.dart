@@ -4,7 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
+import 'models/crash_report.dart';
 import 'providers/settings_provider.dart';
+import 'services/crash_reporter.dart';
+import 'pages/crash_report_page.dart';
 import 'pages/home_page.dart';
 
 class NexAIApp extends StatelessWidget {
@@ -59,7 +62,7 @@ class NexAIApp extends StatelessWidget {
       themeMode: settings.themeMode,
       theme: _buildTheme(settings, effectiveLight),
       darkTheme: _buildTheme(settings, effectiveDark),
-      home: const HomePage(),
+      home: const _CrashReportGate(),
       builder: FlutterSmartDialog.init(),
       navigatorObservers: [FlutterSmartDialog.observer],
     );
@@ -226,6 +229,29 @@ class NexAIApp extends StatelessWidget {
         ),
         textStyle: TextStyle(color: colorScheme.onInverseSurface),
       ),
+    );
+  }
+}
+
+class _CrashReportGate extends StatefulWidget {
+  const _CrashReportGate();
+
+  @override
+  State<_CrashReportGate> createState() => _CrashReportGateState();
+}
+
+class _CrashReportGateState extends State<_CrashReportGate> {
+  late CrashReport? _report = CrashReporter.startupCrashReport;
+
+  @override
+  Widget build(BuildContext context) {
+    final report = _report;
+    if (report == null) return const HomePage();
+    return CrashReportPage(
+      report: report,
+      onContinue: () {
+        setState(() => _report = null);
+      },
     );
   }
 }

@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+
+import '../utils/certificate_error_helper.dart';
 
 enum ImageGenerationMode {
   chat, // v1/chat/completions
@@ -212,6 +215,11 @@ class ImageGenerationProvider extends ChangeNotifier {
         _error = 'HTTP ${response.statusCode}';
       }
     } on DioException catch (e) {
+      final isHandshakeError =
+          CertificateErrorHelper.isHandshakeCertificateError(e);
+      if (isHandshakeError) {
+        unawaited(CertificateErrorHelper.maybePromptToClearCertificateCache(e));
+      }
       if (e.response != null) {
         try {
           final errorBody = e.response!.data;
@@ -223,6 +231,9 @@ class ImageGenerationProvider extends ChangeNotifier {
         }
       } else {
         _error = e.message ?? 'Connection error';
+      }
+      if (isHandshakeError) {
+        _error = CertificateErrorHelper.handshakeUserMessage();
       }
     } catch (e) {
       _error = 'Error: $e';
@@ -296,6 +307,11 @@ class ImageGenerationProvider extends ChangeNotifier {
         _error = 'HTTP ${response.statusCode}';
       }
     } on DioException catch (e) {
+      final isHandshakeError =
+          CertificateErrorHelper.isHandshakeCertificateError(e);
+      if (isHandshakeError) {
+        unawaited(CertificateErrorHelper.maybePromptToClearCertificateCache(e));
+      }
       if (e.response != null) {
         try {
           final errorBody = e.response!.data;
@@ -307,6 +323,9 @@ class ImageGenerationProvider extends ChangeNotifier {
         }
       } else {
         _error = e.message ?? 'Connection error';
+      }
+      if (isHandshakeError) {
+        _error = CertificateErrorHelper.handshakeUserMessage();
       }
     } catch (e) {
       _error = 'Error: $e';
@@ -363,6 +382,11 @@ class ImageGenerationProvider extends ChangeNotifier {
         _error = 'HTTP ${response.statusCode}';
       }
     } on DioException catch (e) {
+      final isHandshakeError =
+          CertificateErrorHelper.isHandshakeCertificateError(e);
+      if (isHandshakeError) {
+        unawaited(CertificateErrorHelper.maybePromptToClearCertificateCache(e));
+      }
       if (e.response != null) {
         try {
           final errorBody = e.response!.data;
@@ -374,6 +398,9 @@ class ImageGenerationProvider extends ChangeNotifier {
         }
       } else {
         _error = e.message ?? 'Connection error';
+      }
+      if (isHandshakeError) {
+        _error = CertificateErrorHelper.handshakeUserMessage();
       }
     } catch (e) {
       _error = 'Error: $e';

@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
+import '../services/crash_reporter.dart';
 import '../utils/build_config.dart';
+import 'crash_report_page.dart';
 
 class DeveloperDebugPage extends StatelessWidget {
   const DeveloperDebugPage({super.key});
@@ -96,6 +98,113 @@ class DeveloperDebugPage extends StatelessWidget {
                 icon: Icons.token_rounded,
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          FutureBuilder(
+            future: CrashReporter.store.load(),
+            builder: (context, snapshot) {
+              final report = snapshot.data;
+              return Card(
+                color: cs.surfaceContainerLow,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.bug_report_outlined,
+                            size: 20,
+                            color: report == null ? cs.outline : cs.error,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'CRASH REPORT',
+                              style: TextStyle(
+                                color: cs.onSurfaceVariant,
+                                fontFamily:
+                                    SettingsProvider.monospaceFontFamily,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          if (report != null)
+                            Text(
+                              report.reportId,
+                              style: TextStyle(
+                                color: cs.onSurfaceVariant,
+                                fontFamily:
+                                    SettingsProvider.monospaceFontFamily,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        report == null
+                            ? 'No stored crash report.'
+                            : '${report.exceptionType}\n${report.crashedAtText}',
+                        style: TextStyle(
+                          color: cs.onSurface,
+                          fontFamily: SettingsProvider.monospaceFontFamily,
+                          fontSize: 12,
+                          height: 1.45,
+                        ),
+                      ),
+                      if (report != null) ...[
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          CrashReportPage(report: report),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.open_in_new_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text('查看'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  await Clipboard.setData(
+                                    ClipboardData(
+                                      text: report.toClipboardText(),
+                                    ),
+                                  );
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('崩溃报告已复制'),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.copy_rounded, size: 18),
+                                label: const Text('复制'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
           Card(

@@ -1,10 +1,14 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:v_video_compressor/v_video_compressor.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:gal/gal.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
 
@@ -63,10 +67,15 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
   bool _autoCorrectOrientation = true;
 
-  // Video player
-  Player? _player;
-  VideoController? _videoController;
+  // FFmpeg-backed video preview
+  Timer? _previewTimer;
+  String? _previewVideoPath;
+  String? _previewFramePath;
+  Duration _previewPosition = Duration.zero;
+  Duration _previewDuration = Duration.zero;
+  bool _isPreviewFrameLoading = false;
   bool _isPlaying = false;
+  int _previewRequestId = 0;
 
   @override
   void dispose() {
@@ -77,22 +86,180 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _audioBitrateController.dispose();
     _trimStartController.dispose();
     _trimEndController.dispose();
-    _player?.dispose();
+    _previewTimer?.cancel();
+    _previewRequestId++;
+    _deletePreviewFrame();
     super.dispose();
   }
 
-  void _initializePlayer(String videoPath) {
-    _player?.dispose();
-    _player = Player();
-    _videoController = VideoController(_player!);
-    _player!.open(Media(videoPath));
-    setState(() => _isPlaying = false);
+  Future<void> _initializePreview(String videoPath) async {
+    _stopPreviewPlayback(updateState: false);
+    _previewRequestId++;
+    _deletePreviewFrame();
+
+    if (!mounted) return;
+    setState(() {
+      _previewVideoPath = videoPath;
+      _previewFramePath = null;
+      _previewPosition = Duration.zero;
+      _previewDuration = Duration.zero;
+      _isPreviewFrameLoading = true;
+      _isPlaying = false;
+    });
+
+    final duration = await _probeVideoDuration(videoPath);
+    if (!mounted || _previewVideoPath != videoPath) return;
+
+    setState(() => _previewDuration = duration);
+    await _renderPreviewFrame(Duration.zero);
   }
 
   void _togglePlayPause() {
-    if (_player == null) return;
-    _player!.playOrPause();
-    setState(() => _isPlaying = !_isPlaying);
+    if (_previewVideoPath == null) return;
+    if (_previewDuration == Duration.zero) return;
+    if (_isPlaying) {
+      _stopPreviewPlayback();
+      return;
+    }
+    _startPreviewPlayback();
+  }
+
+  void _startPreviewPlayback() {
+    if (_previewVideoPath == null) return;
+    _previewTimer?.cancel();
+
+    if (_previewDuration > Duration.zero &&
+        _previewPosition >= _previewDuration) {
+      _previewPosition = Duration.zero;
+    }
+
+    setState(() => _isPlaying = true);
+    _previewTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      if (!mounted || _previewVideoPath == null) return;
+      if (_isPreviewFrameLoading) return;
+
+      final nextPosition = _previewPosition + const Duration(seconds: 1);
+      final endReached =
+          _previewDuration > Duration.zero && nextPosition >= _previewDuration;
+      final target = endReached ? _previewDuration : nextPosition;
+
+      setState(() => _previewPosition = target);
+      await _renderPreviewFrame(target);
+
+      if (endReached) {
+        _stopPreviewPlayback();
+      }
+    });
+  }
+
+  void _stopPreviewPlayback({bool updateState = true}) {
+    _previewTimer?.cancel();
+    _previewTimer = null;
+    if (updateState && mounted) {
+      setState(() => _isPlaying = false);
+    } else {
+      _isPlaying = false;
+    }
+  }
+
+  Future<void> _replayPreview() async {
+    if (_previewVideoPath == null) return;
+    _stopPreviewPlayback();
+    setState(() => _previewPosition = Duration.zero);
+    await _renderPreviewFrame(Duration.zero);
+  }
+
+  Future<Duration> _probeVideoDuration(String videoPath) async {
+    try {
+      final session = await FFprobeKit.getMediaInformation(videoPath);
+      final duration = session.getMediaInformation()?.getDuration();
+      final seconds = duration == null ? null : double.tryParse(duration);
+      if (seconds == null || seconds <= 0) return Duration.zero;
+      return Duration(milliseconds: (seconds * 1000).round());
+    } catch (_) {
+      return Duration.zero;
+    }
+  }
+
+  Future<void> _renderPreviewFrame(Duration position) async {
+    final videoPath = _previewVideoPath;
+    if (videoPath == null) return;
+
+    final requestId = ++_previewRequestId;
+    if (mounted) {
+      setState(() => _isPreviewFrameLoading = true);
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    final previewDir = Directory(p.join(tempDir.path, 'video_previews'));
+    if (!await previewDir.exists()) {
+      await previewDir.create(recursive: true);
+    }
+
+    final framePath = p.join(
+      previewDir.path,
+      'preview_${DateTime.now().microsecondsSinceEpoch}.jpg',
+    );
+    final command =
+        '-hide_banner -loglevel error -y '
+        '-ss ${_formatSeconds(_previewFramePosition(position))} '
+        '-i ${_quotePath(videoPath)} -frames:v 1 -q:v 2 '
+        '${_quotePath(framePath)}';
+
+    try {
+      final session = await FFmpegKit.execute(command);
+      final returnCode = await session.getReturnCode();
+      final frameFile = File(framePath);
+      if (!mounted || requestId != _previewRequestId) {
+        if (await frameFile.exists()) await frameFile.delete();
+        return;
+      }
+
+      if (ReturnCode.isSuccess(returnCode) && await frameFile.exists()) {
+        final previousFrame = _previewFramePath;
+        setState(() {
+          _previewFramePath = framePath;
+          _isPreviewFrameLoading = false;
+        });
+        _deletePreviewFrame(previousFrame);
+      } else {
+        if (await frameFile.exists()) await frameFile.delete();
+        setState(() => _isPreviewFrameLoading = false);
+      }
+    } catch (_) {
+      if (mounted && requestId == _previewRequestId) {
+        setState(() => _isPreviewFrameLoading = false);
+      }
+      final frameFile = File(framePath);
+      if (await frameFile.exists()) await frameFile.delete();
+    }
+  }
+
+  String _formatSeconds(Duration duration) {
+    return (duration.inMilliseconds / 1000).toStringAsFixed(3);
+  }
+
+  Duration _previewFramePosition(Duration position) {
+    if (_previewDuration == Duration.zero) return position;
+    final lastSafeFrame = _previewDuration - const Duration(milliseconds: 200);
+    if (lastSafeFrame <= Duration.zero) return Duration.zero;
+    return position > lastSafeFrame ? lastSafeFrame : position;
+  }
+
+  String _quotePath(String path) {
+    return '"${path.replaceAll('"', r'\"')}"';
+  }
+
+  void _deletePreviewFrame([String? framePath]) {
+    final pathToDelete = framePath ?? _previewFramePath;
+    if (pathToDelete == null) return;
+    if (framePath == null) {
+      _previewFramePath = null;
+    }
+    final file = File(pathToDelete);
+    if (file.existsSync()) {
+      file.deleteSync();
+    }
   }
 
   Future<void> _pickVideo() async {
@@ -103,10 +270,19 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       if (!mounted) return;
 
+      _stopPreviewPlayback(updateState: false);
+      _previewRequestId++;
+      _deletePreviewFrame();
+
       setState(() {
         _videoPath = videoPath;
         _videoInfo = null;
         _compressionResult = null;
+        _previewVideoPath = null;
+        _previewFramePath = null;
+        _previewPosition = Duration.zero;
+        _previewDuration = Duration.zero;
+        _isPlaying = false;
         _isLoadingInfo = true;
       });
 
@@ -167,7 +343,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       if (result != null) {
         setState(() => _compressionResult = result);
-        _initializePlayer(result.compressedFilePath);
+        await _initializePreview(result.compressedFilePath);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -505,7 +681,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                       ),
                     ],
                   ),
-                  if (_videoController != null) ...[
+                  if (_previewVideoPath != null) ...[
                     const SizedBox(height: 12),
                     _buildVideoPlayer(cs),
                   ],
@@ -1194,6 +1370,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   }
 
   Widget _buildVideoPlayer(ColorScheme cs) {
+    final durationText = _previewDuration == Duration.zero
+        ? '--:--'
+        : _formatDuration(_previewDuration);
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -1238,7 +1418,19 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Video(controller: _videoController!, controls: NoVideoControls),
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black,
+                    child: _previewFramePath == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : Image.file(
+                            File(_previewFramePath!),
+                            key: ValueKey(_previewFramePath),
+                            fit: BoxFit.contain,
+                            gaplessPlayback: true,
+                          ),
+                  ),
+                ),
                 Positioned.fill(
                   child: Material(
                     color: Colors.transparent,
@@ -1286,9 +1478,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton.filledTonal(
-                  onPressed: () {
-                    _player?.seek(Duration.zero);
-                  },
+                  onPressed: _replayPreview,
                   icon: const Icon(Icons.replay_rounded),
                   tooltip: '重新播放',
                 ),
@@ -1299,19 +1489,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                   ),
                   tooltip: _isPlaying ? '暂停' : '播放',
                 ),
-                StreamBuilder<Duration>(
-                  stream: _player?.stream.position,
-                  builder: (context, snapshot) {
-                    final position = snapshot.data ?? Duration.zero;
-                    final duration = _player?.state.duration ?? Duration.zero;
-                    return Text(
-                      '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    );
-                  },
+                Text(
+                  '${_formatDuration(_previewPosition)} / $durationText',
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                 ),
               ],
             ),

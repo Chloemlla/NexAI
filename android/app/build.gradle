@@ -146,6 +146,13 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging false
+            excludes += [
+                "**/libmpv.so",
+                "**/libmedia_kit_video.so",
+                "**/libmedia_kit_native_event_loop.so",
+                "**/libmedia_kit_native_video.so",
+                "**/libshaderc_shared.so"
+            ]
         }
     }
 }

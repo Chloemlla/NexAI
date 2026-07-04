@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:media_kit/media_kit.dart';
 
 import 'providers/chat_provider.dart';
 import 'providers/notes_provider.dart';
@@ -20,6 +20,8 @@ import 'app.dart';
 import 'utils/app_security.dart';
 import 'utils/security_headers_interceptor.dart';
 import 'utils/security_event_reporter.dart';
+import 'services/crash_breadcrumbs.dart';
+import 'services/crash_reporter.dart';
 import 'services/nexai_security_service.dart';
 import 'package:dio/dio.dart';
 
@@ -32,11 +34,31 @@ bool get isDesktop =>
 bool get isAndroid =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
-void main() async {
+void main() {
+  runZonedGuarded(
+    () async {
+      await _runMain();
+    },
+    (error, stackTrace) {
+      CrashReporter.recordError(
+        error,
+        stackTrace,
+        event: 'Zone error captured',
+      );
+    },
+  );
+}
+
+Future<void> _runMain() async {
   WidgetsFlutterBinding.ensureInitialized();
+  CrashReporter.install();
+  CrashBreadcrumbs.record('Widgets binding initialized');
+  await CrashReporter.loadStartupCrashReport();
   MediaKit.ensureInitialized();
+  CrashBreadcrumbs.record('MediaKit initialized');
 
   if (isAndroid) {
+    CrashBreadcrumbs.record('Android system UI configured');
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -50,6 +72,7 @@ void main() async {
   }
 
   if (isDesktop) {
+    CrashBreadcrumbs.record('Desktop window initialization started');
     await windowManager.ensureInitialized();
     const windowOptions = WindowOptions(
       size: Size(1100, 750),
@@ -89,6 +112,7 @@ void main() async {
       child: const NexAIApp(),
     ),
   );
+  CrashBreadcrumbs.record('runApp completed');
 
   unawaited(
     _bootstrapAppInBackground(
@@ -113,6 +137,7 @@ Future<void> _bootstrapAppInBackground({
   required AuthProvider authProvider,
 }) async {
   try {
+    CrashBreadcrumbs.record('Background bootstrap started');
     await Future.wait([
       _runSecurityChecksInBackground(),
       settingsProvider.loadSettings(),
@@ -123,7 +148,13 @@ Future<void> _bootstrapAppInBackground({
       shortUrlProvider.loadHistory(),
       authProvider.init(),
     ]);
+    CrashBreadcrumbs.record('Background bootstrap completed');
   } catch (e, stackTrace) {
+    CrashReporter.recordError(
+      e,
+      stackTrace,
+      event: 'Startup bootstrap failed',
+    );
     debugPrint('NexAI startup bootstrap failed: $e');
     debugPrintStack(stackTrace: stackTrace);
   }

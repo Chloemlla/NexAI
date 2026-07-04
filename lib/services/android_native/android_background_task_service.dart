@@ -34,7 +34,7 @@ class AndroidBackgroundTaskService {
   }) {
     return _invokeMap('enqueueTask', {
       'type': type,
-      if (taskId != null) 'taskId': taskId,
+      'taskId': ?taskId,
       'payload': payload,
       'constraints': constraints,
       'retryCount': retryCount,

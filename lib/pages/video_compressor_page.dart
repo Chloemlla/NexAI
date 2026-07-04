@@ -343,8 +343,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
       if (result != null) {
         setState(() => _compressionResult = result);
+        final messenger = ScaffoldMessenger.of(context);
         await _initializePreview(result.compressedFilePath);
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return;
+        messenger.showSnackBar(
           SnackBar(
             content: Row(
               children: [

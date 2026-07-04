@@ -296,7 +296,7 @@ class UpdateChecker {
         expectedSha256: expectedSha256,
       );
       final matches = verified.data?['matches'] == true;
-      if (!verified.success || !matches) {
+      if (!verified.ok || !matches) {
         if (context.mounted) {
           _showErrorDialog(context, 'APK SHA256 校验失败，已取消安装。');
         }
@@ -304,12 +304,13 @@ class UpdateChecker {
       }
 
       final installed = await updater.installApk(uriOrPath: apkFile.path);
-      if (!installed.success) {
+      if (!installed.ok) {
         await updater.openUnknownSourcesSettings();
         if (context.mounted) {
+          final error = installed.error;
           _showErrorDialog(
             context,
-            '无法启动安装器：${installed.message ?? installed.code ?? '未知错误'}',
+            '无法启动安装器：${error?.message ?? error?.code ?? '未知错误'}',
           );
         }
       }

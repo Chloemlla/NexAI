@@ -62,7 +62,7 @@ class AndroidMediaService {
     return _invokeMap('startAudioExtraction', {
       'uri': uriOrPath,
       'format': format,
-      if (taskId != null) 'taskId': taskId,
+      'taskId': ?taskId,
     });
   }
 
@@ -74,7 +74,7 @@ class AndroidMediaService {
     return _invokeMap('startVideoCompression', {
       'uri': uriOrPath,
       'options': options,
-      if (taskId != null) 'taskId': taskId,
+      'taskId': ?taskId,
     });
   }
 

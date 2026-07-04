@@ -21,8 +21,8 @@ class AndroidShareService {
   }) {
     return _invokeMap('shareText', {
       'text': text,
-      if (subject != null) 'subject': subject,
-      if (title != null) 'title': title,
+      'subject': ?subject,
+      'title': ?title,
     });
   }
 
@@ -33,8 +33,8 @@ class AndroidShareService {
   }) {
     return _invokeMap('shareFile', {
       'uri': uri,
-      if (mimeType != null) 'mimeType': mimeType,
-      if (title != null) 'title': title,
+      'mimeType': ?mimeType,
+      'title': ?title,
     });
   }
 
@@ -45,8 +45,8 @@ class AndroidShareService {
   }) {
     return _invokeMap('shareFiles', {
       'uris': uris,
-      if (mimeType != null) 'mimeType': mimeType,
-      if (title != null) 'title': title,
+      'mimeType': ?mimeType,
+      'title': ?title,
     });
   }
 

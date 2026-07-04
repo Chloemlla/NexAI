@@ -39,7 +39,7 @@ class AndroidNotificationService {
       'title': title,
       'message': message,
       'progress': progress,
-      if (id != null) 'id': id,
+      'id': ?id,
     });
   }
 

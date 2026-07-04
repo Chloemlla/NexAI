@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
 
+import '../models/message.dart' show asStringMap;
 import '../models/note.dart';
 import '../utils/atomic_file_writer.dart';
 

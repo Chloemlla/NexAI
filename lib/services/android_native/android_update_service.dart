@@ -29,7 +29,7 @@ class AndroidUpdateService {
   }) {
     return _invokeMap('verifyApkSha256', {
       'uri': uriOrPath,
-      if (expectedSha256 != null) 'expectedSha256': expectedSha256,
+      'expectedSha256': ?expectedSha256,
     });
   }
 

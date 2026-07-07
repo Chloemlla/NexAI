@@ -141,23 +141,26 @@ class AuthDebugDialog extends StatelessWidget {
       debugContext['rawOptionsDiagnostics'],
     );
 
-    // Sanitized options (for Passkey)
-    if (debugContext['sanitizedOptions'] != null) {
-      buffer.writeln('=== Sanitized Options ===');
+    // Credential Manager request options (for Passkey)
+    final requestOptions =
+        debugContext['requestOptions'] ?? debugContext['sanitizedOptions'];
+    if (requestOptions != null) {
+      buffer.writeln('=== Credential Manager Request Options ===');
       try {
         final formatted = JsonEncoder.withIndent(
           '  ',
-        ).convert(debugContext['sanitizedOptions']);
+        ).convert(requestOptions);
         buffer.writeln(formatted);
       } catch (e) {
-        buffer.writeln(debugContext['sanitizedOptions'].toString());
+        buffer.writeln(requestOptions.toString());
       }
       buffer.writeln();
     }
     _writeJsonSection(
       buffer,
-      'Sanitized Options Diagnostics',
-      debugContext['sanitizedOptionsDiagnostics'],
+      'Request Options Diagnostics',
+      debugContext['requestOptionsDiagnostics'] ??
+          debugContext['sanitizedOptionsDiagnostics'],
     );
     _writeJsonSection(
       buffer,

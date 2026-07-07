@@ -581,19 +581,20 @@ class AuthProvider extends ChangeNotifier {
           _buildRegistrationOptionsDiagnostics(optionsMap);
       debugPrint('[NexAI Passkey] Registration options: $optionsMap');
 
-      // 2. Normalize the backend WebAuthn JSON before sending it native.
-      markStep('sanitize_registration_options');
-      final sanitizedOptions = _sanitizePasskeyRegistrationOptions(optionsMap);
+      // 2. Validate the backend WebAuthn JSON and pass it through as
+      // Credential Manager requestJson.
+      markStep('prepare_registration_request_json');
+      final requestOptions = _preparePasskeyRegistrationRequestJson(optionsMap);
 
-      debugContext['sanitizedOptions'] = sanitizedOptions;
-      debugContext['sanitizedOptionsDiagnostics'] =
-          _buildRegistrationOptionsDiagnostics(sanitizedOptions);
-      debugPrint('[NexAI Passkey] Sanitized options: $sanitizedOptions');
+      debugContext['requestOptions'] = requestOptions;
+      debugContext['requestOptionsDiagnostics'] =
+          _buildRegistrationOptionsDiagnostics(requestOptions);
+      debugPrint('[NexAI Passkey] Request options: $requestOptions');
 
       // 3. Prompt user to create passkey through Android Credential Manager
       markStep('invoke_native_register');
       final nativeResult = await _androidPasskeyService.register(
-        options: sanitizedOptions,
+        options: requestOptions,
       );
       debugContext['nativeRegisterResult'] =
           _summarizeAndroidNativeResult(nativeResult);
@@ -692,18 +693,22 @@ class AuthProvider extends ChangeNotifier {
       debugContext['rawOptions'] = optionsMap;
       debugPrint('[NexAI Passkey] Authentication options: $optionsMap');
 
-      // 2. Normalize the backend WebAuthn JSON before sending it native.
-      final sanitizedOptions = _sanitizePasskeyAuthenticationOptions(
+      // 2. Validate the backend WebAuthn JSON and pass it through as
+      // Credential Manager requestJson.
+      markStep('prepare_authentication_request_json');
+      final requestOptions = _preparePasskeyAuthenticationRequestJson(
         optionsMap,
       );
 
-      debugContext['sanitizedOptions'] = sanitizedOptions;
-      debugPrint('[NexAI Passkey] Sanitized auth options: $sanitizedOptions');
+      debugContext['requestOptions'] = requestOptions;
+      debugContext['requestOptionsDiagnostics'] =
+          _buildAuthenticationOptionsDiagnostics(requestOptions);
+      debugPrint('[NexAI Passkey] Auth request options: $requestOptions');
 
       // 3. Prompt user to authenticate through Android Credential Manager
       markStep('invoke_native_authenticate');
       final nativeResult = await _androidPasskeyService.authenticate(
-        options: sanitizedOptions,
+        options: requestOptions,
       );
       debugContext['nativeAuthenticateResult'] =
           _summarizeAndroidNativeResult(nativeResult);
@@ -1194,227 +1199,118 @@ class AuthProvider extends ChangeNotifier {
     return errorStr;
   }
 
-  /// Sanitize passkey registration options to handle null values and encoding
-  Map<String, dynamic> _sanitizePasskeyRegistrationOptions(
+  /// Validate registration options and preserve the backend WebAuthn JSON
+  /// semantics for Android Credential Manager requestJson.
+  Map<String, dynamic> _preparePasskeyRegistrationRequestJson(
     Map<String, dynamic> options,
   ) {
-    final sanitized = Map<String, dynamic>.from(options);
+    final request = _jsonRoundTripObject(options, 'registration options');
 
-    // Handle challenge - the server should send base64url-encoded string.
-    if (sanitized['challenge'] == null) {
-      throw Exception('Missing required field: challenge');
-    }
+    _requireNonEmptyString(request, 'challenge');
+    final rp = _requireObject(request, 'rp');
+    _requireNonEmptyString(rp, 'rp.id', fieldName: 'id');
+    final user = _requireObject(request, 'user');
+    _requireNonEmptyString(user, 'user.id', fieldName: 'id');
+    _requireNonEmptyString(user, 'user.name', fieldName: 'name');
+    _requireNonEmptyString(user, 'user.displayName', fieldName: 'displayName');
+    _requireNonEmptyList(request, 'pubKeyCredParams');
 
-    // Handle user object
-    if (sanitized['user'] != null) {
-      final user = Map<String, dynamic>.from(
-        sanitized['user'] as Map<String, dynamic>,
-      );
-
-      // Ensure required user fields exist
-      if (user['id'] == null) {
-        throw Exception('Missing required field: user.id');
-      }
-      if (user['name'] == null) {
-        throw Exception('Missing required field: user.name');
-      }
-      // Handle empty displayName
-      if (user['displayName'] == null || user['displayName'] == '') {
-        user['displayName'] = user['name'];
-      }
-
-      sanitized['user'] = user;
-    } else {
-      throw Exception('Missing required field: user');
-    }
-
-    // Handle rp (Relying Party)
-    if (sanitized['rp'] == null) {
-      throw Exception('Missing required field: rp');
-    }
-
-    // Ensure excludeCredentials is a list (not null)
-    if (sanitized['excludeCredentials'] == null) {
-      sanitized['excludeCredentials'] = [];
-    } else if (sanitized['excludeCredentials'] is List) {
-      // Ensure each credential has proper structure
-      final credentials = sanitized['excludeCredentials'] as List;
-      sanitized['excludeCredentials'] = credentials.map((cred) {
-        if (cred is Map<String, dynamic>) {
-          final credMap = Map<String, dynamic>.from(cred);
-          // Ensure type field exists
-          if (credMap['type'] == null) {
-            credMap['type'] = 'public-key';
-          }
-          // Add empty transports array if missing for WebAuthn compatibility.
-          if (!credMap.containsKey('transports') ||
-              credMap['transports'] == null) {
-            credMap['transports'] = <String>[];
-          }
-          return credMap;
-        }
-        return cred;
-      }).toList();
-    }
-
-    final isAndroidRegistration =
-        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
-    // Handle authenticatorSelection
-    if (sanitized['authenticatorSelection'] != null) {
-      final authSelection = Map<String, dynamic>.from(
-        sanitized['authenticatorSelection'] as Map<String, dynamic>,
-      );
-
-      // Android Credential Manager should be allowed to select the configured
-      // passkey provider. Forcing platform-only creation fails on some OEM
-      // Android builds even when the request is otherwise valid.
-      if (isAndroidRegistration ||
-          authSelection['authenticatorAttachment'] == null) {
-        authSelection.remove('authenticatorAttachment');
-      }
-
-      if (isAndroidRegistration) {
-        authSelection.remove('requireResidentKey');
-        authSelection['residentKey'] = 'preferred';
-      } else if (authSelection['requireResidentKey'] == null) {
-        authSelection['requireResidentKey'] = false;
-      }
-
-      if (authSelection['userVerification'] == null) {
-        authSelection['userVerification'] = 'preferred';
-      }
-
-      sanitized['authenticatorSelection'] = authSelection;
-    }
-
-    // Handle pubKeyCredParams - ensure it's a list with proper structure
-    if (sanitized['pubKeyCredParams'] == null) {
-      // Provide default algorithms if missing
-      sanitized['pubKeyCredParams'] = [
-        {'type': 'public-key', 'alg': -7}, // ES256
-        {'type': 'public-key', 'alg': -257}, // RS256
-      ];
-    } else if (isAndroidRegistration && sanitized['pubKeyCredParams'] is List) {
-      final params = sanitized['pubKeyCredParams'] as List;
-      final filtered = <Map<String, dynamic>>[];
-      for (final alg in [-7, -257]) {
-        final match = _findPublicKeyCredentialParam(params, alg);
-        if (match != null) {
-          filtered.add(match);
-        }
-      }
-      sanitized['pubKeyCredParams'] = filtered.isEmpty
-          ? [
-              {'type': 'public-key', 'alg': -7},
-              {'type': 'public-key', 'alg': -257},
-            ]
-          : filtered;
-    }
-
-    // Handle attestation
-    if (sanitized['attestation'] == null) {
-      sanitized['attestation'] = 'none';
-    }
-
-    // Handle timeout
-    if (sanitized['timeout'] == null) {
-      sanitized['timeout'] = 60000; // 60 seconds default
-    }
-
-    // Handle extensions - remove problematic fields
-    if (sanitized['extensions'] == null) {
-      sanitized['extensions'] = {};
-    } else if (sanitized['extensions'] is Map) {
-      final ext = Map<String, dynamic>.from(
-        sanitized['extensions'] as Map<String, dynamic>,
-      );
-      // Remove credProps as it may cause issues with some authenticators
-      ext.remove('credProps');
-      sanitized['extensions'] = ext;
-    }
-
-    // Remove hints field if it's null or empty array - it may cause type cast issues
-    if (sanitized['hints'] == null ||
-        (sanitized['hints'] is List && (sanitized['hints'] as List).isEmpty)) {
-      sanitized.remove('hints');
-    }
-
-    return sanitized;
+    return request;
   }
 
-  Map<String, dynamic>? _findPublicKeyCredentialParam(List params, int alg) {
-    for (final param in params) {
-      if (param is! Map) continue;
-      if (param['type'] == 'public-key' && param['alg'] == alg) {
-        return Map<String, dynamic>.from(param);
-      }
-    }
-    return null;
-  }
-
-  /// Sanitize passkey authentication options to handle null values and encoding
-  Map<String, dynamic> _sanitizePasskeyAuthenticationOptions(
+  /// Validate authentication options and preserve the backend WebAuthn JSON
+  /// semantics for Android Credential Manager requestJson.
+  Map<String, dynamic> _preparePasskeyAuthenticationRequestJson(
     Map<String, dynamic> options,
   ) {
-    final sanitized = Map<String, dynamic>.from(options);
+    final request = _jsonRoundTripObject(options, 'authentication options');
 
-    // Handle challenge - ensure it's properly formatted
-    if (sanitized['challenge'] == null) {
-      throw Exception('Missing required field: challenge');
-    }
+    _requireNonEmptyString(request, 'challenge');
+    _requireNonEmptyString(request, 'rpId');
 
-    // Handle rpId
-    if (sanitized['rpId'] == null) {
-      throw Exception('Missing required field: rpId');
-    }
+    return request;
+  }
 
-    // Ensure allowCredentials is a list (not null)
-    if (sanitized['allowCredentials'] == null) {
-      sanitized['allowCredentials'] = [];
-    } else if (sanitized['allowCredentials'] is List) {
-      // Ensure each credential has proper structure
-      final credentials = sanitized['allowCredentials'] as List;
-      sanitized['allowCredentials'] = credentials.map((cred) {
-        if (cred is Map<String, dynamic>) {
-          final credMap = Map<String, dynamic>.from(cred);
-          // Ensure type field exists
-          if (credMap['type'] == null) {
-            credMap['type'] = 'public-key';
-          }
-          // Add empty transports array if missing
-          if (!credMap.containsKey('transports') ||
-              credMap['transports'] == null) {
-            credMap['transports'] = <String>[];
-          }
-          return credMap;
+  Map<String, dynamic> _buildAuthenticationOptionsDiagnostics(
+    Map<String, dynamic> options,
+  ) {
+    final allowCredentials = options['allowCredentials'] is List
+        ? options['allowCredentials'] as List
+        : const [];
+
+    return {
+      'rpId': options['rpId'],
+      'rpIdLength': options['rpId']?.toString().length,
+      'challenge': _base64UrlDiagnostics(options['challenge']),
+      'timeout': options['timeout'],
+      'userVerification': options['userVerification'],
+      'allowCredentialCount': allowCredentials.length,
+      'allowCredentials': allowCredentials.map((credential) {
+        if (credential is Map) {
+          final map = Map<String, dynamic>.from(credential);
+          return {
+            'type': map['type'],
+            'id': _base64UrlDiagnostics(map['id']),
+            'transports': map['transports'],
+          };
         }
-        return cred;
-      }).toList();
-    }
+        return {
+          'raw': credential.toString(),
+          'type': credential.runtimeType.toString(),
+        };
+      }).toList(),
+      'extensionKeys': options['extensions'] is Map
+          ? (options['extensions'] as Map).keys.map((key) => '$key').toList()
+          : const <String>[],
+      'hintsType': options['hints']?.runtimeType.toString(),
+      'hintsLength': options['hints'] is List
+          ? (options['hints'] as List).length
+          : null,
+    };
+  }
 
-    // Handle userVerification
-    if (sanitized['userVerification'] == null) {
-      sanitized['userVerification'] = 'preferred';
+  Map<String, dynamic> _jsonRoundTripObject(
+    Map<String, dynamic> value,
+    String label,
+  ) {
+    try {
+      final decoded = jsonDecode(jsonEncode(value));
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) {
+        return decoded.map((key, value) => MapEntry(key.toString(), value));
+      }
+    } catch (e) {
+      throw Exception('Invalid $label JSON: $e');
     }
+    throw Exception('Invalid $label JSON object');
+  }
 
-    // Handle timeout
-    if (sanitized['timeout'] == null) {
-      sanitized['timeout'] = 60000; // 60 seconds default
+  Map<String, dynamic> _requireObject(
+    Map<String, dynamic> source,
+    String key,
+  ) {
+    final value = source[key];
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      return value.map((key, value) => MapEntry(key.toString(), value));
     }
+    throw Exception('Missing required field: $key');
+  }
 
-    // Handle extensions
-    if (sanitized['extensions'] == null) {
-      sanitized['extensions'] = {};
-    }
+  void _requireNonEmptyString(
+    Map<String, dynamic> source,
+    String path, {
+    String? fieldName,
+  }) {
+    final value = source[fieldName ?? path];
+    if (value is String && value.isNotEmpty) return;
+    throw Exception('Missing required field: $path');
+  }
 
-    // Remove hints field if it's null or empty array
-    if (sanitized['hints'] == null ||
-        (sanitized['hints'] is List && (sanitized['hints'] as List).isEmpty)) {
-      sanitized.remove('hints');
-    }
-
-    return sanitized;
+  void _requireNonEmptyList(Map<String, dynamic> source, String key) {
+    final value = source[key];
+    if (value is List && value.isNotEmpty) return;
+    throw Exception('Missing required field: $key');
   }
 
   // ========== Session Management ==========

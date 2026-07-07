@@ -395,6 +395,10 @@ class AuthProvider extends ChangeNotifier {
       if (res.success && res.user != null) {
         _currentUser = res.user;
         await _saveCachedUser(res.user!);
+        _signalPasskeyState(
+          reason: 'profile_update',
+          includeAcceptedCredentials: false,
+        ).ignore();
         notifyListeners();
         return true;
       } else {
@@ -624,6 +628,7 @@ class AuthProvider extends ChangeNotifier {
 
       markStep('registration_verified');
       debugContext['success'] = true;
+      _signalPasskeyState(reason: 'passkey_registration_verified').ignore();
       return true;
     } catch (e, stackTrace) {
       debugContext['error'] = e.toString();
@@ -731,18 +736,40 @@ class AuthProvider extends ChangeNotifier {
 
       // 4. Send assertion to backend to verify (convert to JSON)
       markStep('verify_authentication_with_backend');
-      final res = await NexaiAuthApi.verifyPasskeyAuthentication(
-        identifier: identifier,
-        responseInfo: assertion,
-      );
+      AuthResponse res;
+      try {
+        res = await NexaiAuthApi.verifyPasskeyAuthentication(
+          identifier: identifier,
+          responseInfo: assertion,
+        );
+      } catch (e) {
+        if (_shouldSignalUnknownCredential(e.toString())) {
+          await _signalUnknownPasskeyCredential(
+            requestOptions: requestOptions,
+            assertion: assertion,
+            reason: 'passkey_authentication_verify_exception',
+            debugContext: debugContext,
+          );
+        }
+        rethrow;
+      }
 
       if (res.success && res.accessToken != null && res.user != null) {
         await _saveSession(res.user!, res.accessToken!, res.refreshToken);
+        _signalPasskeyState(reason: 'passkey_authentication_verified').ignore();
         markStep('authentication_verified');
         debugContext['success'] = true;
         debugContext['userId'] = res.user!.id;
         return true;
       } else {
+        if (_shouldSignalUnknownCredential(res.error)) {
+          await _signalUnknownPasskeyCredential(
+            requestOptions: requestOptions,
+            assertion: assertion,
+            reason: 'passkey_authentication_verify_failed',
+            debugContext: debugContext,
+          );
+        }
         _error = res.error ?? 'Passkey 登录失败';
         debugContext['success'] = false;
         debugContext['error'] = _error;
@@ -1311,6 +1338,132 @@ class AuthProvider extends ChangeNotifier {
     final value = source[key];
     if (value is List && value.isNotEmpty) return;
     throw Exception('Missing required field: $key');
+  }
+
+  Future<void> _signalPasskeyState({
+    required String reason,
+    bool includeAcceptedCredentials = true,
+  }) async {
+    if (!_isAndroidPasskeyNativePlatform || _accessToken == null) return;
+
+    try {
+      final options = await NexaiAuthApi.getPasskeySignalOptions(
+        accessToken: _accessToken!,
+      );
+      final results = <String, dynamic>{};
+
+      if (includeAcceptedCredentials) {
+        final acceptedCredentials = _optionalSignalRequest(
+          options,
+          'allAcceptedCredentials',
+        );
+        if (acceptedCredentials != null) {
+          final result = await _androidPasskeyService
+              .signalAllAcceptedCredentials(options: acceptedCredentials);
+          results['allAcceptedCredentials'] =
+              _summarizeAndroidNativeResult(result);
+        }
+      }
+
+      final currentUserDetails = _optionalSignalRequest(
+        options,
+        'currentUserDetails',
+      );
+      if (currentUserDetails != null) {
+        final result = await _androidPasskeyService.signalCurrentUserDetails(
+          options: currentUserDetails,
+        );
+        results['currentUserDetails'] = _summarizeAndroidNativeResult(result);
+      }
+
+      if (results.isNotEmpty) {
+        debugPrint('[NexAI Passkey] Signal state ($reason): $results');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[NexAI Passkey] Signal state failed ($reason): $e');
+      debugPrint('[NexAI Passkey] Signal state stack trace: $stackTrace');
+    }
+  }
+
+  Future<void> _signalUnknownPasskeyCredential({
+    required Map<String, dynamic> requestOptions,
+    required Map<String, dynamic> assertion,
+    required String reason,
+    Map<String, dynamic>? debugContext,
+  }) async {
+    if (!_isAndroidPasskeyNativePlatform) return;
+
+    final rpId = requestOptions['rpId']?.toString();
+    final credentialId =
+        assertion['id']?.toString() ?? assertion['rawId']?.toString();
+    if (rpId == null ||
+        rpId.isEmpty ||
+        credentialId == null ||
+        credentialId.isEmpty) {
+      debugContext?['signalUnknownCredentialSkipped'] = {
+        'reason': reason,
+        'rpIdPresent': rpId != null && rpId.isNotEmpty,
+        'credentialIdPresent': credentialId != null && credentialId.isNotEmpty,
+      };
+      return;
+    }
+
+    final signalOptions = {
+      'rpId': rpId,
+      'credentialId': credentialId,
+    };
+
+    try {
+      final result = await _androidPasskeyService.signalUnknownCredential(
+        options: signalOptions,
+      );
+      final summary = _summarizeAndroidNativeResult(result);
+      debugContext?['signalUnknownCredential'] = {
+        'reason': reason,
+        'rpId': rpId,
+        'credentialId': _base64UrlDiagnostics(credentialId),
+        'result': summary,
+      };
+      debugPrint('[NexAI Passkey] Signal unknown credential: $summary');
+    } catch (e, stackTrace) {
+      debugContext?['signalUnknownCredentialError'] = {
+        'reason': reason,
+        'error': e.toString(),
+        'errorType': e.runtimeType.toString(),
+        'stackTrace': stackTrace.toString(),
+      };
+      debugPrint('[NexAI Passkey] Signal unknown credential failed: $e');
+    }
+  }
+
+  Map<String, dynamic>? _optionalSignalRequest(
+    Map<String, dynamic> source,
+    String key,
+  ) {
+    final value = source[key];
+    if (value is Map<String, dynamic>) {
+      return _jsonRoundTripObject(value, '$key signal options');
+    }
+    if (value is Map) {
+      return _jsonRoundTripObject(
+        value.map((key, value) => MapEntry(key.toString(), value)),
+        '$key signal options',
+      );
+    }
+    return null;
+  }
+
+  bool _shouldSignalUnknownCredential(String? error) {
+    final text = error?.toLowerCase() ?? '';
+    if (text.isEmpty) return false;
+    return text.contains('unknown_credential') ||
+        text.contains('credential_not_found') ||
+        text.contains('passkey_not_found') ||
+        text.contains('no_such_credential') ||
+        text.contains('unrecognized_credential') ||
+        text.contains('credential not found') ||
+        text.contains('未知凭据') ||
+        text.contains('凭据不存在');
   }
 
   // ========== Session Management ==========

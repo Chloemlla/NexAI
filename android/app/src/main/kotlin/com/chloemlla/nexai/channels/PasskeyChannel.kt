@@ -7,8 +7,14 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
+import androidx.credentials.SignalAllAcceptedCredentialIdsRequest
+import androidx.credentials.SignalCurrentUserDetailsRequest
+import androidx.credentials.SignalCredentialStateRequest
+import androidx.credentials.SignalUnknownCredentialRequest
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.publickeycredential.SignalCredentialRateLimitExceededException
+import androidx.credentials.exceptions.publickeycredential.SignalCredentialStateException
 import com.chloemlla.nexai.MainActivity
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -25,6 +31,9 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
         when (call.method) {
             "register" -> register(call, result)
             "authenticate" -> authenticate(call, result)
+            "signalUnknownCredential" -> signalUnknownCredential(call, result)
+            "signalAllAcceptedCredentials" -> signalAllAcceptedCredentials(call, result)
+            "signalCurrentUserDetails" -> signalCurrentUserDetails(call, result)
             else -> result.notImplemented()
         }
     }
@@ -74,6 +83,89 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                 )
             } catch (error: Exception) {
                 result.success(passkeyError("native_failure", error, throwableDetails(error)))
+            }
+        }
+    }
+
+    private fun signalUnknownCredential(call: MethodCall, result: MethodChannel.Result) {
+        signalCredentialState(
+            call,
+            result,
+            "unknownCredential",
+        ) { requestJson -> SignalUnknownCredentialRequest(requestJson) }
+    }
+
+    private fun signalAllAcceptedCredentials(call: MethodCall, result: MethodChannel.Result) {
+        signalCredentialState(
+            call,
+            result,
+            "allAcceptedCredentials",
+        ) { requestJson -> SignalAllAcceptedCredentialIdsRequest(requestJson) }
+    }
+
+    private fun signalCurrentUserDetails(call: MethodCall, result: MethodChannel.Result) {
+        signalCredentialState(
+            call,
+            result,
+            "currentUserDetails",
+        ) { requestJson -> SignalCurrentUserDetailsRequest(requestJson) }
+    }
+
+    private fun signalCredentialState(
+        call: MethodCall,
+        result: MethodChannel.Result,
+        requestType: String,
+        buildRequest: (String) -> SignalCredentialStateRequest,
+    ) {
+        unsupportedSignalAndroidVersion()?.let {
+            return result.success(it)
+        }
+
+        val requestJson = requestJson(call)
+            ?: return result.success(NativeResult.invalidArgument("requestJson is required"))
+
+        scope.launch {
+            try {
+                credentialManager.signalCredentialState(buildRequest(requestJson))
+                result.success(
+                    NativeResult.ok(
+                        mapOf(
+                            "credentialManagerApi" to "signalCredentialState",
+                            "signalRequestType" to requestType,
+                        ),
+                    ),
+                )
+            } catch (error: SignalCredentialStateException) {
+                result.success(
+                    passkeyError(
+                        "signal_credential_state",
+                        error,
+                        signalCredentialDetails(error),
+                    ),
+                )
+            } catch (error: IllegalArgumentException) {
+                result.success(
+                    NativeResult.invalidArgument(
+                        error.message ?: "Invalid signal credential state requestJson",
+                    ),
+                )
+            } catch (error: SecurityException) {
+                result.success(
+                    NativeResult.error(
+                        "signal_credential_state_security",
+                        error.message ?: "Signal Credential Manager security failure",
+                        recoverable = false,
+                        details = throwableDetails(error),
+                    ),
+                )
+            } catch (error: Exception) {
+                result.success(
+                    passkeyError(
+                        "signal_credential_state",
+                        error,
+                        throwableDetails(error),
+                    ),
+                )
             }
         }
     }
@@ -149,6 +241,20 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
         )
     }
 
+    private fun unsupportedSignalAndroidVersion(): Map<String, Any?>? {
+        if (Build.VERSION.SDK_INT >= ANDROID_15_API) return null
+
+        return NativeResult.error(
+            "unsupported_android_version",
+            "Credential Manager Signal API requires Android 15 (API 35) or higher",
+            recoverable = false,
+            details = mapOf(
+                "sdkInt" to Build.VERSION.SDK_INT,
+                "requiredSdkInt" to ANDROID_15_API,
+            ),
+        )
+    }
+
     private fun passkeyError(
         prefix: String,
         error: Throwable,
@@ -172,6 +278,16 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
             "type" to error.type,
         )
 
+    private fun signalCredentialDetails(error: SignalCredentialStateException): Map<String, Any?> {
+        val details = mutableMapOf<String, Any?>(
+            "type" to error.type,
+        )
+        if (error is SignalCredentialRateLimitExceededException) {
+            details["retryMillis"] = error.retryMillis
+        }
+        return throwableDetails(error) + details
+    }
+
     private fun throwableDetails(error: Throwable): Map<String, Any?> =
         mapOf(
             "exceptionClass" to error.javaClass.name,
@@ -194,5 +310,9 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
     private fun isRecoverable(error: Throwable): Boolean {
         val name = error.javaClass.simpleName.lowercase()
         return !name.contains("unsupported") && !name.contains("security")
+    }
+
+    companion object {
+        private const val ANDROID_15_API = 35
     }
 }

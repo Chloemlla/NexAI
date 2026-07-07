@@ -27,6 +27,24 @@ class AndroidPasskeyService {
     return _invokePasskey('authenticate', options);
   }
 
+  Future<AndroidNativeResult<Map<String, dynamic>>> signalUnknownCredential({
+    required Map<String, dynamic> options,
+  }) {
+    return _invokePasskey('signalUnknownCredential', options);
+  }
+
+  Future<AndroidNativeResult<Map<String, dynamic>>> signalAllAcceptedCredentials({
+    required Map<String, dynamic> options,
+  }) {
+    return _invokePasskey('signalAllAcceptedCredentials', options);
+  }
+
+  Future<AndroidNativeResult<Map<String, dynamic>>> signalCurrentUserDetails({
+    required Map<String, dynamic> options,
+  }) {
+    return _invokePasskey('signalCurrentUserDetails', options);
+  }
+
   Future<AndroidNativeResult<Map<String, dynamic>>> _invokePasskey(
     String method,
     Map<String, dynamic> options,

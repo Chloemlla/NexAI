@@ -318,9 +318,42 @@ class NexaiAuthApi {
       final json = _decodeBody(response.body);
       if (json != null && json['success'] == true) {
         final data = json['data'];
-        return AuthResponse.fromJson(data is Map<String, dynamic> ? data : {});
+        final authData = <String, dynamic>{
+          'success': true,
+        };
+        if (data is Map<String, dynamic>) {
+          authData.addAll(data);
+        }
+        if (json['message'] != null) {
+          authData['message'] = json['message'];
+        }
+        return AuthResponse.fromJson(authData);
       }
       throw Exception(json?['error'] ?? '通行密钥验证失败');
+    }
+
+    final errJson = _decodeBody(response.body);
+    throw Exception(errJson?['error'] ?? '请求失败，状态码: ${response.statusCode}');
+  }
+
+  // / GET /auth/passkey/signal/options
+  static Future<Map<String, dynamic>> getPasskeySignalOptions({
+    required String accessToken,
+  }) async {
+    final response = await NexaiBackendClient.get(
+      Uri.parse('$_baseUrl/auth/passkey/signal/options'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $accessToken',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final json = _decodeBody(response.body);
+      if (json != null && json['success'] == true) {
+        return json['data'] as Map<String, dynamic>? ?? {};
+      }
+      throw Exception(json?['error'] ?? '获取通行密钥 Signal 选项失败');
     }
 
     final errJson = _decodeBody(response.body);

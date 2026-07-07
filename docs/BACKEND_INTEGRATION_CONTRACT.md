@@ -507,6 +507,54 @@ POST /auth/passkey/login/verify
 
 响应同登录接口。
 
+如果验证失败是因为服务器不认识该 credential id，错误码必须使用以下任一稳定值，便于 Android 客户端调用 Credential Manager Signal API 的 `SignalUnknownCredentialRequest`：
+
+- `unknown_credential`
+- `credential_not_found`
+- `passkey_not_found`
+
+不要对 challenge 过期、签名校验失败、用户取消、风控拒绝等错误复用以上错误码，避免客户端误通知凭据提供方隐藏或删除有效凭据。
+
+### 5.5 Credential Manager Signal API 选项
+
+Android 客户端在 Passkey 注册验证成功、Passkey 登录验证成功、用户资料更新后，会调用后端获取 RP 侧权威状态，再通过 Android Credential Manager Signal API 同步给设备上的凭据提供方。
+
+```http
+GET /auth/passkey/signal/options
+Authorization: Bearer <accessToken>
+```
+
+响应：
+
+```json
+{
+  "success": true,
+  "data": {
+    "allAcceptedCredentials": {
+      "rpId": "tts.chloemlla.com",
+      "userId": "base64url-user-id",
+      "allAcceptedCredentialIds": [
+        "base64url-credential-id-1",
+        "base64url-credential-id-2"
+      ]
+    },
+    "currentUserDetails": {
+      "rpId": "tts.chloemlla.com",
+      "userId": "base64url-user-id",
+      "name": "alice@example.com",
+      "displayName": "Alice"
+    }
+  }
+}
+```
+
+要求：
+
+- `allAcceptedCredentials` 必须包含当前用户在 RP 服务端仍有效的完整 credential id 列表，用于 Android `SignalAllAcceptedCredentialIdsRequest`。
+- `currentUserDetails` 必须使用当前用户最新的登录名和展示名，用于 Android `SignalCurrentUserDetailsRequest`。
+- `userId` 和所有 credential id 必须是未填充 `=` 的 base64url 字符串，并与 Passkey 注册/验证时的 WebAuthn 用户 id、credential id 保持一致。
+- 如果用户没有 Passkey，`allAcceptedCredentialIds` 返回空数组；如果暂时不支持某类 Signal，可省略对应对象，但不能返回伪造或局部状态。
+
 ## 6. 云同步接口
 
 ### 6.1 当前旧版接口

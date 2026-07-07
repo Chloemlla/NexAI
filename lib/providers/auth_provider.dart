@@ -1237,6 +1237,7 @@ class AuthProvider extends ChangeNotifier {
     final rp = _requireObject(request, 'rp');
     _requireNonEmptyString(rp, 'rp.id', fieldName: 'id');
     final user = _requireObject(request, 'user');
+    _ensurePasskeyUserDisplayName(user);
     _requireNonEmptyString(user, 'user.id', fieldName: 'id');
     _requireNonEmptyString(user, 'user.name', fieldName: 'name');
     _requireNonEmptyString(user, 'user.displayName', fieldName: 'displayName');
@@ -1332,6 +1333,28 @@ class AuthProvider extends ChangeNotifier {
     final value = source[fieldName ?? path];
     if (value is String && value.isNotEmpty) return;
     throw Exception('Missing required field: $path');
+  }
+
+  void _ensurePasskeyUserDisplayName(Map<String, dynamic> user) {
+    final displayName = user['displayName']?.toString().trim();
+    if (displayName != null && displayName.isNotEmpty) return;
+
+    user['displayName'] =
+        _firstNonEmptyString([
+          _currentUser?.displayName,
+          _currentUser?.username,
+          user['name']?.toString(),
+          _currentUser?.email,
+        ]) ??
+        'NexAI user';
+  }
+
+  String? _firstNonEmptyString(List<String?> values) {
+    for (final value in values) {
+      final text = value?.trim();
+      if (text != null && text.isNotEmpty) return text;
+    }
+    return null;
   }
 
   void _requireNonEmptyList(Map<String, dynamic> source, String key) {

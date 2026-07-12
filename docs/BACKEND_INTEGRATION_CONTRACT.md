@@ -515,6 +515,50 @@ POST /auth/passkey/login/verify
 
 不要对 challenge 过期、签名校验失败、用户取消、风控拒绝等错误复用以上错误码，避免客户端误通知凭据提供方隐藏或删除有效凭据。
 
+### 5.4.1 Discoverable（无用户名）登录选项
+
+用于 Android Credential Manager 的 usernameless / resident-key 登录。`allowCredentials` 必须为空数组。
+
+```http
+POST /auth/passkey/login/discoverable/options
+```
+
+响应：
+
+```json
+{
+  "success": true,
+  "data": {
+    "challenge": "base64url",
+    "timeout": 60000,
+    "rpId": "tts.chloemlla.com",
+    "allowCredentials": [],
+    "userVerification": "preferred"
+  }
+}
+```
+
+服务端必须在短期 TTL（建议 5 分钟）内存或缓存中保存 challenge，供 verify 阶段一次性消费。
+
+### 5.4.2 Discoverable 登录验证
+
+```http
+POST /auth/passkey/login/discoverable/verify
+```
+
+请求：
+
+```json
+{
+  "challenge": "base64url-from-options",
+  "response": {}
+}
+```
+
+服务端根据 `response.id` / `rawId` 反查用户 passkey，校验 challenge 与 WebAuthn 断言后签发 token。响应同登录接口。
+
+未知 credential 仍必须返回 `unknown_credential` / `credential_not_found` / `passkey_not_found`。
+
 ### 5.5 Credential Manager Signal API 选项
 
 Android 客户端在 Passkey 注册验证成功、Passkey 登录验证成功、用户资料更新后，会调用后端获取 RP 侧权威状态，再通过 Android Credential Manager Signal API 同步给设备上的凭据提供方。

@@ -701,7 +701,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Login using a Passkey
-  Future<bool> loginWithPasskey({required String identifier}) async {
+  Future<bool> loginWithPasskey({String? identifier}) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -732,15 +732,34 @@ class AuthProvider extends ChangeNotifier {
         );
       }
 
+      final trimmedIdentifier = identifier?.trim() ?? '';
+      final discoverable = trimmedIdentifier.isEmpty;
+      debugContext['discoverable'] = discoverable;
+      debugContext['identifier'] = trimmedIdentifier.isEmpty
+          ? null
+          : trimmedIdentifier;
+
       // 1. Get options from backend
-      markStep('request_authentication_options');
-      final optionsMap =
-          await NexaiAuthApi.generatePasskeyAuthenticationOptions(
-            identifier: identifier,
-          );
+      markStep(
+        discoverable
+            ? 'request_discoverable_authentication_options'
+            : 'request_authentication_options',
+      );
+      final optionsMap = discoverable
+          ? await NexaiAuthApi
+              .generateDiscoverablePasskeyAuthenticationOptions()
+          : await NexaiAuthApi.generatePasskeyAuthenticationOptions(
+              identifier: trimmedIdentifier,
+            );
 
       debugContext['rawOptions'] = optionsMap;
       debugPrint('[NexAI Passkey] Authentication options: $optionsMap');
+
+      final challenge = optionsMap['challenge']?.toString() ?? '';
+      debugContext['challengePresent'] = challenge.isNotEmpty;
+      if (discoverable && challenge.isEmpty) {
+        throw Exception('Discoverable 登录选项缺少 challenge');
+      }
 
       // 2. Validate the backend WebAuthn JSON and pass it through as
       // Credential Manager requestJson.
@@ -779,19 +798,30 @@ class AuthProvider extends ChangeNotifier {
           _summarizePasskeyResponse(assertion);
 
       // 4. Send assertion to backend to verify (convert to JSON)
-      markStep('verify_authentication_with_backend');
+      markStep(
+        discoverable
+            ? 'verify_discoverable_authentication_with_backend'
+            : 'verify_authentication_with_backend',
+      );
       AuthResponse res;
       try {
-        res = await NexaiAuthApi.verifyPasskeyAuthentication(
-          identifier: identifier,
-          responseInfo: assertion,
-        );
+        res = discoverable
+            ? await NexaiAuthApi.verifyDiscoverablePasskeyAuthentication(
+                responseInfo: assertion,
+                challenge: challenge,
+              )
+            : await NexaiAuthApi.verifyPasskeyAuthentication(
+                identifier: trimmedIdentifier,
+                responseInfo: assertion,
+              );
       } catch (e) {
         if (_shouldSignalUnknownCredentialFromError(e)) {
           await _signalUnknownPasskeyCredential(
             requestOptions: requestOptions,
             assertion: assertion,
-            reason: 'passkey_authentication_verify_exception',
+            reason: discoverable
+                ? 'passkey_discoverable_verify_exception'
+                : 'passkey_authentication_verify_exception',
             debugContext: debugContext,
           );
         }
@@ -1318,6 +1348,13 @@ class AuthProvider extends ChangeNotifier {
 
     _requireNonEmptyString(request, 'challenge');
     _requireNonEmptyString(request, 'rpId');
+
+    // Discoverable / Conditional UI uses an empty allowCredentials list so the
+    // credential provider can present any resident passkey for this RP.
+    final allowCredentials = request['allowCredentials'];
+    if (allowCredentials != null && allowCredentials is! List) {
+      throw Exception('Invalid allowCredentials field');
+    }
 
     return request;
   }

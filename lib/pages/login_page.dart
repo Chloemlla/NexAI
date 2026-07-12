@@ -334,13 +334,18 @@ class _LoginPageState extends State<LoginPage>
           ),
           const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               TextButton.icon(
                 onPressed: () => _handlePasskeyLogin(auth),
                 icon: const Icon(Icons.fingerprint_rounded, size: 18),
                 label: const Text('Passkey 登录'),
               ),
+              TextButton.icon(
+                onPressed: () => _handleDiscoverablePasskeyLogin(auth),
+                icon: const Icon(Icons.key_rounded, size: 18),
+                label: const Text('免输账号'),
+              ),
+              const Spacer(),
               TextButton(
                 onPressed: () => _showForgotPasswordDialog(),
                 child: const Text('忘记密码？'),
@@ -549,33 +554,40 @@ class _LoginPageState extends State<LoginPage>
   Future<void> _handlePasskeyLogin(AuthProvider auth) async {
     final identifier = _loginIdentifierController.text.trim();
     if (identifier.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('请先输入用户名或邮箱')));
-      }
+      // Empty identifier falls through to discoverable (usernameless) login.
+      await _handleDiscoverablePasskeyLogin(auth);
       return;
     }
 
     final success = await auth.loginWithPasskey(identifier: identifier);
-    if (mounted) {
-      if (success) {
-        Navigator.of(context).pop(true);
-      } else {
-        // Show detailed debug dialog on failure
-        if (auth.lastPasskeyDebugContext != null) {
-          showDialog(
-            context: context,
-            builder: (context) =>
-                PasskeyDebugDialog(debugContext: auth.lastPasskeyDebugContext!),
-          );
-        } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Passkey 登录失败')));
-        }
-      }
+    if (!mounted) return;
+    _showPasskeyLoginResult(auth, success);
+  }
+
+  Future<void> _handleDiscoverablePasskeyLogin(AuthProvider auth) async {
+    final success = await auth.loginWithPasskey();
+    if (!mounted) return;
+    _showPasskeyLoginResult(auth, success);
+  }
+
+  void _showPasskeyLoginResult(AuthProvider auth, bool success) {
+    if (success) {
+      Navigator.of(context).pop(true);
+      return;
     }
+
+    if (auth.lastPasskeyDebugContext != null) {
+      showDialog(
+        context: context,
+        builder: (context) =>
+            PasskeyDebugDialog(debugContext: auth.lastPasskeyDebugContext!),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Passkey 登录失败')));
   }
 
   void _showForgotPasswordDialog() {

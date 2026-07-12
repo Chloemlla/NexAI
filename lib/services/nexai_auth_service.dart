@@ -232,9 +232,11 @@ class NexaiAuthApi {
   // Happy-TTS NexAI paths under https://tts.chloemlla.com/api/nexai
   // POST /auth/passkey/register/options  (auth required)
   // POST /auth/passkey/register/verify   (auth required, body = PublicKeyCredential)
-  // POST /auth/passkey/login/options     (body: { identifier })
-  // POST /auth/passkey/login/verify      (body: { identifier, response })
-  // GET  /auth/passkey/signal/options    (auth required, Credential Manager Signal)
+  // POST /auth/passkey/login/options                (body: { identifier })
+  // POST /auth/passkey/login/verify                 (body: { identifier, response })
+  // POST /auth/passkey/login/discoverable/options   (usernameless)
+  // POST /auth/passkey/login/discoverable/verify    (body: { response, challenge })
+  // GET  /auth/passkey/signal/options               (auth required, Credential Manager Signal)
   // Android: Credential Manager createCredential / getCredential / signalCredentialState
   // Digital Asset Links: https://tts.chloemlla.com/.well-known/assetlinks.json
 
@@ -341,6 +343,83 @@ class NexaiAuthApi {
       throw PasskeyApiException(
         statusCode: response.statusCode,
         message: json?['error']?.toString() ?? '通行密钥验证失败',
+        code: json?['code']?.toString(),
+        rawBody: response.body,
+      );
+    }
+
+    throw PasskeyApiException(
+      statusCode: response.statusCode,
+      message: json?['error']?.toString() ??
+          '请求失败，状态码: ${response.statusCode}',
+      code: json?['code']?.toString(),
+      rawBody: response.body,
+    );
+  }
+
+  // / POST /auth/passkey/login/discoverable/options
+  static Future<Map<String, dynamic>> generateDiscoverablePasskeyAuthenticationOptions() async {
+    final response = await NexaiBackendClient.post(
+      Uri.parse('$_baseUrl/auth/passkey/login/discoverable/options'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({}),
+    );
+
+    final json = _decodeBody(response.body);
+    if (response.statusCode == 200) {
+      if (json != null && json['success'] == true) {
+        return json['data'] as Map<String, dynamic>? ?? {};
+      }
+      throw PasskeyApiException(
+        statusCode: response.statusCode,
+        message: json?['error']?.toString() ?? '获取 Discoverable 登录选项失败',
+        code: json?['code']?.toString(),
+        rawBody: response.body,
+      );
+    }
+
+    throw PasskeyApiException(
+      statusCode: response.statusCode,
+      message: json?['error']?.toString() ??
+          '请求失败，状态码: ${response.statusCode}',
+      code: json?['code']?.toString(),
+      rawBody: response.body,
+    );
+  }
+
+  // / POST /auth/passkey/login/discoverable/verify
+  // Body: { response, challenge } — usernameless discoverable credentials
+  static Future<AuthResponse> verifyDiscoverablePasskeyAuthentication({
+    required Map<String, dynamic> responseInfo,
+    required String challenge,
+  }) async {
+    final response = await NexaiBackendClient.post(
+      Uri.parse('$_baseUrl/auth/passkey/login/discoverable/verify'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'response': responseInfo,
+        'challenge': challenge,
+      }),
+    );
+
+    final json = _decodeBody(response.body);
+    if (response.statusCode == 200) {
+      if (json != null && json['success'] == true) {
+        final data = json['data'];
+        final authData = <String, dynamic>{
+          'success': true,
+        };
+        if (data is Map<String, dynamic>) {
+          authData.addAll(data);
+        }
+        if (json['message'] != null) {
+          authData['message'] = json['message'];
+        }
+        return AuthResponse.fromJson(authData);
+      }
+      throw PasskeyApiException(
+        statusCode: response.statusCode,
+        message: json?['error']?.toString() ?? 'Discoverable 通行密钥验证失败',
         code: json?['code']?.toString(),
         rawBody: response.body,
       );

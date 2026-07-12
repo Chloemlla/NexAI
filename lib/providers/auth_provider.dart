@@ -29,6 +29,28 @@ class AndroidPasskeyNativeException implements Exception {
   final String message;
   final Map<String, dynamic> details;
 
+  bool get isUserCanceled {
+    final normalizedCode = code.toLowerCase();
+    final normalizedType = details['type']?.toString().toLowerCase() ?? '';
+    final normalizedClass =
+        details['exceptionClass']?.toString().toLowerCase() ?? '';
+    final normalizedMessage = message.toLowerCase();
+    final normalizedSimpleName =
+        details['simpleName']?.toString().toLowerCase() ?? '';
+
+    return normalizedCode.contains('user_canceled') ||
+        normalizedCode.contains('user_cancelled') ||
+        normalizedCode.contains('cancellation') ||
+        normalizedType.contains('user_canceled') ||
+        normalizedType.contains('user_cancelled') ||
+        normalizedClass.contains('cancellation') ||
+        normalizedSimpleName.contains('cancellation') ||
+        normalizedMessage.contains('user cancelled') ||
+        normalizedMessage.contains('user canceled') ||
+        normalizedMessage.contains('cancelled the selector') ||
+        normalizedMessage.contains('canceled the selector');
+  }
+
   @override
   String toString() {
     return 'AndroidPasskeyNativeException('
@@ -675,6 +697,21 @@ class AuthProvider extends ChangeNotifier {
       _signalPasskeyState(reason: 'passkey_registration_verified').ignore();
       return true;
     } catch (e, stackTrace) {
+      if (_isPasskeyUserCancellation(e)) {
+        debugContext['cancelled'] = true;
+        debugContext['success'] = false;
+        debugContext['error'] = e.toString();
+        debugContext['errorType'] = e.runtimeType.toString();
+        debugContext['errorDetails'] = _extractErrorDetails(e);
+        debugContext['errorDiagnostics'] =
+            _buildErrorDiagnostics(e, stackTrace);
+        debugContext['errorHints'] = _buildPasskeyErrorHints(e, debugContext);
+        debugPrint('[NexAI Passkey] Bind cancelled by user');
+        _error = '已取消绑定通行密钥';
+        _lastPasskeyDebugContext = debugContext;
+        return false;
+      }
+
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
       debugContext['errorDetails'] = _extractErrorDetails(e);
@@ -853,9 +890,26 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e, stackTrace) {
+      if (_isPasskeyUserCancellation(e)) {
+        debugContext['cancelled'] = true;
+        debugContext['success'] = false;
+        debugContext['error'] = e.toString();
+        debugContext['errorType'] = e.runtimeType.toString();
+        debugContext['errorDetails'] = _extractErrorDetails(e);
+        debugContext['errorDiagnostics'] =
+            _buildErrorDiagnostics(e, stackTrace);
+        debugContext['errorHints'] = _buildPasskeyErrorHints(e, debugContext);
+        debugPrint('[NexAI Passkey] Login cancelled by user');
+        _error = '已取消 Passkey 登录';
+        _lastPasskeyDebugContext = debugContext;
+        return false;
+      }
+
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
       debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['errorDiagnostics'] = _buildErrorDiagnostics(e, stackTrace);
+      debugContext['errorHints'] = _buildPasskeyErrorHints(e, debugContext);
       debugContext['stackTrace'] = stackTrace.toString();
 
       debugPrint('[NexAI Passkey] Login error: $e');
@@ -1069,6 +1123,38 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  bool _isPasskeyUserCancellation(Object error) {
+    if (error is AndroidPasskeyNativeException) {
+      return error.isUserCanceled;
+    }
+
+    if (error is AndroidNativeError) {
+      return AndroidPasskeyNativeException(
+        operation: 'unknown',
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      ).isUserCanceled;
+    }
+
+    final text = error.toString().toLowerCase();
+    return text.contains('user_canceled') ||
+        text.contains('user_cancelled') ||
+        text.contains('user cancelled') ||
+        text.contains('user canceled') ||
+        text.contains('cancelled the selector') ||
+        text.contains('canceled the selector') ||
+        text.contains('type_user_canceled');
+  }
+
+  bool get wasLastPasskeyCancelled {
+    final context = _lastPasskeyDebugContext;
+    if (context == null) return false;
+    if (context['cancelled'] == true) return true;
+    final error = context['error']?.toString() ?? '';
+    return _isPasskeyUserCancellation(error);
+  }
+
   Map<String, dynamic> _summarizeAndroidNativeResult(
     AndroidNativeResult<Map<String, dynamic>> result,
   ) {
@@ -1257,9 +1343,14 @@ class AuthProvider extends ChangeNotifier {
           'Check assetlinks.json for package name and signing certificate.',
         );
       }
-      if (nativeCode.contains('user_canceled') ||
+      if (error.isUserCanceled ||
+          nativeCode.contains('user_canceled') ||
+          nativeCode.contains('cancellation') ||
           nativeType.contains('USER_CANCELED')) {
-        hints.add('The native passkey prompt was cancelled by the user.');
+        hints.add(
+          'The native passkey prompt was cancelled by the user. '
+          'This is not a configuration failure; the user can retry when ready.',
+        );
       }
     }
 

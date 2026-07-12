@@ -2160,8 +2160,15 @@ class _SettingsPageState extends State<SettingsPage> {
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
+                    } else if (auth.wasLastPasskeyCancelled) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(auth.error ?? '已取消绑定通行密钥'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     } else {
-                      // Show detailed debug dialog on failure
+                      // Show detailed debug dialog on real failures only.
                       if (auth.lastPasskeyDebugContext != null) {
                         showDialog(
                           context: context,

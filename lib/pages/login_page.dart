@@ -576,6 +576,13 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
 
+    if (auth.wasLastPasskeyCancelled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(auth.error ?? '已取消 Passkey 登录')),
+      );
+      return;
+    }
+
     if (auth.lastPasskeyDebugContext != null) {
       showDialog(
         context: context,

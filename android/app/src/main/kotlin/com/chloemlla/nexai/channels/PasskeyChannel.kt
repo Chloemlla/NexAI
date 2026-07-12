@@ -299,6 +299,10 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
         )
 
     private fun errorCode(prefix: String, error: Throwable): String {
+        if (isUserCancellation(error)) {
+            return "user_canceled"
+        }
+
         val name = error.javaClass.simpleName
             .removeSuffix("Exception")
             .ifBlank { "unknown" }
@@ -308,8 +312,36 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
     }
 
     private fun isRecoverable(error: Throwable): Boolean {
+        if (isUserCancellation(error)) return true
         val name = error.javaClass.simpleName.lowercase()
         return !name.contains("unsupported") && !name.contains("security")
+    }
+
+    private fun isUserCancellation(error: Throwable): Boolean {
+        val simpleName = error.javaClass.simpleName.lowercase()
+        if (simpleName.contains("cancellation") || simpleName.contains("canceled") ||
+            simpleName.contains("cancelled")
+        ) {
+            return true
+        }
+
+        val type = when (error) {
+            is CreateCredentialException -> error.type
+            is GetCredentialException -> error.type
+            else -> null
+        }?.lowercase().orEmpty()
+
+        if (type.contains("user_canceled") || type.contains("user_cancelled") ||
+            type.contains("type_user_canceled")
+        ) {
+            return true
+        }
+
+        val message = (error.message ?: "").lowercase()
+        return message.contains("user cancelled") ||
+            message.contains("user canceled") ||
+            message.contains("cancelled the selector") ||
+            message.contains("canceled the selector")
     }
 
     companion object {

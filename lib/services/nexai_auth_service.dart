@@ -229,6 +229,14 @@ class NexaiAuthApi {
   }
 
   // ========== WebAuthn (Passkeys) API ==========
+  // Happy-TTS NexAI paths under https://tts.chloemlla.com/api/nexai
+  // POST /auth/passkey/register/options  (auth required)
+  // POST /auth/passkey/register/verify   (auth required, body = PublicKeyCredential)
+  // POST /auth/passkey/login/options     (body: { identifier })
+  // POST /auth/passkey/login/verify      (body: { identifier, response })
+  // GET  /auth/passkey/signal/options    (auth required, Credential Manager Signal)
+  // Android: Credential Manager createCredential / getCredential / signalCredentialState
+  // Digital Asset Links: https://tts.chloemlla.com/.well-known/assetlinks.json
 
   // / POST /auth/passkey/register/options
   static Future<Map<String, dynamic>> generatePasskeyRegistrationOptions({
@@ -304,6 +312,7 @@ class NexaiAuthApi {
   }
 
   // / POST /auth/passkey/login/verify
+  // Body: { identifier, response } — Happy-TTS /api/nexai WebAuthn contract
   static Future<AuthResponse> verifyPasskeyAuthentication({
     required String identifier,
     required Map<String, dynamic> responseInfo,
@@ -314,8 +323,8 @@ class NexaiAuthApi {
       body: jsonEncode({'identifier': identifier, 'response': responseInfo}),
     );
 
+    final json = _decodeBody(response.body);
     if (response.statusCode == 200) {
-      final json = _decodeBody(response.body);
       if (json != null && json['success'] == true) {
         final data = json['data'];
         final authData = <String, dynamic>{
@@ -329,11 +338,21 @@ class NexaiAuthApi {
         }
         return AuthResponse.fromJson(authData);
       }
-      throw Exception(json?['error'] ?? '通行密钥验证失败');
+      throw PasskeyApiException(
+        statusCode: response.statusCode,
+        message: json?['error']?.toString() ?? '通行密钥验证失败',
+        code: json?['code']?.toString(),
+        rawBody: response.body,
+      );
     }
 
-    final errJson = _decodeBody(response.body);
-    throw Exception(errJson?['error'] ?? '请求失败，状态码: ${response.statusCode}');
+    throw PasskeyApiException(
+      statusCode: response.statusCode,
+      message: json?['error']?.toString() ??
+          '请求失败，状态码: ${response.statusCode}',
+      code: json?['code']?.toString(),
+      rawBody: response.body,
+    );
   }
 
   // / GET /auth/passkey/signal/options
@@ -378,6 +397,8 @@ class NexaiUser {
   final String? githubUsername;
   final DateTime? lastLoginAt;
   final int loginCount;
+  /// Server-side passkey summaries from /auth/me when present.
+  final List<NexaiPasskeyCredential> passkeys;
 
   NexaiUser({
     required this.id,
@@ -394,9 +415,24 @@ class NexaiUser {
     this.githubUsername,
     this.lastLoginAt,
     required this.loginCount,
+    this.passkeys = const [],
   });
 
   factory NexaiUser.fromJson(Map<String, dynamic> json) {
+    final rawPasskeys = json['passkeys'];
+    final passkeys = <NexaiPasskeyCredential>[];
+    if (rawPasskeys is List) {
+      for (final item in rawPasskeys) {
+        if (item is Map) {
+          passkeys.add(
+            NexaiPasskeyCredential.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          );
+        }
+      }
+    }
+
     return NexaiUser(
       id: json['id'] ?? '',
       username: json['username'] ?? '',
@@ -414,6 +450,7 @@ class NexaiUser {
           ? DateTime.tryParse(json['lastLoginAt'])
           : null,
       loginCount: json['loginCount'] ?? 0,
+      passkeys: passkeys,
     );
   }
 
@@ -432,17 +469,104 @@ class NexaiUser {
     'githubUsername': githubUsername,
     'lastLoginAt': lastLoginAt?.toIso8601String(),
     'loginCount': loginCount,
+    'passkeys': passkeys.map((p) => p.toJson()).toList(),
   };
+
+  NexaiUser copyWith({
+    String? id,
+    String? username,
+    String? email,
+    String? displayName,
+    String? avatarUrl,
+    String? authProvider,
+    bool? emailVerified,
+    String? role,
+    String? googleId,
+    String? googleEmail,
+    String? githubId,
+    String? githubUsername,
+    DateTime? lastLoginAt,
+    int? loginCount,
+    List<NexaiPasskeyCredential>? passkeys,
+  }) {
+    return NexaiUser(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      displayName: displayName ?? this.displayName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      authProvider: authProvider ?? this.authProvider,
+      emailVerified: emailVerified ?? this.emailVerified,
+      role: role ?? this.role,
+      googleId: googleId ?? this.googleId,
+      googleEmail: googleEmail ?? this.googleEmail,
+      githubId: githubId ?? this.githubId,
+      githubUsername: githubUsername ?? this.githubUsername,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      loginCount: loginCount ?? this.loginCount,
+      passkeys: passkeys ?? this.passkeys,
+    );
+  }
 
   bool get hasGoogle => googleId != null && googleId!.isNotEmpty;
   bool get hasGithub => githubId != null && githubId!.isNotEmpty;
   bool get hasPassword => authProvider.contains('local');
+  /// Happy-TTS NexAI enforces a single passkey per account.
+  bool get hasPasskey => passkeys.isNotEmpty;
+  int get passkeyCount => passkeys.length;
+}
+
+class NexaiPasskeyCredential {
+  final String id;
+  final List<String> transports;
+  final String? deviceType;
+  final bool? backedUp;
+  final int? counter;
+
+  const NexaiPasskeyCredential({
+    required this.id,
+    this.transports = const [],
+    this.deviceType,
+    this.backedUp,
+    this.counter,
+  });
+
+  factory NexaiPasskeyCredential.fromJson(Map<String, dynamic> json) {
+    final transports = <String>[];
+    final rawTransports = json['transports'];
+    if (rawTransports is List) {
+      for (final item in rawTransports) {
+        final text = item?.toString();
+        if (text != null && text.isNotEmpty) transports.add(text);
+      }
+    }
+
+    return NexaiPasskeyCredential(
+      id: json['id']?.toString() ?? '',
+      transports: transports,
+      deviceType: json['deviceType']?.toString(),
+      backedUp: json['backedUp'] is bool ? json['backedUp'] as bool : null,
+      counter: json['counter'] is int
+          ? json['counter'] as int
+          : int.tryParse(json['counter']?.toString() ?? ''),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'transports': transports,
+    'deviceType': deviceType,
+    'backedUp': backedUp,
+    'counter': counter,
+  };
 }
 
 class AuthResponse {
   final bool success;
   final String? message;
   final String? error;
+  /// Stable backend error code, e.g. unknown_credential for Signal API.
+  final String? code;
   final NexaiUser? user;
   final String? accessToken;
   final String? refreshToken;
@@ -453,6 +577,7 @@ class AuthResponse {
     required this.success,
     this.message,
     this.error,
+    this.code,
     this.user,
     this.accessToken,
     this.refreshToken,
@@ -495,6 +620,7 @@ class AuthResponse {
       success: body['success'] == true,
       message: body['message'] as String?,
       error: body['error'] as String?,
+      code: body['code']?.toString(),
       user: userData != null && userData is Map<String, dynamic>
           ? NexaiUser.fromJson(userData)
           : null,
@@ -514,12 +640,43 @@ class AuthResponse {
       success: json['success'] == true,
       message: json['message'],
       error: json['error'],
+      code: json['code']?.toString(),
       user: json['user'] != null ? NexaiUser.fromJson(json['user']) : null,
       accessToken: json['accessToken'],
       refreshToken: json['refreshToken'],
       isNewUser: json['isNewUser'],
       statusCode: json['statusCode'] ?? 200,
     );
+  }
+}
+
+/// Thrown when a NexAI passkey API call fails with an optional stable error code.
+class PasskeyApiException implements Exception {
+  PasskeyApiException({
+    required this.statusCode,
+    required this.message,
+    this.code,
+    this.rawBody = '',
+  });
+
+  final int statusCode;
+  final String message;
+  final String? code;
+  final String rawBody;
+
+  bool get isUnknownCredential {
+    final normalized = code?.toLowerCase() ?? '';
+    return normalized == 'unknown_credential' ||
+        normalized == 'credential_not_found' ||
+        normalized == 'passkey_not_found';
+  }
+
+  @override
+  String toString() {
+    if (code != null && code!.isNotEmpty) {
+      return 'PasskeyApiException($statusCode, code=$code): $message';
+    }
+    return 'PasskeyApiException($statusCode): $message';
   }
 }
 

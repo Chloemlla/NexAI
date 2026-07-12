@@ -626,6 +626,50 @@ class AuthProvider extends ChangeNotifier {
         responseInfo: credential,
       );
 
+      // 5. Refresh /auth/me so local user.passkeys reflects the new binding.
+      markStep('refresh_user_after_registration');
+      try {
+        final me = await NexaiAuthApi.getCurrentUser(accessToken: _accessToken!);
+        if (me.success && me.user != null) {
+          var refreshed = me.user!;
+          // Backend may omit passkeys on /auth/me; keep optimistic binding state.
+          if (!refreshed.hasPasskey && credential['id'] != null) {
+            refreshed = refreshed.copyWith(
+              passkeys: [
+                NexaiPasskeyCredential(id: credential['id'].toString()),
+              ],
+            );
+          }
+          _currentUser = refreshed;
+          await _saveCachedUser(refreshed);
+          debugContext['passkeyCount'] = refreshed.passkeyCount;
+        } else if (_currentUser != null && credential['id'] != null) {
+          final optimistic = _currentUser!.copyWith(
+            passkeys: [
+              NexaiPasskeyCredential(id: credential['id'].toString()),
+            ],
+          );
+          _currentUser = optimistic;
+          await _saveCachedUser(optimistic);
+          debugContext['passkeyCount'] = optimistic.passkeyCount;
+          debugContext['passkeyOptimistic'] = true;
+        }
+      } catch (e) {
+        if (_currentUser != null && credential['id'] != null) {
+          final optimistic = _currentUser!.copyWith(
+            passkeys: [
+              NexaiPasskeyCredential(id: credential['id'].toString()),
+            ],
+          );
+          _currentUser = optimistic;
+          await _saveCachedUser(optimistic);
+          debugContext['passkeyCount'] = optimistic.passkeyCount;
+          debugContext['passkeyOptimistic'] = true;
+        }
+        debugContext['refreshUserError'] = e.toString();
+        debugPrint('[NexAI Passkey] Refresh user after register failed: $e');
+      }
+
       markStep('registration_verified');
       debugContext['success'] = true;
       _signalPasskeyState(reason: 'passkey_registration_verified').ignore();
@@ -743,7 +787,7 @@ class AuthProvider extends ChangeNotifier {
           responseInfo: assertion,
         );
       } catch (e) {
-        if (_shouldSignalUnknownCredential(e.toString())) {
+        if (_shouldSignalUnknownCredentialFromError(e)) {
           await _signalUnknownPasskeyCredential(
             requestOptions: requestOptions,
             assertion: assertion,
@@ -760,9 +804,10 @@ class AuthProvider extends ChangeNotifier {
         markStep('authentication_verified');
         debugContext['success'] = true;
         debugContext['userId'] = res.user!.id;
+        debugContext['passkeyCount'] = res.user!.passkeyCount;
         return true;
       } else {
-        if (_shouldSignalUnknownCredential(res.error)) {
+        if (_shouldSignalUnknownCredential(res.error, res.code)) {
           await _signalUnknownPasskeyCredential(
             requestOptions: requestOptions,
             assertion: assertion,
@@ -773,6 +818,7 @@ class AuthProvider extends ChangeNotifier {
         _error = res.error ?? 'Passkey 登录失败';
         debugContext['success'] = false;
         debugContext['error'] = _error;
+        debugContext['errorCode'] = res.code;
         _lastPasskeyDebugContext = debugContext;
         return false;
       }
@@ -1099,6 +1145,15 @@ class AuthProvider extends ChangeNotifier {
       };
     }
 
+    if (error is PasskeyApiException) {
+      diagnostics['passkeyApiException'] = {
+        'statusCode': error.statusCode,
+        'code': error.code,
+        'message': error.message,
+        'isUnknownCredential': error.isUnknownCredential,
+      };
+    }
+
     final dynamic errorObj = error;
     final fields = <String, dynamic>{};
     void readField(String key, dynamic Function() read) {
@@ -1202,6 +1257,14 @@ class AuthProvider extends ChangeNotifier {
         'code=${error.code}',
         'message=${error.message}',
         if (nativeType != null) 'type=$nativeType',
+      ].join(', ');
+    }
+
+    if (error is PasskeyApiException) {
+      return [
+        'status=${error.statusCode}',
+        if (error.code != null && error.code!.isNotEmpty) 'code=${error.code}',
+        'message=${error.message}',
       ].join(', ');
     }
 
@@ -1476,7 +1539,26 @@ class AuthProvider extends ChangeNotifier {
     return null;
   }
 
-  bool _shouldSignalUnknownCredential(String? error) {
+  bool _shouldSignalUnknownCredentialFromError(Object error) {
+    if (error is PasskeyApiException && error.isUnknownCredential) {
+      return true;
+    }
+    if (error is AuthResponse) {
+      return _shouldSignalUnknownCredential(error.error, error.code);
+    }
+    return _shouldSignalUnknownCredential(error.toString(), null);
+  }
+
+  /// Only signal unknown credentials for stable backend codes from Happy-TTS:
+  /// unknown_credential / credential_not_found / passkey_not_found.
+  bool _shouldSignalUnknownCredential(String? error, [String? code]) {
+    final normalizedCode = code?.toLowerCase().trim() ?? '';
+    if (normalizedCode == 'unknown_credential' ||
+        normalizedCode == 'credential_not_found' ||
+        normalizedCode == 'passkey_not_found') {
+      return true;
+    }
+
     final text = error?.toLowerCase() ?? '';
     if (text.isEmpty) return false;
     return text.contains('unknown_credential') ||

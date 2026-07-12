@@ -2136,7 +2136,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '安全便捷地登录，无需密码',
+                    auth.currentUser?.hasPasskey == true
+                        ? '已绑定通行密钥（每账号限 1 个）'
+                        : '安全便捷地登录，无需密码',
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                 ],
@@ -2146,7 +2148,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         const SizedBox(height: 16),
         FilledButton.tonalIcon(
-          onPressed: auth.isLoading
+          onPressed: auth.isLoading || auth.currentUser?.hasPasskey == true
               ? null
               : () async {
                   final success = await auth.bindPasskey();
@@ -2187,8 +2189,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     color: cs.onSecondaryContainer,
                   ),
                 )
-              : const Icon(Icons.add_moderator_rounded, size: 18),
-          label: const Text('添加通行密钥'),
+              : Icon(
+                  auth.currentUser?.hasPasskey == true
+                      ? Icons.verified_user_rounded
+                      : Icons.add_moderator_rounded,
+                  size: 18,
+                ),
+          label: Text(
+            auth.currentUser?.hasPasskey == true ? '已绑定通行密钥' : '添加通行密钥',
+          ),
           style: FilledButton.styleFrom(
             minimumSize: const Size(double.infinity, 44),
             shape: RoundedRectangleBorder(

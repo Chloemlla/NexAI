@@ -399,7 +399,7 @@ POST /auth/passkey/register/options
 Authorization: Bearer <accessToken>
 ```
 
-响应必须直接兼容 passkeys Flutter 插件：
+响应必须兼容 Android Credential Manager `CreatePublicKeyCredentialRequest` / `GetPublicKeyCredentialOption` 的 WebAuthn JSON（NexAI 原生 channel，不再依赖 passkeys Flutter 插件）：
 
 ```json
 {
@@ -439,7 +439,7 @@ POST /auth/passkey/register/verify
 Authorization: Bearer <accessToken>
 ```
 
-请求体为客户端 passkey 插件返回的 credential JSON。
+请求体为 Android Credential Manager 返回的 PublicKeyCredential JSON（`registrationResponseJson` / `authenticationResponseJson`）。
 
 响应：
 

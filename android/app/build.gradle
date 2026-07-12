@@ -61,7 +61,7 @@ if (nexaiFile.exists()) {
 
 android {
     namespace "com.chloemlla.nexai"
-    compileSdk 35
+    compileSdk 37
     ndkVersion "28.2.13676358"
 
     compileOptions {
@@ -76,7 +76,7 @@ android {
     defaultConfig {
         applicationId "com.chloemlla.nexai"
         minSdk 24
-        targetSdk 35
+        targetSdk 37
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -162,23 +162,24 @@ flutter {
 }
 
 dependencies {
-    implementation "androidx.core:core-ktx:1.15.0"
-    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.core:core-ktx:1.19.0"
+    implementation "androidx.appcompat:appcompat:1.7.1"
+    // Passkey Signal APIs still ship on the credentials 1.7 alpha line.
     implementation "androidx.credentials:credentials:1.7.0-alpha02"
     implementation "androidx.credentials:credentials-play-services-auth:1.7.0-alpha02"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
     implementation "com.tencent:mmkv:2.4.0"
 
-    // Force transitive dependencies to versions compatible with compileSdk 35 / AGP 8.7.3
+    // Align transitive AndroidX artifacts with compileSdk 37 / AGP 9.2.1
     constraints {
-        implementation("androidx.core:core:1.15.0") {
-            because "1.17.0 requires compileSdk 36"
+        implementation("androidx.core:core:1.19.0") {
+            because "align with core-ktx for compileSdk 37"
         }
-        implementation("androidx.core:core-ktx:1.15.0") {
-            because "1.17.0 requires compileSdk 36"
+        implementation("androidx.core:core-ktx:1.19.0") {
+            because "align with core-ktx for compileSdk 37"
         }
-        implementation("androidx.browser:browser:1.8.0") {
-            because "1.9.0 requires compileSdk 36 and AGP 8.9.1+"
+        implementation("androidx.browser:browser:1.10.0") {
+            because "latest stable browser for AGP 9.2.1 / compileSdk 37"
         }
     }
 }

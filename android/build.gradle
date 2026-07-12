@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '2.3.21'
+    ext.kotlin_version = '2.4.0'
     repositories {
         google()
         mavenCentral()
@@ -25,7 +25,7 @@ tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
 
-// Force all subprojects (Flutter plugins) to use compileSdk 35
+// Force all subprojects (Flutter plugins) to use compileSdk 37
 subprojects { subproject ->
     subproject.afterEvaluate {
         if (subproject.hasProperty('android')) {
@@ -33,17 +33,15 @@ subprojects { subproject ->
                 if (namespace == null) {
                     namespace subproject.group ?: subproject.name
                 }
-                compileSdk 35
+                compileSdk 37
             }
         }
     }
     subproject.configurations.configureEach {
         resolutionStrategy {
-            force 'androidx.core:core:1.15.0'
-            force 'androidx.core:core-ktx:1.15.0'
-            force 'androidx.browser:browser:1.8.0'
+            force 'androidx.core:core:1.19.0'
+            force 'androidx.core:core-ktx:1.19.0'
+            force 'androidx.browser:browser:1.10.0'
         }
     }
 }
-
-

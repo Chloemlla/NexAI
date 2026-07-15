@@ -121,10 +121,8 @@ class AuthProvider extends ChangeNotifier {
 
       if (_accessToken != null) {
         _currentUser = await _readCachedUser();
-        if (_currentUser == null) {
-          // Fall back to a minimal offline user so isLoggedIn stays true.
-          _currentUser = await _readOfflineStubUser();
-        }
+        // Fall back to a minimal offline user so isLoggedIn stays true.
+        _currentUser ??= await _readOfflineStubUser();
 
         // Try to get current user with stored token
         try {
@@ -137,18 +135,14 @@ class AuthProvider extends ChangeNotifier {
           } else if (_refreshToken != null) {
             // Access token expired, try refresh
             await _tryRefreshToken();
-            if (_currentUser == null) {
-              _currentUser = await _readOfflineStubUser();
-            }
+            _currentUser ??= await _readOfflineStubUser();
           } else if (_currentUser == null) {
             await _clearTokens();
           }
         } catch (e) {
           // Network error — keep tokens + cached/stub user for offline UI.
           // Session will be validated on next successful request.
-          if (_currentUser == null) {
-            _currentUser = await _readOfflineStubUser();
-          }
+          _currentUser ??= await _readOfflineStubUser();
           debugPrint(
             '[NexAI Auth] Session restore network error (offline?): $e',
           );

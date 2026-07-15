@@ -19,6 +19,7 @@ import '../utils/google_font_paint.dart';
 import '../services/pinned_http_client.dart';
 import '../widgets/passkey_debug_dialog.dart';
 import '../widgets/sync_recovery_key_dialogs.dart';
+import '../widgets/user_avatar.dart';
 import 'about_page.dart';
 import 'developer_debug_page.dart';
 import 'login_page.dart';
@@ -1804,25 +1805,11 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Row(
             children: [
-              CircleAvatar(
+              UserAvatar(
                 radius: 24,
-                backgroundColor: cs.primaryContainer,
-                backgroundImage: user.avatarUrl != null
-                    ? NetworkImage(user.avatarUrl!)
-                    : null,
-                child: user.avatarUrl == null
-                    ? Text(
-                        (user.displayName.isNotEmpty
-                                ? user.displayName[0]
-                                : user.username[0])
-                            .toUpperCase(),
-                        style: TextStyle(
-                          color: cs.onPrimaryContainer,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 18,
-                        ),
-                      )
-                    : null,
+                imageUrl: user.avatarUrl,
+                displayName: user.displayName,
+                username: user.username,
               ),
               const SizedBox(width: 14),
               Expanded(

@@ -121,6 +121,10 @@ class AuthProvider extends ChangeNotifier {
 
       if (_accessToken != null) {
         _currentUser = await _readCachedUser();
+        if (_currentUser == null) {
+          // Fall back to a minimal offline user so isLoggedIn stays true.
+          _currentUser = await _readOfflineStubUser();
+        }
 
         // Try to get current user with stored token
         try {
@@ -133,12 +137,18 @@ class AuthProvider extends ChangeNotifier {
           } else if (_refreshToken != null) {
             // Access token expired, try refresh
             await _tryRefreshToken();
-          } else {
+            if (_currentUser == null) {
+              _currentUser = await _readOfflineStubUser();
+            }
+          } else if (_currentUser == null) {
             await _clearTokens();
           }
         } catch (e) {
-          // Network error — keep tokens, user is considered 'offline logged-in'.
+          // Network error — keep tokens + cached/stub user for offline UI.
           // Session will be validated on next successful request.
+          if (_currentUser == null) {
+            _currentUser = await _readOfflineStubUser();
+          }
           debugPrint(
             '[NexAI Auth] Session restore network error (offline?): $e',
           );
@@ -1731,6 +1741,21 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _saveCachedUser(NexaiUser user) async {
     await _storage.write(key: _keyUserJson, value: jsonEncode(user.toJson()));
+  }
+
+  Future<NexaiUser?> _readOfflineStubUser() async {
+    final userId = await _storage.read(key: _keyUserId);
+    if (userId == null || userId.isEmpty) return null;
+    return NexaiUser(
+      id: userId,
+      username: 'offline',
+      email: '',
+      displayName: '离线用户',
+      authProvider: 'local',
+      emailVerified: false,
+      role: 'user',
+      loginCount: 0,
+    );
   }
 
   Future<NexaiUser?> _readCachedUser() async {

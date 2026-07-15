@@ -214,26 +214,88 @@ class AppSecurity {
   ) async {
     final assets = releaseData['assets'] as List<dynamic>? ?? [];
     final body = releaseData['body'] as String? ?? '';
+    final manifestHashes = await _loadReleaseManifestHashes(assets);
 
-    for (final asset in assets) {
-      final name = (asset['name'] as String? ?? '').toLowerCase();
-      if (!name.endsWith('.apk')) continue;
+    for (final abi in supportedAbis) {
+      final abiLower = abi.toLowerCase().replaceAll('_', '-');
+      final abiRaw = abi.toLowerCase();
 
-      // Try to match device ABI
-      for (final abi in supportedAbis) {
-        final abiLower = abi.toLowerCase().replaceAll('_', '-');
-        if (name.contains(abiLower)) {
-          // Extract SHA256 from release body
-          return _extractHashFromBody(body, name);
+      for (final asset in assets) {
+        final name = (asset['name'] as String? ?? '');
+        final nameLower = name.toLowerCase();
+        if (!nameLower.endsWith('.apk')) continue;
+        if (!nameLower.contains(abiLower) && !nameLower.contains(abiRaw)) {
+          continue;
         }
-        final abiRaw = abi.toLowerCase();
-        if (abiRaw != abiLower && name.contains(abiRaw)) {
-          return _extractHashFromBody(body, name);
+
+        // Prefer machine-readable release-manifest.json when attached.
+        final fromManifest = manifestHashes[name] ??
+            manifestHashes[nameLower] ??
+            _matchManifestHash(manifestHashes, nameLower);
+        if (fromManifest != null && fromManifest.isNotEmpty) {
+          return fromManifest;
+        }
+
+        final fromBody = _extractHashFromBody(body, name);
+        if (fromBody != null && fromBody.isNotEmpty) {
+          return fromBody;
         }
       }
     }
 
     return null;
+  }
+
+  String? _matchManifestHash(
+    Map<String, String> manifestHashes,
+    String assetNameLower,
+  ) {
+    for (final entry in manifestHashes.entries) {
+      if (entry.key.toLowerCase() == assetNameLower) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  /// Loads sha256 values from release-manifest.json attached to the GitHub release.
+  Future<Map<String, String>> _loadReleaseManifestHashes(
+    List<dynamic> assets,
+  ) async {
+    final result = <String, String>{};
+    String? manifestUrl;
+    for (final asset in assets) {
+      if (asset is! Map) continue;
+      final name = (asset['name'] as String? ?? '').toLowerCase();
+      if (name == 'release-manifest.json') {
+        manifestUrl = asset['browser_download_url'] as String?;
+        break;
+      }
+    }
+    if (manifestUrl == null || manifestUrl.isEmpty) return result;
+
+    try {
+      final response = await http.get(Uri.parse(manifestUrl));
+      if (response.statusCode != 200) return result;
+      final decoded = json.decode(response.body);
+      if (decoded is! Map) return result;
+      final manifestAssets = decoded['assets'];
+      if (manifestAssets is! List) return result;
+      for (final item in manifestAssets) {
+        if (item is! Map) continue;
+        final name = item['name']?.toString();
+        final hash = item['sha256']?.toString();
+        if (name != null &&
+            name.isNotEmpty &&
+            hash != null &&
+            RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(hash)) {
+          result[name] = hash.toLowerCase();
+        }
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: failed to load release-manifest.json: $e');
+    }
+    return result;
   }
 
   String? _extractHashFromBody(String body, String assetName) {

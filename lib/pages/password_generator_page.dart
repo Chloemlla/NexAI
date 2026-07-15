@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -367,11 +368,127 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     }
   }
 
-  Future<void> _createBackup() async {
-    final provider = context.read<PasswordProvider>();
-    final backup = await provider.createBackup();
+  Future<String?> _promptBackupPassphrase({
+    required String title,
+    required String confirmLabel,
+    bool requireConfirm = false,
+  }) async {
+    final passphraseController = TextEditingController();
+    final confirmController = TextEditingController();
+    var obscure = true;
 
     try {
+      return await showDialog<String>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                title: Text(title),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      requireConfirm
+                          ? '备份使用口令派生 AES-256-GCM 加密，请牢记口令。'
+                          : '请输入创建加密备份时设置的口令。',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passphraseController,
+                      obscureText: obscure,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        labelText: '备份口令',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.lock_rounded),
+                        suffixIcon: IconButton(
+                          onPressed: () =>
+                              setDialogState(() => obscure = !obscure),
+                          icon: Icon(
+                            obscure
+                                ? Icons.visibility_rounded
+                                : Icons.visibility_off_rounded,
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (requireConfirm) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: confirmController,
+                        obscureText: obscure,
+                        decoration: InputDecoration(
+                          labelText: '确认口令',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      final passphrase = passphraseController.text.trim();
+                      if (passphrase.length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('口令至少需要 8 个字符'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+                      if (requireConfirm &&
+                          passphrase != confirmController.text.trim()) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('两次输入的口令不一致'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+                      Navigator.pop(dialogContext, passphrase);
+                    },
+                    child: Text(confirmLabel),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      passphraseController.dispose();
+      confirmController.dispose();
+    }
+  }
+
+  Future<void> _createBackup() async {
+    final passphrase = await _promptBackupPassphrase(
+      title: '创建加密备份',
+      confirmLabel: '创建',
+      requireConfirm: true,
+    );
+    if (passphrase == null || !mounted) return;
+
+    final provider = context.read<PasswordProvider>();
+    try {
+      final backup = await provider.createBackup(passphrase: passphrase);
       final fileName =
           'password_backup_${DateTime.now().millisecondsSinceEpoch}.json';
       final path = await _getSafeSavePath(fileName);
@@ -390,7 +507,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('备份创建成功: $path'),
+            content: Text('加密备份创建成功: $path'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Colors.green,
           ),
@@ -413,31 +530,57 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       allowedExtensions: ['json'],
     );
 
-    if (filePath != null) {
-      try {
-        final file = File(filePath);
-        final content = await file.readAsString();
-        if (!mounted) return;
-        final provider = context.read<PasswordProvider>();
-        final success = await provider.restoreFromBackup(content);
+    if (filePath == null) return;
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(success ? '恢复成功' : '恢复失败：备份文件损坏'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+    try {
+      final file = File(filePath);
+      final content = await file.readAsString();
+      if (!mounted) return;
+
+      String? passphrase;
+      Map<String, dynamic>? decoded;
+      try {
+        final raw = jsonDecode(content);
+        if (raw is Map) {
+          decoded = Map<String, dynamic>.from(raw);
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('恢复失败: $e'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+      } catch (_) {
+        decoded = null;
+      }
+
+      final isEncrypted =
+          decoded?['format'] == PasswordProvider.encryptedBackupFormat ||
+          decoded?['version'] == PasswordProvider.encryptedBackupVersion;
+      if (isEncrypted) {
+        passphrase = await _promptBackupPassphrase(
+          title: '恢复加密备份',
+          confirmLabel: '恢复',
+        );
+        if (passphrase == null || !mounted) return;
+      }
+
+      final provider = context.read<PasswordProvider>();
+      final success = await provider.restoreFromBackup(
+        content,
+        passphrase: passphrase,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(success ? '恢复成功' : '恢复失败：备份损坏或口令错误'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('恢复失败: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -589,7 +732,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       children: [
                         Icon(Icons.backup_rounded, size: 20),
                         SizedBox(width: 12),
-                        Text('创建备份'),
+                        Text('创建加密备份'),
                       ],
                     ),
                   ),
@@ -1337,7 +1480,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          '• 所有密码仅存储在本地设备\n• 不会上传或同步到任何服务器\n• 支持导出和可校验备份\n• 您的数据完全由您掌控',
+                          '• 所有密码仅存储在本地设备\n• 不会上传或同步到任何服务器\n• 支持口令保护的 AES-256-GCM 加密备份\n• 您的数据完全由您掌控',
                           style: TextStyle(
                             fontSize: 13,
                             color: cs.onTertiaryContainer,

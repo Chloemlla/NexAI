@@ -4,6 +4,8 @@ library;
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 
+import '../services/android_native/android_security_service.dart';
+
 class NetworkSecurity {
   NetworkSecurity._();
   static final NetworkSecurity instance = NetworkSecurity._();
@@ -27,9 +29,9 @@ class NetworkSecurity {
     try {
       // Check environment variables for proxy
       final httpProxy = Platform.environment['HTTP_PROXY'] ??
-                       Platform.environment['http_proxy'];
+          Platform.environment['http_proxy'];
       final httpsProxy = Platform.environment['HTTPS_PROXY'] ??
-                        Platform.environment['https_proxy'];
+          Platform.environment['https_proxy'];
 
       if (httpProxy != null || httpsProxy != null) {
         isProxyDetected = true;
@@ -42,13 +44,16 @@ class NetworkSecurity {
     }
   }
 
-  /// Detect VPN connection (Android/iOS specific checks via platform channel)
+  /// Detect VPN via Android native security snapshot (NetworkCapabilities).
   Future<void> _checkVpn() async {
     try {
-      if (Platform.isAndroid) {
-        // VPN detection will be implemented via MethodChannel
-        // For now, we'll add a placeholder
-        // TODO: Add Android VPN detection via NetworkCapabilities
+      if (!Platform.isAndroid) return;
+      final result = await AndroidSecurityService().getSecuritySnapshot();
+      if (result.ok && result.data != null) {
+        isVpnDetected = result.data!.vpnActive;
+        if (isVpnDetected) {
+          debugPrint('NetworkSecurity: VPN connection detected (native)');
+        }
       }
     } catch (e) {
       debugPrint('NetworkSecurity: VPN check error: $e');

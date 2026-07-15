@@ -1,38 +1,19 @@
-1. 高危：证书固定的 TOFU/续签探针会接受任意证书并写入 pin。
-     lib/services/pinned_http_client.dart:285 里的 _probeAndPin 使用 withTrustedRoots:false，并在
-     badCertificateCallback 中 return true，随后把该证书指纹写入安全存储。它会在首次请求后和证书临
-     期续签时触发。主动 MITM 可以让正常请求通过、劫持探针，把攻击者证书固定下来。应只从系统 CA 验证
-     通过的连接中提取证书，或取消这种 permissive 探针。
+# NexAI outstanding items (updated 2026-07-15)
 
-  2. 高危：APK 完整性校验基本是 fail-open。
-     lib/utils/app_security.dart:45 默认 isApkHashValid = true，Release 不存在或找不到 hash 时直接
-     return，不会标记失败。代码还要求 release body 里有 sha256:，但 .github/workflows/
-     release.yml:277 生成的发布说明没有写入 APK hash，.github/workflows/build.yml:148 的自动
-     release 也只是生成说明。结果是 README 声称的 APK hash 校验大概率不会真正生效。
+## Resolved in code (verify in CI)
+1. Certificate TOFU/renewal probe uses system-CA validated SecureSocket only (no permissive badCertificate pin write).
+2. APK hash check is fail-closed in release; hashes read from release body and release-manifest.json.
+3. Android CI fails when release signing secrets are missing; automatic release limited to main.
+4. Cloud sync uses /sync/v2 + SyncCrypto; partial undecryptable snapshots refuse restore.
+5. Password backups use passphrase + PBKDF2 + AES-256-GCM (legacy checksum backups still importable).
+6. Offline login restores cached user or offline stub so isLoggedIn stays true with a token.
+7. NetworkSecurity VPN detection reads Android native security snapshot.
+8. Avatar network failures are non-fatal; UserAvatar + CrashReporter filters applied.
+9. Backend client has explicit timeouts; request signing fails closed.
+10. Crash reports redact Bearer / API key / sk- / AIza style secrets.
 
-  3. 高危：CI 可以发布 debug-signed APK。
-     .github/workflows/build.yml:5 对所有分支 push 触发；签名 secret 缺失或解码失败时写入
-     NEXAI_USE_DEBUG_SIGNING，而 android/app/build.gradle:110 release 构建会退回 debug 签名，之
-     后 .github/workflows/build.yml:141 仍会创建 latest release。发布任务应在 release 签名不可用时
-     失败，并限制到 main/tag。
-
-  4. 中高：云同步仍走明文旧接口，SyncCrypto 没接入。
-     lib/providers/sync_provider.dart:547 会把 notes、conversations、translationHistory、shortUrls
-     直接收集成 JSON，lib/services/nexai_sync_service.dart:148 发到 /sync。虽然已排除密码/API key，
-     但用户内容仍是服务端可读；而文档要求 /sync/v2 端到端加密。要么接入 v2 加密容器，要么在 UI/文档
-     里明确旧同步是服务端可读。
-
-  5. 中：密码“加密备份”文案与实现不符。
-     lib/pages/password_generator_page.dart:1340 承诺“加密备份”，但 lib/providers/
-     password_provider.dart:119 生成的是明文 JSON 加 SHA-256 checksum。checksum 只能发现意外损坏，
-     不能保密也不能防篡改。应改文案，或用用户口令 + KDF + AEAD 做真正加密备份。
-
-  6. 中：离线登录恢复逻辑不符合注释。
-     lib/providers/auth_provider.dart:41 的 isLoggedIn 要求 _currentUser 非空；但初始化遇到网络错误
-     时只保留 token，不恢复用户对象。注释说“offline logged-in”，实际 UI 会表现为未登录。需要持久化
-     安全裁剪后的 user，或引入 token-only 恢复态并在网络恢复后重试 /auth/me。
-
-  7. 低：README 的 Windows 本地启动步骤不完整。
-     README.md:90 写的是直接 flutter run -d windows，但本地 flutter build windows --debug 报 No
-     Windows desktop project configured；CI 是先跑 flutter create --platforms windows .。要么提交完
-     整 Windows 平台工程，要么更新本地开发步骤。
+## Remaining / follow-ups
+- Incremental encrypted sync (still full v2 snapshot upload).
+- Split oversized UI/provider files (settings/auth/password/media pages).
+- Expand tests for auth/passkey native channel contracts.
+- Optional: provenance/SLSA for release artifacts.

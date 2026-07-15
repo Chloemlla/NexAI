@@ -1,9 +1,10 @@
 package com.chloemlla.nexai
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.graphics.Color
+import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.nexai.channels.NativeChannelRegistry
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -13,6 +14,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LumenCrash.recordBreadcrumb("MainActivity.onCreate")
 
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.R until 36) {
             @Suppress("DEPRECATION")
@@ -31,6 +33,7 @@ class MainActivity : FlutterActivity() {
         nativeChannelRegistry = NativeChannelRegistry(this, flutterEngine).also {
             it.register()
         }
+        LumenCrash.recordBreadcrumb("MainActivity.configureFlutterEngine")
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

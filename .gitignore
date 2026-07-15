@@ -46,3 +46,8 @@ scripts/keystore_base64.txt
 
 # Dart obfuscation debug symbols (never commit — store securely for crash symbolication)
 debug_symbols/
+
+# Generated Lumen Crash local Maven cache (CI/local resolver)
+android/local-maven/
+android/lumen-crash.version
+

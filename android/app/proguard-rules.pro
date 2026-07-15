@@ -73,6 +73,7 @@
 
 # Optional or desktop/JVM APIs referenced by transitive libraries but absent on
 # Android. These warnings do not imply code is packaged into the APK.
+-keep class androidx.compose.** { *; }
 -dontwarn androidx.compose.**
 -dontwarn androidx.lifecycle.**
 -dontwarn androidx.navigation.**
@@ -87,3 +88,38 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 -dontwarn org.apache.commons.imaging.**
+
+############################################################
+# Lumen Crash SDK minify exemption
+# Artifact: com.chloemlla.lumen:lumen-crash
+############################################################
+
+# Required: author attribution + integrity checks
+-keep class com.chloemlla.lumen.crash.CrashAuthorAttribution {
+    public static final java.lang.String *;
+}
+-keep class com.chloemlla.lumen.crash.AuthorIntegrity {
+    public static *** verifyOrThrow();
+    public static *** fingerprintHex();
+}
+
+# Required backup: keep public SDK API used by host integration
+-keep class com.chloemlla.lumen.crash.LumenCrash { *; }
+-keep class com.chloemlla.lumen.crash.LumenCrashConfig { *; }
+-keep class com.chloemlla.lumen.crash.CrashReport { *; }
+-keep class com.chloemlla.lumen.crash.CrashAppInfo { *; }
+-keep class com.chloemlla.lumen.crash.CrashReportStore { *; }
+-keep class com.chloemlla.lumen.crash.CrashBreadcrumbs { *; }
+-keep class com.chloemlla.lumen.crash.ui.LumenCrashReportScreenKt { *; }
+
+# Package-level exemption (safe default for third-party hosts)
+-keep class com.chloemlla.lumen.crash.** { *; }
+-dontwarn com.chloemlla.lumen.crash.**
+
+# Crash gate activity is instantiated from the manifest.
+-keep,allowoptimization class com.chloemlla.nexai.CrashGateActivity {
+    public <init>();
+    public <methods>;
+    protected <methods>;
+}
+

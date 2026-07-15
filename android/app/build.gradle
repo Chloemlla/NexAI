@@ -1,6 +1,7 @@
 plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
+    id "org.jetbrains.kotlin.plugin.compose"
     id "dev.flutter.flutter-gradle-plugin"
 }
 
@@ -75,11 +76,16 @@ android {
 
     defaultConfig {
         applicationId "com.chloemlla.nexai"
-        minSdk 24
+        // lumen-crash requires minSdk 26.
+        minSdk 26
         targetSdk 37
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+
+        // Host metadata used by LumenCrashConfig.
+        buildConfigField "String", "SHORT_HASH", "\"${nexaiShort}\""
+        buildConfigField "String", "APP_DISPLAY_NAME", "\"NexAI\""
     }
 
     // Signing config for release builds (CI injects via gradle.properties)
@@ -155,6 +161,13 @@ android {
             ]
         }
     }
+
+    buildFeatures {
+        // LumenCrashConfig needs BuildConfig fields for host app metadata.
+        buildConfig true
+        // Crash pending-report gate uses Compose (LumenCrashReportScreen).
+        compose true
+    }
 }
 
 flutter {
@@ -169,6 +182,24 @@ dependencies {
     implementation "androidx.credentials:credentials-play-services-auth:1.7.0-alpha02"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
     implementation "com.tencent:mmkv:2.4.0"
+
+    // Auto-resolved latest Project Lumen main release (see CI/local resolver).
+    // Do not hard-pin com.chloemlla.lumen:lumen-crash:X.Y.Z in source control.
+    def lumenCrashVersion = findProperty("lumenCrashVersion") ?: System.getenv("LUMEN_CRASH_VERSION")
+    if (!lumenCrashVersion) {
+        throw new GradleException(
+            "Resolve latest lumen-crash first. Set lumenCrashVersion in gradle.properties " +
+            "or LUMEN_CRASH_VERSION env (see lumen-crash README section 2.1)."
+        )
+    }
+    implementation "com.chloemlla.lumen:lumen-crash:$lumenCrashVersion"
+
+    // Compose host gate for LumenCrashReportScreen.
+    def composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    implementation composeBom
+    implementation "androidx.activity:activity-compose:1.13.0"
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.material3:material3"
 
     // Align transitive AndroidX artifacts with compileSdk 37 / AGP 9.2.1
     constraints {

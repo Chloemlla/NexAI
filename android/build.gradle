@@ -13,6 +13,18 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            name = "GitHubPackagesProjectLumen"
+            url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
+            credentials {
+                username = findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+                password = findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+        maven {
+            name = "LumenCrashLocal"
+            url = uri("${rootDir}/local-maven")
+        }
     }
 }
 

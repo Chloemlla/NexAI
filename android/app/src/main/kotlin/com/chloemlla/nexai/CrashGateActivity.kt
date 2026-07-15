@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.chloemlla.lumen.crash.CrashReport
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.lumen.crash.ui.LumenCrashReportScreen
 
@@ -34,7 +35,8 @@ class CrashGateActivity : ComponentActivity() {
         }
 
         setContent {
-            var report by remember { mutableStateOf(pendingReport) }
+            // Explicit nullable type: continue path assigns null to leave the gate.
+            var report by remember { mutableStateOf<CrashReport?>(pendingReport) }
             val crashReport = report
             if (crashReport == null) {
                 LaunchedEffect(Unit) { openMainAndFinish() }

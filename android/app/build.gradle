@@ -192,14 +192,27 @@ dependencies {
             "or LUMEN_CRASH_VERSION env (see lumen-crash README section 2.1)."
         )
     }
-    implementation "com.chloemlla.lumen:lumen-crash:$lumenCrashVersion"
+    // Published lumen-crash POMs currently ship Compose API deps with empty
+    // versions (BOM-managed in the library, not rewritten into Maven metadata).
+    // Exclude those broken transitive coords and redeclare them via host BOM.
+    implementation("com.chloemlla.lumen:lumen-crash:$lumenCrashVersion") {
+        exclude group: "androidx.compose.ui"
+        exclude group: "androidx.compose.material"
+        exclude group: "androidx.compose.material3"
+        exclude group: "androidx.compose.foundation"
+        exclude group: "androidx.compose.animation"
+    }
 
-    // Compose host gate for LumenCrashReportScreen.
+    // Compose host gate for LumenCrashReportScreen + SDK API surface.
     def composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation composeBom
     implementation "androidx.activity:activity-compose:1.13.0"
     implementation "androidx.compose.ui:ui"
     implementation "androidx.compose.material3:material3"
+    implementation "androidx.compose.material:material-icons-extended"
+    implementation "androidx.compose.material3:material3-window-size-class"
+    implementation "androidx.compose.foundation:foundation"
+    implementation "androidx.compose.animation:animation"
 
     // Align transitive AndroidX artifacts with compileSdk 37 / AGP 9.2.1
     constraints {

@@ -20,19 +20,20 @@
 * Kotlin 已承担大量 Android 边界能力（channel facade 已拆分）
 * 关键现状文档：`docs/android-kotlin-native-capability-migration.md`
 * 安全清单：`docs/security_hardening_checklist.md`
+* 正式本地 Trellis 任务：`.trellis/tasks/07-16-android-kotlin-boundary-hardening/`
 
 ### Existing Kotlin surfaces
 
 | 模块 | 现状 |
 |---|---|
-| Passkey | `PasskeyChannel` 已支持 Google-first / Google-only；缺系统级 provider 诊断 API |
+| Passkey | `PasskeyChannel` 已支持 Google-first / Google-only；`PasskeyProviderDiagnostics` + `diagnoseProviders` 已在 WIP 中 |
 | Security | `SecuritySignals` 已有 root/debugger/emulator/VPN/frida/xposed/签名/APK hash |
-| Startup | `NexAIApplication` 只装 lumen-crash + MMKV；缺统一启动安全快照 |
-| Background | `BackgroundTaskChannel` + `NativeTaskStore(MMKV)`；主要是入队/查询，缺恢复与通知联动稳定性 |
+| Startup | `StartupSecurityBootstrap` + `NexAIApplication` 非致命启动 + `getStartupSecuritySnapshot` 已在 WIP 中 |
+| Background | `BackgroundTaskChannel` + `NativeTaskStore(MMKV)`；主要是入队/查询，仍缺恢复与通知联动稳定性 |
 | Media tasks | `MediaChannel` 有音频提取线程池；视频压缩仍占位 |
-| Notifications | `NotificationChannelHandler` 有渠道/进度/权限检查 |
+| Notifications | `NotificationChannelHandler` 有渠道/进度/权限检查；缺权限错误尚未统一 `recoverable=true` |
 | Update | `UpdateChannel` 可校验 sha256 + 调起安装；缺安装前包身份/签名一致性硬校验 |
-| Fingerprint | `DeviceFingerprint` 多维采集已存在；与 security 信号可再聚合 |
+| Fingerprint | `DeviceFingerprint` 多维采集已存在；反调试字段尚未扩展到 adb/dev-settings/debugBuild/tracerPid |
 
 ### Partial WIP already present in working tree
 
@@ -44,7 +45,7 @@
 * `SecurityChannel` 增加 `getStartupSecuritySnapshot`
 * `NexAIApplication` 启动时非致命 bootstrap
 
-注意：工作区还有与本任务无关的 IME/edge-to-edge 改动（`MainActivity.kt` / `home_page.dart`），实现阶段应避免混提交。
+注意：工作区还有与本任务无关的本地文件（`AGENTS.md` / `.gitignore`），实现阶段应避免混提交。
 
 ### Product constraints
 
@@ -103,6 +104,7 @@
 5. 注册/登录路径继续：
    * Google-only 不回退
    * 非 Google-only 时 Google 优先后回退系统
+6. 失败 details 尽量附带最新 provider 诊断
 
 ### R2 — 启动安全/完整性检查
 
@@ -192,11 +194,12 @@
 * [ ] Passkey debug 能看到 provider 诊断
 * [ ] 更新安装在 hash/包名/签名不匹配时 fail-closed
 * [ ] 每个切片独立 commit + push
-* [ ] 不混入无关 IME/edge-to-edge 改动（除非单开 commit）
+* [ ] 不混入无关本地改动（`AGENTS.md` / `.gitignore` 等）
 
 ### R1 Passkey
 
 * [ ] `diagnoseProviders` 可返回 GMS/OEM/risk/recommendedMode
+* [ ] Dart 有 `AndroidPasskeyService.diagnoseProviders()`
 * [ ] Google-only=true 时不回退系统 provider
 * [ ] 失败 debug context 包含 provider 诊断
 
@@ -204,18 +207,20 @@
 
 * [ ] `Application.onCreate` 生成启动快照且不炸进程
 * [ ] `getStartupSecuritySnapshot` 可重复读取
+* [ ] Dart `AppSecurity.init()` 优先复用启动快照
 * [ ] breadcrumb 写入成功或 best-effort 失败可忽略
 
 ### R3 Tasks/Notifications
 
 * [ ] cancel/list/get 行为稳定
-* [ ] 通知权限缺失返回明确错误码
+* [ ] 通知权限缺失返回明确错误码且 `recoverable=true`
 * [ ] media cancel 清理输出
 
 ### R4 Update Verify
 
 * [ ] 安装前可做 sha256 + package + signature 校验
 * [ ] 校验失败不会拉起系统安装器
+* [ ] Dart 展示可读错误
 
 ### R5 Fingerprint/Anti-debug
 
@@ -234,19 +239,19 @@
 输出 Trellis 文档，冻结需求。
 
 ### Slice B — Passkey diagnostics
-Kotlin diagnostics + channel + Dart bridge + debug context.
+Kotlin diagnostics + channel + Dart bridge + debug context。
 
 ### Slice C — Startup security
-Bootstrap + Application hook + security channel + AppSecurity reuse.
+Bootstrap + Application hook + security channel + AppSecurity reuse。
 
 ### Slice D — Background/notification stability
 Task/notify hardening without API 破坏。
 
 ### Slice E — Update package verification
-Install-time identity checks.
+Install-time identity checks。
 
 ### Slice F — Anti-debug/fingerprint expansion
-Signal enrichment + Dart exposure.
+Signal enrichment + Dart exposure。
 
 ## Risks
 
@@ -267,3 +272,11 @@ Signal enrichment + Dart exposure.
   3. 媒体任务取消后通知/文件清理
   4. 错误 APK hash 安装被拒
   5. 调试器/开发者选项信号可见
+
+## Decision (ADR-lite)
+
+**Context**: 用户要求用 Kotlin 重写 5 个 Android 边界能力，并先形成 Trellis 文档再逐步实现。仓库已有部分 Kotlin WIP 和 docs/trellis 草稿。
+
+**Decision**: 正式 Trellis 任务以本目录与 `.trellis/tasks/07-16-android-kotlin-boundary-hardening/` 冻结需求；实现按 B→F 切片推进，不重做业务 UI。
+
+**Consequences**: 可独立提交/回滚每个切片；Dart bridge 与错误码契约成为跨层稳定性关键。

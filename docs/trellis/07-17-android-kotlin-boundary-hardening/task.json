@@ -10,7 +10,7 @@
   "priority": "P1",
   "creator": "Codex",
   "assignee": "Codex",
-  "createdAt": "2026-07-17",
+  "createdAt": "2026-07-16",
   "completedAt": null,
   "branch": "main",
   "base_branch": "main",
@@ -40,7 +40,7 @@
     "lib/utils/app_security.dart",
     "lib/utils/update_checker.dart"
   ],
-  "notes": "NexAI does not ship full .trellis runtime; this docs/trellis task mirrors Project-Lumen task shape for planning and phased implementation.",
+  "notes": "Commit-able docs mirror. Formal local Trellis task path: .trellis/tasks/07-16-android-kotlin-boundary-hardening/",
   "meta": {
     "slices": [
       "A-docs",

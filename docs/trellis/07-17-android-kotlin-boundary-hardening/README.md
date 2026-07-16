@@ -1,6 +1,8 @@
 # Trellis Task: 07-17-android-kotlin-boundary-hardening
 
-NexAI currently has no full `.trellis/` runtime. This folder mirrors Project-Lumen task structure so we can plan and implement in slices.
+Commit-able Trellis docs for hardening five Android Kotlin boundary slices while keeping Flutter as the product shell.
+
+Local formal task (gitignored runtime): `.trellis/tasks/07-16-android-kotlin-boundary-hardening/`
 
 ## Files
 

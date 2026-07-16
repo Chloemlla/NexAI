@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vivo/Android 13-17 network policy for NexAI:
+  - Prefer networkSecurityConfig over application usesCleartextTraffic.
+  - Release/main has cleartext disabled globally.
+  - Debug/profile manifests may still enable cleartext for local tooling only.
+  - Certificate Transparency is default-enforced on targetSdk 37+.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">tts.chloemlla.com</domain>
+    </domain-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.github.com</domain>
+    </domain-config>
+</network-security-config>

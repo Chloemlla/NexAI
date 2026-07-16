@@ -1,5 +1,6 @@
 package com.chloemlla.nexai.channels
 
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.webkit.MimeTypeMap
@@ -9,6 +10,12 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
+/**
+ * Share helpers with explicit FileProvider URI grants.
+ *
+ * Vivo/Android 17 prep: do not rely on implicit URI grants for ACTION_SEND*.
+ * Always attach ClipData + FLAG_GRANT_READ_URI_PERMISSION.
+ */
 class ShareChannel(private val activity: MainActivity) : MethodChannel.MethodCallHandler {
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
@@ -36,9 +43,11 @@ class ShareChannel(private val activity: MainActivity) : MethodChannel.MethodCal
             ?: return result.success(NativeResult.invalidArgument("uri is required"))
         val uri = shareableUri(rawUri)
         val mimeType = call.argument<String>("mimeType") ?: inferMimeType(uri)
+        val label = call.argument<String>("title") ?: "shared"
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = mimeType
             putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newUri(activity.contentResolver, label, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startChooser(intent, call.argument<String>("title") ?: "Share file", result)
@@ -52,17 +61,26 @@ class ShareChannel(private val activity: MainActivity) : MethodChannel.MethodCal
         }
         val uris = ArrayList(rawUris.map(::shareableUri))
         val mimeType = call.argument<String>("mimeType") ?: "*/*"
+        val label = call.argument<String>("title") ?: "shared"
         val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
             type = mimeType
             putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+            clipData = ClipData.newUri(activity.contentResolver, label, uris.first()).also { clip ->
+                uris.drop(1).forEach { uri ->
+                    clip.addItem(ClipData.Item(uri))
+                }
+            }
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startChooser(intent, call.argument<String>("title") ?: "Share files", result)
     }
 
     private fun startChooser(intent: Intent, title: String, result: MethodChannel.Result) {
-        val chooser = Intent.createChooser(intent, title)
-        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val chooser = Intent.createChooser(intent, title).apply {
+            // createChooser wraps the send Intent; keep grant flags on the chooser too.
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.clipData?.let { clipData = it }
+        }
         result.success(
             runCatching {
                 activity.startActivity(chooser)

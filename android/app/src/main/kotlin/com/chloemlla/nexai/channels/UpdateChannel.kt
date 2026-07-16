@@ -1,5 +1,6 @@
 package com.chloemlla.nexai.channels
 
+import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
@@ -153,8 +154,11 @@ class UpdateChannel(
         val uri = shareableApkUri(uriOrPath)
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, "application/vnd.android.package-archive")
+            // Explicit ClipData + grant flags: Android 17/18 stop relying on implicit URI grants.
+            clipData = ClipData.newUri(activity.contentResolver, "apk", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            addCategory(Intent.CATEGORY_DEFAULT)
         }
         result.success(
             runCatching {

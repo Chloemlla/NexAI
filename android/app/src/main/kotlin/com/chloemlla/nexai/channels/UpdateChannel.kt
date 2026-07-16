@@ -16,7 +16,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.security.MessageDigest
-import java.util.zip.
+
 class UpdateChannel(
     private val activity: MainActivity,
     private val securitySignals: SecuritySignals,

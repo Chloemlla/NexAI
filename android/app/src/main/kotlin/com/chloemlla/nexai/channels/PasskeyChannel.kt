@@ -373,20 +373,12 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
 
     private fun createPublicKeyRequest(
         requestJson: String,
-        allowedProviders: Set<ComponentName>,
+        @Suppress("UNUSED_PARAMETER") allowedProviders: Set<ComponentName>,
     ): CreatePublicKeyCredentialRequest {
-        return if (allowedProviders.isEmpty()) {
-            CreatePublicKeyCredentialRequest(
-                requestJson = requestJson,
-                preferImmediatelyAvailableCredentials = false,
-            )
-        } else {
-            CreatePublicKeyCredentialRequest(
-                requestJson = requestJson,
-                preferImmediatelyAvailableCredentials = false,
-                allowedProviders = allowedProviders,
-            )
-        }
+        // androidx.credentials 1.7.0-alpha02 CreatePublicKeyCredentialRequest does not expose
+        // allowedProviders. Google-first create still runs first and falls back on failure; get
+        // paths continue to pin providers via GetPublicKeyCredentialOption.allowedProviders.
+        return CreatePublicKeyCredentialRequest(requestJson)
     }
 
     private fun getPublicKeyRequest(
@@ -394,17 +386,15 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
         allowedProviders: Set<ComponentName>,
     ): GetCredentialRequest {
         val option = if (allowedProviders.isEmpty()) {
-            GetPublicKeyCredentialOption(requestJson = requestJson)
+            GetPublicKeyCredentialOption(requestJson)
         } else {
             GetPublicKeyCredentialOption(
                 requestJson = requestJson,
+                clientDataHash = null,
                 allowedProviders = allowedProviders,
             )
         }
-        return GetCredentialRequest(
-            credentialOptions = listOf(option),
-            preferImmediatelyAvailableCredentials = false,
-        )
+        return GetCredentialRequest(listOf(option))
     }
 
     private fun isGooglePasswordManagerAvailable(): Boolean =

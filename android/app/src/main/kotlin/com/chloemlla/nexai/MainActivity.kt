@@ -4,7 +4,6 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.nexai.channels.NativeChannelRegistry
@@ -15,9 +14,9 @@ class MainActivity : FlutterActivity() {
     private var nativeChannelRegistry: NativeChannelRegistry? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Use the Activity edge-to-edge helper so IME / system bar insets
-        // continue to flow into Flutter as MediaQuery.viewInsets.
-        enableEdgeToEdge()
+        // FlutterActivity is not a ComponentActivity, so androidx.activity.enableEdgeToEdge()
+        // cannot be used here. WindowCompat + transparent system bars give Flutter the same
+        // edge-to-edge / IME inset behavior via MediaQuery.viewInsets.
         super.onCreate(savedInstanceState)
         runCatching { LumenCrash.recordBreadcrumb("MainActivity.onCreate") }
 

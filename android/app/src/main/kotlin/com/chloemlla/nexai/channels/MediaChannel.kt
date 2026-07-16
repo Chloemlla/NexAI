@@ -48,10 +48,28 @@ class MediaChannel(
             "cancelTask" -> {
                 val taskId = call.argument<String>("taskId")
                     ?: return result.success(NativeResult.invalidArgument("taskId is required"))
+                val existing = taskStore.get(taskId)
+                val status = existing?.get("status")?.toString()
+                if (status in setOf("succeeded", "failed", "cancelled")) {
+                    return result.success(
+                        NativeResult.ok(
+                            existing ?: mapOf("taskId" to taskId, "status" to status),
+                        ),
+                    )
+                }
                 cancelledTasks.add(taskId)
                 taskStore.updateStatus(taskId, "cancelled", "cancel requested")
+                taskStore.cleanupOutput(existing?.get("outputUri") as? String)
                 emit(taskId, "cancelled", 0.0, "cancel requested")
-                result.success(NativeResult.ok(mapOf("taskId" to taskId, "status" to "cancelled")))
+                result.success(
+                    NativeResult.ok(
+                        taskStore.get(taskId) ?: mapOf(
+                            "taskId" to taskId,
+                            "status" to "cancelled",
+                            "message" to "cancel requested",
+                        ),
+                    ),
+                )
             }
             "getTaskStatus" -> {
                 val taskId = call.argument<String>("taskId")

@@ -44,6 +44,10 @@ class NativeTaskStore(context: Context) {
         put(existing)
     }
 
+    fun cleanupOutput(outputUri: String?) {
+        deleteOutput(outputUri)
+    }
+
     fun pruneTerminalTasks(
         maxRecords: Int = 100,
         terminalRetentionMillis: Long = 7L * 24L * 60L * 60L * 1000L,

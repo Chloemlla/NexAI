@@ -23,11 +23,21 @@ class NotificationChannelHandler(private val activity: MainActivity) : MethodCha
         const val SECURITY = "nexai_security"
     }
 
+    @Volatile
+    private var channelsInitialized = false
+
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "initializeChannels" -> {
                 initializeChannels()
-                result.success(NativeResult.ok(mapOf("initialized" to true)))
+                result.success(
+                    NativeResult.ok(
+                        mapOf(
+                            "initialized" to true,
+                            "channelsInitialized" to channelsInitialized,
+                        ),
+                    ),
+                )
             }
             "showProgressNotification" -> showProgress(call, result)
             "showNotification" -> showNotification(call, result)
@@ -43,7 +53,10 @@ class NotificationChannelHandler(private val activity: MainActivity) : MethodCha
     }
 
     fun initializeChannels() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            channelsInitialized = true
+            return
+        }
         val manager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channels = listOf(
             android.app.NotificationChannel(MEDIA_TASKS, "Media tasks", NotificationManager.IMPORTANCE_LOW),
@@ -52,11 +65,19 @@ class NotificationChannelHandler(private val activity: MainActivity) : MethodCha
             android.app.NotificationChannel(SECURITY, "Security", NotificationManager.IMPORTANCE_HIGH),
         )
         manager.createNotificationChannels(channels)
+        channelsInitialized = true
     }
 
     private fun showProgress(call: MethodCall, result: MethodChannel.Result) {
         if (!hasNotificationPermission()) {
-            return result.success(NativeResult.error("permission_denied", "Notification permission denied"))
+            return result.success(
+                NativeResult.error(
+                    "permission_denied",
+                    "Notification permission denied",
+                    recoverable = true,
+                    details = notificationState(),
+                ),
+            )
         }
         initializeChannels()
         val id = call.argument<Int>("id")
@@ -78,12 +99,28 @@ class NotificationChannelHandler(private val activity: MainActivity) : MethodCha
             .build()
 
         NotificationManagerCompat.from(activity).notify(id, notification)
-        result.success(NativeResult.ok(mapOf("id" to id, "shown" to true)))
+        result.success(
+            NativeResult.ok(
+                mapOf(
+                    "id" to id,
+                    "shown" to true,
+                    "taskId" to taskId,
+                    "channelsInitialized" to channelsInitialized,
+                ),
+            ),
+        )
     }
 
     private fun showNotification(call: MethodCall, result: MethodChannel.Result) {
         if (!hasNotificationPermission()) {
-            return result.success(NativeResult.error("permission_denied", "Notification permission denied"))
+            return result.success(
+                NativeResult.error(
+                    "permission_denied",
+                    "Notification permission denied",
+                    recoverable = true,
+                    details = notificationState(),
+                ),
+            )
         }
         initializeChannels()
         val id = call.argument<Int>("id")
@@ -92,17 +129,28 @@ class NotificationChannelHandler(private val activity: MainActivity) : MethodCha
         val title = call.argument<String>("title") ?: "NexAI"
         val message = call.argument<String>("message") ?: ""
         val route = call.argument<String>("route") ?: "home"
+        val taskId = call.argument<String>("taskId")
 
         val notification = NotificationCompat.Builder(activity, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(message)
             .setAutoCancel(true)
-            .setContentIntent(mainPendingIntent(route, null))
+            .setOnlyAlertOnce(true)
+            .setContentIntent(mainPendingIntent(route, taskId))
             .build()
 
         NotificationManagerCompat.from(activity).notify(id, notification)
-        result.success(NativeResult.ok(mapOf("id" to id, "shown" to true)))
+        result.success(
+            NativeResult.ok(
+                mapOf(
+                    "id" to id,
+                    "shown" to true,
+                    "taskId" to taskId,
+                    "channelsInitialized" to channelsInitialized,
+                ),
+            ),
+        )
     }
 
     private fun mainPendingIntent(route: String, taskId: String?): PendingIntent {
@@ -119,6 +167,7 @@ class NotificationChannelHandler(private val activity: MainActivity) : MethodCha
     private fun notificationState(): Map<String, Any?> = mapOf(
         "enabled" to NotificationManagerCompat.from(activity).areNotificationsEnabled(),
         "runtimePermissionGranted" to hasNotificationPermission(),
+        "channelsInitialized" to channelsInitialized,
         "sdkInt" to Build.VERSION.SDK_INT,
     )
 

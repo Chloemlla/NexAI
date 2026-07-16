@@ -1,0 +1,4 @@
+{"file":"docs/android-kotlin-native-capability-migration.md","reason":"Validate channel envelope/error-code conventions remain intact"}
+{"file":"docs/security_hardening_checklist.md","reason":"Validate honeypot/non-fatal security posture is preserved"}
+{"file":"docs/trellis/07-17-android-kotlin-boundary-hardening/prd.md","reason":"Acceptance criteria checklist for each slice"}
+{"file":"docs/trellis/07-17-android-kotlin-boundary-hardening/info.md","reason":"API contracts and failure modes to verify after code changes"}

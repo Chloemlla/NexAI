@@ -1,0 +1,5 @@
+{"file":"docs/android-kotlin-native-capability-migration.md","reason":"Existing Android Kotlin capability migration contract and channel conventions"}
+{"file":"docs/security_hardening_checklist.md","reason":"Security product intent: integrity, root/debug honeypot, no hard-kill strategy"}
+{"file":"docs/trellis/07-17-android-kotlin-boundary-hardening/prd.md","reason":"This task requirements and acceptance criteria"}
+{"file":"docs/trellis/07-17-android-kotlin-boundary-hardening/research/current-gap-matrix.md","reason":"Current vs target gap matrix for five slices"}
+{"file":"docs/trellis/07-17-android-kotlin-boundary-hardening/info.md","reason":"Technical design and API surface for implement phase"}

@@ -1,0 +1,54 @@
+{
+  "id": "android-kotlin-boundary-hardening",
+  "name": "android-kotlin-boundary-hardening",
+  "title": "plan: harden Android Kotlin boundary capabilities (passkey/security/tasks/update/fingerprint)",
+  "description": "Trellis plan for five Android Kotlin boundary slices while keeping Flutter as the product shell.",
+  "status": "planning",
+  "dev_type": "android-native",
+  "scope": "android-boundary",
+  "package": "android",
+  "priority": "P1",
+  "creator": "Codex",
+  "assignee": "Codex",
+  "createdAt": "2026-07-17",
+  "completedAt": null,
+  "branch": "main",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [
+    "passkey-provider-diagnostics",
+    "startup-security-bootstrap",
+    "background-notification-stability",
+    "update-package-verification",
+    "fingerprint-antidebug-signals",
+    "dart-bridges"
+  ],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "docs/android-kotlin-native-capability-migration.md",
+    "docs/security_hardening_checklist.md",
+    "android/app/src/main/kotlin/com/chloemlla/nexai/channels/PasskeyChannel.kt",
+    "android/app/src/main/kotlin/com/chloemlla/nexai/security/SecuritySignals.kt",
+    "android/app/src/main/kotlin/com/chloemlla/nexai/NexAIApplication.kt",
+    "android/app/src/main/kotlin/com/chloemlla/nexai/channels/UpdateChannel.kt",
+    "android/app/src/main/kotlin/com/chloemlla/nexai/background/NativeTaskStore.kt",
+    "android/app/src/main/kotlin/com/chloemlla/nexai/DeviceFingerprint.kt",
+    "lib/services/android_native/",
+    "lib/utils/app_security.dart",
+    "lib/utils/update_checker.dart"
+  ],
+  "notes": "NexAI does not ship full .trellis runtime; this docs/trellis task mirrors Project-Lumen task shape for planning and phased implementation.",
+  "meta": {
+    "slices": [
+      "A-docs",
+      "B-passkey",
+      "C-startup-security",
+      "D-tasks-notifications",
+      "E-update-verify",
+      "F-fingerprint-antidebug"
+    ]
+  }
+}

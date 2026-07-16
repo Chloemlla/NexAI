@@ -57,6 +57,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _smartAutoScroll = true;
   bool _developerDebugModeUnlocked = false;
 
+  // Android passkey: only use Google Password Manager, never fall back to OEM/system providers.
+  bool _passkeyGoogleOnly = true;
+
   // Cloud Sync
   bool _syncEnabled = false;
   String _syncMethod = 'WebDAV'; // 'WebDAV' or 'UpStash'
@@ -89,6 +92,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get fullScreenMode => _fullScreenMode;
   bool get smartAutoScroll => _smartAutoScroll;
   bool get developerDebugModeUnlocked => _developerDebugModeUnlocked;
+  bool get passkeyGoogleOnly => _passkeyGoogleOnly;
 
   bool get syncEnabled => _syncEnabled;
   String get syncMethod => _syncMethod;
@@ -175,6 +179,7 @@ class SettingsProvider extends ChangeNotifier {
       _smartAutoScroll = prefs.getBool('smartAutoScroll') ?? true;
       _developerDebugModeUnlocked =
           prefs.getBool('developerDebugModeUnlocked') ?? false;
+      _passkeyGoogleOnly = prefs.getBool('passkeyGoogleOnly') ?? true;
 
       _syncEnabled = prefs.getBool('syncEnabled') ?? false;
       _syncMethod = prefs.getString('syncMethod') ?? 'WebDAV';
@@ -270,6 +275,7 @@ class SettingsProvider extends ChangeNotifier {
       'developerDebugModeUnlocked',
       _developerDebugModeUnlocked,
     );
+    await prefs.setBool('passkeyGoogleOnly', _passkeyGoogleOnly);
 
     await prefs.setBool('syncEnabled', _syncEnabled);
     await prefs.setString('syncMethod', _syncMethod);
@@ -326,6 +332,13 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> unlockDeveloperDebugMode() async {
     if (_developerDebugModeUnlocked) return;
     _developerDebugModeUnlocked = true;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setPasskeyGoogleOnly(bool value) async {
+    if (_passkeyGoogleOnly == value) return;
+    _passkeyGoogleOnly = value;
     notifyListeners();
     await _save();
   }

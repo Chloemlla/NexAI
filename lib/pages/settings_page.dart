@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -2090,6 +2091,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildPasskeyCard(BuildContext context, ColorScheme cs, TextTheme tt) {
     final auth = context.watch<AuthProvider>();
+    final settings = context.watch<SettingsProvider>();
     if (!auth.isLoggedIn || auth.currentUser == null) {
       return const SizedBox.shrink();
     }
@@ -2133,6 +2135,26 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ],
         ),
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+          const SizedBox(height: 12),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              '仅使用 Google 密码管理器',
+              style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            subtitle: Text(
+              settings.passkeyGoogleOnly
+                  ? '不回退系统/厂商 Passkey 管理器'
+                  : 'Google 不可用时允许回退系统管理器',
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            value: settings.passkeyGoogleOnly,
+            onChanged: auth.isLoading
+                ? null
+                : (value) => settings.setPasskeyGoogleOnly(value),
+          ),
+        ],
         const SizedBox(height: 16),
         FilledButton.tonalIcon(
           onPressed: auth.isLoading || auth.currentUser?.hasPasskey == true

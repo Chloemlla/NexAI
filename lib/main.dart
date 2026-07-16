@@ -91,6 +91,7 @@ Future<void> _runMain() async {
   final translationProvider = TranslationProvider();
   final shortUrlProvider = ShortUrlProvider();
   final authProvider = AuthProvider();
+  authProvider.attachSettingsProvider(settingsProvider);
 
   runApp(
     MultiProvider(

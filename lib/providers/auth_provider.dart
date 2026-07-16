@@ -13,6 +13,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/android_native/android_native_result.dart';
 import '../services/android_native/android_passkey_service.dart';
+import 'settings_provider.dart';
 import '../services/nexai_auth_service.dart';
 import '../utils/build_config.dart';
 
@@ -69,6 +70,7 @@ class AuthProvider extends ChangeNotifier {
     wOptions: WindowsOptions(useBackwardCompatibility: false),
   );
   final AndroidPasskeyService _androidPasskeyService = AndroidPasskeyService();
+  SettingsProvider? _settingsProvider;
 
   NexaiUser? _currentUser;
   String? _accessToken;
@@ -562,6 +564,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void attachSettingsProvider(SettingsProvider settings) {
+    _settingsProvider = settings;
+  }
+
+  bool _passkeyGoogleOnlyPreference() {
+    return _settingsProvider?.passkeyGoogleOnly ?? true;
+  }
+
   // ========== WebAuthn (Passkeys) ==========
 
   /// Bind a new Passkey to the current account
@@ -623,8 +633,11 @@ class AuthProvider extends ChangeNotifier {
 
       // 3. Prompt user to create passkey through Android Credential Manager
       markStep('invoke_native_register');
+      final googleOnly = _passkeyGoogleOnlyPreference();
+      debugContext['passkeyGoogleOnly'] = googleOnly;
       final nativeResult = await _androidPasskeyService.register(
         options: requestOptions,
+        googleOnly: googleOnly,
       );
       debugContext['nativeRegisterResult'] =
           _summarizeAndroidNativeResult(nativeResult);
@@ -816,8 +829,11 @@ class AuthProvider extends ChangeNotifier {
 
       // 3. Prompt user to authenticate through Android Credential Manager
       markStep('invoke_native_authenticate');
+      final googleOnly = _passkeyGoogleOnlyPreference();
+      debugContext['passkeyGoogleOnly'] = googleOnly;
       final nativeResult = await _androidPasskeyService.authenticate(
         options: requestOptions,
+        googleOnly: googleOnly,
       );
       debugContext['nativeAuthenticateResult'] =
           _summarizeAndroidNativeResult(nativeResult);

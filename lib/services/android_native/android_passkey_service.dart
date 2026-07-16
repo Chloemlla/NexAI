@@ -17,14 +17,16 @@ class AndroidPasskeyService {
 
   Future<AndroidNativeResult<Map<String, dynamic>>> register({
     required Map<String, dynamic> options,
+    bool googleOnly = true,
   }) {
-    return _invokePasskey('register', options);
+    return _invokePasskey('register', options, googleOnly: googleOnly);
   }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> authenticate({
     required Map<String, dynamic> options,
+    bool googleOnly = true,
   }) {
-    return _invokePasskey('authenticate', options);
+    return _invokePasskey('authenticate', options, googleOnly: googleOnly);
   }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> signalUnknownCredential({
@@ -47,13 +49,19 @@ class AndroidPasskeyService {
 
   Future<AndroidNativeResult<Map<String, dynamic>>> _invokePasskey(
     String method,
-    Map<String, dynamic> options,
-  ) async {
+    Map<String, dynamic> options, {
+    bool? googleOnly,
+  }) async {
     if (!_available) return AndroidNativeResult.unsupported();
 
-    final envelope = await _channel.invokeMethod<Object?>(method, {
+    final args = <String, Object?>{
       'requestJson': jsonEncode(options),
-    });
+    };
+    if (googleOnly != null) {
+      args['googleOnly'] = googleOnly;
+    }
+
+    final envelope = await _channel.invokeMethod<Object?>(method, args);
     return AndroidNativeResult.fromEnvelope(
       envelope,
       _decodeNativePasskeyData,

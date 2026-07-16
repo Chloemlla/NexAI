@@ -17,6 +17,7 @@ import '../providers/auth_provider.dart';
 import '../utils/file_access_helper.dart';
 import 'rich_content_view.dart';
 import 'share_artifact_dialog.dart';
+import '../theme/lumen_tokens.dart';
 
 class MessageBubble extends StatefulWidget {
   final Message message;
@@ -78,22 +79,17 @@ class _MessageBubbleState extends State<MessageBubble> {
                               ? cs.primaryContainer
                               : cs.surfaceContainerHighest,
                           borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(22),
-                            topRight: const Radius.circular(22),
-                            bottomLeft: Radius.circular(isUser ? 22 : 6),
-                            bottomRight: Radius.circular(isUser ? 6 : 22),
+                            topLeft: const Radius.circular(LumenTokens.radiusLg),
+                            topRight: const Radius.circular(LumenTokens.radiusLg),
+                            bottomLeft: Radius.circular(
+                              isUser ? LumenTokens.radiusLg : LumenTokens.radiusXs,
+                            ),
+                            bottomRight: Radius.circular(
+                              isUser ? LumenTokens.radiusXs : LumenTokens.radiusLg,
+                            ),
                           ),
                           border: widget.message.isError
                               ? Border.all(color: cs.error.withAlpha(120))
-                              : null,
-                          boxShadow: isWide
-                              ? [
-                                  BoxShadow(
-                                    color: Colors.black.withAlpha(12),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ]
                               : null,
                         ),
                   padding: settings.borderlessMode

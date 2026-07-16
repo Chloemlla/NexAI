@@ -6,6 +6,7 @@ import '../models/note.dart';
 import '../providers/notes_provider.dart';
 import 'note_detail_page.dart';
 import 'graph_page.dart';
+import '../theme/lumen_tokens.dart';
 
 final _taskItemRegex = RegExp(r'^\s*-\s+\[([ xX])\]\s+', multiLine: true);
 
@@ -76,7 +77,9 @@ class _NotesPageState extends State<NotesPage>
         child: Focus(
           autofocus: true,
           child: Scaffold(
-            backgroundColor: cs.surface,
+            backgroundColor: cs.brightness == Brightness.dark
+                ? LumenTokens.backgroundDark
+                : LumenTokens.background,
             body: Column(
               children: [
                 // Search bar (toggleable)
@@ -103,16 +106,14 @@ class _NotesPageState extends State<NotesPage>
 
   Widget _buildSearchBar(ColorScheme cs) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      margin: const EdgeInsets.fromLTRB(
+        LumenTokens.pagePaddingStart,
+        LumenTokens.pagePaddingTop,
+        LumenTokens.pagePaddingEnd,
+        4,
+      ),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withAlpha(20),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
       ),
       child: SearchBar(
         controller: _searchController,
@@ -177,7 +178,12 @@ class _NotesPageState extends State<NotesPage>
 
   Widget _buildSearchRevealBar(ColorScheme cs) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.fromLTRB(
+        LumenTokens.pagePaddingStart,
+        LumenTokens.pagePaddingTop,
+        LumenTokens.pagePaddingEnd,
+        4,
+      ),
       child: Align(
         alignment: Alignment.centerRight,
         child: TextButton.icon(
@@ -191,9 +197,9 @@ class _NotesPageState extends State<NotesPage>
           label: const Text('打开搜索'),
           style: TextButton.styleFrom(
             foregroundColor: cs.primary,
-            backgroundColor: cs.primaryContainer.withAlpha(100),
+            backgroundColor: cs.primaryContainer,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
             ),
           ),
         ),
@@ -391,11 +397,10 @@ class _NotesPageState extends State<NotesPage>
               elevation: 0,
               color: cs.tertiaryContainer.withAlpha(120),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: cs.tertiary.withAlpha(60), width: 1),
+                borderRadius: LumenTokens.cardBorderRadius,
               ),
               child: InkWell(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: LumenTokens.cardBorderRadius,
                 onTap: () {
                   Navigator.of(
                     context,
@@ -995,11 +1000,10 @@ class _NoteCard extends StatelessWidget {
       elevation: 0,
       color: cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80), width: 1),
+        borderRadius: LumenTokens.cardBorderRadius,
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: LumenTokens.cardBorderRadius,
         onTap: () async {
           await context.read<NotesProvider>().markViewed(note.id);
           if (!context.mounted) return;
@@ -1008,7 +1012,7 @@ class _NoteCard extends StatelessWidget {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1018,22 +1022,10 @@ class _NoteCard extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: taskTotal > 0
-                            ? [cs.tertiaryContainer, cs.tertiary.withAlpha(100)]
-                            : [cs.primaryContainer, cs.primary.withAlpha(100)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (taskTotal > 0 ? cs.tertiary : cs.primary)
-                              .withAlpha(30),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      color: taskTotal > 0
+                          ? cs.tertiaryContainer
+                          : cs.primaryContainer,
+                      borderRadius: LumenTokens.chipBorderRadius,
                     ),
                     child: Center(
                       child: Icon(

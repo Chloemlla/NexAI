@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/navigation_helper.dart';
+import '../theme/lumen_tokens.dart';
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
@@ -45,7 +46,10 @@ class WelcomeView extends StatelessWidget {
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+        padding: EdgeInsets.symmetric(
+          horizontal: LumenTokens.horizontalPaddingForWidth(screenWidth),
+          vertical: 32,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -153,13 +157,12 @@ class WelcomeView extends StatelessWidget {
     }
 
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 720),
+      constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: cs.outlineVariant.withAlpha(70)),
+          borderRadius: LumenTokens.cardBorderRadius,
         ),
         child: Row(
           children: [
@@ -170,7 +173,7 @@ class WelcomeView extends StatelessWidget {
                 color: settings.isConfigured
                     ? cs.primaryContainer
                     : cs.errorContainer.withAlpha(160),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: LumenTokens.chipBorderRadius,
               ),
               child: Icon(
                 settings.isConfigured
@@ -192,7 +195,7 @@ class WelcomeView extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: tt.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       letterSpacing: 0,
                     ),
                   ),
@@ -233,11 +236,16 @@ class WelcomeView extends StatelessWidget {
       width: width,
       child: Card(
         color: cs.surfaceContainerHighest.withAlpha(160),
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: LumenTokens.cardBorderRadius,
+        ),
         child: InkWell(
           onTap: isLoading
               ? null
               : () => _sendPrompt(context, settings, item.prompt),
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: LumenTokens.cardBorderRadius,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
             child: Column(
@@ -247,7 +255,7 @@ class WelcomeView extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(13),
+                    borderRadius: LumenTokens.chipBorderRadius,
                   ),
                   child: Center(
                     child: Icon(

@@ -10,6 +10,7 @@ import '../services/nexai_auth_service.dart';
 import '../utils/google_font_paint.dart';
 import '../utils/app_security.dart';
 import '../widgets/passkey_debug_dialog.dart';
+import '../theme/lumen_tokens.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -117,7 +118,7 @@ class _LoginPageState extends State<LoginPage>
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: LumenTokens.cardBorderRadius,
                       ),
                       child: Row(
                         children: [
@@ -273,8 +274,7 @@ class _LoginPageState extends State<LoginPage>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withAlpha(120),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.outlineVariant),
+        borderRadius: LumenTokens.cardBorderRadius,
       ),
       child: Row(
         children: [

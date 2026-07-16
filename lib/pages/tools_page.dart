@@ -9,6 +9,7 @@ import 'short_url_page.dart';
 import 'translation_page.dart';
 import 'video_compressor_page.dart';
 import 'video_to_audio_page.dart';
+import '../theme/lumen_tokens.dart';
 
 class ToolsPage extends StatefulWidget {
   const ToolsPage({super.key});
@@ -204,21 +205,31 @@ class _ToolsPageState extends State<ToolsPage> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final isNarrow = MediaQuery.of(context).size.width < 600;
-    final hPad = isNarrow ? 20.0 : 28.0;
+    final hPad = LumenTokens.horizontalPaddingForWidth(
+      MediaQuery.of(context).size.width,
+    );
     final filteredTools = _filteredTools;
     final groupedTools = _groupTools(filteredTools);
 
     return Scaffold(
+      backgroundColor: cs.brightness == Brightness.dark
+          ? LumenTokens.backgroundDark
+          : LumenTokens.background,
       body: CustomScrollView(
         key: const PageStorageKey('tools_page_scroll'),
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 0),
+              padding: EdgeInsets.fromLTRB(
+                hPad,
+                LumenTokens.pagePaddingTop + 8,
+                hPad,
+                0,
+              ),
               child: Column(
                 children: [
                   _buildIntroCard(cs, tt),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: LumenTokens.sectionGap),
                   _buildSearchPanel(cs, tt, filteredTools.length),
                 ],
               ),
@@ -248,14 +259,14 @@ class _ToolsPageState extends State<ToolsPage> {
                   ),
                 ),
                 SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: hPad),
-                  sliver: SliverGrid(
-                    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: isNarrow ? 180 : 200,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.92,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: hPad),
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: isNarrow ? 180 : 200,
+                        mainAxisSpacing: LumenTokens.sectionGap,
+                        crossAxisSpacing: LumenTokens.sectionGap,
+                        childAspectRatio: 0.92,
+                      ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final tool = tools[index];
                       return _ToolCard(
@@ -278,11 +289,10 @@ class _ToolsPageState extends State<ToolsPage> {
 
   Widget _buildIntroCard(ColorScheme cs, TextTheme tt) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: cs.outlineVariant.withAlpha(40)),
+        borderRadius: LumenTokens.cardBorderRadius,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,24 +301,13 @@ class _ToolsPageState extends State<ToolsPage> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [cs.primary, cs.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: cs.primary.withAlpha(50),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: cs.primaryContainer,
+              borderRadius: LumenTokens.chipBorderRadius,
             ),
             child: Icon(
               Icons.build_circle_rounded,
               size: 24,
-              color: cs.onPrimary,
+              color: cs.onPrimaryContainer,
             ),
           ),
           const SizedBox(width: 14),
@@ -319,7 +318,7 @@ class _ToolsPageState extends State<ToolsPage> {
                 Text(
                   '按任务而不是按记忆找工具。',
                   style: tt.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     letterSpacing: 0,
                   ),
                 ),
@@ -343,18 +342,17 @@ class _ToolsPageState extends State<ToolsPage> {
 
   Widget _buildSearchPanel(ColorScheme cs, TextTheme tt, int resultCount) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: cs.outlineVariant.withAlpha(40)),
+        borderRadius: LumenTokens.cardBorderRadius,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '快速定位',
-            style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           SearchBar(
@@ -446,8 +444,7 @@ class _ToolsPageState extends State<ToolsPage> {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: cs.outlineVariant.withAlpha(40)),
+          borderRadius: LumenTokens.cardBorderRadius,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -456,13 +453,13 @@ class _ToolsPageState extends State<ToolsPage> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: cs.primaryContainer.withAlpha(120),
+                color: cs.primaryContainer,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.search_off_rounded,
                 size: 34,
-                color: cs.primary,
+                color: cs.onPrimaryContainer,
               ),
             ),
             const SizedBox(height: 16),
@@ -470,7 +467,7 @@ class _ToolsPageState extends State<ToolsPage> {
               '没有找到匹配工具',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w600,
                 color: cs.onSurface,
               ),
             ),
@@ -581,15 +578,17 @@ class _SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 30,
-            height: 30,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: cs.primaryContainer.withAlpha(140),
-              borderRadius: BorderRadius.circular(9),
+              color: cs.primaryContainer,
+              shape: BoxShape.circle,
             ),
-            child: Center(child: Icon(icon, size: 16, color: cs.primary)),
+            child: Center(
+              child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -598,7 +597,7 @@ class _SectionHeader extends StatelessWidget {
                   title,
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                     letterSpacing: 0,
                   ),
@@ -664,25 +663,21 @@ class _ToolCardState extends State<_ToolCard> {
         curve: Curves.easeOutCubic,
         child: Card(
           color: _hovered ? cs.surfaceContainer : cs.surfaceContainerLow,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: LumenTokens.cardBorderRadius,
           ),
           child: InkWell(
             onTap: widget.onTap,
             onHover: (value) => setState(() => _hovered = value),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: LumenTokens.cardBorderRadius,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 160),
               curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: _hovered
-                      ? cs.primary.withAlpha(90)
-                      : cs.outlineVariant.withAlpha(50),
-                  width: 1,
-                ),
+                borderRadius: LumenTokens.cardBorderRadius,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -692,14 +687,9 @@ class _ToolCardState extends State<_ToolCard> {
                     height: 60,
                     decoration: BoxDecoration(
                       gradient: widget.gradient,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: cs.primary.withAlpha(_hovered ? 55 : 30),
-                          blurRadius: _hovered ? 16 : 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
+                      borderRadius: BorderRadius.circular(
+                        LumenTokens.radiusMd,
+                      ),
                     ),
                     child: Icon(
                       widget.icon,
@@ -712,7 +702,7 @@ class _ToolCardState extends State<_ToolCard> {
                     widget.title,
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       color: cs.onSurface,
                       letterSpacing: 0,
                       height: 1.2,

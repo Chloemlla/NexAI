@@ -1,0 +1,26 @@
+{
+  "stage": "deep_interview",
+  "run_id": "vibe-20260716-223836",
+  "goal": "Replace NexAI Android UI/UX soft surfaces with Project-Lumen style",
+  "deliverable": "Android-only Lumen theme + soft-surface redesign",
+  "constraints": [
+    "Android only",
+    "no local install/build",
+    "commit after completion"
+  ],
+  "acceptance_criteria": [
+    "Android uses Lumen palette by default",
+    "Soft surfaces use Lumen radius/spacing/elevation",
+    "Desktop theme path unchanged"
+  ],
+  "non_goals": [
+    "Desktop redesign",
+    "feature rewrite"
+  ],
+  "autonomy_mode": "interactive_governed",
+  "inferred_assumptions": [
+    "custom accent can override",
+    "no global mono font force"
+  ],
+  "approach": "full soft-surface redesign"
+}

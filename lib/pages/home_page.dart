@@ -22,6 +22,7 @@ import 'settings_page.dart';
 import 'about_page.dart';
 import 'graph_page.dart';
 import 'tools_page.dart';
+import '../theme/lumen_tokens.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -218,10 +219,16 @@ class _HomePageState extends State<HomePage> with WindowListener {
     final fullScreen = settings.fullScreenMode && isChat;
 
     return Scaffold(
+      backgroundColor: isAndroid
+          ? (cs.brightness == Brightness.dark
+                ? LumenTokens.backgroundDark
+                : LumenTokens.background)
+          : cs.surface,
       appBar: fullScreen
           ? null
           : AppBar(
-              surfaceTintColor: cs.surfaceTint,
+              surfaceTintColor: Colors.transparent,
+              backgroundColor: cs.surface,
               title: Row(
                 children: [
                   Hero(
@@ -268,7 +275,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       key: ValueKey(_androidNavIndex),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 19,
+                        fontSize: LumenTokens.topBarTitleSize,
                         color: cs.onSurface,
                         letterSpacing: 0,
                       ),
@@ -287,6 +294,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
                     style: FilledButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          LumenTokens.radiusMd,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -322,6 +334,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
                     style: FilledButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          LumenTokens.radiusMd,
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(
@@ -377,7 +394,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
               },
               labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
               animationDuration: const Duration(milliseconds: 400),
-              elevation: 3,
+              elevation: 0,
+              height: LumenTokens.navigationBarHeight,
+              backgroundColor: cs.surface,
+              indicatorColor: cs.secondaryContainer,
               destinations: const [
                 NavigationDestination(
                   icon: Icon(Icons.chat_outlined),

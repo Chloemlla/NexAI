@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
@@ -9,6 +10,11 @@ import 'providers/settings_provider.dart';
 import 'services/crash_reporter.dart';
 import 'pages/crash_report_page.dart';
 import 'pages/home_page.dart';
+import 'theme/lumen_theme.dart';
+import 'theme/lumen_tokens.dart';
+
+bool get _isAndroid =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
 class NexAIApp extends StatelessWidget {
   const NexAIApp({super.key});
@@ -31,37 +37,64 @@ class NexAIApp extends StatelessWidget {
   ) {
     final seedColor = settings.accentColorValue != null
         ? Color(settings.accentColorValue!)
-        : const Color(0xFF6750A4);
+        : (_isAndroid ? LumenTokens.teal : const Color(0xFF6750A4));
 
-    final lightScheme =
-        lightDynamic ??
-        ColorScheme.fromSeed(
-          seedColor: seedColor,
-          brightness: Brightness.light,
-        );
-    final darkScheme =
-        darkDynamic ??
-        ColorScheme.fromSeed(seedColor: seedColor, brightness: Brightness.dark);
+    final accentOverride = settings.accentColorValue != null
+        ? Color(settings.accentColorValue!)
+        : null;
 
-    final effectiveLight = settings.accentColorValue != null
-        ? ColorScheme.fromSeed(
-            seedColor: Color(settings.accentColorValue!),
+    final ColorScheme effectiveLight;
+    final ColorScheme effectiveDark;
+
+    if (_isAndroid) {
+      // Android uses the fixed Project-Lumen soft-surface palette.
+      // A custom accent only overrides primary family seed values.
+      effectiveLight = LumenTheme.lightColorScheme(accentOverride: accentOverride);
+      effectiveDark = LumenTheme.darkColorScheme(accentOverride: accentOverride);
+    } else {
+      final lightScheme =
+          lightDynamic ??
+          ColorScheme.fromSeed(
+            seedColor: seedColor,
             brightness: Brightness.light,
-          )
-        : lightScheme;
-    final effectiveDark = settings.accentColorValue != null
-        ? ColorScheme.fromSeed(
-            seedColor: Color(settings.accentColorValue!),
+          );
+      final darkScheme =
+          darkDynamic ??
+          ColorScheme.fromSeed(
+            seedColor: seedColor,
             brightness: Brightness.dark,
-          )
-        : darkScheme;
+          );
+
+      effectiveLight = settings.accentColorValue != null
+          ? ColorScheme.fromSeed(
+              seedColor: Color(settings.accentColorValue!),
+              brightness: Brightness.light,
+            )
+          : lightScheme;
+      effectiveDark = settings.accentColorValue != null
+          ? ColorScheme.fromSeed(
+              seedColor: Color(settings.accentColorValue!),
+              brightness: Brightness.dark,
+            )
+          : darkScheme;
+    }
 
     return MaterialApp(
       title: 'NexAI',
       debugShowCheckedModeBanner: false,
       themeMode: settings.themeMode,
-      theme: _buildTheme(settings, effectiveLight),
-      darkTheme: _buildTheme(settings, effectiveDark),
+      theme: _isAndroid
+          ? LumenTheme.build(
+              colorScheme: effectiveLight,
+              fontFamily: settings.effectiveFontFamily,
+            )
+          : _buildTheme(settings, effectiveLight),
+      darkTheme: _isAndroid
+          ? LumenTheme.build(
+              colorScheme: effectiveDark,
+              fontFamily: settings.effectiveFontFamily,
+            )
+          : _buildTheme(settings, effectiveDark),
       home: const _CrashReportGate(),
       builder: FlutterSmartDialog.init(),
       navigatorObservers: [FlutterSmartDialog.observer],

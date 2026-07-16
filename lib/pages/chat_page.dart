@@ -10,6 +10,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/rich_content_view.dart';
 import '../widgets/welcome_view.dart';
 import 'image_generation_page.dart';
+import '../theme/lumen_tokens.dart';
 
 class ChatPage extends StatefulWidget {
   const ChatPage({super.key});
@@ -342,8 +343,8 @@ class _ChatPageState extends State<ChatPage> {
         // AnimatedPadding so the bar slides up smoothly with the keyboard
         Material(
           color: cs.surfaceContainerLow,
-          surfaceTintColor: cs.surfaceTint,
-          elevation: keyboardVisible ? 2 : 0,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
           child: SafeArea(
             top: false,
             // When keyboard is visible, SafeArea bottom is not needed
@@ -351,9 +352,9 @@ class _ChatPageState extends State<ChatPage> {
             bottom: !keyboardVisible,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                isWide ? horizontalPad : 10,
+                isWide ? horizontalPad : LumenTokens.pagePaddingStart,
                 8,
-                isWide ? horizontalPad : 6,
+                isWide ? horizontalPad : LumenTokens.pagePaddingEnd,
                 8,
               ),
               child: Row(
@@ -373,7 +374,9 @@ class _ChatPageState extends State<ChatPage> {
                       style: IconButton.styleFrom(
                         backgroundColor: cs.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(23),
+                          borderRadius: BorderRadius.circular(
+                            LumenTokens.radiusMd,
+                          ),
                         ),
                       ),
                     ),
@@ -411,15 +414,21 @@ class _ChatPageState extends State<ChatPage> {
                             vertical: 14,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
+                            borderRadius: BorderRadius.circular(
+                              LumenTokens.radiusXl,
+                            ),
                             borderSide: BorderSide.none,
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
+                            borderRadius: BorderRadius.circular(
+                              LumenTokens.radiusXl,
+                            ),
                             borderSide: BorderSide.none,
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(26),
+                            borderRadius: BorderRadius.circular(
+                              LumenTokens.radiusXl,
+                            ),
                             borderSide: BorderSide(
                               color: cs.primary.withAlpha(100),
                               width: 1.5,
@@ -455,15 +464,7 @@ class _ChatPageState extends State<ChatPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.primary.withAlpha(40)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(20),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: LumenTokens.cardBorderRadius,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,8 +512,7 @@ class _ChatPageState extends State<ChatPage> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withAlpha(60)),
+        borderRadius: LumenTokens.cardBorderRadius,
       ),
       child: Wrap(
         spacing: 8,

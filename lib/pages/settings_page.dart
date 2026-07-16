@@ -24,6 +24,7 @@ import '../widgets/user_avatar.dart';
 import 'about_page.dart';
 import 'developer_debug_page.dart';
 import 'login_page.dart';
+import '../theme/lumen_tokens.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -257,7 +258,9 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: cs.brightness == Brightness.dark
+          ? LumenTokens.backgroundDark
+          : LumenTokens.background,
       // FAB-style save button that appears when dirty
       floatingActionButton: IgnorePointer(
         ignoring: !_isDirty,
@@ -283,7 +286,12 @@ class _SettingsPageState extends State<SettingsPage> {
       body: CustomScrollView(
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            padding: const EdgeInsets.fromLTRB(
+              LumenTokens.pagePaddingStart,
+              LumenTokens.pagePaddingTop + 8,
+              LumenTokens.pagePaddingEnd,
+              100,
+            ),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 // ── Account ──
@@ -293,9 +301,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   cs: cs,
                   tt: tt,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: LumenTokens.sectionGap),
                 _buildAccountCard(context, cs, tt),
-                const SizedBox(height: 10),
+                const SizedBox(height: LumenTokens.sectionGap),
                 _buildPasskeyCard(context, cs, tt),
                 const SizedBox(height: 20),
 
@@ -306,7 +314,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   cs: cs,
                   tt: tt,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: LumenTokens.sectionGap),
                 _SettingsCard(
                   cs: cs,
                   children: [
@@ -2303,19 +2311,21 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: 32,
+          height: 32,
           decoration: BoxDecoration(
-            color: cs.primaryContainer.withAlpha(160),
-            borderRadius: BorderRadius.circular(9),
+            color: cs.primaryContainer,
+            shape: BoxShape.circle,
           ),
-          child: Center(child: Icon(icon, size: 16, color: cs.primary)),
+          child: Center(
+            child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
+          ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Text(
           label,
-          style: tt.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
+          style: tt.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
             letterSpacing: 0,
             color: cs.onSurface,
           ),
@@ -2335,7 +2345,10 @@ class _SettingsCard extends StatelessWidget {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: LumenTokens.cardBorderRadius,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

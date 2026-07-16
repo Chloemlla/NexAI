@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../theme/lumen_tokens.dart';
+
 class ToolHeroChipData {
   final IconData icon;
   final String label;
@@ -144,21 +146,14 @@ class ToolPageHeroSliver extends StatelessWidget {
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [cs.primary, cs.tertiary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: cs.primary.withAlpha(60),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                          color: cs.primaryContainer,
+                          borderRadius: LumenTokens.cardBorderRadius,
                         ),
-                        child: Icon(icon, size: 32, color: cs.onPrimary),
+                        child: Icon(
+                          icon,
+                          size: 32,
+                          color: cs.onPrimaryContainer,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -328,12 +323,14 @@ class ToolSectionTitle extends StatelessWidget {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: cs.primaryContainer.withAlpha(150),
-            borderRadius: BorderRadius.circular(10),
+            color: cs.primaryContainer,
+            shape: BoxShape.circle,
           ),
-          child: Center(child: Icon(icon, size: 18, color: cs.primary)),
+          child: Center(
+            child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
+          ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Text(
           title,
           style: tt.titleSmall?.copyWith(
@@ -359,7 +356,7 @@ class ToolPanel extends StatelessWidget {
   const ToolPanel({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(18),
+    this.padding = const EdgeInsets.all(16),
     this.color,
     this.borderSide,
   });
@@ -371,9 +368,10 @@ class ToolPanel extends StatelessWidget {
     return Card(
       elevation: 0,
       color: color ?? cs.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: borderSide ?? BorderSide(color: cs.outlineVariant.withAlpha(50)),
+        borderRadius: LumenTokens.cardBorderRadius,
+        side: borderSide ?? BorderSide.none,
       ),
       child: Padding(padding: padding, child: child),
     );
@@ -407,10 +405,10 @@ class ToolEmptyStateCard extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: cs.primaryContainer.withAlpha(120),
+              color: cs.primaryContainer,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 34, color: cs.primary),
+            child: Icon(icon, size: 34, color: cs.onPrimaryContainer),
           ),
           const SizedBox(height: 16),
           Text(
@@ -484,17 +482,14 @@ class _ToolQuickActionCard extends StatelessWidget {
       opacity: enabled ? 1 : 0.48,
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: LumenTokens.cardBorderRadius,
         child: InkWell(
           onTap: action.onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: LumenTokens.cardBorderRadius,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withAlpha(40),
-              ),
+              borderRadius: LumenTokens.cardBorderRadius,
             ),
             child: Row(
               children: [
@@ -503,7 +498,7 @@ class _ToolQuickActionCard extends StatelessWidget {
                   height: 34,
                   decoration: BoxDecoration(
                     color: bg,
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: LumenTokens.chipBorderRadius,
                   ),
                   child: Icon(action.icon, size: 18, color: iconColor),
                 ),

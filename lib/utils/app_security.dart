@@ -56,6 +56,19 @@ class AppSecurity {
   String? dexHash;
 
   AndroidSecuritySnapshot? _nativeSnapshot;
+  Map<String, dynamic>? _startupSnapshot;
+
+  /// Aggregate snapshot collected early by Kotlin Application bootstrap.
+  Map<String, dynamic>? get startupSecuritySnapshot => _startupSnapshot;
+
+  /// Passkey provider diagnostics embedded in the startup snapshot when available.
+  Map<String, dynamic>? get passkeyProviderDiagnostics {
+    final raw = _startupSnapshot?['passkeyProviders'];
+    if (raw is Map) {
+      return raw.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return null;
+  }
 
   /// Initialise security checks. Call once in [main] before [runApp].
   Future<void> init() async {
@@ -74,8 +87,31 @@ class AppSecurity {
 
   Future<void> _loadNativeSnapshot() async {
     if (!Platform.isAndroid) return;
+
+    final service = AndroidSecurityService();
     try {
-      final result = await AndroidSecurityService().getSecuritySnapshot();
+      final startup = await service.getStartupSecuritySnapshot();
+      if (startup.ok && startup.data != null) {
+        _startupSnapshot = startup.data;
+        final securityRaw = startup.data!['security'];
+        if (securityRaw is Map) {
+          _nativeSnapshot = AndroidSecuritySnapshot.fromMap(
+            securityRaw.map((key, value) => MapEntry(key.toString(), value)),
+          );
+          debugPrint('AppSecurity: reused startup security snapshot');
+          return;
+        }
+      } else {
+        debugPrint(
+          'AppSecurity: startup snapshot unavailable: ${startup.error?.code}',
+        );
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: startup snapshot error: $e');
+    }
+
+    try {
+      final result = await service.getSecuritySnapshot();
       if (result.ok) {
         _nativeSnapshot = result.data;
       } else {

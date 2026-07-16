@@ -73,6 +73,14 @@ class AndroidSecurityService {
     return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
   }
 
+  Future<AndroidNativeResult<Map<String, dynamic>>> getStartupSecuritySnapshot() async {
+    if (!_available) return AndroidNativeResult.unsupported();
+    final envelope = await _channel.invokeMethod<Object?>(
+      'getStartupSecuritySnapshot',
+    );
+    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+  }
+
   Future<void> setSecureScreen({required bool enable}) async {
     if (!_available) return;
     await _channel.invokeMethod<void>('setSecureScreen', {'enable': enable});

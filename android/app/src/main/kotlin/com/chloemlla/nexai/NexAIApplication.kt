@@ -4,6 +4,7 @@ import android.content.Context
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.chloemlla.nexai.core.mmkv.NexAIMmkv
+import com.chloemlla.nexai.security.StartupSecurityBootstrap
 import io.flutter.app.FlutterApplication
 
 class NexAIApplication : FlutterApplication() {
@@ -21,6 +22,17 @@ class NexAIApplication : FlutterApplication() {
         runCatching {
             installLumenCrashSdk()
             LumenCrash.recordBreadcrumb("Application.onCreate")
+        }
+        // Early non-fatal security/provider snapshot for diagnostics + crash breadcrumbs.
+        runCatching {
+            StartupSecurityBootstrap.ensureInitialized(this)
+            LumenCrash.recordBreadcrumb("Startup security snapshot ready")
+        }.onFailure { error ->
+            runCatching {
+                LumenCrash.recordBreadcrumb(
+                    "Startup security snapshot failed: ${error.javaClass.simpleName}",
+                )
+            }
         }
         runCatching { NexAIMmkv.initialize(this) }
             .onSuccess { LumenCrash.recordBreadcrumb("MMKV initialized") }

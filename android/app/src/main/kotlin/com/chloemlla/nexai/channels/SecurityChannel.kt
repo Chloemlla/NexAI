@@ -4,6 +4,7 @@ import android.view.WindowManager
 import com.chloemlla.nexai.DeviceFingerprint
 import com.chloemlla.nexai.MainActivity
 import com.chloemlla.nexai.security.SecuritySignals
+import com.chloemlla.nexai.security.StartupSecurityBootstrap
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
@@ -34,6 +35,9 @@ class SecurityChannel(
             }))
             "getOverlayRisk" -> result.success(NativeResult.ok(signals.getOverlayRisk()))
             "getSecuritySnapshot" -> result.success(NativeResult.ok(signals.getSecuritySnapshot()))
+            "getStartupSecuritySnapshot" -> result.success(
+                NativeResult.ok(StartupSecurityBootstrap.ensureInitialized(activity)),
+            )
 
             // Compatibility: old Dart device fingerprint helper used the security channel.
             "getHardwareInfo" -> result.success(deviceFingerprint.getHardwareInfo())

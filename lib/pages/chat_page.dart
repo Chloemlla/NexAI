@@ -296,7 +296,7 @@ class _ChatPageState extends State<ChatPage> {
                           thumbVisibility: false,
                           child: ListView.builder(
                             controller: _scrollController,
-                            // Keyboard pushes content up via resizeToAvoidBottomInset
+                            // Parent Scaffold resizes for IME; dismiss on drag.
                             keyboardDismissBehavior:
                                 ScrollViewKeyboardDismissBehavior.onDrag,
                             padding: EdgeInsets.fromLTRB(

@@ -204,6 +204,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
     final chat = context.watch<ChatProvider>();
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     final pages = <Widget>[
       const ChatPage(),
@@ -365,7 +366,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
             ),
         ],
       ),
-      bottomNavigationBar: fullScreen
+      // Hide the bottom bar while typing so it does not cover the composer.
+      bottomNavigationBar: fullScreen || keyboardVisible
           ? null
           : NavigationBar(
               selectedIndex: _androidNavIndex,

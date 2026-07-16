@@ -4,6 +4,8 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.nexai.channels.NativeChannelRegistry
 import io.flutter.embedding.android.FlutterActivity
@@ -13,14 +15,14 @@ class MainActivity : FlutterActivity() {
     private var nativeChannelRegistry: NativeChannelRegistry? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Use the Activity edge-to-edge helper so IME / system bar insets
+        // continue to flow into Flutter as MediaQuery.viewInsets.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         runCatching { LumenCrash.recordBreadcrumb("MainActivity.onCreate") }
 
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.R until 36) {
-            @Suppress("DEPRECATION")
-            window.setDecorFitsSystemWindows(false)
-        }
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.LOLLIPOP until 36) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        if (Build.VERSION.SDK_INT < 36) {
             @Suppress("DEPRECATION")
             window.statusBarColor = Color.TRANSPARENT
             @Suppress("DEPRECATION")

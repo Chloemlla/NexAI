@@ -1,8 +1,12 @@
 package com.chloemlla.nexai.channels
 
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.credentials.CreateCredentialResponse
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.CreatePublicKeyCredentialResponse
+import androidx.credentials.Credential
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetPublicKeyCredentialOption
@@ -48,11 +52,8 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
 
         scope.launch {
             try {
-                val request = CreatePublicKeyCredentialRequest(
-                    requestJson = requestJson,
-                    preferImmediatelyAvailableCredentials = false,
-                )
-                val response = credentialManager.createCredential(activity, request)
+                val outcome = createPasskeyPreferringGoogle(requestJson)
+                val response = outcome.response
                 if (response is CreatePublicKeyCredentialResponse) {
                     result.success(
                         NativeResult.ok(
@@ -60,6 +61,8 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                                 "responseJson" to response.registrationResponseJson,
                                 "responseType" to response.javaClass.name,
                                 "credentialManagerApi" to "createCredential",
+                                "providerPreference" to outcome.providerPreference,
+                                "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
                             ),
                         ),
                     )
@@ -69,12 +72,25 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                             "unexpected_create_response",
                             "Credential Manager returned ${response.javaClass.name}",
                             recoverable = false,
-                            details = mapOf("responseType" to response.javaClass.name),
+                            details = mapOf(
+                                "responseType" to response.javaClass.name,
+                                "providerPreference" to outcome.providerPreference,
+                                "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
+                            ),
                         ),
                     )
                 }
             } catch (error: CreateCredentialException) {
-                result.success(passkeyError("create_credential", error, credentialDetails(error)))
+                result.success(
+                    passkeyError(
+                        "create_credential",
+                        error,
+                        credentialDetails(error) + mapOf(
+                            "providerPreference" to preferredProviderMode(),
+                            "googlePasswordManagerAvailable" to isGooglePasswordManagerAvailable(),
+                        ),
+                    ),
+                )
             } catch (error: IllegalArgumentException) {
                 result.success(
                     NativeResult.invalidArgument(
@@ -180,15 +196,8 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
 
         scope.launch {
             try {
-                val option = GetPublicKeyCredentialOption(
-                    requestJson = requestJson,
-                )
-                val request = GetCredentialRequest(
-                    listOf(option),
-                    preferImmediatelyAvailableCredentials = false,
-                )
-                val response = credentialManager.getCredential(activity, request)
-                val credential = response.credential
+                val outcome = getPasskeyPreferringGoogle(requestJson)
+                val credential = outcome.credential
                 if (credential is PublicKeyCredential) {
                     result.success(
                         NativeResult.ok(
@@ -196,6 +205,8 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                                 "responseJson" to credential.authenticationResponseJson,
                                 "credentialType" to credential.type,
                                 "credentialManagerApi" to "getCredential",
+                                "providerPreference" to outcome.providerPreference,
+                                "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
                             ),
                         ),
                     )
@@ -205,12 +216,25 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                             "unexpected_get_credential",
                             "Credential Manager returned ${credential.javaClass.name}",
                             recoverable = false,
-                            details = mapOf("credentialType" to credential.javaClass.name),
+                            details = mapOf(
+                                "credentialType" to credential.javaClass.name,
+                                "providerPreference" to outcome.providerPreference,
+                                "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
+                            ),
                         ),
                     )
                 }
             } catch (error: GetCredentialException) {
-                result.success(passkeyError("get_credential", error, credentialDetails(error)))
+                result.success(
+                    passkeyError(
+                        "get_credential",
+                        error,
+                        credentialDetails(error) + mapOf(
+                            "providerPreference" to preferredProviderMode(),
+                            "googlePasswordManagerAvailable" to isGooglePasswordManagerAvailable(),
+                        ),
+                    ),
+                )
             } catch (error: IllegalArgumentException) {
                 result.success(
                     NativeResult.invalidArgument(
@@ -221,6 +245,177 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                 result.success(passkeyError("native_failure", error, throwableDetails(error)))
             }
         }
+    }
+
+    /**
+     * Prefer Google Password Manager when installed.
+     *
+     * OEM skins frequently replace/tamper the system credential provider UI. When GMS is present,
+     * pin create/get requests to Google first, then fall back to the unrestricted provider set.
+     */
+    private suspend fun createPasskeyPreferringGoogle(
+        requestJson: String,
+    ): CreatePasskeyOutcome {
+        if (isGooglePasswordManagerAvailable()) {
+            try {
+                val response = credentialManager.createCredential(
+                    activity,
+                    createPublicKeyRequest(
+                        requestJson = requestJson,
+                        allowedProviders = GOOGLE_PASSWORD_MANAGER_PROVIDERS,
+                    ),
+                )
+                return CreatePasskeyOutcome(
+                    response = response,
+                    providerPreference = PROVIDER_PREFERENCE_GOOGLE_FIRST,
+                    usedGooglePasswordManager = true,
+                )
+            } catch (error: CreateCredentialException) {
+                if (isUserCancellation(error) || !shouldFallbackFromGoogleProvider(error)) {
+                    throw error
+                }
+            }
+        }
+
+        val response = credentialManager.createCredential(
+            activity,
+            createPublicKeyRequest(
+                requestJson = requestJson,
+                allowedProviders = emptySet(),
+            ),
+        )
+        return CreatePasskeyOutcome(
+            response = response,
+            providerPreference = if (isGooglePasswordManagerAvailable()) {
+                PROVIDER_PREFERENCE_FALLBACK_AFTER_GOOGLE
+            } else {
+                PROVIDER_PREFERENCE_SYSTEM_DEFAULT
+            },
+            usedGooglePasswordManager = false,
+        )
+    }
+
+    private suspend fun getPasskeyPreferringGoogle(
+        requestJson: String,
+    ): GetPasskeyOutcome {
+        if (isGooglePasswordManagerAvailable()) {
+            try {
+                val response = credentialManager.getCredential(
+                    activity,
+                    getPublicKeyRequest(
+                        requestJson = requestJson,
+                        allowedProviders = GOOGLE_PASSWORD_MANAGER_PROVIDERS,
+                    ),
+                )
+                return GetPasskeyOutcome(
+                    credential = response.credential,
+                    providerPreference = PROVIDER_PREFERENCE_GOOGLE_FIRST,
+                    usedGooglePasswordManager = true,
+                )
+            } catch (error: GetCredentialException) {
+                if (isUserCancellation(error) || !shouldFallbackFromGoogleProvider(error)) {
+                    throw error
+                }
+            }
+        }
+
+        val response = credentialManager.getCredential(
+            activity,
+            getPublicKeyRequest(
+                requestJson = requestJson,
+                allowedProviders = emptySet(),
+            ),
+        )
+        return GetPasskeyOutcome(
+            credential = response.credential,
+            providerPreference = if (isGooglePasswordManagerAvailable()) {
+                PROVIDER_PREFERENCE_FALLBACK_AFTER_GOOGLE
+            } else {
+                PROVIDER_PREFERENCE_SYSTEM_DEFAULT
+            },
+            usedGooglePasswordManager = false,
+        )
+    }
+
+    private fun createPublicKeyRequest(
+        requestJson: String,
+        allowedProviders: Set<ComponentName>,
+    ): CreatePublicKeyCredentialRequest {
+        return if (allowedProviders.isEmpty()) {
+            CreatePublicKeyCredentialRequest(
+                requestJson = requestJson,
+                preferImmediatelyAvailableCredentials = false,
+            )
+        } else {
+            CreatePublicKeyCredentialRequest(
+                requestJson = requestJson,
+                preferImmediatelyAvailableCredentials = false,
+                allowedProviders = allowedProviders,
+            )
+        }
+    }
+
+    private fun getPublicKeyRequest(
+        requestJson: String,
+        allowedProviders: Set<ComponentName>,
+    ): GetCredentialRequest {
+        val option = if (allowedProviders.isEmpty()) {
+            GetPublicKeyCredentialOption(requestJson = requestJson)
+        } else {
+            GetPublicKeyCredentialOption(
+                requestJson = requestJson,
+                allowedProviders = allowedProviders,
+            )
+        }
+        return GetCredentialRequest(
+            credentialOptions = listOf(option),
+            preferImmediatelyAvailableCredentials = false,
+        )
+    }
+
+    private fun isGooglePasswordManagerAvailable(): Boolean {
+        return try {
+            @Suppress("DEPRECATION")
+            activity.packageManager.getPackageInfo(GOOGLE_PLAY_SERVICES_PACKAGE, 0)
+            true
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun preferredProviderMode(): String {
+        return if (isGooglePasswordManagerAvailable()) {
+            PROVIDER_PREFERENCE_GOOGLE_FIRST
+        } else {
+            PROVIDER_PREFERENCE_SYSTEM_DEFAULT
+        }
+    }
+
+    private fun shouldFallbackFromGoogleProvider(error: Throwable): Boolean {
+        if (isUserCancellation(error)) return false
+
+        val type = when (error) {
+            is CreateCredentialException -> error.type
+            is GetCredentialException -> error.type
+            else -> null
+        }?.lowercase().orEmpty()
+        val name = error.javaClass.simpleName.lowercase()
+        val message = (error.message ?: "").lowercase()
+
+        return type.contains("no_create_option") ||
+            type.contains("no_credential") ||
+            type.contains("provider_configuration") ||
+            type.contains("unsupported") ||
+            type.contains("interrupted") ||
+            name.contains("noprovider") ||
+            name.contains("noconfig") ||
+            name.contains("unsupported") ||
+            message.contains("no provider") ||
+            message.contains("not available") ||
+            message.contains("no credentials available") ||
+            message.contains("cannot find a provider")
     }
 
     private fun requestJson(call: MethodCall): String? {
@@ -346,5 +541,29 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
 
     companion object {
         private const val ANDROID_15_API = 35
+        private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms"
+        private const val PROVIDER_PREFERENCE_GOOGLE_FIRST = "google_password_manager_first"
+        private const val PROVIDER_PREFERENCE_FALLBACK_AFTER_GOOGLE = "fallback_after_google"
+        private const val PROVIDER_PREFERENCE_SYSTEM_DEFAULT = "system_default"
+
+        // Official Google Password Manager Credential Manager provider component.
+        private val GOOGLE_PASSWORD_MANAGER_PROVIDERS: Set<ComponentName> = setOf(
+            ComponentName(
+                GOOGLE_PLAY_SERVICES_PACKAGE,
+                "com.google.android.gms.auth.api.credentials.credman.service.PasswordAndPasskeyService",
+            ),
+        )
     }
+
+    private data class CreatePasskeyOutcome(
+        val response: CreateCredentialResponse,
+        val providerPreference: String,
+        val usedGooglePasswordManager: Boolean,
+    )
+
+    private data class GetPasskeyOutcome(
+        val credential: Credential,
+        val providerPreference: String,
+        val usedGooglePasswordManager: Boolean,
+    )
 }

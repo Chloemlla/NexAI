@@ -59,6 +59,97 @@ class AndroidPasskeyNativeException implements Exception {
   }
 }
 
+/// Expand a cert SHA-256 (compact or colon hex) into both Android WebAuthn
+/// `android:apk-key-hash:` origin encodings that Credential Manager may emit.
+///
+/// Android commonly returns standard Base64 (`+/`), while some backends only
+/// pre-register Base64URL (`-_`). Origin checks must accept both.
+List<String> androidApkKeyHashOriginsFromSha256(String? sha256Hex) {
+  final compact = (sha256Hex ?? '')
+      .trim()
+      .replaceAll(RegExp(r'[^0-9a-fA-F]'), '')
+      .toUpperCase();
+  if (compact.length != 64) {
+    return const <String>[];
+  }
+
+  final bytes = <int>[];
+  for (var i = 0; i < compact.length; i += 2) {
+    bytes.add(int.parse(compact.substring(i, i + 2), radix: 16));
+  }
+
+  final base64 = base64Encode(bytes).replaceAll('=', '');
+  final base64UrlNoPad = base64Url.encode(bytes).replaceAll('=', '');
+  return <String>[
+    'android:apk-key-hash:$base64UrlNoPad',
+    'android:apk-key-hash:$base64',
+  ];
+}
+
+/// Parse SimpleWebAuthn-style origin mismatch text from the NexAI backend.
+Map<String, dynamic>? parseAndroidApkKeyHashOriginMismatch(String? message) {
+  final text = message?.trim() ?? '';
+  if (text.isEmpty) {
+    return null;
+  }
+
+  final match = RegExp(
+    r'Unexpected (?:registration|authentication) response origin '
+    r'"([^"]+)", expected one of: (.+)$',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (match == null) {
+    return null;
+  }
+
+  final actualOrigin = match.group(1)?.trim() ?? '';
+  final expectedOrigins = (match.group(2) ?? '')
+      .split(',')
+      .map((item) => item.trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
+  if (actualOrigin.isEmpty) {
+    return null;
+  }
+
+  final actualIsApkKeyHash = actualOrigin.startsWith('android:apk-key-hash:');
+  final actualHash = actualIsApkKeyHash
+      ? actualOrigin.substring('android:apk-key-hash:'.length)
+      : null;
+  final expectedApkHashes = expectedOrigins
+      .where((origin) => origin.startsWith('android:apk-key-hash:'))
+      .map((origin) => origin.substring('android:apk-key-hash:'.length))
+      .toList(growable: false);
+
+  String? alternateEncoding;
+  if (actualHash != null && actualHash.isNotEmpty) {
+    final asBase64Url = actualHash.replaceAll('+', '-').replaceAll('/', '_');
+    final asBase64 = actualHash.replaceAll('-', '+').replaceAll('_', '/');
+    if (asBase64Url != actualHash) {
+      alternateEncoding = 'android:apk-key-hash:$asBase64Url';
+    } else if (asBase64 != actualHash) {
+      alternateEncoding = 'android:apk-key-hash:$asBase64';
+    }
+  }
+
+  final expectedHasAlternate =
+      alternateEncoding != null && expectedOrigins.contains(alternateEncoding);
+  final encodingMismatch = actualIsApkKeyHash &&
+      alternateEncoding != null &&
+      !expectedHasAlternate &&
+      expectedApkHashes.isNotEmpty;
+
+  return <String, dynamic>{
+    'actualOrigin': actualOrigin,
+    'expectedOrigins': expectedOrigins,
+    'actualIsApkKeyHash': actualIsApkKeyHash,
+    'actualHash': actualHash,
+    'alternateOrigin': alternateEncoding,
+    'encodingMismatch': encodingMismatch,
+    'expectedHasAlternateEncoding': expectedHasAlternate,
+  };
+}
+
 class AuthProvider extends ChangeNotifier {
   static const _keyAccessToken = 'nexai_access_token';
   static const _keyRefreshToken = 'nexai_refresh_token';
@@ -977,6 +1068,12 @@ class AuthProvider extends ChangeNotifier {
         'buildSignature': packageInfo.buildSignature,
         'installerStore': packageInfo.installerStore,
       };
+      final expectedApkKeyHashOrigins = androidApkKeyHashOriginsFromSha256(
+        packageInfo.buildSignature,
+      );
+      if (expectedApkKeyHashOrigins.isNotEmpty) {
+        context['expectedApkKeyHashOrigins'] = expectedApkKeyHashOrigins;
+      }
     } catch (e) {
       context['packageInfoError'] = e.toString();
     }
@@ -1256,6 +1353,32 @@ class AuthProvider extends ChangeNotifier {
         ? Map<String, dynamic>.from(response['response'] as Map)
         : <String, dynamic>{};
 
+    final clientDataJson = authenticatorResponse['clientDataJSON']?.toString();
+    Map<String, dynamic>? clientDataOrigin;
+    if (clientDataJson != null && clientDataJson.isNotEmpty) {
+      try {
+        final bytes = base64Url.decode(base64Url.normalize(clientDataJson));
+        final decoded = jsonDecode(utf8.decode(bytes));
+        if (decoded is Map) {
+          final origin = decoded['origin']?.toString();
+          final type = decoded['type']?.toString();
+          clientDataOrigin = <String, dynamic>{
+            'origin': origin,
+            'type': type,
+            'challengePresent': decoded['challenge'] != null,
+            if (origin != null && origin.startsWith('android:apk-key-hash:'))
+              'apkKeyHashEncoding': origin.contains('/') || origin.contains('+')
+                  ? 'base64'
+                  : 'base64url',
+          };
+        }
+      } catch (e) {
+        clientDataOrigin = <String, dynamic>{
+          'decodeError': e.toString(),
+        };
+      }
+    }
+
     return {
       'idLength': response['id']?.toString().length,
       'rawId': _base64UrlDiagnostics(rawId),
@@ -1264,6 +1387,7 @@ class AuthProvider extends ChangeNotifier {
       'responseFieldLengths': authenticatorResponse.map(
         (key, value) => MapEntry(key, value?.toString().length),
       ),
+      if (clientDataOrigin != null) 'clientData': clientDataOrigin,
     };
   }
 
@@ -1279,6 +1403,11 @@ class AuthProvider extends ChangeNotifier {
       'isAndroidPasskeyNativeException':
           error is AndroidPasskeyNativeException,
     };
+
+    final originMismatch = parseAndroidApkKeyHashOriginMismatch(error.toString());
+    if (originMismatch != null) {
+      diagnostics['apkKeyHashOriginMismatch'] = originMismatch;
+    }
 
     if (error is PlatformException) {
       diagnostics['platformException'] = {
@@ -1426,6 +1555,49 @@ class AuthProvider extends ChangeNotifier {
       hints.add(
         'OEM credential providers are present. Prefer Google-only mode on release builds.',
       );
+    }
+
+    final errorMessage = error.toString();
+    final originMismatch = parseAndroidApkKeyHashOriginMismatch(errorMessage);
+    if (originMismatch != null) {
+      final actualOrigin = originMismatch['actualOrigin']?.toString() ?? '';
+      final alternateOrigin = originMismatch['alternateOrigin']?.toString();
+      final expectedApkKeyHashOrigins =
+          debugContext['expectedApkKeyHashOrigins'] is List
+          ? (debugContext['expectedApkKeyHashOrigins'] as List)
+                .map((item) => item.toString())
+                .toList(growable: false)
+          : const <String>[];
+
+      if (originMismatch['encodingMismatch'] == true) {
+        hints.add(
+          'Backend rejected Android passkey origin due to Base64 vs Base64URL '
+          'encoding. Credential Manager returned "$actualOrigin", but the '
+          'server only listed the alternate encoding '
+          '"${alternateOrigin ?? 'android:apk-key-hash:<base64url>'}".',
+        );
+        hints.add(
+          'Deploy/fix the NexAI WebAuthn expectedOrigins allowlist so it '
+          'accepts both Base64 (`+/`) and Base64URL (`-_`) forms of the same '
+          'apk-key-hash. Happy-TTS already expands both encodings in '
+          'getNexaiWebAuthnConfig().',
+        );
+      } else if (actualOrigin.startsWith('android:apk-key-hash:')) {
+        hints.add(
+          'Backend rejected Android passkey origin "$actualOrigin". Ensure '
+          'NEXAI_ANDROID_APK_KEY_HASHES / default apk-key-hash allowlist '
+          'includes this signing certificate.',
+        );
+      }
+
+      if (expectedApkKeyHashOrigins.isNotEmpty &&
+          !expectedApkKeyHashOrigins.contains(actualOrigin)) {
+        hints.add(
+          'Installed APK signature maps to: '
+          '${expectedApkKeyHashOrigins.join(', ')}. Compare with backend '
+          'expectedOrigins and assetlinks fingerprints.',
+        );
+      }
     }
 
     return hints;

@@ -455,6 +455,20 @@ Authorization: Bearer <accessToken>
 - 校验 challenge、origin、rpId。
 - 保存 credential id、公钥、signCount、transports。
 
+Android 注册/登录校验 origin 时必须同时接受同一证书的两种 `android:apk-key-hash:` 编码：
+
+- Base64URL（`A-Za-z0-9-_`，常见于文档/后端默认值）
+- 标准 Base64（`A-Za-z0-9+/`，Android Credential Manager 在部分机型上会直接返回）
+
+示例（同一 SHA-256 签名证书）：
+
+```text
+android:apk-key-hash:_9HzfCcFGsx_oYdF4QfmF5ooVyYZtj_G902sPaRO184
+android:apk-key-hash:/9HzfCcFGsx/oYdF4QfmF5ooVyYZtj/G902sPaRO184
+```
+
+只配置其中一种会导致 `Unexpected registration response origin`，即使 `assetlinks.json` 指纹正确。Happy-TTS 侧应通过 `getNexaiWebAuthnConfig()` 把配置值扩展为两种编码后再传给 `@simplewebauthn/server` 的 `expectedOrigin`。
+
 ### 5.3 登录选项
 
 ```http

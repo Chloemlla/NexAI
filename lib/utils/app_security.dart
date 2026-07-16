@@ -52,6 +52,24 @@ class AppSecurity {
   /// True if VPN is active.
   bool isVpnActive = false;
 
+  /// True if ADB debugging is enabled on the device.
+  bool isAdbEnabled = false;
+
+  /// True if developer options are enabled.
+  bool isDevelopmentSettingsEnabled = false;
+
+  /// True if the running app binary is debuggable.
+  bool isDebugBuild = false;
+
+  /// TracerPid from /proc/self/status when available.
+  int tracerPid = 0;
+
+  /// True if a tracer is attached.
+  bool isTracerAttached = false;
+
+  /// Aggregated anti-debug score from native snapshot (0..1).
+  double antiDebugScore = 0;
+
   /// DEX file hash (for runtime integrity check)
   String? dexHash;
 
@@ -81,6 +99,7 @@ class AppSecurity {
       _checkDebugger(),
       _checkEmulator(),
       _checkVpn(),
+      _checkAntiDebugSignals(),
       _checkDexIntegrity(),
     ]);
   }
@@ -441,6 +460,32 @@ class AppSecurity {
     }
   }
 
+  Future<void> _checkAntiDebugSignals() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final snapshot = _nativeSnapshot;
+      if (snapshot == null) return;
+
+      isAdbEnabled = snapshot.adbEnabled;
+      isDevelopmentSettingsEnabled = snapshot.developmentSettingsEnabled;
+      isDebugBuild = snapshot.debugBuild;
+      tracerPid = snapshot.tracerPid;
+      isTracerAttached = snapshot.tracerAttached;
+      antiDebugScore = snapshot.antiDebugScore;
+
+      if (isTracerAttached || (isAdbEnabled && isDebuggerAttached) || antiDebugScore >= 0.5) {
+        debugPrint(
+          'AppSecurity: elevated anti-debug signals '
+          'adb=$isAdbEnabled dev=$isDevelopmentSettingsEnabled '
+          'debugBuild=$isDebugBuild tracerPid=$tracerPid score=$antiDebugScore',
+        );
+        isCompromised = true;
+      }
+    } catch (e) {
+      debugPrint('AppSecurity: anti-debug signal check error: $e');
+    }
+  }
+
   /// Calculate risk score (0-100)
   int get riskScore {
     var score = 0;
@@ -448,8 +493,13 @@ class AppSecurity {
     if (!isApkHashValid) score += 50;
     if (isCompromised) score += 30;
     if (isDebuggerAttached) score += 40;
+    if (isTracerAttached) score += 35;
+    if (isAdbEnabled) score += 10;
+    if (isDevelopmentSettingsEnabled) score += 8;
+    if (isDebugBuild) score += 12;
     if (isEmulator) score += 30;
     if (isVpnActive) score += 20;
+    score += (antiDebugScore * 40).round();
     return score.clamp(0, 100);
   }
 

@@ -314,10 +314,25 @@ class DeviceFingerprint(private val context: Context) {
             "systemProperties" to collect("systemProperties") { getSystemProperties() },
         )
         val derivedSha256 = hashString(snapshot.toSortedString())
+        val securityDigest = runCatching {
+            val soft = snapshot["software"] as? Map<*, *> ?: emptyMap<Any, Any>()
+            val props = snapshot["systemProperties"] as? Map<*, *> ?: emptyMap<Any, Any>()
+            hashString(
+                listOf(
+                    soft["buildFingerprint"]?.toString().orEmpty(),
+                    soft["securityPatch"]?.toString().orEmpty(),
+                    soft["sdkInt"]?.toString().orEmpty(),
+                    props["build_type"]?.toString().orEmpty(),
+                    props["build_tags"]?.toString().orEmpty(),
+                    props["build_fingerprint"]?.toString().orEmpty(),
+                ).joinToString("|"),
+            )
+        }.getOrNull()
 
         return mapOf(
             "snapshot" to snapshot,
             "derivedSha256" to derivedSha256,
+            "securityDigest" to securityDigest,
             "checkedAt" to System.currentTimeMillis(),
             "source" to "android_kotlin_native",
             "errors" to errors,

@@ -1,6 +1,7 @@
 package com.chloemlla.nexai.security
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -62,6 +63,34 @@ class SecuritySignals(private val context: Context) {
 
     fun isXposedDetected(): Boolean = checkXposedStack() || checkXposedApps()
 
+    fun isAdbEnabled(): Boolean = runCatching {
+        Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
+    }.getOrDefault(false)
+
+    fun isDevelopmentSettingsEnabled(): Boolean = runCatching {
+        Settings.Global.getInt(
+            context.contentResolver,
+            Settings.Global.DEVELOPMENT_SETTINGS_ENABLED,
+            0,
+        ) == 1
+    }.getOrDefault(false)
+
+    fun isDebugBuild(): Boolean = runCatching {
+        (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+    }.getOrDefault(false)
+
+    fun getTracerPid(): Int = runCatching {
+        val status = File("/proc/self/status")
+        if (!status.exists()) return@runCatching 0
+        status.useLines { lines ->
+            lines.firstOrNull { it.startsWith("TracerPid:") }
+                ?.substringAfter(":")
+                ?.trim()
+                ?.toIntOrNull()
+                ?: 0
+        }
+    }.getOrDefault(0)
+
     fun getOverlayRisk(): Map<String, Any?> {
         val canDrawOverlays = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(context)
@@ -93,6 +122,25 @@ class SecuritySignals(private val context: Context) {
         val vpnActive = checked("vpnActive", false) { isVpnActive() }
         val fridaDetected = checked("fridaDetected", false) { isFridaDetected() }
         val xposedDetected = checked("xposedDetected", false) { isXposedDetected() }
+        val adbEnabled = checked("adbEnabled", false) { isAdbEnabled() }
+        val developmentSettingsEnabled = checked("developmentSettingsEnabled", false) {
+            isDevelopmentSettingsEnabled()
+        }
+        val debugBuild = checked("debugBuild", false) { isDebugBuild() }
+        val tracerPid = checked("tracerPid", 0) { getTracerPid() }
+        val tracerAttached = tracerPid > 0
+
+        val antiDebugScore = listOf(
+            debuggerAttached to 0.35,
+            tracerAttached to 0.25,
+            adbEnabled to 0.10,
+            developmentSettingsEnabled to 0.08,
+            debugBuild to 0.12,
+            fridaDetected to 0.35,
+            xposedDetected to 0.30,
+            rooted to 0.20,
+            emulator to 0.15,
+        ).sumOf { (flag, weight) -> if (flag) weight else 0.0 }.coerceIn(0.0, 1.0)
 
         return mapOf(
             "rooted" to (rooted || fridaDetected || xposedDetected),
@@ -102,6 +150,12 @@ class SecuritySignals(private val context: Context) {
             "vpnActive" to vpnActive,
             "fridaDetected" to fridaDetected,
             "xposedDetected" to xposedDetected,
+            "adbEnabled" to adbEnabled,
+            "developmentSettingsEnabled" to developmentSettingsEnabled,
+            "debugBuild" to debugBuild,
+            "tracerPid" to tracerPid,
+            "tracerAttached" to tracerAttached,
+            "antiDebugScore" to antiDebugScore,
             "overlayRisk" to checked("overlayRisk", emptyMap<String, Any?>()) { getOverlayRisk() },
             "signatureSha256" to checked("signatureSha256", null) { getApkSignatureSha256() },
             "apkSha256" to checked("apkSha256", null) { getApkFileSha256() },

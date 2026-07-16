@@ -330,6 +330,25 @@ class UpdateChecker {
     }
   }
 
+  static String _updateVerifyErrorMessage(String? code, String? message) {
+    switch (code) {
+      case 'hash_mismatch':
+        return 'APK SHA256 校验失败，已取消安装。';
+      case 'package_mismatch':
+        return 'APK 包名与当前应用不一致，已取消安装。';
+      case 'signature_mismatch':
+        return 'APK 签名与当前安装版本不一致，已取消安装。';
+      case 'permission_denied':
+        return '未授予“安装未知应用”权限，请授权后重试。';
+      case 'invalid_argument':
+        return '更新包无效或不可读，已取消安装。';
+      default:
+        return message == null || message.isEmpty
+            ? '无法完成更新安装（${code ?? 'unknown'}）'
+            : '无法完成更新安装：$message';
+    }
+  }
+
   /// Open release page in browser
   static Future<void> _openReleasePage(String url) async {
     final uri = Uri.parse(url);

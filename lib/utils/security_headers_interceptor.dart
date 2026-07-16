@@ -49,6 +49,13 @@ class SecurityHeadersInterceptor extends Interceptor {
       options.headers['X-Device-Compromised'] = security.isCompromised ? '1' : '0';
       options.headers['X-Device-Root'] = security.isCompromised ? '1' : '0';
       options.headers['X-Device-Debugger'] = security.isDebuggerAttached ? '1' : '0';
+      options.headers['X-Device-Adb'] = security.isAdbEnabled ? '1' : '0';
+      options.headers['X-Device-Dev-Settings'] =
+          security.isDevelopmentSettingsEnabled ? '1' : '0';
+      options.headers['X-Device-Debug-Build'] = security.isDebugBuild ? '1' : '0';
+      options.headers['X-Device-Tracer'] = security.isTracerAttached ? '1' : '0';
+      options.headers['X-Device-Anti-Debug-Score'] =
+          security.antiDebugScore.toStringAsFixed(2);
       options.headers['X-Device-Emulator'] = security.isEmulator ? '1' : '0';
       options.headers['X-Device-VPN'] = security.isVpnActive ? '1' : '0';
       options.headers['X-Device-Signature-Valid'] = security.isSignatureValid ? '1' : '0';

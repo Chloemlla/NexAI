@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../models/crash_report.dart';
+import 'android_native/android_crash_service.dart';
 import 'crash_breadcrumbs.dart';
 import 'crash_report_store.dart';
 
@@ -179,16 +180,50 @@ class CrashReporter {
     CrashBreadcrumbs.record('Crash captured: ${error.runtimeType}');
     final report = CrashReport.fromError(error, stack);
     startupCrashReport = report;
-    unawaited(
-      store.save(report).catchError((Object saveError) {
-        debugPrint('NexAI crash report save failed: $saveError');
-      }),
-    );
+    unawaited(_persistReport(report));
     return report;
   }
 
   static Future<void> clearStartupCrashReport() async {
     startupCrashReport = null;
     await store.clear();
+    if (_isAndroid) {
+      await AndroidCrashService.clearPendingReport();
+    }
+  }
+
+  static bool get _isAndroid =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  /// Persist Flutter/Dart crashes to lumen-crash on Android (primary) and keep
+  /// the Dart-side store as a cross-platform / bridge-failure fallback.
+  static Future<void> _persistReport(CrashReport report) async {
+    var bridged = false;
+    if (_isAndroid) {
+      bridged = await AndroidCrashService.recordReport(report);
+      if (bridged) {
+        CrashBreadcrumbs.record(
+          'Flutter crash bridged to lumen-crash ${report.reportId}',
+        );
+        // Avoid a second Flutter crash gate after CrashGateActivity already
+        // handled the same native-backed report on the next cold start.
+        startupCrashReport = null;
+        await store.clear();
+        return;
+      }
+      CrashBreadcrumbs.record(
+        'lumen-crash bridge unavailable; using Dart crash store',
+      );
+    }
+
+    try {
+      await store.save(report);
+    } catch (saveError) {
+      debugPrint('NexAI crash report save failed: $saveError');
+      if (!bridged && _isAndroid) {
+        // Last resort: try bridge again if Dart store failed.
+        await AndroidCrashService.recordReport(report);
+      }
+    }
   }
 }

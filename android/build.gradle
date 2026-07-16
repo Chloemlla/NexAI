@@ -13,17 +13,23 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        maven {
-            name = "GitHubPackagesProjectLumen"
-            url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
-            credentials {
-                username = findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
-                password = findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
-            }
-        }
+        // Prefer CI-staged release assets; avoid GitHub Packages 401 falling
+        // through for transitive lumen-crash-core when credentials are missing.
         maven {
             name = "LumenCrashLocal"
             url = uri("${rootDir}/local-maven")
+        }
+        def gprUser = findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+        def gprKey = findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        if (gprUser && gprKey) {
+            maven {
+                name = "GitHubPackagesProjectLumen"
+                url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
+                credentials {
+                    username = gprUser
+                    password = gprKey
+                }
+            }
         }
     }
 }

@@ -76,6 +76,7 @@ fi
 download_asset() {
   local name="$1"
   local out="$2"
+  local required="${3:-1}"
   local url
   url="$(
     python - "${RELEASE_JSON_FILE}" "${VERSION}" "${name}" <<'PY'
@@ -90,27 +91,67 @@ for r in releases:
             if a.get("name") == name:
                 print(a.get("browser_download_url") or "")
                 raise SystemExit(0)
-raise SystemExit(f"Asset not found: {name}")
+raise SystemExit(1)
 PY
-  )"
+  )" || true
   if [ -z "${url}" ]; then
-    echo "Missing release asset URL for ${name}" >&2
-    return 1
+    if [ "${required}" = "1" ]; then
+      echo "Missing release asset URL for ${name}" >&2
+      return 1
+    fi
+    echo "Optional asset not found: ${name}"
+    return 0
   fi
   echo "Downloading ${name}..."
   curl -fsSL "${AUTH_HEADER[@]}" -L -o "${out}" "${url}"
 }
 
-echo "Staging lumen-crash ${VERSION} into local Maven repo..."
-download_asset "lumen-crash-${VERSION}.aar" "${STAGE}/lumen-crash-${VERSION}.aar"
-download_asset "lumen-crash-${VERSION}.pom" "${STAGE}/lumen-crash-${VERSION}.pom" || true
-download_asset "lumen-crash-${VERSION}.module" "${STAGE}/lumen-crash-${VERSION}.module" || true
-download_asset "checksums.txt" "${STAGE}/checksums.txt" || true
+stage_maven_artifact() {
+  local artifact_id="$1"
+  local aar="${STAGE}/${artifact_id}-${VERSION}.aar"
+  local pom="${STAGE}/${artifact_id}-${VERSION}.pom"
+  local module="${STAGE}/${artifact_id}-${VERSION}.module"
+  local dest="${LOCAL_MAVEN}/com/chloemlla/lumen/${artifact_id}/${VERSION}"
 
-if [ ! -f "${STAGE}/lumen-crash-${VERSION}.aar" ]; then
-  echo "Failed to download lumen-crash AAR for ${VERSION}" >&2
-  exit 1
-fi
+  if [ ! -f "${aar}" ]; then
+    echo "Failed to stage ${artifact_id}: missing AAR" >&2
+    return 1
+  fi
+
+  rm -rf "${dest}"
+  mkdir -p "${dest}"
+  cp "${aar}" "${dest}/"
+  if [ -f "${pom}" ]; then
+    cp "${pom}" "${dest}/"
+  else
+    cat > "${dest}/${artifact_id}-${VERSION}.pom" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+  xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.chloemlla.lumen</groupId>
+  <artifactId>${artifact_id}</artifactId>
+  <version>${VERSION}</version>
+  <packaging>aar</packaging>
+  <name>${artifact_id}</name>
+</project>
+EOF
+  fi
+  if [ -f "${module}" ]; then
+    cp "${module}" "${dest}/"
+  fi
+  echo "Staged ${artifact_id}:${VERSION} -> ${dest}"
+}
+
+echo "Staging lumen-crash ${VERSION} into local Maven repo..."
+download_asset "lumen-crash-${VERSION}.aar" "${STAGE}/lumen-crash-${VERSION}.aar" 1
+download_asset "lumen-crash-${VERSION}.pom" "${STAGE}/lumen-crash-${VERSION}.pom" 0
+download_asset "lumen-crash-${VERSION}.module" "${STAGE}/lumen-crash-${VERSION}.module" 0
+download_asset "lumen-crash-core-${VERSION}.aar" "${STAGE}/lumen-crash-core-${VERSION}.aar" 1
+download_asset "lumen-crash-core-${VERSION}.pom" "${STAGE}/lumen-crash-core-${VERSION}.pom" 0
+download_asset "lumen-crash-core-${VERSION}.module" "${STAGE}/lumen-crash-core-${VERSION}.module" 0
+download_asset "checksums.txt" "${STAGE}/checksums.txt" 0
 
 if [ -f "${STAGE}/checksums.txt" ] && command -v sha256sum >/dev/null 2>&1; then
   (
@@ -119,29 +160,36 @@ if [ -f "${STAGE}/checksums.txt" ] && command -v sha256sum >/dev/null 2>&1; then
   )
 fi
 
-DEST="${LOCAL_MAVEN}/com/chloemlla/lumen/lumen-crash/${VERSION}"
-rm -rf "${DEST}"
-mkdir -p "${DEST}"
-cp "${STAGE}/lumen-crash-${VERSION}.aar" "${DEST}/"
-if [ -f "${STAGE}/lumen-crash-${VERSION}.pom" ]; then
-  cp "${STAGE}/lumen-crash-${VERSION}.pom" "${DEST}/"
-else
-  cat > "${DEST}/lumen-crash-${VERSION}.pom" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
-  xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.chloemlla.lumen</groupId>
-  <artifactId>lumen-crash</artifactId>
-  <version>${VERSION}</version>
-  <packaging>aar</packaging>
-  <name>Lumen Crash SDK</name>
-</project>
-EOF
-fi
-if [ -f "${STAGE}/lumen-crash-${VERSION}.module" ]; then
-  cp "${STAGE}/lumen-crash-${VERSION}.module" "${DEST}/"
+stage_maven_artifact "lumen-crash-core"
+stage_maven_artifact "lumen-crash"
+
+# Ensure published lumen-crash POM dependency on lumen-crash-core can resolve offline.
+# If the release POM was missing, inject an explicit dependency block.
+BUNDLE_POM="${LOCAL_MAVEN}/com/chloemlla/lumen/lumen-crash/${VERSION}/lumen-crash-${VERSION}.pom"
+if [ -f "${BUNDLE_POM}" ] && ! grep -q 'lumen-crash-core' "${BUNDLE_POM}"; then
+  python - "${BUNDLE_POM}" "${VERSION}" <<'PY'
+from pathlib import Path
+import sys
+pom_path = Path(sys.argv[1])
+version = sys.argv[2]
+text = pom_path.read_text(encoding="utf-8")
+dep = f"""
+  <dependencies>
+    <dependency>
+      <groupId>com.chloemlla.lumen</groupId>
+      <artifactId>lumen-crash-core</artifactId>
+      <version>{version}</version>
+      <scope>compile</scope>
+    </dependency>
+  </dependencies>
+"""
+if "</project>" not in text:
+    raise SystemExit(f"Invalid POM: {pom_path}")
+if "<dependencies>" in text:
+    raise SystemExit(0)
+pom_path.write_text(text.replace("</project>", dep + "</project>"), encoding="utf-8")
+print(f"Injected lumen-crash-core dependency into {pom_path}")
+PY
 fi
 
 echo "Local Maven repo ready at ${LOCAL_MAVEN}"

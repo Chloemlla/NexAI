@@ -41,19 +41,27 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven {
-            name = "GitHubPackagesProjectLumen"
-            url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
-            credentials {
-                username = providers.gradleProperty("gpr.user").orNull
-                    ?: System.getenv("GITHUB_ACTOR")
-                password = providers.gradleProperty("gpr.key").orNull
-                    ?: System.getenv("GITHUB_TOKEN")
-            }
-        }
+        // Prefer release assets staged by scripts/resolve-lumen-crash.* so CI does
+        // not need cross-repo GitHub Packages auth for lumen-crash-core.
         maven {
             name = "LumenCrashLocal"
             url = uri("${settingsDir}/local-maven")
+        }
+        def gprUser = providers.gradleProperty("gpr.user").orNull
+            ?: System.getenv("GITHUB_ACTOR")
+        def gprKey = providers.gradleProperty("gpr.key").orNull
+            ?: System.getenv("GITHUB_TOKEN")
+        // Only register GitHub Packages when credentials exist. Empty credentials
+        // return 401 and abort resolution even if local-maven already has the AAR.
+        if (gprUser && gprKey) {
+            maven {
+                name = "GitHubPackagesProjectLumen"
+                url = uri("https://maven.pkg.github.com/Chloemlla/Project-Lumen")
+                credentials {
+                    username = gprUser
+                    password = gprKey
+                }
+            }
         }
     }
 }

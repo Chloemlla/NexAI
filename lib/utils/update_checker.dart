@@ -291,26 +291,35 @@ class UpdateChecker {
 
       final apkFile = await _downloadAssetToTemp(selected);
       final updater = AndroidUpdateService();
-      final verified = await updater.verifyApkSha256(
+      final verified = await updater.verifyApkPackage(
         uriOrPath: apkFile.path,
         expectedSha256: expectedSha256,
       );
-      final matches = verified.data?['matches'] == true;
-      if (!verified.ok || !matches) {
+      if (!verified.ok) {
         if (context.mounted) {
-          _showErrorDialog(context, 'APK SHA256 校验失败，已取消安装。');
+          final error = verified.error;
+          _showErrorDialog(
+            context,
+            _updateVerifyErrorMessage(error?.code, error?.message),
+          );
         }
         return;
       }
 
-      final installed = await updater.installApk(uriOrPath: apkFile.path);
+      final installed = await updater.installApk(
+        uriOrPath: apkFile.path,
+        expectedSha256: expectedSha256,
+      );
       if (!installed.ok) {
-        await updater.openUnknownSourcesSettings();
+        final error = installed.error;
+        final code = error?.code;
+        if (code == 'permission_denied') {
+          await updater.openUnknownSourcesSettings();
+        }
         if (context.mounted) {
-          final error = installed.error;
           _showErrorDialog(
             context,
-            '无法启动安装器：${error?.message ?? error?.code ?? '未知错误'}',
+            _updateVerifyErrorMessage(code, error?.message),
           );
         }
       }

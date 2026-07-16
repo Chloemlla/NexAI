@@ -33,9 +33,25 @@ class AndroidUpdateService {
     });
   }
 
+  Future<AndroidNativeResult<Map<String, dynamic>>> verifyApkPackage({
+    required String uriOrPath,
+    String? expectedSha256,
+  }) {
+    return _invokeMap('verifyApkPackage', {
+      'uri': uriOrPath,
+      'expectedSha256': ?expectedSha256,
+    });
+  }
+
   Future<AndroidNativeResult<Map<String, dynamic>>> installApk({
     required String uriOrPath,
-  }) => _invokeMap('installApk', {'uri': uriOrPath});
+    String? expectedSha256,
+  }) {
+    return _invokeMap('installApk', {
+      'uri': uriOrPath,
+      'expectedSha256': ?expectedSha256,
+    });
+  }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> _invokeMap(
     String method, [

@@ -1,7 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-
-import 'android_native/android_crash_service.dart';
 
 class CrashBreadcrumbs {
   static const int _maxEvents = 40;
@@ -19,16 +16,7 @@ class CrashBreadcrumbs {
     final clipped = sanitized.length > 180
         ? sanitized.substring(0, 180)
         : sanitized;
-    final entry = '${_timeFormat.format(DateTime.now())}  $clipped';
-    _events.add(entry);
-
-    // Best-effort mirror into lumen-crash for Android-native crash context.
-    // Ignore failures; channel may not be ready during very early bootstrap.
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      // Fire-and-forget; do not block Dart crash capture paths.
-      // ignore: unawaited_futures
-      AndroidCrashService.recordBreadcrumb(clipped);
-    }
+    _events.add('${_timeFormat.format(DateTime.now())}  $clipped');
   }
 
   static List<String> snapshot() => List.unmodifiable(_events);

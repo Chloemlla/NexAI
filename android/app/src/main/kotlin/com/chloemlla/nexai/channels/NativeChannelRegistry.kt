@@ -46,9 +46,6 @@ class NativeChannelRegistry(
         MethodChannel(messenger, "com.chloemlla.nexai/passkeys").setMethodCallHandler(
             PasskeyChannel(activity),
         )
-        MethodChannel(messenger, "com.chloemlla.nexai/crash").setMethodCallHandler(
-            CrashChannel(),
-        )
         EventChannel(messenger, "com.chloemlla.nexai/native_task_events").setStreamHandler(taskEvents)
     }
 

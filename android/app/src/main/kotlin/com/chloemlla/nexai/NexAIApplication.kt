@@ -9,18 +9,27 @@ import io.flutter.app.FlutterApplication
 class NexAIApplication : FlutterApplication() {
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
-        installLumenCrashSdk()
-        LumenCrash.recordBreadcrumb("Application.attachBaseContext")
+        // Host startup must stay non-fatal even if author integrity fail-closes.
+        runCatching {
+            installLumenCrashSdk()
+            LumenCrash.recordBreadcrumb("Application.attachBaseContext")
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
-        installLumenCrashSdk()
-        LumenCrash.recordBreadcrumb("Application.onCreate")
+        runCatching {
+            installLumenCrashSdk()
+            LumenCrash.recordBreadcrumb("Application.onCreate")
+        }
         runCatching { NexAIMmkv.initialize(this) }
             .onSuccess { LumenCrash.recordBreadcrumb("MMKV initialized") }
             .onFailure { error ->
-                LumenCrash.recordBreadcrumb("MMKV initialize failed: ${error.javaClass.simpleName}")
+                runCatching {
+                    LumenCrash.recordBreadcrumb(
+                        "MMKV initialize failed: ${error.javaClass.simpleName}",
+                    )
+                }
                 runCatching { LumenCrash.record(error) }
             }
     }
@@ -28,7 +37,9 @@ class NexAIApplication : FlutterApplication() {
     private fun installLumenCrashSdk() {
         if (LumenCrash.isInstalled()) return
         val appName = runCatching { getString(R.string.app_name) }.getOrDefault("NexAI")
-        LumenCrash.install(
+        // installSafely keeps integrity fail-closed inside the SDK while preventing
+        // one failed install path from process-killing cold start (white screen).
+        LumenCrash.installSafely(
             this,
             LumenCrashConfig(
                 appDisplayName = appName,

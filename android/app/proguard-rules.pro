@@ -92,28 +92,51 @@
 ############################################################
 # Lumen Crash SDK minify exemption
 # Artifact: com.chloemlla.lumen:lumen-crash
+# Required when release minify/resource shrink is enabled.
+# Prevents white-screen/startup crash from author integrity
+# fail-closed checks and missing crash public API symbols.
 ############################################################
 
-# Required: author attribution + integrity checks
+# Keep annotations / signatures used by integrity + public API.
+-keepattributes *Annotation*, InnerClasses, EnclosingMethod, Signature
+-keepattributes RuntimeVisibleAnnotations, AnnotationDefault
+-keepattributes SourceFile, LineNumberTable
+
+# Required: author attribution constants must keep source values/names.
 -keep class com.chloemlla.lumen.crash.CrashAuthorAttribution {
     public static final java.lang.String *;
+    public static *** payload();
 }
+-keepclassmembers class com.chloemlla.lumen.crash.CrashAuthorAttribution {
+    public static final java.lang.String *;
+}
+
+# Required: integrity entry points used on install / report / UI open.
 -keep class com.chloemlla.lumen.crash.AuthorIntegrity {
-    public static *** verifyOrThrow();
+    public static *** verifyOrThrow(...);
     public static *** fingerprintHex();
+    public static *** verifiedAuthorBlock();
 }
+-keep class com.chloemlla.lumen.crash.AuthorBlock { *; }
 
 # Required backup: keep public SDK API used by host integration
 -keep class com.chloemlla.lumen.crash.LumenCrash { *; }
 -keep class com.chloemlla.lumen.crash.LumenCrashConfig { *; }
+-keep class com.chloemlla.lumen.crash.LumenCrashConfigBuilder { *; }
+-keep class com.chloemlla.lumen.crash.LumenCrashDefaults { *; }
+-keep class com.chloemlla.lumen.crash.LumenCrashFileProvider { *; }
 -keep class com.chloemlla.lumen.crash.CrashReport { *; }
 -keep class com.chloemlla.lumen.crash.CrashAppInfo { *; }
 -keep class com.chloemlla.lumen.crash.CrashReportStore { *; }
 -keep class com.chloemlla.lumen.crash.CrashBreadcrumbs { *; }
+-keep class com.chloemlla.lumen.crash.CrashReportPasteUploader { *; }
 -keep class com.chloemlla.lumen.crash.ui.LumenCrashReportScreenKt { *; }
+-keep class com.chloemlla.lumen.crash.ui.LumenCrashGateKt { *; }
 
 # Package-level exemption (safe default for third-party hosts)
 -keep class com.chloemlla.lumen.crash.** { *; }
+-keepclassmembers class com.chloemlla.lumen.crash.** { *; }
+-keepnames class com.chloemlla.lumen.crash.**
 -dontwarn com.chloemlla.lumen.crash.**
 
 # Crash gate activity is instantiated from the manifest.
@@ -122,4 +145,3 @@
     public <methods>;
     protected <methods>;
 }
-

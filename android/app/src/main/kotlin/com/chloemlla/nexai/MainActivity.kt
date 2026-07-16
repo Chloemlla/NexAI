@@ -14,7 +14,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        LumenCrash.recordBreadcrumb("MainActivity.onCreate")
+        runCatching { LumenCrash.recordBreadcrumb("MainActivity.onCreate") }
 
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.R until 36) {
             @Suppress("DEPRECATION")
@@ -33,7 +33,7 @@ class MainActivity : FlutterActivity() {
         nativeChannelRegistry = NativeChannelRegistry(this, flutterEngine).also {
             it.register()
         }
-        LumenCrash.recordBreadcrumb("MainActivity.configureFlutterEngine")
+        runCatching { LumenCrash.recordBreadcrumb("MainActivity.configureFlutterEngine") }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

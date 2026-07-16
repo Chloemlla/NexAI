@@ -25,10 +25,11 @@ import com.chloemlla.lumen.crash.ui.LumenCrashReportScreen
 class CrashGateActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        LumenCrash.recordBreadcrumb("CrashGateActivity.onCreate")
+        runCatching { LumenCrash.recordBreadcrumb("CrashGateActivity.onCreate") }
         enableEdgeToEdge()
 
-        val pendingReport = runCatching { LumenCrash.loadPendingReport() }.getOrNull()
+        // Prefer the SDK host-safe loader so integrity/install failures do not kill launch.
+        val pendingReport = LumenCrash.loadPendingReportSafely()
         if (pendingReport == null) {
             openMainAndFinish()
             return
@@ -49,7 +50,7 @@ class CrashGateActivity : ComponentActivity() {
                 LumenCrashReportScreen(
                     report = crashReport,
                     onContinue = {
-                        LumenCrash.clearPendingReport()
+                        runCatching { LumenCrash.clearPendingReport() }
                         report = null
                     },
                     clearStoredReportOnContinue = true,

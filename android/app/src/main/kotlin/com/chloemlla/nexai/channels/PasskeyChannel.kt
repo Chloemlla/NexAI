@@ -20,6 +20,7 @@ import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.publickeycredential.SignalCredentialRateLimitExceededException
 import androidx.credentials.exceptions.publickeycredential.SignalCredentialStateException
 import com.chloemlla.nexai.MainActivity
+import com.chloemlla.nexai.security.PasskeyProviderDiagnostics
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +39,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
             "signalUnknownCredential" -> signalUnknownCredential(call, result)
             "signalAllAcceptedCredentials" -> signalAllAcceptedCredentials(call, result)
             "signalCurrentUserDetails" -> signalCurrentUserDetails(call, result)
+            "diagnoseProviders" -> diagnoseProviders(call, result)
             else -> result.notImplemented()
         }
     }
@@ -64,7 +66,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                                 "credentialManagerApi" to "createCredential",
                                 "providerPreference" to outcome.providerPreference,
                                 "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
-                            ),
+                            ) + providerDiagnosticsDetails(googleOnly),
                         ),
                     )
                 } else {
@@ -77,7 +79,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                                 "responseType" to response.javaClass.name,
                                 "providerPreference" to outcome.providerPreference,
                                 "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
-                            ),
+                            ) + providerDiagnosticsDetails(googleOnly),
                         ),
                     )
                 }
@@ -90,7 +92,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                             "providerPreference" to preferredProviderMode(googleOnly),
                             "googlePasswordManagerAvailable" to isGooglePasswordManagerAvailable(),
                             "googleOnly" to googleOnly,
-                        ),
+                        ) + providerDiagnosticsDetails(googleOnly),
                     ),
                 )
             } catch (error: IllegalArgumentException) {
@@ -100,7 +102,13 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                     ),
                 )
             } catch (error: Exception) {
-                result.success(passkeyError("native_failure", error, throwableDetails(error)))
+                result.success(
+                    passkeyError(
+                        "native_failure",
+                        error,
+                        throwableDetails(error) + providerDiagnosticsDetails(googleOnly),
+                    ),
+                )
             }
         }
     }
@@ -210,7 +218,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                                 "credentialManagerApi" to "getCredential",
                                 "providerPreference" to outcome.providerPreference,
                                 "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
-                            ),
+                            ) + providerDiagnosticsDetails(googleOnly),
                         ),
                     )
                 } else {
@@ -223,7 +231,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                                 "credentialType" to credential.javaClass.name,
                                 "providerPreference" to outcome.providerPreference,
                                 "usedGooglePasswordManager" to outcome.usedGooglePasswordManager,
-                            ),
+                            ) + providerDiagnosticsDetails(googleOnly),
                         ),
                     )
                 }
@@ -236,7 +244,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                             "providerPreference" to preferredProviderMode(googleOnly),
                             "googlePasswordManagerAvailable" to isGooglePasswordManagerAvailable(),
                             "googleOnly" to googleOnly,
-                        ),
+                        ) + providerDiagnosticsDetails(googleOnly),
                     ),
                 )
             } catch (error: IllegalArgumentException) {
@@ -246,7 +254,13 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                     ),
                 )
             } catch (error: Exception) {
-                result.success(passkeyError("native_failure", error, throwableDetails(error)))
+                result.success(
+                    passkeyError(
+                        "native_failure",
+                        error,
+                        throwableDetails(error) + providerDiagnosticsDetails(googleOnly),
+                    ),
+                )
             }
         }
     }
@@ -393,16 +407,43 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
         )
     }
 
-    private fun isGooglePasswordManagerAvailable(): Boolean {
-        return try {
-            @Suppress("DEPRECATION")
-            activity.packageManager.getPackageInfo(GOOGLE_PLAY_SERVICES_PACKAGE, 0)
-            true
-        } catch (_: PackageManager.NameNotFoundException) {
-            false
-        } catch (_: Exception) {
-            false
+    private fun isGooglePasswordManagerAvailable(): Boolean =
+        PasskeyProviderDiagnostics.isGooglePasswordManagerAvailable(activity)
+
+    private fun providerDiagnosticsDetails(googleOnly: Boolean): Map<String, Any?> =
+        runCatching {
+            mapOf(
+                "providerDiagnostics" to PasskeyProviderDiagnostics.diagnose(
+                    context = activity,
+                    googleOnlyPreferred = googleOnly,
+                ),
+            )
+        }.getOrElse { error ->
+            mapOf(
+                "providerDiagnosticsError" to mapOf(
+                    "exceptionClass" to error.javaClass.name,
+                    "simpleName" to error.javaClass.simpleName,
+                    "message" to error.message,
+                ),
+            )
         }
+
+    private fun diagnoseProviders(call: MethodCall, result: MethodChannel.Result) {
+        val googleOnly = googleOnly(call)
+        result.success(
+            runCatching {
+                NativeResult.ok(
+                    PasskeyProviderDiagnostics.diagnose(
+                        context = activity,
+                        googleOnlyPreferred = googleOnly,
+                    ),
+                )
+            }.getOrElse { error ->
+                NativeResult.nativeFailure(
+                    error.message ?: "Failed to diagnose passkey providers",
+                )
+            },
+        )
     }
 
     private fun preferredProviderMode(googleOnly: Boolean = true): String {
@@ -566,7 +607,6 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
 
     companion object {
         private const val ANDROID_15_API = 35
-        private const val GOOGLE_PLAY_SERVICES_PACKAGE = "com.google.android.gms"
         private const val PROVIDER_PREFERENCE_GOOGLE_ONLY = "google_password_manager_only"
         private const val PROVIDER_PREFERENCE_GOOGLE_FIRST = "google_password_manager_first"
         private const val PROVIDER_PREFERENCE_FALLBACK_AFTER_GOOGLE = "fallback_after_google"
@@ -574,10 +614,7 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
 
         // Official Google Password Manager Credential Manager provider component.
         private val GOOGLE_PASSWORD_MANAGER_PROVIDERS: Set<ComponentName> = setOf(
-            ComponentName(
-                GOOGLE_PLAY_SERVICES_PACKAGE,
-                "com.google.android.gms.auth.api.credentials.credman.service.PasswordAndPasskeyService",
-            ),
+            PasskeyProviderDiagnostics.googlePasswordManagerComponent,
         )
     }
 

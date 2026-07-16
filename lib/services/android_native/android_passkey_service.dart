@@ -47,6 +47,18 @@ class AndroidPasskeyService {
     return _invokePasskey('signalCurrentUserDetails', options);
   }
 
+  Future<AndroidNativeResult<Map<String, dynamic>>> diagnoseProviders({
+    bool googleOnly = true,
+  }) async {
+    if (!_available) return AndroidNativeResult.unsupported();
+
+    final envelope = await _channel.invokeMethod<Object?>(
+      'diagnoseProviders',
+      {'googleOnly': googleOnly},
+    );
+    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+  }
+
   Future<AndroidNativeResult<Map<String, dynamic>>> _invokePasskey(
     String method,
     Map<String, dynamic> options, {

@@ -1001,6 +1001,23 @@ class AuthProvider extends ChangeNotifier {
       } catch (e) {
         context['androidDeviceError'] = e.toString();
       }
+
+      final googleOnly = _passkeyGoogleOnlyPreference();
+      context['passkeyGoogleOnly'] = googleOnly;
+      try {
+        final diagnostics = await _androidPasskeyService.diagnoseProviders(
+          googleOnly: googleOnly,
+        );
+        if (diagnostics.ok) {
+          context['providerDiagnostics'] = diagnostics.data;
+        } else {
+          context['providerDiagnosticsError'] =
+              diagnostics.error?.toDebugMap() ??
+              <String, dynamic>{'code': 'native_failure'};
+        }
+      } catch (e) {
+        context['providerDiagnosticsError'] = e.toString();
+      }
     }
 
     return context;
@@ -1382,6 +1399,32 @@ class AuthProvider extends ChangeNotifier {
         'The exception class name is obfuscated in the release build. '
         'Use Last Step, Error Diagnostics, device info, and Android logcat '
         'around the same timestamp to identify the Credential Manager error.',
+      );
+    }
+
+    final providerDiagnostics =
+        debugContext['providerDiagnostics'] is Map
+            ? Map<String, dynamic>.from(debugContext['providerDiagnostics'] as Map)
+            : (error is AndroidPasskeyNativeException &&
+                    error.details['providerDiagnostics'] is Map
+                ? Map<String, dynamic>.from(
+                    error.details['providerDiagnostics'] as Map,
+                  )
+                : null);
+    final risk = providerDiagnostics?['risk']?.toString();
+    if (risk == 'google_missing') {
+      hints.add(
+        'Google Play Services / Password Manager is missing. '
+        'Install or enable GMS, or disable Google-only passkey mode.',
+      );
+    } else if (risk == 'google_disabled_or_hidden') {
+      hints.add(
+        'Google Password Manager appears disabled/hidden by OEM policy. '
+        'Check credential providers or disable Google-only mode.',
+      );
+    } else if (risk == 'oem_providers_present') {
+      hints.add(
+        'OEM credential providers are present. Prefer Google-only mode on release builds.',
       );
     }
 

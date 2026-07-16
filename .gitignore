@@ -51,3 +51,7 @@ debug_symbols/
 android/local-maven/
 android/lumen-crash.version
 
+Install-CodexTrellis.ps1
+.agents/skills/
+.codex/
+.trellis/

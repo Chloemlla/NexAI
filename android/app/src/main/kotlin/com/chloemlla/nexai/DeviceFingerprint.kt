@@ -92,7 +92,8 @@ class DeviceFingerprint(private val context: Context) {
             info["securityPatch"] = Build.VERSION.SECURITY_PATCH ?: "unknown"
         }
 
-        // Installed apps hash (privacy-preserving)
+        // Installed apps hash (privacy-preserving, package-visibility limited on API 30+).
+        // We intentionally do NOT request QUERY_ALL_PACKAGES; result is best-effort visible set only.
         val installedApps = context.packageManager.getInstalledApplications(0)
         val appPackages = installedApps
             .filter { it.flags and ApplicationInfo.FLAG_SYSTEM == 0 } // User apps only

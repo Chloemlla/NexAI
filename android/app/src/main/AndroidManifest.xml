@@ -18,7 +18,8 @@
         tools:targetApi="37">
 
         <!--
-          Vivo/Android 13-17 notes:
+          Vivo/Android 11-17 notes:
+          - Android 11 package visibility: explicit <queries> for known packages/intents
           - Predictive back: enableOnBackInvokedCallback
           - Intent redirect hardening: intentMatchingFlags
           - Cleartext policy lives in network_security_config (no global usesCleartextTraffic on release)
@@ -74,18 +75,85 @@
         </provider>
     </application>
 
+    <!--
+      Android 11 package visibility:
+      Explicit packages/intents required for passkey diagnostics and security honeypot signals.
+      Do NOT add QUERY_ALL_PACKAGES; keep this as a bounded allowlist.
+    -->
     <queries>
+        <!-- Share / browser / installer interactions -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
         </intent>
         <intent>
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="*/*" />
         </intent>
         <intent>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="application/vnd.android.package-archive" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.CREATE_DOCUMENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.provider.action.PICK_IMAGES" />
+        </intent>
+
+        <!-- Passkey / Credential Manager providers -->
+        <package android:name="com.google.android.gms" />
+        <package android:name="com.vivo.password" />
+        <package android:name="com.vivo.assistant" />
+        <package android:name="com.coloros.phonemanager" />
+        <package android:name="com.oplus.password" />
+        <package android:name="com.oneplus.account" />
+        <package android:name="com.miui.cloudservice" />
+        <package android:name="com.xiaomi.account" />
+        <package android:name="com.huawei.hwid" />
+        <package android:name="com.hihonor.id" />
+        <package android:name="com.samsung.android.lool" />
+        <package android:name="com.samsung.android.sm.devicesecurity" />
+
+        <!-- SecuritySignals root / Xposed / VPN indicators (honeypot only) -->
+        <package android:name="com.noshufou.android.su" />
+        <package android:name="com.thirdparty.superuser" />
+        <package android:name="eu.chainfire.supersu" />
+        <package android:name="com.koushikdutta.superuser" />
+        <package android:name="com.zachspong.temprootremovejb" />
+        <package android:name="com.ramdroid.appquarantine" />
+        <package android:name="com.topjohnwu.magisk" />
+        <package android:name="de.robv.android.xposed.installer" />
+        <package android:name="org.meowcat.edxposed.manager" />
+        <package android:name="com.solohsu.android.edxp.manager" />
+        <package android:name="io.github.lsposed.manager" />
+        <package android:name="com.nordvpn.android" />
+        <package android:name="net.openvpn.openvpn" />
+        <package android:name="com.expressvpn.vpn" />
+        <package android:name="com.privateinternetaccess.android" />
+        <package android:name="com.surfshark.vpnclient.android" />
+        <package android:name="com.protonvpn.android" />
+        <package android:name="com.cloudflare.onedotonedotone" />
+        <package android:name="com.wireguard.android" />
+        <package android:name="de.blinkt.openvpn" />
+        <package android:name="com.github.shadowsocks" />
+        <package android:name="com.v2ray.ang" />
+        <package android:name="io.nekohasekai.sagernet" />
+        <package android:name="com.v2ray.actinium" />
+        <package android:name="com.github.kr328.clash" />
+        <package android:name="com.github.kr328.clash.premium" />
     </queries>
 </manifest>

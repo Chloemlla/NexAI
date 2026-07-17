@@ -15,6 +15,7 @@ import '../services/android_native/android_native_result.dart';
 import '../services/android_native/android_passkey_service.dart';
 import 'settings_provider.dart';
 import '../services/nexai_auth_service.dart';
+import '../utils/nexai_api_error.dart';
 import '../utils/build_config.dart';
 
 class AndroidPasskeyNativeException implements Exception {
@@ -321,7 +322,7 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = '网络错误: $e';
+      _error = e is NexaiApiError ? e.toDialogBody() : '网络错误: $e';
       return false;
     } finally {
       _isLoading = false;
@@ -352,7 +353,7 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = '网络错误: $e';
+      _error = e is NexaiApiError ? e.toDialogBody() : '网络错误: $e';
       return false;
     } finally {
       _isLoading = false;
@@ -530,7 +531,7 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = '网络错误: $e';
+      _error = e is NexaiApiError ? e.toDialogBody() : '网络错误: $e';
       return false;
     }
   }
@@ -649,7 +650,7 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e) {
-      _error = '网络错误: $e';
+      _error = e is NexaiApiError ? e.toDialogBody() : '网络错误: $e';
       return false;
     }
   }

@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import '../utils/nexai_api_error.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
@@ -551,9 +552,7 @@ class _LoginPageState extends State<LoginPage>
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(auth.error ?? 'Google 快速登录失败')),
-          );
+          await _showAuthError(auth.error, title: 'Google 登录失败');
         }
       }
     }
@@ -602,7 +601,8 @@ class _LoginPageState extends State<LoginPage>
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(auth.error ?? 'Passkey 登录失败')));
+    );
+    await _showAuthError(auth.error, title: 'Passkey 登录失败');
   }
 
   void _showForgotPasswordDialog() {

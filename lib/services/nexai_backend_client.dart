@@ -1,22 +1,23 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../utils/app_security.dart';
+import '../utils/nexai_api_error.dart';
 import '../utils/request_signer.dart';
 import 'pinned_http_client.dart';
 
-class NexaiBackendTimeoutException implements Exception {
-  NexaiBackendTimeoutException(this.method, this.url, this.timeout);
-
-  final String method;
-  final Uri url;
-  final Duration timeout;
-
-  @override
-  String toString() =>
-      'NexaiBackendTimeoutException: $method $url exceeded ${timeout.inSeconds}s';
+class NexaiBackendTimeoutException extends NexaiApiError {
+  NexaiBackendTimeoutException(String method, Uri url, Duration timeout)
+      : super(
+          stage: 'transport',
+          code: 'CLIENT_TIMEOUT',
+          message: '$method $url 超过 ${timeout.inSeconds}s 未响应',
+          path: url.path,
+          method: method,
+        );
 }
 
 class NexaiBackendClient {
@@ -25,9 +26,22 @@ class NexaiBackendClient {
   static const requestTimeout = Duration(seconds: 30);
   static http.Client? _client;
 
+  /// Optional explicit signing key override (e.g. refreshToken).
+  static String? overrideSigningKey;
+  static String? overrideKeyId;
+
   static Future<http.Client> _get() async {
-    _client ??= await buildPinnedHttpClient();
-    return _client!;
+    try {
+      _client ??= await buildPinnedHttpClient();
+      return _client!;
+    } catch (e) {
+      throw NexaiApiError(
+        stage: 'tls_pinning',
+        code: 'CLIENT_TLS_PIN',
+        message: '安全连接（证书钉扎）失败: $e',
+        cause: e,
+      );
+    }
   }
 
   static Map<String, String> _base([Map<String, String>? extra]) {
@@ -65,42 +79,150 @@ class NexaiBackendClient {
     required Uri url,
     required Map<String, String>? headers,
     String body = '',
-  }) {
-    return signRequest(
+  }) async {
+    final base = _base(headers);
+    try {
+      return await signRequestV2(
+        method: method,
+        path: url.path,
+        headers: base,
+        body: body,
+        signingKey: overrideSigningKey,
+        keyId: overrideKeyId,
+      );
+    } on RequestSigningException catch (e) {
+      // Soft-client: allow unsigned when no key yet (login before secret/token).
+      if (e.code == 'CLIENT_SIGN_NO_KEY' || e.code == 'CLIENT_SIGN_WEB') {
+        debugPrint('NexAI Backend: signing skipped (${e.code}): ${e.message}');
+        return {
+          ...base,
+          'X-NexAI-Sig-Skipped': e.code,
+        };
+      }
+      throw NexaiApiError(
+        stage: e.stage,
+        code: e.code,
+        message: e.message,
+        path: url.path,
+        method: method,
+        cause: e,
+      );
+    } catch (e) {
+      throw NexaiApiError(
+        stage: 'request_sign',
+        code: 'CLIENT_SIGN_NO_KEY',
+        message: '请求签名失败: $e',
+        path: url.path,
+        method: method,
+        cause: e,
+      );
+    }
+  }
+
+  static Future<http.Response> _send(
+    String method,
+    Uri url,
+    Future<http.Response> Function(Map<String, String> headers) send,
+    String body,
+    Map<String, String>? headers,
+  ) async {
+    final signed = await _signedHeaders(
       method: method,
-      path: url.path,
-      headers: _base(headers),
+      url: url,
+      headers: headers,
       body: body,
+    );
+    try {
+      return await send(signed).timeout(
+        requestTimeout,
+        onTimeout: () {
+          throw NexaiBackendTimeoutException(method, url, requestTimeout);
+        },
+      );
+    } on NexaiApiError {
+      rethrow;
+    } on SocketException catch (e) {
+      throw NexaiApiError(
+        stage: 'transport',
+        code: 'CLIENT_TRANSPORT',
+        message: '网络连接失败: ${e.message}',
+        path: url.path,
+        method: method,
+        cause: e,
+      );
+    } on HandshakeException catch (e) {
+      throw NexaiApiError(
+        stage: 'tls_pinning',
+        code: 'CLIENT_TLS_PIN',
+        message: 'TLS/证书握手失败: $e',
+        path: url.path,
+        method: method,
+        cause: e,
+      );
+    } on TlsException catch (e) {
+      throw NexaiApiError(
+        stage: 'tls_pinning',
+        code: 'CLIENT_TLS_PIN',
+        message: 'TLS 错误: $e',
+        path: url.path,
+        method: method,
+        cause: e,
+      );
+    } on TimeoutException {
+      throw NexaiBackendTimeoutException(method, url, requestTimeout);
+    } catch (e) {
+      if (e is NexaiApiError) rethrow;
+      throw NexaiApiError(
+        stage: 'transport',
+        code: 'CLIENT_TRANSPORT',
+        message: '网络请求异常: $e',
+        path: url.path,
+        method: method,
+        cause: e,
+      );
+    }
+  }
+
+  static http.Response ensureSuccess(
+    http.Response response, {
+    String? method,
+  }) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response;
+    }
+    throw nexaiErrorFromResponse(
+      statusCode: response.statusCode,
+      body: response.body,
+      path: response.request?.url.path,
+      method: method ?? response.request?.method,
     );
   }
 
   static Future<http.Response> get(
     Uri url, {
     Map<String, String>? headers,
-  }) async {
-    final signed = await _signedHeaders(
-      method: 'GET',
-      url: url,
-      headers: headers,
+  }) {
+    return _send(
+      'GET',
+      url,
+      (h) async => (await _get()).get(url, headers: h),
+      '',
+      headers,
     );
-    return _withTimeout('GET', url, (await _get()).get(url, headers: signed));
   }
 
   static Future<http.Response> post(
     Uri url, {
     Map<String, String>? headers,
     Object? body,
-  }) async {
-    final signed = await _signedHeaders(
-      method: 'POST',
-      url: url,
-      headers: headers,
-      body: _bodyString(body),
-    );
-    return _withTimeout(
+  }) {
+    final bodyStr = _bodyString(body);
+    return _send(
       'POST',
       url,
-      (await _get()).post(url, headers: signed, body: body),
+      (h) async => (await _get()).post(url, headers: h, body: body),
+      bodyStr,
+      headers,
     );
   }
 
@@ -108,17 +230,14 @@ class NexaiBackendClient {
     Uri url, {
     Map<String, String>? headers,
     Object? body,
-  }) async {
-    final signed = await _signedHeaders(
-      method: 'PUT',
-      url: url,
-      headers: headers,
-      body: _bodyString(body),
-    );
-    return _withTimeout(
+  }) {
+    final bodyStr = _bodyString(body);
+    return _send(
       'PUT',
       url,
-      (await _get()).put(url, headers: signed, body: body),
+      (h) async => (await _get()).put(url, headers: h, body: body),
+      bodyStr,
+      headers,
     );
   }
 
@@ -126,47 +245,27 @@ class NexaiBackendClient {
     Uri url, {
     Map<String, String>? headers,
     Object? body,
-  }) async {
-    final signed = await _signedHeaders(
-      method: 'PATCH',
-      url: url,
-      headers: headers,
-      body: _bodyString(body),
-    );
-    return _withTimeout(
+  }) {
+    final bodyStr = _bodyString(body);
+    return _send(
       'PATCH',
       url,
-      (await _get()).patch(url, headers: signed, body: body),
+      (h) async => (await _get()).patch(url, headers: h, body: body),
+      bodyStr,
+      headers,
     );
   }
 
   static Future<http.Response> delete(
     Uri url, {
     Map<String, String>? headers,
-  }) async {
-    final signed = await _signedHeaders(
-      method: 'DELETE',
-      url: url,
-      headers: headers,
-    );
-    return _withTimeout(
+  }) {
+    return _send(
       'DELETE',
       url,
-      (await _get()).delete(url, headers: signed),
-    );
-  }
-
-  static Future<http.Response> _withTimeout(
-    String method,
-    Uri url,
-    Future<http.Response> request,
-  ) {
-    return request.timeout(
-      requestTimeout,
-      onTimeout: () {
-        debugPrint('NexAI Backend: $method $url timed out');
-        throw NexaiBackendTimeoutException(method, url, requestTimeout);
-      },
+      (h) async => (await _get()).delete(url, headers: h),
+      '',
+      headers,
     );
   }
 }

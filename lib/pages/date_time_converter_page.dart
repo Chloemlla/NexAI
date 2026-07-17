@@ -215,7 +215,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
         LumenPageIntro(
           icon: Icons.access_time_filled_rounded,
           title: '日期时间转换器',
-          description: '在同一页面完成时间输入、格式转换与结果复制，保持工具流连贯。',
+          description: '输入或选择时间，转换为多种日期时间格式并复制结果。',
           chips: [
             if (_selectedDate != null)
               DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedDate!),

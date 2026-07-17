@@ -802,7 +802,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                   LumenPageIntro(
                     icon: Icons.password_rounded,
                     title: '密码生成器',
-                    description: '统一顶部信息层级后，生成、批量导出和本地保存都共享同一套视觉和快捷操作入口。',
+                    description: '生成随机/易记/PIN 密码，支持批量导出、本地保存与加密备份。',
                     chips: [
                       typeLabel,
                       '强度 $strengthLabel',

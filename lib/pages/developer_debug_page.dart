@@ -23,7 +23,7 @@ class DeveloperDebugPage extends StatelessWidget {
         const LumenPageIntro(
           icon: Icons.terminal_rounded,
           title: 'NexAI Debug Console',
-          description: '运行时诊断、崩溃报告入口与日志流。此页采用 Lumen 二级页节奏：简洁顶栏 + soft section。',
+          description: '查看运行参数、崩溃报告入口和调试日志，便于本地排障。',
           chips: ['Runtime', 'Crash', 'Log stream'],
         ),
         LumenSettingsSection(

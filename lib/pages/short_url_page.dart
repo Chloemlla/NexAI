@@ -154,7 +154,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
         LumenPageIntro(
           icon: Icons.link_rounded,
           title: '短链接生成',
-          description: '把输入、生成结果和后续操作收敛到一条流程里，避免用户生成后还要重新找复制或访问入口。',
+          description: '输入长链接生成短链，支持复制结果并直接访问。',
           chips: [
             '快速生成',
             _resultUrl == null ? '等待生成' : '结果已就绪',
@@ -320,25 +320,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
             ),
           ],
         ),
-        LumenSettingsSection(
-          icon: Icons.tips_and_updates_rounded,
-          title: '体验说明',
-          children: [
-            ToolPanel(
-              color: cs.tertiaryContainer.withAlpha(80),
-              borderSide: BorderSide(color: cs.tertiary.withAlpha(40)),
-              child: Text(
-                '原页面虽然有单独的 hero，但输入卡与结果卡的关系不够紧。现在把粘贴、生成、复制、访问拆成固定动作入口，'
-                '并把结果展示成可直接复制的主输出区，减少生成后再找按钮的成本。',
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.6,
-                  color: cs.onTertiaryContainer,
-                ),
-              ),
-            ),
-          ],
-        ),
+        
       ],
     );
   }

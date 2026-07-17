@@ -389,7 +389,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
         LumenPageIntro(
           icon: Icons.audiotrack_rounded,
           title: '视频转音频',
-          description: '把批量选择、格式设置、转换进度和保存操作收敛成统一流程，减少任务处理中断后的查找成本。',
+          description: '批量选择视频、设置输出格式，查看转换进度并保存提取的音频。',
           chips: [
             '输出 ${_selectedFormat.label}',
             _tasks.isEmpty ? '暂无任务' : '${_tasks.length} 个任务',

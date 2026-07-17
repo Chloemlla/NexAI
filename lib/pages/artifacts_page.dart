@@ -150,7 +150,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
           LumenPageIntro(
             icon: Icons.share_rounded,
             title: '我的分享',
-            description: '查看并管理你已经发布的分享内容，包括复制链接、刷新列表和删除记录。',
+            description: '查看已发布分享，支持复制链接、刷新列表和删除记录。',
             chips: ['需要登录', '集中管理'],
           ),
           ToolEmptyStateCard(
@@ -165,7 +165,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
     final intro = LumenPageIntro(
       icon: Icons.share_rounded,
       title: '我的分享',
-      description: '把登录状态、空状态和列表管理统一进同一套信息层级，减少“页面空白但不知道原因”的困惑。',
+      description: '登录后管理分享记录，可刷新列表、复制链接或删除条目。',
       chips: [
         artifactsProvider.isLoading ? '同步中' : '${artifacts.length} 条记录',
         artifactsProvider.error == null ? '状态正常' : '加载异常',

@@ -605,7 +605,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         LumenPageIntro(
           icon: Icons.video_file_rounded,
           title: '视频压缩',
-          description: '统一首屏信息层级后，用户可以先看素材状态，再决定压缩质量和是否打开高级设置。',
+          description: '先选择视频并查看素材信息，再设置压缩质量与高级参数，完成后保存结果。',
           chips: [
             '质量 ${_selectedQuality.name}',
             _isCompressing

@@ -194,7 +194,7 @@ class _TranslationPageState extends State<TranslationPage> {
         LumenPageIntro(
           icon: Icons.translate_rounded,
           title: 'AI 翻译',
-          description: '把语言切换、输入和结果输出都放进同一条操作链里，减少配置和翻译结果之间的视觉割裂。',
+          description: '选择源语言和目标语言，输入文本后进行 AI 翻译并复制结果。',
           chips: [
             '${_languages[_sourceLanguage]} → ${_languages[_targetLanguage]}',
             hasApiKey ? 'API Key 已配置' : '缺少 API Key',
@@ -388,33 +388,7 @@ class _TranslationPageState extends State<TranslationPage> {
             ),
           ],
         ),
-        LumenSettingsSection(
-          icon: Icons.tips_and_updates_rounded,
-          title: '体验说明',
-          children: [
-            ToolPanel(
-              color: cs.secondaryContainer.withAlpha(70),
-              borderSide: BorderSide(color: cs.secondary.withAlpha(40)),
-              child: Text(
-                '当前页面把语言切换、输入、翻译按钮和结果输出整合为单列流程。'
-                '相比原来的基础表单布局，用户可以更直观地判断现在的源语言、目标语言，以及是否已经具备调用 API 的条件。',
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.6,
-                  color: cs.onSecondaryContainer,
-                ),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: _clearAll,
-                icon: const Icon(Icons.cleaning_services_rounded),
-                label: const Text('清空输入与结果'),
-              ),
-            ),
-          ],
-        ),
+        
       ],
     );
   }

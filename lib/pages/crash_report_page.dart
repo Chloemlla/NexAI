@@ -61,7 +61,7 @@ class _CrashReportPageState extends State<CrashReportPage> {
         LumenPageIntro(
           icon: Icons.bug_report_rounded,
           title: 'NexAI 崩溃报告',
-          description: '汇总崩溃摘要、堆栈与系统信息，便于复制、导出或继续使用应用。',
+          description: '查看崩溃摘要、堆栈与系统信息，可复制、导出或清除后继续使用。',
           chips: const ['Crash', 'Stack', 'Export'],
         ),
                 _CrashCard(

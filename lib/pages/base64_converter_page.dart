@@ -146,7 +146,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
         LumenPageIntro(
           icon: Icons.code_rounded,
           title: 'Base64 编解码',
-          description: '把原始文本和 Base64 串拆成两个独立工作区，避免输入输出互相覆盖。',
+          description: '将文本编码为 Base64，或将 Base64 解码为文本，支持 URL Safe 模式。',
           chips: [
             '双向转换',
             _encodeUrlSafe || _decodeUrlSafe ? 'URL Safe 已启用' : '支持 URL Safe',
@@ -347,8 +347,8 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
               color: cs.tertiaryContainer.withAlpha(90),
               borderSide: BorderSide(color: cs.tertiary.withAlpha(50)),
               child: Text(
-                '标准 Base64 使用 + / = 字符；URL Safe 会改写为 - 和 _，并可移除结尾填充。'
-                '\n把编码和解码拆成两个独立输入区后，用户不会再遇到输入刚粘贴就被结果覆盖的问题。',
+                '标准 Base64 使用 + / =；URL Safe 会改为 - / _，并可省略结尾 =。'
+                '\n编码与解码分别在两个工作区完成。',
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.6,

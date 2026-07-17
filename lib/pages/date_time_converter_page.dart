@@ -388,110 +388,80 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
   }
 
   Widget _buildInputCard(ColorScheme cs, TextTheme tt, bool isNarrow) {
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: cs.secondaryContainer.withAlpha(150),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.edit_calendar_rounded,
-                      size: 18,
-                      color: cs.secondary,
+    return LumenActionCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const LumenSectionHeader(
+            icon: Icons.edit_calendar_rounded,
+            title: '输入',
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedFormat,
+            decoration: InputDecoration(
+              labelText: '输入格式',
+              prefixIcon: const Icon(
+                Icons.format_list_bulleted_rounded,
+                size: 20,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+            ),
+            items: _formatEntries
+                .map(
+                  (e) => DropdownMenuItem(
+                    value: e.name,
+                    child: Row(
+                      children: [
+                        Icon(e.icon, size: 16, color: cs.primary),
+                        const SizedBox(width: 10),
+                        Text(e.name),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '输入',
-                  style: tt.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Format selector
-            DropdownButtonFormField<String>(
-              initialValue: _selectedFormat,
-              decoration: InputDecoration(
-                labelText: '输入格式',
-                prefixIcon: const Icon(
-                  Icons.format_list_bulleted_rounded,
-                  size: 20,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+                )
+                .toList(),
+            onChanged: _onFormatChanged,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _inputController,
+            decoration: InputDecoration(
+              labelText: '日期时间值',
+              hintText: '输入或粘贴日期时间...',
+              errorText: _errorMessage,
+              prefixIcon: const Icon(Icons.input_rounded, size: 20),
+              suffixIcon: _inputController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 20),
+                      onPressed: () {
+                        _inputController.clear();
+                        _onInputChanged('');
+                      },
+                    )
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
               ),
-              items: _formatEntries
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e.name,
-                      child: Row(
-                        children: [
-                          Icon(e.icon, size: 16, color: cs.primary),
-                          const SizedBox(width: 10),
-                          Text(e.name),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: _onFormatChanged,
-            ),
-            const SizedBox(height: 12),
-            // Input field
-            TextField(
-              controller: _inputController,
-              decoration: InputDecoration(
-                labelText: '日期时间值',
-                hintText: '输入或粘贴日期时间...',
-                errorText: _errorMessage,
-                prefixIcon: const Icon(Icons.input_rounded, size: 20),
-                suffixIcon: _inputController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 20),
-                        onPressed: () {
-                          _inputController.clear();
-                          _onInputChanged('');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
               ),
-              style: const TextStyle(
-                fontFamily: 'JetBrainsMonoNexAI',
-                fontSize: 14,
-              ),
-              onChanged: _onInputChanged,
             ),
-          ],
-        ),
+            style: const TextStyle(
+              fontFamily: 'JetBrainsMonoNexAI',
+              fontSize: 14,
+            ),
+            onChanged: _onInputChanged,
+          ),
+        ],
       ),
     );
   }
@@ -695,38 +665,29 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-          child: Column(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(150),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(child: Icon(icon, size: 18, color: iconColor)),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+    return LumenActionCard(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      onTap: onTap,
+      child: Column(
+        children: [
+          LumenIconChip(
+            icon: icon,
+            size: 36,
+            iconSize: 18,
+            backgroundColor: color.withAlpha(150),
+            foregroundColor: iconColor,
+            shape: LumenIconChipShape.rounded,
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

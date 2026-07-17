@@ -549,7 +549,13 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Card(
+      elevation: 0,
+      color: cs.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
       clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

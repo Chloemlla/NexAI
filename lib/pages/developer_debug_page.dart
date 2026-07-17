@@ -102,11 +102,9 @@ class DeveloperDebugPage extends StatelessWidget {
             future: CrashReporter.store.load(),
             builder: (context, snapshot) {
               final report = snapshot.data;
-              return Card(
-                color: cs.surfaceContainerLow,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
+              return LumenActionCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Row(
@@ -200,21 +198,19 @@ class DeveloperDebugPage extends StatelessWidget {
                       ],
                     ],
                   ),
-                ),
               );
             },
           ),
           const SizedBox(height: 12),
-          Card(
+          LumenActionCard(
             color: cs.surfaceContainerLowest,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.article_rounded, size: 18, color: cs.primary),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.article_rounded, size: 18, color: cs.primary),
                       const SizedBox(width: 8),
                       Text(
                         'LOG STREAM',
@@ -255,7 +251,6 @@ class DeveloperDebugPage extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
           ),
         ],
       ),
@@ -301,38 +296,35 @@ class _DebugMetricCard extends StatelessWidget {
 
     return SizedBox(
       width: cardWidth.clamp(140, 220).toDouble(),
-      child: Card(
-        color: cs.surfaceContainerLow,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 18, color: cs.primary),
-              const SizedBox(height: 12),
-              Text(
-                label,
-                style: TextStyle(
-                  color: cs.onSurfaceVariant,
-                  fontFamily: SettingsProvider.monospaceFontFamily,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
+      child: LumenActionCard(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: cs.primary),
+            const SizedBox(height: 12),
+            Text(
+              label,
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontFamily: SettingsProvider.monospaceFontFamily,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: cs.onSurface,
-                  fontFamily: SettingsProvider.monospaceFontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: cs.onSurface,
+                fontFamily: SettingsProvider.monospaceFontFamily,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

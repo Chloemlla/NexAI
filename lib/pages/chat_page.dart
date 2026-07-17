@@ -592,9 +592,10 @@ class _ChatPageState extends State<ChatPage> {
     return FloatingActionButton.small(
       heroTag: 'chat_scroll_to_bottom',
       onPressed: _jumpToLatestMessage,
-      backgroundColor: cs.surface,
+      backgroundColor: cs.surfaceContainerLow,
       foregroundColor: cs.primary,
-      elevation: 2,
+      elevation: 0,
+      highlightElevation: 0,
       tooltip: '跳到最新消息',
       child: const Icon(Icons.keyboard_arrow_down_rounded),
     );

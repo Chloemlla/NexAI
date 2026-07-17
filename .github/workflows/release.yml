@@ -211,62 +211,78 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
-          flutter-version: '3.44.5'
-          channel: 'stable'
-          cache: true
+          dotnet-version: '9.0.x'
 
-      - name: Cache Flutter pub dependencies
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~\AppData\Local\Pub\Cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
-      - name: Subset JetBrains Mono font
-        run: python scripts/subset_jetbrains_mono.py
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Analyze Dart code
-        run: flutter analyze
-
-      - name: Run Flutter tests
-        run: flutter test
-
-      - name: Enable Windows Desktop
-        run: flutter config --enable-windows-desktop
-
-      - name: Recreate Windows directory
-        run: flutter create --platforms windows .
-
-      - name: Configure Windows native build
-        run: pwsh scripts/configure_windows_native_build.ps1
-
-      - name: Run build.ps1 (version control)
-        run: pwsh scripts/build.ps1
-
-      - name: Build Windows
-        env:
-          CL: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
+      - name: Compute version metadata
+        shell: pwsh
         run: |
-          flutter build windows --release `
-            --obfuscate `
-            --split-debug-info=debug_symbols\windows `
-            --dart-define-from-file=nexai_release.json
+          $ErrorActionPreference = 'Stop'
+          $commitHash = (git rev-parse HEAD).Trim()
+          $shortHash = $commitHash.Substring(0, 9)
+          $versionName = '1.0.7'
+          if (Test-Path 'pubspec.yaml') {
+            $line = Select-String -Path 'pubspec.yaml' -Pattern '^\s*version:\s*([\d\.]+)' | Select-Object -First 1
+            if ($line -and $line.Matches.Count -gt 0) {
+              $versionName = $line.Matches[0].Groups[1].Value
+            }
+          }
+          $displayName = "$versionName-$shortHash"
+          "VERSION_NAME=$versionName" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "SHORT_HASH=$shortHash" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "VERSION_DISPLAY=$displayName" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: windows-debug-symbols
-          path: debug_symbols\windows
-          retention-days: 90
+      - name: Restore WinUI solution
+        shell: pwsh
+        run: |
+          msbuild winui\NexAI.WinUI3.sln /t:Restore /p:Configuration=Release /p:Platform=x64 /v:m
+
+      - name: Build WinUI3 client
+        shell: pwsh
+        run: |
+          msbuild winui\NexAI.WinUI3\NexAI.WinUI3.csproj `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:WindowsPackageType=None `
+            /p:WindowsAppSDKSelfContained=true `
+            /p:Restore=false `
+            /v:m
 
       - name: Compress Windows Build
-        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath NexAI-Windows.zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $candidates = @(
+            'winui/NexAI.WinUI3/bin/x64/Release/net9.0-windows10.0.19041.0',
+            'winui/NexAI.WinUI3/bin/Release/net9.0-windows10.0.19041.0',
+            'winui/NexAI.WinUI3/bin/x64/Release/net9.0-windows10.0.19041.0/win-x64',
+            'winui/NexAI.WinUI3/bin/Release/net9.0-windows10.0.19041.0/win-x64'
+          )
+          $source = $null
+          foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+              $exe = Get-ChildItem -Path $candidate -Filter NexAI.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($exe) {
+                $source = $exe.Directory.FullName
+                break
+              }
+            }
+          }
+          if (-not $source) {
+            $exe = Get-ChildItem -Path 'winui/NexAI.WinUI3/bin' -Filter NexAI.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($exe) { $source = $exe.Directory.FullName }
+          }
+          if (-not $source) {
+            throw 'WinUI build output not found.'
+          }
+          if (Test-Path 'NexAI-Windows.zip') { Remove-Item -Force 'NexAI-Windows.zip' }
+          Compress-Archive -Path (Join-Path $source '*') -DestinationPath 'NexAI-Windows.zip' -Force
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -315,7 +331,7 @@ jobs:
           # Package web build
           cd web-build && zip -r ../release-assets/NexAI-Web-${{ github.ref_name }}.zip . && cd ..
           
-          # Package windows build
+          # Package native WinUI3 windows build
           cp windows-build/NexAI-Windows.zip release-assets/NexAI-Windows-${{ github.ref_name }}.zip
           
           # Package all android outputs for debugging

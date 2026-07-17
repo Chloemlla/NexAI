@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using NexAI.Core.Auth;
 using NexAI.Core.Chat;
-using NexAI.Core.Migration;
 using NexAI.Core.Notes;
 using NexAI.Core.Settings;
 using NexAI.Core.Sync;
@@ -9,7 +8,6 @@ using NexAI.Core.Tools;
 using NexAI.Infrastructure.Auth;
 using NexAI.Infrastructure.Chat;
 using NexAI.Infrastructure.Media;
-using NexAI.Infrastructure.Migration;
 using NexAI.Infrastructure.Storage;
 using NexAI.Infrastructure.Sync;
 using NexAI.Infrastructure.Tools;
@@ -27,7 +25,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuthClient, NexaiAuthClient>();
         services.AddSingleton<ISyncCrypto, AesGcmSyncCrypto>();
         services.AddSingleton<ISyncService, NexaiSyncService>();
-        services.AddSingleton<IFlutterDataMigrator, FlutterDataMigrator>();
         services.AddSingleton<HttpClient>();
         services.AddSingleton<IChatStreamingClient, OpenAiCompatibleChatClient>();
         services.AddSingleton<IShortUrlClient, MmpShortUrlClient>();

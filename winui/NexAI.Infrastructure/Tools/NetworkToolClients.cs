@@ -176,7 +176,13 @@ public sealed class OpenAiImageGenerationClient : IImageGenerationClient
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            return await GenerateViaChatFallbackAsync(baseUrl, apiKey, model, prompt, body, cancellationToken)
+            return await GenerateViaChatFallbackAsync(
+                    baseUrl ?? string.Empty,
+                    apiKey ?? string.Empty,
+                    model,
+                    prompt,
+                    body,
+                    cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -210,8 +216,8 @@ public sealed class OpenAiImageGenerationClient : IImageGenerationClient
     }
 
     private async Task<ImageGenerationResult> GenerateViaChatFallbackAsync(
-        string baseUrl,
-        string apiKey,
+        string? baseUrl,
+        string? apiKey,
         string model,
         string prompt,
         string primaryErrorBody,

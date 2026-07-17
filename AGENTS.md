@@ -30,16 +30,21 @@ apply_patch 在当前环境可用。
 
 ## Project Structure & Module Organization
 
-NexAI is a Flutter/Dart client for OpenAI-compatible APIs. Core app code lives in `lib/`: `main.dart` and `app.dart` bootstrap the app, `pages/` contains screens, `providers/` owns state and API-facing logic, `models/` defines data objects, `services/` handles backend/security integrations, `utils/` contains shared helpers, and `widgets/` holds reusable UI. Tests are under `test/`, with widget tests in `test/widgets/`. Static assets, fonts, Markdown CSS, and icons are in `assets/`. Platform code is in `android/`, `web/`, and `windows/`; project docs are in `docs/`.
+NexAI is multi-client:
+- Flutter/Dart for Android and Web under `lib/` (`main.dart`, `app.dart`, `pages/`, `providers/`, `models/`, `services/`, `utils/`, `widgets/`). Tests live in `test/`.
+- Native Windows desktop under `winui/` (`NexAI.WinUI3`, `NexAI.Core`, `NexAI.Infrastructure`).
+- Platform hosts: `android/`, `web/`. The legacy Flutter `windows/` host is removed; do not recreate it as the product path.
+- Assets/docs: `assets/`, `docs/`.
 
 ## Build, Test, and Development Commands
 
 - `flutter pub get` installs dependencies from `pubspec.yaml`.
-- `flutter run -d windows`, `flutter run -d android`, or `flutter run -d chrome` runs the app locally on the target platform.
+- `flutter run -d android` or `flutter run -d chrome` runs Flutter clients locally.
 - `flutter analyze` runs the Dart analyzer with `flutter_lints`.
 - `dart format lib test` formats source and tests.
 - `flutter test` runs all unit and widget tests.
 - `flutter build apk --release` and `flutter build web` create release builds.
+- Windows product builds are WinUI3 via GitHub Actions `build-windows` (msbuild `winui/NexAI.WinUI3`).
 - `pwsh scripts/build.ps1 -Arg android` updates Android release metadata; it rewrites `pubspec.yaml` and `nexai_release.json`.
 - `scripts\generate-icons.cmd` regenerates Android launcher icons from `assets/icon.png` and requires ImageMagick.
 

@@ -1,6 +1,6 @@
 # NexAI WinUI3
 
-Native Windows client for the Fluent / WinUI3 rewrite.
+Native Windows product client for NexAI. This is the only Windows desktop path.
 
 ## Layout
 
@@ -19,7 +19,7 @@ winui/
 Implemented:
 
 - Fluent shell (Mica, custom title bar, NavigationView)
-- Settings: API, theme, backend, sync config, recovery key, Flutter migration trigger
+- Settings: API, theme, backend, sync config, recovery key
 - Chat: multi-conversation + OpenAI-compatible streaming + basic Markdown
 - Notes: local store, search, create/edit/delete/star, tags/wiki-link extraction
 - Tools:
@@ -31,8 +31,7 @@ Implemented:
 - Sync: AES-256-GCM record crypto + NexAI `/sync/v2` upload/download
 - Advanced rendering: LaTeX Unicode math preview + Mermaid edge/node preview cards
 - Sync restore uses atomic conversation `ReplaceAll` (id-preserving)
-- Flutter local data migration (best-effort chats/notes/settings import)
-- Independent WinUI CI job (`build-winui`) packaging zip artifacts
+- CI/release Windows packaging builds this WinUI3 client only
 
 Local data roots:
 
@@ -46,3 +45,9 @@ msbuild winui\NexAI.WinUI3\NexAI.WinUI3.csproj /p:Configuration=Release /p:Platf
 ```
 
 Local machine builds remain prohibited by repo policy; GitHub Actions owns verification.
+
+## Platform note
+
+- Windows desktop product path: `winui/` (native WinUI3)
+- Android/Web continue on Flutter
+- Legacy Flutter `windows/` host is removed from the repository

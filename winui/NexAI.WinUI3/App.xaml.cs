@@ -2,7 +2,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using NexAI.Core.Auth;
 using NexAI.Core.Chat;
-using NexAI.Core.Migration;
 using NexAI.Core.Notes;
 using NexAI.Core.Settings;
 using NexAI.Core.Sync;
@@ -35,7 +34,6 @@ public partial class App : Application
         var notesStore = Services.GetRequiredService<INotesStore>();
         var authStore = Services.GetRequiredService<IAuthSessionStore>();
         var syncService = Services.GetRequiredService<ISyncService>();
-        var migrator = Services.GetRequiredService<IFlutterDataMigrator>();
 
         await Task.WhenAll(
             settingsStore.LoadAsync(),
@@ -43,21 +41,6 @@ public partial class App : Application
             notesStore.LoadAsync(),
             authStore.LoadAsync(),
             syncService.LoadAsync());
-
-        // Best-effort one-time Flutter data migration.
-        try
-        {
-            await migrator.TryMigrateAsync();
-            // Reload after potential import.
-            await Task.WhenAll(
-                settingsStore.LoadAsync(),
-                conversationStore.LoadAsync(),
-                notesStore.LoadAsync());
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine("Flutter migration failed: " + ex.Message);
-        }
 
         var themeService = Services.GetRequiredService<ThemeService>();
         _window = Services.GetRequiredService<MainWindow>();

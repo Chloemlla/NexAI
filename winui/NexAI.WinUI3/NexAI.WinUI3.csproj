@@ -15,7 +15,8 @@
     <EnableMsixTooling>false</EnableMsixTooling>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- Required by LibraryImport in Program.cs (XamlCheckProcessRequirements). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>

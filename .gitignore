@@ -23,8 +23,14 @@ doc/api/
 .DS_Store
 Thumbs.db
 
-# Windows build intermediates
-windows/flutter/ephemeral/
+# Windows product is WinUI3 under winui/
+# Ignore any recreated legacy Flutter windows host tree
+windows/
+
+# WinUI3 native client intermediates
+winui/**/bin/
+winui/**/obj/
+winui/**/.vs/
 
 # Android
 android/.gradle/
@@ -55,8 +61,4 @@ Install-CodexTrellis.ps1
 .agents/skills/
 .codex/
 .trellis/
-# WinUI3 native client
-winui/**/bin/
-winui/**/obj/
-winui/**/.vs/
 

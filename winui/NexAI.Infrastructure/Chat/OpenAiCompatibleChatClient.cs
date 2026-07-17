@@ -106,7 +106,7 @@ public sealed class OpenAiCompatibleChatClient : IChatStreamingClient
             }
             catch (JsonException)
             {
-                // Skip malformed SSE chunks, matching Flutter client behavior.
+                // Skip malformed SSE chunks for resilient streaming.
             }
 
             if (!string.IsNullOrEmpty(delta))

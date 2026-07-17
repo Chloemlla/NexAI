@@ -1,8 +1,9 @@
 # NexAI
 
-OpenAI-compatible AI chat client built with Flutter. Material Design 3 across Windows, Android, and Web, with notes, tools, encrypted cloud sync, and Android-oriented security hardening.
+OpenAI-compatible AI chat client. Android/Web use Flutter + Material Design 3; Windows desktop uses native WinUI3. Notes, tools, encrypted cloud sync, and Android-oriented security hardening are included.
 
 ![Flutter](https://img.shields.io/badge/Flutter-3.44-blue?logo=flutter)
+![WinUI3](https://img.shields.io/badge/Windows-WinUI3-blue)
 ![Version](https://img.shields.io/badge/Version-1.0.7-orange)
 ![License](https://img.shields.io/badge/License-GPL--3.0-green)
 ![Platforms](https://img.shields.io/badge/Platforms-Windows%20%7C%20Android%20%7C%20Web-blueviolet)
@@ -62,7 +63,8 @@ OpenAI-compatible AI chat client built with Flutter. Material Design 3 across Wi
 
 ### Appearance & UX
 
-- **Material Design 3** on Windows, Android, and Web
+- **Material Design 3** on Android and Web
+- **Fluent / WinUI3** on Windows desktop (`winui/`)
 - **Dynamic color** — Follows system accent on Android 12+
 - **Custom accent color**, font family, and reading size
 - **Dark / Light / System** theme
@@ -97,7 +99,9 @@ OpenAI-compatible AI chat client built with Flutter. Material Design 3 across Wi
 
 ### Build via GitHub Actions (recommended)
 
-CI uses Flutter **3.44.5** and is the supported path for release artifacts.
+CI is the supported path for release artifacts:
+- Android/Web: Flutter **3.44.5**
+- Windows: native WinUI3 (`winui/`) via MSBuild
 
 1. Fork the repository
 2. Open **Actions → Build NexAI → Run workflow**
@@ -119,9 +123,6 @@ Tag pushes matching `v*` run the **Release NexAI** workflow (analyze, test, buil
 
 ```bash
 flutter pub get
-flutter config --enable-windows-desktop   # once, if needed
-flutter create --platforms windows .      # if the windows/ project is incomplete
-flutter run -d windows
 flutter run -d android
 flutter run -d chrome
 ```
@@ -133,6 +134,8 @@ flutter analyze
 flutter test
 dart format lib test
 ```
+
+Windows desktop development uses the native solution under `winui/` (built by CI). Do not recreate the legacy Flutter `windows/` host as the product path.
 
 > Agents and contributors following this repo’s AGENTS instructions should rely on GitHub Actions for authoritative build/test validation rather than heavy local builds.
 

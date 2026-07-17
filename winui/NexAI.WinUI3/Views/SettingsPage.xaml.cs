@@ -4,7 +4,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using NexAI.Core.Auth;
-using NexAI.Core.Migration;
 using NexAI.Core.Settings;
 using NexAI.Core.Sync;
 using NexAI.WinUI3.Services;
@@ -19,7 +18,6 @@ public sealed partial class SettingsPage : Page
     private readonly IAuthSessionStore _authStore;
     private readonly IAuthClient _authClient;
     private readonly ISyncService _syncService;
-    private readonly IFlutterDataMigrator _migrator;
     private bool _suppressThemeEvent;
 
     public SettingsPage()
@@ -30,7 +28,6 @@ public sealed partial class SettingsPage : Page
         _authStore = App.Current.Services.GetRequiredService<IAuthSessionStore>();
         _authClient = App.Current.Services.GetRequiredService<IAuthClient>();
         _syncService = App.Current.Services.GetRequiredService<ISyncService>();
-        _migrator = App.Current.Services.GetRequiredService<IFlutterDataMigrator>();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -183,11 +180,6 @@ public sealed partial class SettingsPage : Page
         }
     }
 
-    private async void MigrateButton_Click(object sender, RoutedEventArgs e)
-    {
-        var result = await _migrator.TryMigrateAsync();
-        MigrationStatusText.Text = result.Message;
-    }
 
     private async Task SaveSilentAsync()
     {

@@ -13,7 +13,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Spacing="4">
                     <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Settings" />
-                    <TextBlock Opacity="0.72" Text="API, account, sync, migration, and rendering preferences for the native Windows client." />
+                    <TextBlock Opacity="0.72" Text="API, account, sync, and rendering preferences for the native Windows client." />
                 </StackPanel>
                 <Button x:Name="SaveButton" Grid.Column="1" Content="Save" Style="{StaticResource AccentButtonStyle}" Click="SaveButton_Click" />
             </Grid>
@@ -78,15 +78,6 @@
                     <TextBox x:Name="RecoveryKeyBox" Header="Import recovery key" />
                     <Button Content="Import recovery key" Click="ImportKeyButton_Click" />
                     <TextBlock x:Name="SyncStatusText" Opacity="0.8" TextWrapping="Wrap" />
-                </StackPanel>
-            </Border>
-
-            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
-                <StackPanel Spacing="12">
-                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Flutter migration" />
-                    <TextBlock Opacity="0.72" Text="Imports Flutter Windows chats/notes/settings into the clean WinUI local store when available." />
-                    <Button Content="Run migration now" Click="MigrateButton_Click" />
-                    <TextBlock x:Name="MigrationStatusText" Opacity="0.8" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
 

@@ -408,8 +408,8 @@ class _ArtifactListItem extends StatelessWidget {
                       break;
                   }
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
                     value: 'copy',
                     child: Row(
                       children: [

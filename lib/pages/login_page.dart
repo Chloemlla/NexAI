@@ -536,6 +536,22 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
+  Future<void> _showAuthError(String? message, {String title = '请求失败'}) async {
+    if (!mounted) return;
+    final text = (message ?? '未知错误').trim();
+    await showNexaiErrorDialog(
+      context,
+      NexaiApiError(
+        stage: text.contains('签名')
+            ? 'request_sign'
+            : (text.contains('【环节】') ? 'http_status' : 'server_auth'),
+        code: 'AUTH_FLOW',
+        message: text.isEmpty ? '未知错误' : text,
+      ),
+      title: title,
+    );
+  }
+
   Future<void> _handleGoogleSignIn(AuthProvider auth) async {
     final success = await auth.signInWithGoogle();
     if (mounted) {
@@ -568,16 +584,16 @@ class _LoginPageState extends State<LoginPage>
 
     final success = await auth.loginWithPasskey(identifier: identifier);
     if (!mounted) return;
-    _showPasskeyLoginResult(auth, success);
+    await _showPasskeyLoginResult(auth, success);
   }
 
   Future<void> _handleDiscoverablePasskeyLogin(AuthProvider auth) async {
     final success = await auth.loginWithPasskey();
     if (!mounted) return;
-    _showPasskeyLoginResult(auth, success);
+    await _showPasskeyLoginResult(auth, success);
   }
 
-  void _showPasskeyLoginResult(AuthProvider auth, bool success) {
+  Future<void> _showPasskeyLoginResult(AuthProvider auth, bool success) async {
     if (success) {
       Navigator.of(context).pop(true);
       return;
@@ -599,9 +615,6 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    );
     await _showAuthError(auth.error, title: 'Passkey 登录失败');
   }
 

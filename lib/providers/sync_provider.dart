@@ -9,6 +9,7 @@ import '../models/message.dart';
 import '../models/note.dart';
 import '../services/nexai_sync_service.dart';
 import '../utils/sync_crypto.dart';
+import '../utils/nexai_api_error.dart';
 import 'auth_provider.dart';
 import 'settings_provider.dart';
 import 'chat_provider.dart';
@@ -42,6 +43,14 @@ class SyncProvider extends ChangeNotifier {
   bool get isSyncing =>
       _status == SyncStatus.uploading || _status == SyncStatus.downloading;
 
+  String _formatSyncError(Object e, String fallback) {
+    if (e is NexaiApiError) return e.toDialogBody();
+    final text = e.toString();
+    if (text.contains('【环节】')) return text;
+    return '$fallback: $text';
+  }
+
+
   /// 上传所有本地数据到云端
   Future<bool> uploadAll({
     required AuthProvider authProvider,
@@ -53,7 +62,11 @@ class SyncProvider extends ChangeNotifier {
     required ShortUrlProvider shortUrlProvider,
   }) async {
     if (authProvider.accessToken == null) {
-      _errorMessage = '请先登录';
+      _errorMessage = NexaiApiError(
+        stage: 'auth_session',
+        code: 'CLIENT_AUTH_REQUIRED',
+        message: '请先登录后再同步',
+      ).toDialogBody();
       _status = SyncStatus.error;
       notifyListeners();
       return false;
@@ -86,13 +99,17 @@ class SyncProvider extends ChangeNotifier {
         await _saveLastSyncedAt(syncedAt);
       } else {
         _status = SyncStatus.error;
-        _errorMessage = '上传失败';
+        _errorMessage = NexaiApiError(
+          stage: 'server_validation',
+          code: 'SYNC_UPLOAD_FAILED',
+          message: '上传失败：服务器未返回成功结果',
+        ).toDialogBody();
       }
       notifyListeners();
       return success;
     } catch (e) {
       _status = SyncStatus.error;
-      _errorMessage = '上传失败: $e';
+      _errorMessage = _formatSyncError(e, '上传失败');
       notifyListeners();
       return false;
     }
@@ -109,7 +126,11 @@ class SyncProvider extends ChangeNotifier {
     required ShortUrlProvider shortUrlProvider,
   }) async {
     if (authProvider.accessToken == null) {
-      _errorMessage = '请先登录';
+      _errorMessage = NexaiApiError(
+        stage: 'auth_session',
+        code: 'CLIENT_AUTH_REQUIRED',
+        message: '请先登录后再同步',
+      ).toDialogBody();
       _status = SyncStatus.error;
       notifyListeners();
       return false;
@@ -152,7 +173,7 @@ class SyncProvider extends ChangeNotifier {
       return true;
     } catch (e) {
       _status = SyncStatus.error;
-      _errorMessage = '下载失败: $e';
+      _errorMessage = _formatSyncError(e, '下载失败');
       notifyListeners();
       return false;
     }

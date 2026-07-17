@@ -221,6 +221,8 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
     if (provider.error == null) {
       _promptController.clear();
+    } else if (mounted) {
+      _showError(provider.error!);
     }
   }
 

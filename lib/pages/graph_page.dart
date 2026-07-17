@@ -293,43 +293,70 @@ class _GraphPageState extends State<GraphPage>
                       ),
                       child: Stack(
                         clipBehavior: Clip.none,
-                        children: _graphData.nodes.map((node) {
-                          final radius = _nodeRadius(node);
-                          final isHighlighted = _highlightedNodeId == node.id;
-                          final labelWidth = math.max((radius + 20) * 2, 80.0);
-                          return Positioned(
-                            left: node.x - labelWidth / 2,
-                            top: node.y + radius + 4,
-                            child: GestureDetector(
-                              onTap: () => _onNodeTap(node),
-                              onLongPress: () => setState(() {
-                                _highlightedNodeId =
-                                    _highlightedNodeId == node.id
-                                    ? null
-                                    : node.id;
-                              }),
-                              child: SizedBox(
-                                width: labelWidth,
-                                child: Text(
-                                  node.title,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: isHighlighted ? 12 : 10,
-                                    fontWeight: isHighlighted
-                                        ? FontWeight.w700
-                                        : FontWeight.w500,
-                                    color: isHighlighted
-                                        ? cs.primary
-                                        : cs.onSurfaceVariant,
-                                    height: 1.3,
+                        children: [
+                          // Hit targets on actual node circles (paint itself is not tappable).
+                          ..._graphData.nodes.map((node) {
+                            final radius = _nodeRadius(node);
+                            final hit = (radius + 10) * 2;
+                            return Positioned(
+                              left: node.x - hit / 2,
+                              top: node.y - hit / 2,
+                              width: hit,
+                              height: hit,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () => _onNodeTap(node),
+                                onLongPress: () => setState(() {
+                                  _highlightedNodeId =
+                                      _highlightedNodeId == node.id
+                                      ? null
+                                      : node.id;
+                                }),
+                                child: const SizedBox.expand(),
+                              ),
+                            );
+                          }),
+                          // Labels under nodes remain secondary hit targets.
+                          ..._graphData.nodes.map((node) {
+                            final radius = _nodeRadius(node);
+                            final isHighlighted =
+                                _highlightedNodeId == node.id;
+                            final labelWidth =
+                                math.max((radius + 20) * 2, 80.0);
+                            return Positioned(
+                              left: node.x - labelWidth / 2,
+                              top: node.y + radius + 4,
+                              child: GestureDetector(
+                                onTap: () => _onNodeTap(node),
+                                onLongPress: () => setState(() {
+                                  _highlightedNodeId =
+                                      _highlightedNodeId == node.id
+                                      ? null
+                                      : node.id;
+                                }),
+                                child: SizedBox(
+                                  width: labelWidth,
+                                  child: Text(
+                                    node.title,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: isHighlighted ? 12 : 10,
+                                      fontWeight: isHighlighted
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                      color: isHighlighted
+                                          ? cs.primary
+                                          : cs.onSurfaceVariant,
+                                      height: 1.3,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          );
-                        }).toList(),
+                            );
+                          }),
+                        ],
                       ),
                     ),
                   ),

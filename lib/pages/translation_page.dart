@@ -136,7 +136,10 @@ class _TranslationPageState extends State<TranslationPage> {
   Future<void> _pasteSource() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text;
-    if (text == null || text.isEmpty) return;
+    if (text == null || text.isEmpty) {
+      _showMessage('剪贴板为空');
+      return;
+    }
     setState(() => _sourceController.text = text);
   }
 

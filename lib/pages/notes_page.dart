@@ -350,7 +350,7 @@ class _NotesPageState extends State<NotesPage>
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 96),
       itemCount: results.length,
       separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (_, idx) {
@@ -659,7 +659,7 @@ class _NotesPageState extends State<NotesPage>
         // 标签列表
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 96),
             itemCount: tags.length,
             itemBuilder: (_, idx) {
               final tag = tags[idx];
@@ -774,7 +774,7 @@ class _NotesPageState extends State<NotesPage>
 
   Widget _buildNotesList(List<Note> notes) {
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(14, 4, 14, 96),
       itemCount: notes.length,
       separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (_, index) => _NoteCard(note: notes[index]),

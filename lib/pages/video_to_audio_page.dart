@@ -489,106 +489,85 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
   }
 
   Widget _buildFormatSelector(ColorScheme cs) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.audio_file_rounded,
-                    color: cs.onPrimaryContainer,
-                    size: 20,
-                  ),
+    return LumenActionCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const LumenIconChip(
+                icon: Icons.audio_file_rounded,
+                size: 40,
+                iconSize: 20,
+                shape: LumenIconChipShape.rounded,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '输出格式',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  '输出格式',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: AudioFormat.values.map((fmt) {
-                final selected = fmt == _selectedFormat;
-                return ChoiceChip(
-                  label: Text(fmt.label),
-                  selected: selected,
-                  onSelected: _isProcessing
-                      ? null
-                      : (v) {
-                          if (v) setState(() => _selectedFormat = fmt);
-                        },
-                );
-              }).toList(),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: AudioFormat.values.map((fmt) {
+              final selected = fmt == _selectedFormat;
+              return ChoiceChip(
+                label: Text(fmt.label),
+                selected: selected,
+                onSelected: _isProcessing
+                    ? null
+                    : (v) {
+                        if (v) setState(() => _selectedFormat = fmt);
+                      },
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildOverallProgress(ColorScheme cs) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '批量转换中...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
+    return LumenActionCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '批量转换中...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
                 ),
-                Text(
-                  '$_completedCount / ${_tasks.length}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: cs.primary,
-                  ),
+              ),
+              Text(
+                '$_completedCount / ${_tasks.length}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: cs.primary,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: _overallProgress,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          LinearProgressIndicator(
+            value: _overallProgress,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
       ),
     );
   }
@@ -605,14 +584,14 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
         height: 20,
         child: CircularProgressIndicator(strokeWidth: 2.5, color: cs.primary),
       ),
-      TaskStatus.success => const Icon(
+      TaskStatus.success => Icon(
         Icons.check_circle_rounded,
-        color: Colors.green,
+        color: cs.tertiary,
         size: 20,
       ),
-      TaskStatus.failed => const Icon(
+      TaskStatus.failed => Icon(
         Icons.error_rounded,
-        color: Colors.red,
+        color: cs.error,
         size: 20,
       ),
       TaskStatus.cancelled => Icon(
@@ -622,14 +601,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       ),
     };
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(60)),
-      ),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: LumenActionCard(
         padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -699,7 +673,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
                   task.errorMessage!,
-                  style: const TextStyle(fontSize: 12, color: Colors.red),
+                  style: TextStyle(fontSize: 12, color: cs.error),
                 ),
               ),
           ],

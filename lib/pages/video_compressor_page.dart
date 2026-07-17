@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
 import '../widgets/lumen/lumen.dart';
+import '../theme/lumen_tokens.dart';
 
 class VideoCompressorPage extends StatefulWidget {
   const VideoCompressorPage({super.key});
@@ -715,43 +716,33 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   }) {
     final cs = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: cs.onPrimaryContainer, size: 20),
+    return LumenActionCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              LumenIconChip(
+                icon: icon,
+                size: 40,
+                iconSize: 20,
+                shape: LumenIconChipShape.rounded,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
       ),
     );
   }
@@ -782,56 +773,49 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   }
 
   Widget _buildQualitySelector(ColorScheme cs) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '压缩质量',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
+    return LumenActionCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '压缩质量',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<VVideoCompressQuality>(
+            segments: const [
+              ButtonSegment(
+                value: VVideoCompressQuality.low,
+                label: Text('低'),
+                icon: Icon(Icons.compress_rounded, size: 16),
               ),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<VVideoCompressQuality>(
-              segments: const [
-                ButtonSegment(
-                  value: VVideoCompressQuality.low,
-                  label: Text('低'),
-                  icon: Icon(Icons.compress_rounded, size: 16),
-                ),
-                ButtonSegment(
-                  value: VVideoCompressQuality.medium,
-                  label: Text('中'),
-                  icon: Icon(Icons.compress_rounded, size: 16),
-                ),
-                ButtonSegment(
-                  value: VVideoCompressQuality.high,
-                  label: Text('高'),
-                  icon: Icon(Icons.compress_rounded, size: 16),
-                ),
-              ],
-              selected: {_selectedQuality},
-              onSelectionChanged: (Set<VVideoCompressQuality> newSelection) {
-                setState(() => _selectedQuality = newSelection.first);
-              },
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _getQualityDescription(_selectedQuality),
-              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
-            ),
-          ],
-        ),
+              ButtonSegment(
+                value: VVideoCompressQuality.medium,
+                label: Text('中'),
+                icon: Icon(Icons.compress_rounded, size: 16),
+              ),
+              ButtonSegment(
+                value: VVideoCompressQuality.high,
+                label: Text('高'),
+                icon: Icon(Icons.compress_rounded, size: 16),
+              ),
+            ],
+            selected: {_selectedQuality},
+            onSelectionChanged: (Set<VVideoCompressQuality> newSelection) {
+              setState(() => _selectedQuality = newSelection.first);
+            },
+          ),
+          const SizedBox(height: 12),
+          Text(
+            _getQualityDescription(_selectedQuality),
+            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+          ),
+        ],
       ),
     );
   }
@@ -850,21 +834,64 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   }
 
   Widget _buildProgressCard(ColorScheme cs) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
+    return LumenActionCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '压缩中...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              Text(
+                '${(_progress * 100).toInt()}%',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: cs.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          LinearProgressIndicator(
+            value: _progress,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    );
+  }
+
+  Widget _buildAdvancedSettingsToggle(ColorScheme cs) {
+    return LumenActionCard(
+      padding: const EdgeInsets.all(20),
+      onTap: () =>
+          setState(() => _showAdvancedSettings = !_showAdvancedSettings),
+      child: Row(
+        children: [
+          LumenIconChip(
+            icon: Icons.tune_rounded,
+            size: 40,
+            iconSize: 20,
+            backgroundColor: cs.tertiaryContainer,
+            foregroundColor: cs.onTertiaryContainer,
+            shape: LumenIconChipShape.rounded,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '压缩中...',
+                  '高级设置',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -872,87 +899,22 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                   ),
                 ),
                 Text(
-                  '${(_progress * 100).toInt()}%',
+                  '自定义分辨率、编码器、音频等',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: cs.primary,
+                    fontSize: 13,
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: _progress,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAdvancedSettingsToggle(ColorScheme cs) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
-      ),
-      child: InkWell(
-        onTap: () =>
-            setState(() => _showAdvancedSettings = !_showAdvancedSettings),
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: cs.tertiaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.tune_rounded,
-                  color: cs.onTertiaryContainer,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '高级设置',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface,
-                      ),
-                    ),
-                    Text(
-                      '自定义分辨率、编码器、音频等',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                _showAdvancedSettings
-                    ? Icons.expand_less_rounded
-                    : Icons.expand_more_rounded,
-                color: cs.outline,
-              ),
-            ],
           ),
-        ),
+          Icon(
+            _showAdvancedSettings
+                ? Icons.expand_less_rounded
+                : Icons.expand_more_rounded,
+            color: cs.outline,
+          ),
+        ],
       ),
     );
   }
@@ -1309,35 +1271,28 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     required IconData icon,
     required List<Widget> children,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(60)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 20, color: cs.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
+    return LumenActionCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
       ),
     );
   }
@@ -1380,9 +1335,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
     return Card(
       elevation: 0,
+      color: cs.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
+        borderRadius: BorderRadius.circular(LumenTokens.cardRadius),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
@@ -1392,18 +1348,13 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: cs.secondaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.play_circle_outline_rounded,
-                    color: cs.onSecondaryContainer,
-                    size: 20,
-                  ),
+                LumenIconChip(
+                  icon: Icons.play_circle_outline_rounded,
+                  size: 40,
+                  iconSize: 20,
+                  backgroundColor: cs.secondaryContainer,
+                  foregroundColor: cs.onSecondaryContainer,
+                  shape: LumenIconChipShape.rounded,
                 ),
                 const SizedBox(width: 12),
                 Text(

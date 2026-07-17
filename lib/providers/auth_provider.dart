@@ -132,11 +132,16 @@ Map<String, dynamic>? parseAndroidApkKeyHashOriginMismatch(String? message) {
     }
   }
 
+  // Encoding mismatch: Credential Manager returned one Base64 form of the APK
+  // key hash, while the backend allowlist only has the other form of the same
+  // hash (standard Base64 `+/` vs Base64URL `-_`).
+  final expectedHasActual = expectedOrigins.contains(actualOrigin);
   final expectedHasAlternate =
       alternateEncoding != null && expectedOrigins.contains(alternateEncoding);
   final encodingMismatch = actualIsApkKeyHash &&
       alternateEncoding != null &&
-      !expectedHasAlternate &&
+      expectedHasAlternate &&
+      !expectedHasActual &&
       expectedApkHashes.isNotEmpty;
 
   return <String, dynamic>{

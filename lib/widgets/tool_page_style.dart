@@ -336,6 +336,7 @@ class ToolPanel extends StatelessWidget {
     return LumenActionCard(
       color: color ?? cs.surfaceContainerLow,
       padding: padding,
+      borderSide: borderSide,
       child: child,
     );
   }

@@ -10,6 +10,7 @@ class LumenActionCard extends StatelessWidget {
   final Color? color;
   final double? elevation;
   final BorderRadius? borderRadius;
+  final BorderSide? borderSide;
 
   const LumenActionCard({
     super.key,
@@ -19,19 +20,24 @@ class LumenActionCard extends StatelessWidget {
     this.color,
     this.elevation = 0,
     this.borderRadius,
+    this.borderSide,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final radius = borderRadius ?? LumenTokens.cardBorderRadius;
+    final side = borderSide ?? BorderSide.none;
 
     return Card(
       elevation: elevation,
       color: color ?? cs.surfaceContainerLow,
       surfaceTintColor: Colors.transparent,
       shadowColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: radius),
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: side,
+      ),
       clipBehavior: Clip.antiAlias,
       margin: EdgeInsets.zero,
       child: onTap == null

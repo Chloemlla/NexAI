@@ -523,6 +523,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         child: Focus(
           autofocus: true,
           child: Scaffold(
+            backgroundColor: lumenScaffoldBackground(cs),
             appBar: AppBar(
               surfaceTintColor: Colors.transparent,
               elevation: 0,

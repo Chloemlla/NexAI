@@ -272,13 +272,9 @@ class _ChatPageState extends State<ChatPage> {
     final keyboardVisible = mq.viewInsets.bottom > 0;
     // Responsive horizontal padding: wider on tablets
     final screenWidth = mq.size.width;
-    final isWide = screenWidth > 600;
-    final horizontalPad = isWide
-        ? (screenWidth - LumenTokens.maxContentWidth).clamp(0, double.infinity) /
-              2
-        : LumenTokens.pagePaddingStart;
+    // Keep composer/message gutters on the Lumen page shell scale.
     final contentHorizontalPad =
-        isWide ? horizontalPad + LumenTokens.pagePaddingStart : horizontalPad;
+        LumenTokens.horizontalPaddingForWidth(screenWidth);
 
     _syncVisibleConversation(chat);
 
@@ -333,7 +329,7 @@ class _ChatPageState extends State<ChatPage> {
               ),
               if (messages.isNotEmpty && !_isAtBottom)
                 Positioned(
-                  right: isWide ? horizontalPad : 16,
+                  right: contentHorizontalPad,
                   bottom: 16,
                   child: _buildScrollToBottomButton(cs),
                 ),

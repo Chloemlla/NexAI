@@ -44,4 +44,19 @@ void main() {
     expect(LumenTokens.cardRadius, 20);
     expect(lumenScaffoldBackground(LumenTheme.lightColorScheme()), LumenTokens.background);
   });
+
+  test('LumenActionCard accepts optional border contract', () {
+    final card = LumenActionCard(
+      borderSide: const BorderSide(color: Colors.red, width: 1),
+      child: const Text('bordered'),
+    );
+    expect(card.borderSide?.color, Colors.red);
+    expect(card.borderSide?.width, 1);
+  });
+
+  test('chat-like page padding follows Lumen shell helper', () {
+    expect(LumenTokens.horizontalPaddingForWidth(390), 12);
+    expect(LumenTokens.horizontalPaddingForWidth(640), 16);
+    expect(LumenTokens.horizontalPaddingForWidth(900), 24);
+  });
 }

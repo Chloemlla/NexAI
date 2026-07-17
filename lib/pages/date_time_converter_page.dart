@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/lumen/lumen.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import '../theme/lumen_tokens.dart';
 
 class DateTimeConverterPage extends StatefulWidget {
   const DateTimeConverterPage({super.key});
@@ -207,7 +208,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
     final mq = MediaQuery.of(context);
     final isNarrow = mq.size.width < 600;
     final hasLeading = ModalRoute.of(context)?.canPop ?? false;
-    final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
+    final hPad = LumenTokens.horizontalPaddingForWidth(mq.size.width);
 
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
@@ -218,7 +219,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
             pinned: true,
             expandedHeight: isNarrow ? 208 : 220,
             backgroundColor: lumenScaffoldBackground(cs),
-            surfaceTintColor: cs.surfaceTint,
+            surfaceTintColor: Colors.transparent,
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,
               titlePadding: EdgeInsets.only(
@@ -232,24 +233,15 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      cs.primaryContainer.withAlpha(130),
-                      cs.tertiaryContainer.withAlpha(60),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
+              background: ColoredBox(
+                color: lumenScaffoldBackground(cs),
                 child: SafeArea(
                   bottom: false,
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
-                      24,
+                      hPad,
                       kToolbarHeight + 16,
-                      24,
+                      hPad,
                       28,
                     ),
                     child: Center(
@@ -257,29 +249,11 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [cs.primary, cs.tertiary],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: cs.primary.withAlpha(60),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 6),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.access_time_filled_rounded,
-                              size: 32,
-                              color: cs.onPrimary,
-                            ),
+                          const LumenIconChip(
+                            icon: Icons.access_time_filled_rounded,
+                            size: 64,
+                            iconSize: 32,
+                            shape: LumenIconChipShape.rounded,
                           ),
                           const SizedBox(height: 8),
                           if (_selectedDate != null)

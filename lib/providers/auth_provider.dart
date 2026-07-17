@@ -1387,7 +1387,7 @@ class AuthProvider extends ChangeNotifier {
       'responseFieldLengths': authenticatorResponse.map(
         (key, value) => MapEntry(key, value?.toString().length),
       ),
-      if (clientDataOrigin != null) 'clientData': clientDataOrigin,
+      'clientData': ?clientDataOrigin,
     };
   }
 

@@ -1520,13 +1520,6 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         border: Border(
           bottom: BorderSide(color: cs.outlineVariant.withAlpha(80), width: 1),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withAlpha(10),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
-          ),
-        ],
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
@@ -1639,17 +1632,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       child: Container(
         width: 1,
         height: 24,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              cs.outlineVariant.withAlpha(0),
-              cs.outlineVariant.withAlpha(120),
-              cs.outlineVariant.withAlpha(0),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: cs.outlineVariant.withAlpha(120),
       ),
     );
   }
@@ -1752,13 +1735,6 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         border: Border(
           top: BorderSide(color: cs.outlineVariant.withAlpha(80), width: 1),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withAlpha(10),
-            blurRadius: 4,
-            offset: const Offset(0, -1),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -1771,7 +1747,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               cs,
               Icons.check_box_outlined,
               '$_taskDone/$_taskTotal 个任务',
-              color: _taskDone == _taskTotal ? Colors.green : null,
+              color: _taskDone == _taskTotal ? cs.tertiary : null,
             ),
           ],
           const Spacer(),

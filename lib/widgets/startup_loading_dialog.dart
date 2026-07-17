@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
+import '../theme/lumen_tokens.dart';
+import 'lumen/lumen.dart';
 
 /// Startup loading dialog that shows initialization progress with typewriter effect
 class StartupLoadingDialog extends StatefulWidget {
@@ -58,8 +60,10 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
     final fontSize = settings?.fontSize ?? 14.0;
 
     return Dialog(
-      backgroundColor: colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(LumenTokens.radiusLg),
+      ),
       child: Container(
         width: 400,
         height: 500,
@@ -70,20 +74,11 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
             // Header
             Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [colorScheme.primary, colorScheme.secondary],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.rocket_launch_rounded,
-                    color: colorScheme.onPrimary,
-                    size: 24,
-                  ),
+                const LumenIconChip(
+                  icon: Icons.rocket_launch_rounded,
+                  size: 40,
+                  iconSize: 22,
+                  shape: LumenIconChipShape.rounded,
                 ),
                 const SizedBox(width: 16),
                 Expanded(

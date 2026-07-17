@@ -1141,8 +1141,8 @@ class _NoteCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: taskDone == taskTotal
-                            ? Colors.green.withAlpha(40)
-                            : cs.tertiaryContainer,
+                            ? cs.tertiaryContainer
+                            : cs.tertiaryContainer.withAlpha(120),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: taskDone == taskTotal

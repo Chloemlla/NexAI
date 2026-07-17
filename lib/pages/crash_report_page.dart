@@ -308,20 +308,16 @@ class _CrashCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return LumenActionCard(
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final child in children) ...[
-              child,
-              if (child != children.last) const SizedBox(height: 12),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final child in children) ...[
+            child,
+            if (child != children.last) const SizedBox(height: 12),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -493,58 +489,54 @@ class _ActionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return LumenActionCard(
       color: cs.primaryContainer,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.warning_amber_rounded, color: cs.onPrimaryContainer),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '报告会尽量脱敏本地路径和 URI，但复制或导出前仍建议快速检查。',
-                    style: TextStyle(color: cs.onPrimaryContainer),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: cs.onPrimaryContainer),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '报告会尽量脱敏本地路径和 URI，但复制或导出前仍建议快速检查。',
+                  style: TextStyle(color: cs.onPrimaryContainer),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: onCopyId,
-              icon: const Icon(Icons.copy_rounded),
-              label: const Text('复制 Report ID'),
-            ),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              onPressed: onCopyReport,
-              icon: const Icon(Icons.copy_all_rounded),
-              label: const Text('复制完整报告'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: exporting ? null : onExport,
-              icon: exporting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_alt_rounded),
-              label: const Text('导出文本文件'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: onClear,
-              icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('清除并继续'),
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: onCopyId,
+            icon: const Icon(Icons.copy_rounded),
+            label: const Text('复制 Report ID'),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: onCopyReport,
+            icon: const Icon(Icons.copy_all_rounded),
+            label: const Text('复制完整报告'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: exporting ? null : onExport,
+            icon: exporting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save_alt_rounded),
+            label: const Text('导出文本文件'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: onClear,
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: const Text('清除并继续'),
+          ),
+        ],
       ),
     );
   }

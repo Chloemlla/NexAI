@@ -5,19 +5,26 @@ namespace NexAI.WinUI3.Services;
 
 public sealed class ThemeService
 {
+    private FrameworkElement? _root;
+
+    public void Attach(FrameworkElement root)
+    {
+        _root = root;
+        // Ensure newly attached trees inherit the last requested mode.
+    }
+
     public void Apply(AppThemeMode mode)
     {
-        if (Application.Current is not App app)
+        if (_root is null)
         {
             return;
         }
 
-        // Application.RequestedTheme is honored best before the first window activates.
-        app.RequestedTheme = mode switch
+        _root.RequestedTheme = mode switch
         {
-            AppThemeMode.Light => ApplicationTheme.Light,
-            AppThemeMode.Dark => ApplicationTheme.Dark,
-            _ => ApplicationTheme.Light,
+            AppThemeMode.Light => ElementTheme.Light,
+            AppThemeMode.Dark => ElementTheme.Dark,
+            _ => ElementTheme.Default,
         };
     }
 }

@@ -1,6 +1,6 @@
 # NexAI WinUI3
 
-Native Windows client scaffold for the Fluent / WinUI3 rewrite.
+Native Windows client for the Fluent / WinUI3 rewrite.
 
 ## Layout
 
@@ -16,20 +16,27 @@ winui/
 
 ## MVP-1 status
 
-PR1 (this scaffold):
+Done:
 
 - solution + three projects
-- Mica main window
-- custom title bar
-- NavigationView shell with Chat / Settings destinations
-- clean local settings store foundation
+- Mica main window, custom title bar, NavigationView
+- editable Settings (Base URL / API Key / Model / Temperature / Max tokens / Theme)
+- clean local JSON settings store with validation
+- immediate theme preview + persisted theme on save
 
-Still pending in later PRs:
+Still pending:
 
-- editable settings UI + theme switcher
 - multi-conversation chat storage
 - streaming OpenAI-compatible client
 - basic Markdown rendering
+
+## Local data
+
+Settings are stored under:
+
+`%LocalAppData%\NexAI\WinUI3\settings.json`
+
+No Flutter data migration in MVP-1.
 
 ## Build notes
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using NexAI.Core;
 using NexAI.Core.Settings;
 
@@ -10,6 +11,7 @@ public sealed class JsonSettingsStore : ISettingsStore
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
     private readonly object _gate = new();
@@ -45,7 +47,7 @@ public sealed class JsonSettingsStore : ISettingsStore
 
         lock (_gate)
         {
-            _current = loaded ?? new AppSettings();
+            _current = AppSettingsValidator.Normalize(loaded ?? new AppSettings());
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -54,9 +56,15 @@ public sealed class JsonSettingsStore : ISettingsStore
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        AppPaths.EnsureRoot();
 
-        var snapshot = settings.Clone();
+        var snapshot = AppSettingsValidator.Normalize(settings);
+        var error = AppSettingsValidator.Validate(snapshot);
+        if (error is not null)
+        {
+            throw new InvalidOperationException(error);
+        }
+
+        AppPaths.EnsureRoot();
         var path = AppPaths.SettingsFilePath;
         var tempPath = path + ".tmp";
 

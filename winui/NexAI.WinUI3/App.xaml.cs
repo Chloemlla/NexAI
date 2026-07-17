@@ -32,9 +32,19 @@ public partial class App : Application
         await settingsStore.LoadAsync();
 
         var themeService = Services.GetRequiredService<ThemeService>();
-        themeService.Apply(settingsStore.Current.ThemeMode);
-
         _window = Services.GetRequiredService<MainWindow>();
+
+        if (_window.Content is FrameworkElement root)
+        {
+            themeService.Attach(root);
+        }
+
+        themeService.Apply(settingsStore.Current.ThemeMode);
+        settingsStore.Changed += (_, _) =>
+        {
+            themeService.Apply(settingsStore.Current.ThemeMode);
+        };
+
         _window.Activate();
     }
 

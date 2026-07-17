@@ -9,12 +9,26 @@
     mc:Ignorable="d">
     <ScrollViewer Padding="24">
         <StackPanel MaxWidth="720" Spacing="16">
-            <StackPanel Spacing="4">
-                <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Settings" />
-                <TextBlock
-                    Opacity="0.72"
-                    Text="MVP-1 foundation page. Editable API settings land in the next PR." />
-            </StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="4">
+                    <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Settings" />
+                    <TextBlock
+                        Opacity="0.72"
+                        Text="Configure the OpenAI-compatible endpoint used by the native Windows client." />
+                </StackPanel>
+                <Button
+                    x:Name="SaveButton"
+                    Grid.Column="1"
+                    Content="Save"
+                    MinWidth="96"
+                    MinHeight="36"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Click="SaveButton_Click" />
+            </Grid>
 
             <Border
                 Padding="16"
@@ -24,9 +38,36 @@
                 CornerRadius="8">
                 <StackPanel Spacing="12">
                     <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="API" />
-                    <TextBox x:Name="BaseUrlBox" Header="Base URL" IsReadOnly="True" />
-                    <PasswordBox Header="API Key" IsEnabled="False" PlaceholderText="Configured later" />
-                    <TextBox x:Name="ModelBox" Header="Model" IsReadOnly="True" />
+                    <TextBox
+                        x:Name="BaseUrlBox"
+                        Header="Base URL"
+                        PlaceholderText="https://api.openai.com/v1" />
+                    <PasswordBox
+                        x:Name="ApiKeyBox"
+                        Header="API Key"
+                        PlaceholderText="sk-..." />
+                    <TextBox
+                        x:Name="ModelBox"
+                        Header="Model"
+                        PlaceholderText="gpt-4o-mini" />
+                    <NumberBox
+                        x:Name="TemperatureBox"
+                        Header="Temperature"
+                        Minimum="0"
+                        Maximum="2"
+                        SmallChange="0.1"
+                        LargeChange="0.5"
+                        SpinButtonPlacementMode="Inline"
+                        ValidationMode="InvalidInputOverwritten" />
+                    <NumberBox
+                        x:Name="MaxTokensBox"
+                        Header="Max tokens"
+                        Minimum="1"
+                        Maximum="128000"
+                        SmallChange="64"
+                        LargeChange="256"
+                        SpinButtonPlacementMode="Inline"
+                        ValidationMode="InvalidInputOverwritten" />
                 </StackPanel>
             </Border>
 
@@ -38,10 +79,25 @@
                 CornerRadius="8">
                 <StackPanel Spacing="12">
                     <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Appearance" />
-                    <TextBox x:Name="ThemeBox" Header="Theme" IsReadOnly="True" />
-                    <TextBlock Opacity="0.72" Text="Theme switching UI arrives with the settings store PR." />
+                    <ComboBox
+                        x:Name="ThemeBox"
+                        Header="Theme"
+                        MinWidth="220"
+                        SelectionChanged="ThemeBox_SelectionChanged">
+                        <ComboBoxItem Content="System" Tag="System" />
+                        <ComboBoxItem Content="Light" Tag="Light" />
+                        <ComboBoxItem Content="Dark" Tag="Dark" />
+                    </ComboBox>
+                    <TextBlock
+                        Opacity="0.72"
+                        Text="Theme applies immediately and is persisted when you save." />
                 </StackPanel>
             </Border>
+
+            <TextBlock
+                x:Name="StatusText"
+                Opacity="0.8"
+                TextWrapping="Wrap" />
         </StackPanel>
     </ScrollViewer>
 </Page>

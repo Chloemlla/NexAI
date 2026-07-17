@@ -10,6 +10,7 @@ import 'providers/settings_provider.dart';
 import 'services/crash_reporter.dart';
 import 'pages/crash_report_page.dart';
 import 'pages/home_page.dart';
+import 'pages/oss_notice_page.dart';
 import 'theme/lumen_theme.dart';
 import 'theme/lumen_tokens.dart';
 
@@ -279,12 +280,35 @@ class _CrashReportGateState extends State<_CrashReportGate> {
   @override
   Widget build(BuildContext context) {
     final report = _report;
-    if (report == null) return const HomePage();
+    if (report == null) return const _OssNoticeGate();
     return CrashReportPage(
       report: report,
       onContinue: () {
         setState(() => _report = null);
       },
     );
+  }
+}
+
+class _OssNoticeGate extends StatelessWidget {
+  const _OssNoticeGate();
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+
+    // Settings load in background after first frame. Keep a calm waiting state
+    // so we never flash Home before the first-install decision is known.
+    if (!settings.loaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (!settings.ossNoticeAcknowledged) {
+      return const OssNoticePage();
+    }
+
+    return const HomePage();
   }
 }

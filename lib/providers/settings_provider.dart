@@ -124,6 +124,11 @@ class SettingsProvider extends ChangeNotifier {
   bool _loaded = false;
   bool get loaded => _loaded;
 
+  // First-install open-source notice acknowledgment.
+  static const String _ossNoticeAcknowledgedKey = 'ossNoticeAcknowledged';
+  bool _ossNoticeAcknowledged = false;
+  bool get ossNoticeAcknowledged => _ossNoticeAcknowledged;
+
   bool get isConfigured => _apiMode == 'OpenAI'
       ? _openaiApiKey.isNotEmpty
       : _vertexApiKey.isNotEmpty;
@@ -138,6 +143,14 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Capture first-install state before any prefs are written below.
+      final storedOssNoticeAcknowledged =
+          prefs.getBool(_ossNoticeAcknowledgedKey);
+      final hadExistingPrefs = prefs
+          .getKeys()
+          .where((key) => key != _ossNoticeAcknowledgedKey)
+          .isNotEmpty;
 
       // ── Migrate legacy plaintext secrets to secure storage (one-time) ──────
       await _migrateLegacySecrets(prefs);
@@ -222,6 +235,17 @@ class SettingsProvider extends ChangeNotifier {
         (e) => e.name == themeModeStr,
         orElse: () => ThemeMode.system,
       );
+
+      if (storedOssNoticeAcknowledged != null) {
+        _ossNoticeAcknowledged = storedOssNoticeAcknowledged;
+      } else {
+        // Existing installs already have local preference traces. Do not
+        // re-show the first-install notice for upgrades.
+        _ossNoticeAcknowledged = hadExistingPrefs;
+        if (hadExistingPrefs) {
+          await prefs.setBool(_ossNoticeAcknowledgedKey, true);
+        }
+      }
     } finally {
       _loaded = true;
       notifyListeners();
@@ -292,6 +316,8 @@ class SettingsProvider extends ChangeNotifier {
     } else {
       await prefs.remove('accentColorValue');
     }
+
+    await prefs.setBool(_ossNoticeAcknowledgedKey, _ossNoticeAcknowledged);
   }
 
   Future<void> setFontSize(double size) async {
@@ -430,6 +456,13 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setAiTitleGeneration(bool value) async {
     _aiTitleGeneration = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> acknowledgeOssNotice() async {
+    if (_ossNoticeAcknowledged) return;
+    _ossNoticeAcknowledged = true;
     notifyListeners();
     await _save();
   }

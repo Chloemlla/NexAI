@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/oss_dependency_credits.dart';
 import '../providers/settings_provider.dart';
 import '../utils/build_config.dart';
 
@@ -282,18 +283,39 @@ class _AboutPageState extends State<AboutPage> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              for (final label in [
-                                'Flutter',
-                                'Provider',
-                                'flutter_math_fork',
-                                'flutter_markdown',
-                                'dynamic_color',
-                                'shared_preferences',
-                              ])
-                                _m3Chip(cs, label),
+                              for (final credit in kOssDependencyCredits)
+                                _m3Chip(cs, credit.name),
                             ],
                           ),
                         ]),
+                        const SizedBox(height: 12),
+
+                        // ── Open-source credits ──
+                        _m3Section(
+                          cs,
+                          tt,
+                          Icons.favorite_outline_rounded,
+                          '开源致谢',
+                          [
+                            for (var i = 0;
+                                i < kOssDependencyCredits.length;
+                                i++) ...[
+                              if (i > 0) const SizedBox(height: 10),
+                              _CreditRow(
+                                name: kOssDependencyCredits[i].name,
+                                author: kOssDependencyCredits[i].author,
+                                description:
+                                    kOssDependencyCredits[i].description,
+                                license: kOssDependencyCredits[i].license,
+                                onTap: kOssDependencyCredits[i].url == null
+                                    ? null
+                                    : () => _openUrl(
+                                          kOssDependencyCredits[i].url!,
+                                        ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ]),
                     ),
                   ),
@@ -595,6 +617,53 @@ class _ActionCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CreditRow extends StatelessWidget {
+  final String name;
+  final String author;
+  final String description;
+  final String license;
+  final VoidCallback? onTap;
+
+  const _CreditRow({
+    required this.name,
+    required this.author,
+    required this.description,
+    required this.license,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$author · $license',
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 4),
+        Text(description, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+
+    if (onTap == null) return content;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: content,
       ),
     );
   }

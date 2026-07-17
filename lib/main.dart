@@ -50,7 +50,7 @@ void main() {
 
 Future<void> _runMain() async {
   WidgetsFlutterBinding.ensureInitialized();
-  CrashReporter.install();
+  CrashReporter.installSafely();
   CrashBreadcrumbs.record('Widgets binding initialized');
   await CrashReporter.loadStartupCrashReport();
 

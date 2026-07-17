@@ -1,11 +1,15 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/crash_report.dart';
 import '../providers/settings_provider.dart';
+import '../services/crash_author_attribution.dart';
+import '../services/crash_report_paste_uploader.dart';
 import '../services/crash_reporter.dart';
 import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
@@ -31,6 +35,7 @@ class _CrashReportPageState extends State<CrashReportPage> {
   static const int _visibleEventCount = 12;
   bool _stackExpanded = false;
   bool _exporting = false;
+  bool _uploadingLink = false;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +46,9 @@ class _CrashReportPageState extends State<CrashReportPage> {
         .split('\n')
         .map((line) => line.split(':'))
         .where((parts) => parts.length >= 2)
-        .map((parts) => MapEntry(parts.first.trim(), parts.skip(1).join(':').trim()))
+        .map(
+          (parts) => MapEntry(parts.first.trim(), parts.skip(1).join(':').trim()),
+        )
         .toList();
     final stackLines = report.stackTrace.split('\n');
     final stackPreview = _stackExpanded
@@ -53,7 +60,9 @@ class _CrashReportPageState extends State<CrashReportPage> {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
+            constraints: const BoxConstraints(
+              maxWidth: LumenTokens.maxContentWidth,
+            ),
             child: ListView(
               padding: EdgeInsets.fromLTRB(
                 LumenTokens.horizontalPaddingForWidth(
@@ -77,7 +86,11 @@ class _CrashReportPageState extends State<CrashReportPage> {
                       label: '崩溃摘要',
                     ),
                     _InfoTile(label: 'Report ID', value: report.reportId, cs: cs),
-                    _InfoTile(label: 'Crash time', value: report.crashedAtText, cs: cs),
+                    _InfoTile(
+                      label: 'Crash time',
+                      value: report.crashedAtText,
+                      cs: cs,
+                    ),
                     _InfoTile(
                       label: 'Root cause',
                       value: report.rootCause,
@@ -90,7 +103,11 @@ class _CrashReportPageState extends State<CrashReportPage> {
                       cs: cs,
                     ),
                     _InfoTile(label: 'Thread', value: report.threadName, cs: cs),
-                    _InfoTile(label: 'Process', value: report.processName, cs: cs),
+                    _InfoTile(
+                      label: 'Process',
+                      value: report.processName,
+                      cs: cs,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -127,9 +144,9 @@ class _CrashReportPageState extends State<CrashReportPage> {
                         icon: Icons.history_rounded,
                         label: '最近事件',
                       ),
-                      ...report.recentEvents.take(_visibleEventCount).map(
-                            (event) => _EventRow(event: event, cs: cs),
-                          ),
+                      ...report.recentEvents
+                          .take(_visibleEventCount)
+                          .map((event) => _EventRow(event: event, cs: cs)),
                     ],
                   ),
                 ],
@@ -170,7 +187,9 @@ class _CrashReportPageState extends State<CrashReportPage> {
                       ),
                       decoration: BoxDecoration(
                         color: cs.surface,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(
+                          LumenTokens.radiusXs,
+                        ),
                         border: Border.all(color: cs.outlineVariant),
                       ),
                       child: SingleChildScrollView(
@@ -186,15 +205,25 @@ class _CrashReportPageState extends State<CrashReportPage> {
                         ),
                       ),
                     ),
+                    Text(
+                      '报告会尽量脱敏本地路径、URI 与常见密钥痕迹，但复制或导出前仍建议快速检查。',
+                      style: tt.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                _AuthorCard(report: report, cs: cs),
                 const SizedBox(height: 12),
                 _ActionPanel(
                   cs: cs,
                   exporting: _exporting,
+                  uploadingLink: _uploadingLink,
                   onCopyId: _copyId,
                   onCopyReport: _copyReport,
                   onExport: _exportReport,
+                  onUploadLink: _uploadShareableLink,
                   onClear: _clearAndContinue,
                 ),
               ],
@@ -214,7 +243,9 @@ class _CrashReportPageState extends State<CrashReportPage> {
   }
 
   Future<void> _copyReport() async {
-    await Clipboard.setData(ClipboardData(text: widget.report.toClipboardText()));
+    await Clipboard.setData(
+      ClipboardData(text: widget.report.toClipboardText()),
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('崩溃报告已复制')),
@@ -243,9 +274,59 @@ class _CrashReportPageState extends State<CrashReportPage> {
     }
   }
 
+  Future<void> _uploadShareableLink() async {
+    if (_uploadingLink) return;
+    setState(() => _uploadingLink = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('正在生成分享链接…')),
+    );
+    try {
+      final url = await const CrashReportPasteUploader().uploadText(
+        widget.report.toClipboardText(),
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('分享链接已就绪'),
+            content: SelectableText(url),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: url));
+                  if (context.mounted) Navigator.of(context).pop();
+                },
+                child: const Text('复制'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final uri = Uri.parse(url);
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                },
+                child: const Text('打开'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('完成'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('分享链接生成失败: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _uploadingLink = false);
+    }
+  }
+
   Future<void> _clearAndContinue() async {
     if (widget.clearStoredReportOnContinue) {
-      await CrashReporter.clearStartupCrashReport();
+      await CrashReporter.clearPendingReport();
     }
     if (widget.onContinue != null) {
       widget.onContinue!.call();
@@ -289,11 +370,46 @@ class _CrashHero extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '上次运行遇到未处理错误。你可以复制报告，或清除后继续使用。',
+                '上次运行遇到未处理错误。你可以复制报告、生成分享链接，或清除后继续使用。',
                 style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthorCard extends StatelessWidget {
+  const _AuthorCard({required this.report, required this.cs});
+
+  final CrashReport report;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CrashCard(
+      cs: cs,
+      children: [
+        _SectionTitle(
+          cs: cs,
+          icon: Icons.person_outline_rounded,
+          label: '作者署名',
+        ),
+        _InfoTile(label: 'Author', value: report.authorName, cs: cs),
+        _InfoTile(label: 'Author URL', value: report.authorUrl, cs: cs),
+        _InfoTile(
+          label: 'Fingerprint',
+          value: report.authorFingerprint ??
+              CrashAuthorAttribution.fingerprintHex,
+          cs: cs,
+        ),
+        Text(
+          CrashAuthorAttribution.footerLabel,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
         ),
       ],
     );
@@ -371,7 +487,7 @@ class _InfoTile extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
@@ -415,7 +531,7 @@ class _MetadataPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: cs.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
@@ -454,7 +570,7 @@ class _EventRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: cs.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: SelectableText(
@@ -474,17 +590,21 @@ class _ActionPanel extends StatelessWidget {
   const _ActionPanel({
     required this.cs,
     required this.exporting,
+    required this.uploadingLink,
     required this.onCopyId,
     required this.onCopyReport,
     required this.onExport,
+    required this.onUploadLink,
     required this.onClear,
   });
 
   final ColorScheme cs;
   final bool exporting;
+  final bool uploadingLink;
   final VoidCallback onCopyId;
   final VoidCallback onCopyReport;
   final VoidCallback onExport;
+  final VoidCallback onUploadLink;
   final VoidCallback onClear;
 
   @override
@@ -500,7 +620,7 @@ class _ActionPanel extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '报告会尽量脱敏本地路径和 URI，但复制或导出前仍建议快速检查。',
+                  '报告会尽量脱敏本地路径和 URI，但复制、导出或上传前仍建议快速检查。',
                   style: TextStyle(color: cs.onPrimaryContainer),
                 ),
               ),
@@ -529,6 +649,18 @@ class _ActionPanel extends StatelessWidget {
                   )
                 : const Icon(Icons.save_alt_rounded),
             label: const Text('导出文本文件'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: uploadingLink ? null : onUploadLink,
+            icon: uploadingLink
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.link_rounded),
+            label: const Text('生成分享链接'),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(

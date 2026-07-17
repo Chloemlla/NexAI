@@ -13,8 +13,16 @@ class CrashReporter {
   static final CrashReportStore store = CrashReportStore();
   static CrashReport? startupCrashReport;
   static FlutterExceptionHandler? _previousFlutterErrorHandler;
+  static bool _installed = false;
+
+  static bool get isInstalled => _installed;
 
   static void install() {
+    if (_installed) {
+      CrashBreadcrumbs.record('Crash reporter already installed');
+      return;
+    }
+    _installed = true;
     CrashBreadcrumbs.record('Crash reporter installed');
     _previousFlutterErrorHandler ??= FlutterError.onError;
     FlutterError.onError = (FlutterErrorDetails details) {
@@ -47,6 +55,17 @@ class CrashReporter {
     };
   }
 
+  /// Host-safe install wrapper; never throws into app startup.
+  static bool installSafely() {
+    try {
+      install();
+      return true;
+    } catch (error) {
+      debugPrint('NexAI crash reporter install failed: $error');
+      return false;
+    }
+  }
+
   static Future<void> loadStartupCrashReport() async {
     try {
       final report = await store.load();
@@ -62,6 +81,16 @@ class CrashReporter {
     } catch (error) {
       debugPrint('NexAI crash report load failed: $error');
       startupCrashReport = null;
+    }
+  }
+
+  /// Host-safe pending-report load. Returns null when load fails.
+  static Future<CrashReport?> loadPendingReportSafely() async {
+    try {
+      await loadStartupCrashReport();
+      return startupCrashReport;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -190,5 +219,9 @@ class CrashReporter {
   static Future<void> clearStartupCrashReport() async {
     startupCrashReport = null;
     await store.clear();
+  }
+
+  static Future<void> clearPendingReport() async {
+    await clearStartupCrashReport();
   }
 }

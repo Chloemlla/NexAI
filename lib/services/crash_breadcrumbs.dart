@@ -21,6 +21,10 @@ class CrashBreadcrumbs {
 
   static List<String> snapshot() => List.unmodifiable(_events);
 
+  static void clear() {
+    _events.clear();
+  }
+
   static String _sanitize(String value) {
     return value
         .replaceAll(RegExp(r'[A-Za-z]:\\Users\\[^\\\s]+'), '[user-home]')

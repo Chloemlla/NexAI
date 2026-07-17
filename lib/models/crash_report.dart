@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 
+import '../services/crash_author_attribution.dart';
 import '../services/crash_breadcrumbs.dart';
 import '../utils/build_config.dart';
 
@@ -19,6 +20,9 @@ class CrashReport {
     required this.systemInfo,
     required this.stackTrace,
     this.recentEvents = const <String>[],
+    this.authorName = CrashAuthorAttribution.authorName,
+    this.authorUrl = CrashAuthorAttribution.authorUrl,
+    this.authorFingerprint,
   });
 
   final String reportId;
@@ -31,16 +35,56 @@ class CrashReport {
   final String systemInfo;
   final String stackTrace;
   final List<String> recentEvents;
+  final String authorName;
+  final String authorUrl;
+  final String? authorFingerprint;
 
   static final DateFormat _timeFormat = DateFormat('yyyy-MM-dd HH:mm:ss.SSS');
 
   factory CrashReport.fromError(Object error, StackTrace stackTrace) {
+    try {
+      final now = DateTime.now();
+      final stackText = _sanitize(stackTrace.toString());
+      final exceptionType = error.runtimeType.toString();
+      final root = _rootCause(error);
+      final rootText = root.toString().trim();
+      final rootCause = _sanitize(
+        rootText.isEmpty ? root.runtimeType.toString() : rootText,
+      );
+      return CrashReport(
+        reportId: _reportId(
+          now.millisecondsSinceEpoch,
+          exceptionType,
+          rootCause,
+          stackText,
+        ),
+        crashedAtMillis: now.millisecondsSinceEpoch,
+        crashedAtText: _timeFormat.format(now),
+        exceptionType: exceptionType,
+        rootCause: rootCause,
+        threadName: 'main isolate',
+        processName: 'NexAI',
+        systemInfo: _buildSystemInfo(),
+        stackTrace: stackText,
+        recentEvents: CrashBreadcrumbs.snapshot(),
+        authorFingerprint: CrashAuthorAttribution.fingerprintHex,
+      );
+    } catch (reportFailure) {
+      return CrashReport.fromErrorFallback(error, stackTrace, reportFailure);
+    }
+  }
+
+  factory CrashReport.fromErrorFallback(
+    Object error,
+    StackTrace stackTrace,
+    Object reportFailure,
+  ) {
     final now = DateTime.now();
-    final stackText = _sanitize(stackTrace.toString());
+    final stackText = stackTrace.toString();
     final exceptionType = error.runtimeType.toString();
-    final rootCause = _sanitize(error.toString()).trim().isEmpty
+    final rootCause = error.toString().trim().isEmpty
         ? exceptionType
-        : _sanitize(error.toString());
+        : error.toString();
     return CrashReport(
       reportId: _reportId(
         now.millisecondsSinceEpoch,
@@ -49,14 +93,17 @@ class CrashReport {
         stackText,
       ),
       crashedAtMillis: now.millisecondsSinceEpoch,
-      crashedAtText: _timeFormat.format(now),
+      crashedAtText: now.millisecondsSinceEpoch.toString(),
       exceptionType: exceptionType,
       rootCause: rootCause,
       threadName: 'main isolate',
       processName: 'NexAI',
-      systemInfo: _buildSystemInfo(),
+      systemInfo:
+          'Crash report construction failed: ${reportFailure.runtimeType}\n'
+          '${_buildSystemInfo()}',
       stackTrace: stackText,
       recentEvents: CrashBreadcrumbs.snapshot(),
+      authorFingerprint: CrashAuthorAttribution.fingerprintHex,
     );
   }
 
@@ -79,6 +126,11 @@ class CrashReport {
               .where((item) => item.trim().isNotEmpty)
               .toList() ??
           const <String>[],
+      authorName:
+          json['authorName'] as String? ?? CrashAuthorAttribution.authorName,
+      authorUrl: json['authorUrl'] as String? ?? CrashAuthorAttribution.authorUrl,
+      authorFingerprint: json['authorFingerprint'] as String? ??
+          CrashAuthorAttribution.fingerprintHex,
     );
   }
 
@@ -94,6 +146,10 @@ class CrashReport {
       'systemInfo': systemInfo,
       'stackTrace': stackTrace,
       'recentEvents': recentEvents,
+      'authorName': authorName,
+      'authorUrl': authorUrl,
+      'authorFingerprint':
+          authorFingerprint ?? CrashAuthorAttribution.fingerprintHex,
     };
   }
 
@@ -115,12 +171,38 @@ class CrashReport {
     }
     buffer
       ..writeln('Stack trace:')
-      ..writeln(stackTrace);
+      ..writeln(stackTrace)
+      ..writeln('Author: $authorName')
+      ..writeln('Author URL: $authorUrl')
+      ..writeln(
+        'Author fingerprint: ${authorFingerprint ?? CrashAuthorAttribution.fingerprintHex}',
+      )
+      ..writeln(CrashAuthorAttribution.footerLabel);
     return buffer.toString();
+  }
+
+  static Object _rootCause(Object error) {
+    var current = error;
+    final seen = <Object>{current};
+    while (true) {
+      final dynamic maybe = current;
+      Object? next;
+      try {
+        next = maybe.cause as Object?;
+      } catch (_) {
+        next = null;
+      }
+      if (next == null || identical(next, current) || !seen.add(next)) {
+        break;
+      }
+      current = next;
+    }
+    return current;
   }
 
   static String _buildSystemInfo() {
     return <String>[
+      'App: NexAI',
       'App version: ${BuildConfig.versionName} (${BuildConfig.versionCode})',
       'Commit: ${BuildConfig.shortHash}',
       'Flutter mode: ${kReleaseMode
@@ -130,6 +212,8 @@ class CrashReport {
           : 'debug'}',
       'Platform: ${defaultTargetPlatform.name}',
       'Build time: ${BuildConfig.buildTime}',
+      'Crash SDK author: ${CrashAuthorAttribution.authorName}',
+      'Crash SDK author URL: ${CrashAuthorAttribution.authorUrl}',
     ].join('\n');
   }
 

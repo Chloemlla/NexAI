@@ -292,7 +292,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         color: supported
             ? cs.primaryContainer.withAlpha(150)
             : cs.errorContainer.withAlpha(220),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
         border: Border.all(
           color: supported ? cs.primary.withAlpha(60) : cs.error.withAlpha(70),
         ),
@@ -551,14 +551,8 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
   ) {
     final cs = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      surfaceTintColor: Colors.transparent,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+    return LumenActionCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

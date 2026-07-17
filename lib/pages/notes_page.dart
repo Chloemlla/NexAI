@@ -248,7 +248,7 @@ class _NotesPageState extends State<NotesPage>
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
               border: Border.all(color: cs.outlineVariant.withAlpha(100)),
             ),
             child: Text(
@@ -814,96 +814,83 @@ class _TagTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final parts = tag.name.split('/');
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerHighest.withAlpha(120),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.only(bottom: 4),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: LumenActionCard(
+        color: cs.surfaceContainerHighest.withAlpha(120),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
-                ),
-                child: Center(
-                  child: Icon(
-                    isNested ? Icons.folder_outlined : Icons.tag_rounded,
-                    size: 16,
-                    color: cs.onPrimaryContainer,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (isNested)
-                      Row(
-                        children: [
-                          for (int i = 0; i < parts.length; i++) ...[
-                            if (i > 0)
-                              Icon(
-                                Icons.chevron_right_rounded,
-                                size: 14,
-                                color: cs.outline,
-                              ),
-                            Text(
-                              parts[i],
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: i == parts.length - 1
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                                color: i == parts.length - 1
-                                    ? cs.onSurface
-                                    : cs.onSurfaceVariant,
-                              ),
+        child: Row(
+          children: [
+            LumenIconChip(
+              icon: isNested ? Icons.folder_outlined : Icons.tag_rounded,
+              size: 32,
+              iconSize: 16,
+              shape: LumenIconChipShape.rounded,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isNested)
+                    Row(
+                      children: [
+                        for (int i = 0; i < parts.length; i++) ...[
+                          if (i > 0)
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              size: 14,
+                              color: cs.outline,
                             ),
-                          ],
+                          Text(
+                            parts[i],
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: i == parts.length - 1
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: i == parts.length - 1
+                                  ? cs.onSurface
+                                  : cs.onSurfaceVariant,
+                            ),
+                          ),
                         ],
-                      )
-                    else
-                      Text(
-                        '#${tag.name}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
-                      ),
+                      ],
+                    )
+                  else
                     Text(
-                      '${tag.count} 条笔记${tag.count != 1 ? 's' : ''}',
-                      style: TextStyle(fontSize: 11, color: cs.outline),
+                      '#${tag.name}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
                     ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<String>(
-                icon: Icon(
-                  Icons.more_vert_rounded,
-                  size: 18,
-                  color: cs.outline,
-                ),
-                onSelected: (v) {
-                  if (v == 'rename') onRename();
-                  if (v == 'delete') onDelete();
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'rename', child: Text('重命名')),
-                  const PopupMenuItem(value: 'delete', child: Text('删除')),
+                  Text(
+                    '${tag.count} 条笔记${tag.count != 1 ? 's' : ''}',
+                    style: TextStyle(fontSize: 11, color: cs.outline),
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert_rounded,
+                size: 18,
+                color: cs.outline,
+              ),
+              onSelected: (v) {
+                if (v == 'rename') onRename();
+                if (v == 'delete') onDelete();
+              },
+              itemBuilder: (_) => [
+                const PopupMenuItem(value: 'rename', child: Text('重命名')),
+                const PopupMenuItem(value: 'delete', child: Text('删除')),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -931,28 +918,18 @@ class _NoteCard extends StatelessWidget {
         .where((m) => m.group(1)!.trim().toLowerCase() == 'x')
         .length;
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      surfaceTintColor: Colors.transparent,
-      shadowColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: LumenTokens.cardBorderRadius,
-      ),
-      child: InkWell(
-        borderRadius: LumenTokens.cardBorderRadius,
-        onTap: () async {
-          await context.read<NotesProvider>().markViewed(note.id);
-          if (!context.mounted) return;
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    return LumenActionCard(
+      padding: const EdgeInsets.all(16),
+      onTap: () async {
+        await context.read<NotesProvider>().markViewed(note.id);
+        if (!context.mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => NoteDetailPage(noteId: note.id)),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
               Row(
                 children: [
                   Container(
@@ -1194,8 +1171,6 @@ class _NoteCard extends StatelessWidget {
                 ],
               ),
             ],
-          ),
-        ),
       ),
     );
   }

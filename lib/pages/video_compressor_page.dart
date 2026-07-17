@@ -934,7 +934,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           LinearProgressIndicator(
             value: _progress,
             minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
           ),
         ],
       ),
@@ -1408,14 +1408,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         : (_previewPosition.inMilliseconds / _previewDuration.inMilliseconds)
               .clamp(0.0, 1.0);
 
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(LumenTokens.cardRadius),
-      ),
-      clipBehavior: Clip.antiAlias,
+    return LumenActionCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

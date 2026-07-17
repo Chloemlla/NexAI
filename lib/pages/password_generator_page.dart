@@ -202,7 +202,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.cardRadius)),
         title: const Row(
           children: [
             Icon(Icons.save_rounded, size: 24),
@@ -387,7 +387,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
             builder: (context, setDialogState) {
               return AlertDialog(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(LumenTokens.cardRadius),
                 ),
                 title: Text(title),
                 content: Column(
@@ -591,12 +591,12 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.cardRadius)),
+        title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error, size: 28),
-            SizedBox(width: 12),
-            Text('清空所有密码'),
+            const SizedBox(width: 12),
+            const Text('清空所有密码'),
           ],
         ),
         content: const Text('此操作不可恢复，确定要清空所有保存的密码吗？'),
@@ -672,7 +672,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
         ),
         const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
           child: LinearProgressIndicator(
             value: strength / 100,
             backgroundColor: cs.surfaceContainerHighest,
@@ -725,7 +725,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
               PopupMenuButton(
                 icon: const Icon(Icons.more_vert_rounded),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                 ),
                 itemBuilder: (context) => [
                   const PopupMenuItem(
@@ -758,7 +758,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'clear',
                     child: Row(
                       children: [
@@ -767,7 +767,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                           size: 20,
                           color: Theme.of(context).colorScheme.error,
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Text('清空所有', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                       ],
                     ),
@@ -999,7 +999,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
         Card(
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(LumenTokens.cardRadius),
             side: BorderSide(color: cs.outlineVariant.withAlpha(100)),
           ),
           child: Padding(
@@ -1272,7 +1272,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
         Card(
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(LumenTokens.cardRadius),
             side: BorderSide(color: cs.outlineVariant.withAlpha(100)),
           ),
           child: Padding(
@@ -1346,16 +1346,11 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           const SizedBox(height: 12),
           ...List.generate(_batchPasswords.length, (index) {
             final password = _batchPasswords[index];
-            return Card(
-              elevation: 0,
-              color: cs.surfaceContainerLow,
-              surfaceTintColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: LumenTokens.cardBorderRadius,
-              ),
-              child: ListTile(
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: LumenActionCard(
+                padding: EdgeInsets.zero,
+                child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 4,
@@ -1401,6 +1396,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       tooltip: '保存',
                     ),
                   ],
+                ),
                 ),
               ),
             );
@@ -1452,7 +1448,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     margin: const EdgeInsets.symmetric(horizontal: 32),
                     decoration: BoxDecoration(
                       color: cs.tertiaryContainer.withAlpha(100),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusXl),
                       border: Border.all(color: cs.tertiary.withAlpha(50)),
                     ),
                     child: Column(
@@ -1516,7 +1512,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                             ),
                             side: BorderSide.none,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(LumenTokens.cardRadius),
                             ),
                           ),
                         );
@@ -1541,21 +1537,15 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       ? Theme.of(context).colorScheme.secondary
                       : Theme.of(context).colorScheme.tertiary;
 
-                  return Card(
-                    elevation: 0,
-                    color: cs.surfaceContainerLow,
-                    surfaceTintColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: LumenTokens.cardBorderRadius,
-                    ),
-                    child: Theme(
-                      data: Theme.of(
-                        context,
-                      ).copyWith(dividerColor: Colors.transparent),
-                      child: ExpansionTile(
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: LumenActionCard(
+                      padding: EdgeInsets.zero,
+                      child: Theme(
+                        data: Theme.of(
+                          context,
+                        ).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
                         tilePadding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 8,
@@ -1710,6 +1700,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                             ),
                           ),
                         ],
+                        ),
                       ),
                     ),
                   );

@@ -394,7 +394,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                           color: cs.primaryContainer.withAlpha(
                             h.level <= 2 ? 255 : 140,
                           ),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                         ),
                         child: Center(
                           child: Text(
@@ -1494,7 +1494,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 ),
                 const SizedBox(height: 6),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 8,

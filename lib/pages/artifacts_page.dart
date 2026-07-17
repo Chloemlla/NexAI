@@ -217,7 +217,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
           ToolEmptyStateCard(
             icon: Icons.error_outline_rounded,
             title: '加载失败',
-            description: artifactsProvider.error!,
+            description: artifactsProvider.error ?? '加载失败',
             action: FilledButton.icon(
               onPressed: _loadArtifacts,
               icon: const Icon(Icons.refresh_rounded),

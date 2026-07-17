@@ -490,7 +490,13 @@ class _LoginPageState extends State<LoginPage>
     required VoidCallback? onPressed,
     required ColorScheme colorScheme,
   }) {
-    final displayIcon = iconWidget ?? Icon(icon!, color: iconColor, size: 28);
+    final displayIcon =
+        iconWidget ??
+        Icon(
+          icon ?? Icons.login_rounded,
+          color: iconColor,
+          size: 28,
+        );
     return SizedBox(
       width: double.infinity,
       height: 48,
@@ -511,7 +517,8 @@ class _LoginPageState extends State<LoginPage>
   // ========== Handlers ==========
 
   Future<void> _handleLogin(AuthProvider auth) async {
-    if (!_loginFormKey.currentState!.validate()) return;
+    final loginState = _loginFormKey.currentState;
+    if (loginState == null || !loginState.validate()) return;
 
     final success = await auth.login(
       identifier: _loginIdentifierController.text.trim(),
@@ -524,7 +531,8 @@ class _LoginPageState extends State<LoginPage>
   }
 
   Future<void> _handleRegister(AuthProvider auth) async {
-    if (!_registerFormKey.currentState!.validate()) return;
+    final registerState = _registerFormKey.currentState;
+    if (registerState == null || !registerState.validate()) return;
 
     final success = await auth.register(
       username: _registerUsernameController.text.trim(),

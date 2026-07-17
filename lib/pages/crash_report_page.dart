@@ -312,7 +312,7 @@ class _CrashReportPageState extends State<CrashReportPage> {
       await CrashReporter.clearPendingReport();
     }
     if (widget.onContinue != null) {
-      widget.onContinue!.call();
+      widget.onContinue?.call();
     } else if (mounted) {
       Navigator.of(context).pop();
     }

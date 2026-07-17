@@ -100,13 +100,18 @@ class ArtifactSummary {
 
   factory ArtifactSummary.fromJson(Map<String, dynamic> json) {
     return ArtifactSummary(
-      id: json['_id'] ?? json['id'],
-      shortId: json['shortId'],
-      title: json['title'],
-      contentType: json['contentType'],
-      visibility: json['visibility'],
-      viewCount: json['viewCount'] ?? 0,
-      createdAt: DateTime.parse(json['createdAt']),
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      shortId: (json['shortId'] ?? json['short_id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      contentType:
+          (json['contentType'] ?? json['content_type'] ?? '').toString(),
+      visibility: (json['visibility'] ?? 'public').toString(),
+      viewCount:
+          int.tryParse('${json['viewCount'] ?? json['view_count'] ?? 0}') ?? 0,
+      createdAt: DateTime.tryParse(
+            (json['createdAt'] ?? json['created_at'] ?? '').toString(),
+          ) ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 }

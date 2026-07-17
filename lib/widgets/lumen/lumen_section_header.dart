@@ -55,7 +55,7 @@ class LumenSectionHeader extends StatelessWidget {
               ],
             ),
           ),
-          ?trailing,
+          if (trailing != null) trailing!,
         ],
       ),
     );

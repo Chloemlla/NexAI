@@ -259,9 +259,10 @@ Row(
           final data = await Clipboard.getData(
             Clipboard.kTextPlain,
           );
-          if (data?.text != null && data!.text!.isNotEmpty) {
-            _inputController.text = data.text!;
-            _onInputChanged(data.text!);
+          final text = data?.text;
+          if (text != null && text.isNotEmpty) {
+            _inputController.text = text;
+            _onInputChanged(text);
           }
         },
       ),

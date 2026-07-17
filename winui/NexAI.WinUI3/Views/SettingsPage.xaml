@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NexAI.WinUI3.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+    <ScrollViewer Padding="24">
+        <StackPanel MaxWidth="720" Spacing="16">
+            <StackPanel Spacing="4">
+                <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Settings" />
+                <TextBlock
+                    Opacity="0.72"
+                    Text="MVP-1 foundation page. Editable API settings land in the next PR." />
+            </StackPanel>
+
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="API" />
+                    <TextBox x:Name="BaseUrlBox" Header="Base URL" IsReadOnly="True" />
+                    <PasswordBox Header="API Key" IsEnabled="False" PlaceholderText="Configured later" />
+                    <TextBox x:Name="ModelBox" Header="Model" IsReadOnly="True" />
+                </StackPanel>
+            </Border>
+
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Appearance" />
+                    <TextBox x:Name="ThemeBox" Header="Theme" IsReadOnly="True" />
+                    <TextBlock Opacity="0.72" Text="Theme switching UI arrives with the settings store PR." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

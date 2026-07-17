@@ -55,3 +55,8 @@ Install-CodexTrellis.ps1
 .agents/skills/
 .codex/
 .trellis/
+# WinUI3 native client
+winui/**/bin/
+winui/**/obj/
+winui/**/.vs/
+

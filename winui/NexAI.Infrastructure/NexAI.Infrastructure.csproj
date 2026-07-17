@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RootNamespace>NexAI.Infrastructure</RootNamespace>
+    <AssemblyName>NexAI.Infrastructure</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\NexAI.Core\NexAI.Core.csproj" />
+  </ItemGroup>
+</Project>

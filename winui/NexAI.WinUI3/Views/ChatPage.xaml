@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NexAI.WinUI3.Views.ChatPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+    <Grid Padding="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Spacing="4">
+            <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Chat" />
+            <TextBlock
+                Opacity="0.72"
+                Style="{StaticResource BodyTextBlockStyle}"
+                Text="Native WinUI shell is ready. Streaming chat arrives in the next PR." />
+        </StackPanel>
+
+        <Border
+            Grid.Row="1"
+            Margin="0,20,0,20"
+            Padding="20"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                <FontIcon Glyph="&#xE8BD;" FontSize="28" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Style="{StaticResource SubtitleTextBlockStyle}"
+                    Text="No conversations yet" />
+                <TextBlock
+                    HorizontalAlignment="Center"
+                    Opacity="0.72"
+                    Text="Conversation storage and streaming will land next." />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox
+                IsEnabled="False"
+                PlaceholderText="Message NexAI..."
+                AcceptsReturn="True"
+                TextWrapping="Wrap"
+                MinHeight="44" />
+            <Button
+                Grid.Column="1"
+                Content="Send"
+                IsEnabled="False"
+                Style="{StaticResource AccentButtonStyle}"
+                MinWidth="96"
+                MinHeight="44" />
+        </Grid>
+    </Grid>
+</Page>

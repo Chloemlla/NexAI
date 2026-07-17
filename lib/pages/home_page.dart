@@ -456,15 +456,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
                             width: 36,
                             height: 36,
                             decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  cs.primaryContainer,
-                                  cs.secondaryContainer,
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                              color: cs.primaryContainer,
+                              borderRadius: BorderRadius.circular(
+                                LumenTokens.radiusSm,
                               ),
-                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Center(
                               child: Icon(
@@ -581,10 +576,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [cs.surfaceContainerHighest, cs.surfaceContainer],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusLg),
                 ),
                 child: Center(
                   child: Icon(
@@ -680,16 +673,17 @@ class _HomePageState extends State<HomePage> with WindowListener {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: isActive
-                    ? LinearGradient(colors: [cs.primary, cs.tertiary])
-                    : null,
-                color: isActive ? null : cs.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(12),
+                color: isActive
+                    ? cs.primaryContainer
+                    : cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
               ),
               child: Center(
                 child: Icon(
                   isActive ? Icons.chat_rounded : Icons.chat_outlined,
-                  color: isActive ? cs.onPrimary : cs.onSurfaceVariant,
+                  color: isActive
+                      ? cs.onPrimaryContainer
+                      : cs.onSurfaceVariant,
                   size: 20,
                 ),
               ),

@@ -639,14 +639,7 @@ class _ChatPageState extends State<ChatPage> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              cs.errorContainer.withAlpha(200),
-              cs.errorContainer.withAlpha(100),
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
+          color: cs.errorContainer.withAlpha(180),
           border: Border(
             bottom: BorderSide(color: cs.error.withAlpha(60), width: 1),
           ),
@@ -778,14 +771,7 @@ class _ChatPageState extends State<ChatPage> {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        gradient: canSend
-            ? LinearGradient(
-                colors: [cs.primary, cs.tertiary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: canSend ? null : cs.surfaceContainerHighest,
+        color: canSend ? cs.primary : cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(23),
       ),
       child: Material(

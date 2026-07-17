@@ -13,6 +13,7 @@ import 'pages/home_page.dart';
 import 'pages/oss_notice_page.dart';
 import 'theme/lumen_theme.dart';
 import 'theme/lumen_tokens.dart';
+import 'widgets/lumen/lumen.dart';
 
 bool get _isAndroid =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -302,7 +303,7 @@ class _OssNoticeGate extends StatelessWidget {
     if (!settings.loaded) {
       final cs = Theme.of(context).colorScheme;
       return Scaffold(
-        backgroundColor: cs.surface,
+        backgroundColor: lumenScaffoldBackground(cs),
         body: Center(
           child: CircularProgressIndicator(color: cs.primary),
         ),

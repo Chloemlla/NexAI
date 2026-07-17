@@ -609,24 +609,15 @@ class _NotesPageState extends State<NotesPage>
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [cs.primary, cs.tertiary],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        color: cs.primaryContainer,
+                        borderRadius: BorderRadius.circular(
+                          LumenTokens.radiusSm,
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: cs.primary.withAlpha(60),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
                       child: Icon(
                         Icons.hub_rounded,
                         size: 24,
-                        color: cs.onPrimary,
+                        color: cs.onPrimaryContainer,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -1155,7 +1146,7 @@ class _NoteCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: taskDone == taskTotal
-                              ? Colors.green.withAlpha(100)
+                              ? cs.tertiary.withAlpha(120)
                               : cs.tertiary.withAlpha(60),
                           width: 1,
                         ),
@@ -1169,7 +1160,7 @@ class _NoteCard extends StatelessWidget {
                                 : Icons.radio_button_unchecked_rounded,
                             size: 12,
                             color: taskDone == taskTotal
-                                ? Colors.green.shade700
+                                ? cs.onTertiaryContainer
                                 : cs.onTertiaryContainer,
                           ),
                           const SizedBox(width: 4),
@@ -1179,7 +1170,7 @@ class _NoteCard extends StatelessWidget {
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: taskDone == taskTotal
-                                  ? Colors.green.shade700
+                                  ? cs.onTertiaryContainer
                                   : cs.onTertiaryContainer,
                             ),
                           ),

@@ -1911,14 +1911,14 @@ class _SettingsPageState extends State<SettingsPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.tertiary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
               ),
-              child: Icon(Icons.person_rounded, color: cs.onPrimary, size: 24),
+              child: Icon(
+                Icons.person_rounded,
+                color: cs.onPrimaryContainer,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(

@@ -1437,20 +1437,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isComplete
-              ? [Colors.green.shade50, Colors.green.shade100]
-              : [
-                  cs.primaryContainer.withAlpha(60),
-                  cs.secondaryContainer.withAlpha(60),
-                ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
+        color: isComplete
+            ? cs.tertiaryContainer.withAlpha(160)
+            : cs.primaryContainer.withAlpha(90),
         border: Border(
           bottom: BorderSide(
             color: isComplete
-                ? Colors.green.withAlpha(100)
+                ? cs.tertiary.withAlpha(120)
                 : cs.outlineVariant.withAlpha(60),
             width: 1,
           ),
@@ -1461,13 +1454,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: isComplete ? Colors.green.shade100 : cs.primaryContainer,
-              borderRadius: BorderRadius.circular(8),
+              color: isComplete ? cs.tertiaryContainer : cs.primaryContainer,
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
             ),
             child: Icon(
               isComplete ? Icons.check_circle_rounded : Icons.checklist_rounded,
               size: 18,
-              color: isComplete ? Colors.green.shade700 : cs.primary,
+              color: isComplete ? cs.onTertiaryContainer : cs.primary,
             ),
           ),
           const SizedBox(width: 12),
@@ -1483,7 +1476,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: isComplete
-                            ? Colors.green.shade700
+                            ? cs.onTertiaryContainer
                             : cs.onSurface,
                         letterSpacing: 0.1,
                       ),
@@ -1494,7 +1487,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: isComplete ? Colors.green.shade700 : cs.primary,
+                        color: isComplete ? cs.onTertiaryContainer : cs.primary,
                       ),
                     ),
                   ],
@@ -1506,7 +1499,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     value: progress,
                     minHeight: 8,
                     backgroundColor: cs.surfaceContainerHighest.withAlpha(120),
-                    color: isComplete ? Colors.green.shade600 : cs.primary,
+                    color: isComplete ? cs.tertiary : cs.primary,
                   ),
                 ),
               ],

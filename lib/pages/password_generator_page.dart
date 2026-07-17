@@ -9,6 +9,7 @@ import '../models/saved_password.dart';
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
 import '../widgets/lumen/lumen.dart';
+import '../theme/lumen_tokens.dart';
 
 enum PasswordType { random, memorable, pin }
 
@@ -867,19 +868,8 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           width: double.infinity,
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [cs.primaryContainer, cs.secondaryContainer],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: cs.primary.withAlpha(20),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+            color: cs.surfaceContainerLow,
+            borderRadius: LumenTokens.cardBorderRadius,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

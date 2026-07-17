@@ -319,51 +319,6 @@ class _CrashReportPageState extends State<CrashReportPage> {
   }
 }
 
-class _CrashHero extends StatelessWidget {
-  const _CrashHero({required this.cs, required this.tt});
-
-  final ColorScheme cs;
-  final TextTheme tt;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: cs.errorContainer,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.bug_report_rounded, color: cs.onErrorContainer),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'NexAI 崩溃报告',
-                style: tt.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '上次运行遇到未处理错误。你可以复制报告、生成分享链接，或清除后继续使用。',
-                style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _AuthorCard extends StatelessWidget {
   const _AuthorCard({required this.report, required this.cs});
 

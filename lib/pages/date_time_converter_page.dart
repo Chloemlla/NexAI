@@ -204,6 +204,8 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isNarrow = MediaQuery.sizeOf(context).width < 600;
 
 
 

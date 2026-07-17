@@ -687,13 +687,13 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final strength = _calculateStrength(_generatedPassword);
+    final strength = _calculatePasswordStrength(_generatedPassword);
     final strengthLabel = strength < 40
         ? '弱'
         : strength < 70
             ? '中'
             : '强';
-    final typeLabel = switch (_passwordType) {
+    final typeLabel = switch (_selectedType) {
       PasswordType.random => '随机密码',
       PasswordType.memorable => '易记密码',
       PasswordType.pin => 'PIN 码',

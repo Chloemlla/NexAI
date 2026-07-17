@@ -6,7 +6,6 @@ import '../providers/settings_provider.dart';
 import '../services/crash_reporter.dart';
 import '../utils/build_config.dart';
 import 'crash_report_page.dart';
-import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
 
 class DeveloperDebugPage extends StatelessWidget {

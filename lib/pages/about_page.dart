@@ -234,8 +234,6 @@ _m3Section(
     );
   }
 
-
-
   Future<void> _handleDeveloperEggTap() async {
     HapticFeedback.selectionClick();
     final nextCount = _developerTapCount + 1;
@@ -348,44 +346,6 @@ _m3Section(
     } catch (_) {
       SmartDialog.showToast('无法打开链接');
     }
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color bg;
-  final Color fg;
-  final VoidCallback? onTap;
-
-  const _Badge({
-    required this.label,
-    required this.bg,
-    required this.fg,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(LumenTokens.radiusSm);
-    return Material(
-      color: bg,
-      borderRadius: radius,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: radius,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: fg,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }
 

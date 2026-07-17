@@ -56,11 +56,13 @@ class _OssNoticePageState extends State<OssNoticePage> {
 
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
-      body: Column(
-        children: [
-          Expanded(
-            child: CustomScrollView(
-              slivers: [
+      body: PopScope(
+        canPop: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
                 SliverToBoxAdapter(
                   child: SafeArea(
                     bottom: false,
@@ -69,7 +71,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(hPad, 28, hPad, 8),
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 720),
+                          constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -227,6 +229,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
                       ),
                     ),
                   ),
+                ),
                   SliverPadding(
                     padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 24),
                     sliver: SliverList.separated(
@@ -237,7 +240,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
                         return Align(
                           alignment: Alignment.topCenter,
                           child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 720),
+                            constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
                             child: _DependencyTile(
                               credit: credit,
                               onOpen: credit.url == null
@@ -252,39 +255,44 @@ class _OssNoticePageState extends State<OssNoticePage> {
                 ],
               ),
             ),
-          ),
-          Material(
-            color: lumenScaffoldBackground(cs),
-            child: SafeArea(
-              top: false,
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 12),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: cs.outlineVariant.withAlpha(120)),
-                  ),
-                ),
-                child: FilledButton(
-                  onPressed: _submitting ? null : _acknowledge,
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+            Material(
+              color: lumenScaffoldBackground(cs),
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(hPad, 12, hPad, 12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: cs.outlineVariant.withAlpha(120)),
                     ),
                   ),
-                  child: _submitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('我已了解，开始使用'),
+                  child: FilledButton(
+                    onPressed: _submitting ? null : _acknowledge,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          LumenTokens.radiusMd,
+                        ),
+                      ),
+                    ),
+                    child: _submitting
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: cs.onPrimary,
+                            ),
+                          )
+                        : const Text('我已了解，开始使用'),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -360,7 +368,7 @@ class _DependencyTile extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: LumenTokens.panelBorderRadius,
         border: Border.all(color: cs.outlineVariant.withAlpha(110)),
       ),
       child: Theme(

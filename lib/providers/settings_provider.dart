@@ -25,6 +25,8 @@ class SettingsProvider extends ChangeNotifier {
   static const _kSecVertexApiKey = 'sec.vertexApiKey';
   static const _kSecAccessToken = 'nexai_access_token';
   static const _kSecRefreshToken = 'nexai_refresh_token';
+  static const _kSecUserJson = 'nexai_user_json';
+  static const _kSecUserId = 'nexai_user_id';
 
   String _selectedModel = 'gpt-4o';
   ThemeMode _themeMode = ThemeMode.system;
@@ -291,9 +293,17 @@ class SettingsProvider extends ChangeNotifier {
       return;
     }
 
+    // Persist a safe default first. If we crash mid-detection after
+    // loadSettings() auto-writes prefs, a missing flag must not become a
+    // false "upgrade" skip on next launch.
+    _ossNoticeAcknowledged = false;
+    await prefs.setBool(_ossNoticeAcknowledgedKey, false);
+
     final looksExisting = await _hasDurableExistingInstallSignals(prefs);
-    _ossNoticeAcknowledged = looksExisting;
-    await prefs.setBool(_ossNoticeAcknowledgedKey, looksExisting);
+    if (!looksExisting) return;
+
+    _ossNoticeAcknowledged = true;
+    await prefs.setBool(_ossNoticeAcknowledgedKey, true);
   }
 
   Future<bool> _hasDurableExistingInstallSignals(
@@ -316,6 +326,8 @@ class SettingsProvider extends ChangeNotifier {
         _kSecUpstashToken,
         _kSecAccessToken,
         _kSecRefreshToken,
+        _kSecUserJson,
+        _kSecUserId,
       ];
       for (final key in secureKeys) {
         final value = await _secure.read(key: key);

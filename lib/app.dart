@@ -300,8 +300,12 @@ class _OssNoticeGate extends StatelessWidget {
     // Settings load in background after first frame. Keep a calm waiting state
     // so we never flash Home before the first-install decision is known.
     if (!settings.loaded) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      final cs = Theme.of(context).colorScheme;
+      return Scaffold(
+        backgroundColor: cs.surface,
+        body: Center(
+          child: CircularProgressIndicator(color: cs.primary),
+        ),
       );
     }
 

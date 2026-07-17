@@ -65,7 +65,7 @@ const List<OssDependencyCredit> kOssDependencyCredits = [
     name: 'ffmpeg_kit_flutter_new',
     author: 'sk3llo / FFmpeg community packaging',
     description: '媒体转码与音视频处理能力。',
-    license: 'LGPL-3.0 / GPL depending on build',
+    license: 'LGPL-3.0-or-later (build-dependent components may vary)',
     url: 'https://pub.dev/packages/ffmpeg_kit_flutter_new',
   ),
   OssDependencyCredit(
@@ -108,7 +108,7 @@ const List<OssDependencyCredit> kOssDependencyCredits = [
     author: 'Chloemlla / GPT Markdown contributors',
     description: '聊天场景 Markdown 渲染增强。',
     license: 'MIT',
-    url: 'https://pub.dev/packages/gpt_markdown',
+    url: 'https://pub.dev/packages/gpt_markdown_chloemlla',
   ),
   OssDependencyCredit(
     name: 'provider',
@@ -196,7 +196,7 @@ const List<OssDependencyCredit> kOssDependencyCredits = [
   ),
   OssDependencyCredit(
     name: 'flutter_secure_storage',
-    author: 'Moorren / Julian Steenbakker et al.',
+    author: 'mogol / Julian Steenbakker et al.',
     description: '敏感信息安全存储。',
     license: 'BSD-3-Clause',
     url: 'https://pub.dev/packages/flutter_secure_storage',

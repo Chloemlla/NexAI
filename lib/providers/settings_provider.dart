@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -20,6 +23,8 @@ class SettingsProvider extends ChangeNotifier {
   static const _kSecWebdavPass = 'sec.webdavPassword';
   static const _kSecUpstashToken = 'sec.upstashToken';
   static const _kSecVertexApiKey = 'sec.vertexApiKey';
+  static const _kSecAccessToken = 'nexai_access_token';
+  static const _kSecRefreshToken = 'nexai_refresh_token';
 
   String _selectedModel = 'gpt-4o';
   ThemeMode _themeMode = ThemeMode.system;
@@ -129,6 +134,47 @@ class SettingsProvider extends ChangeNotifier {
   bool _ossNoticeAcknowledged = false;
   bool get ossNoticeAcknowledged => _ossNoticeAcknowledged;
 
+  /// Prefs that prove a real prior install/user configuration.
+  /// Do NOT include keys that `loadSettings()` may auto-create on first run.
+  static const Set<String> _existingInstallPrefSignals = {
+    'themeMode',
+    'selectedModel',
+    'openaiModels',
+    'apiMode',
+    'syncEnabled',
+    'syncMethod',
+    'borderlessMode',
+    'fullScreenMode',
+    'smartAutoScroll',
+    'fontFamily',
+    'fontSize',
+    'accentColorValue',
+    'webdavServer',
+    'webdavUser',
+    'upstashUrl',
+    'notesAutoSave',
+    'aiTitleGeneration',
+    'developerDebugModeUnlocked',
+    'passkeyGoogleOnly',
+    'vertexProjectId',
+    'vertexLocation',
+    'vertexModels',
+    'systemPrompt',
+    'temperature',
+    'maxTokens',
+    // Valid only because we resolve BEFORE this key is auto-written on first run.
+    'openaiBaseUrl',
+    'nexai_short_url_history',
+    'nexai_translation_history',
+    // Legacy plaintext keys that older builds may still carry.
+    'apiKey',
+    'webdavPassword',
+    'upstashToken',
+    'vertexApiKey',
+    'notes',
+    'saved_passwords',
+  };
+
   bool get isConfigured => _apiMode == 'OpenAI'
       ? _openaiApiKey.isNotEmpty
       : _vertexApiKey.isNotEmpty;
@@ -144,13 +190,10 @@ class SettingsProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // Capture first-install state before any prefs are written below.
-      final storedOssNoticeAcknowledged =
-          prefs.getBool(_ossNoticeAcknowledgedKey);
-      final hadExistingPrefs = prefs
-          .getKeys()
-          .where((key) => key != _ossNoticeAcknowledgedKey)
-          .isNotEmpty;
+      // Resolve first-install state BEFORE any default prefs writes below.
+      // Fresh installs must persist `false` immediately so a kill-before-ack
+      // relaunch does not get misclassified as an upgrade.
+      await _resolveOssNoticeAcknowledged(prefs);
 
       // ── Migrate legacy plaintext secrets to secure storage (one-time) ──────
       await _migrateLegacySecrets(prefs);
@@ -235,21 +278,64 @@ class SettingsProvider extends ChangeNotifier {
         (e) => e.name == themeModeStr,
         orElse: () => ThemeMode.system,
       );
-
-      if (storedOssNoticeAcknowledged != null) {
-        _ossNoticeAcknowledged = storedOssNoticeAcknowledged;
-      } else {
-        // Existing installs already have local preference traces. Do not
-        // re-show the first-install notice for upgrades.
-        _ossNoticeAcknowledged = hadExistingPrefs;
-        if (hadExistingPrefs) {
-          await prefs.setBool(_ossNoticeAcknowledgedKey, true);
-        }
-      }
     } finally {
       _loaded = true;
       notifyListeners();
     }
+  }
+
+  Future<void> _resolveOssNoticeAcknowledged(SharedPreferences prefs) async {
+    final stored = prefs.getBool(_ossNoticeAcknowledgedKey);
+    if (stored != null) {
+      _ossNoticeAcknowledged = stored;
+      return;
+    }
+
+    final looksExisting = await _hasDurableExistingInstallSignals(prefs);
+    _ossNoticeAcknowledged = looksExisting;
+    await prefs.setBool(_ossNoticeAcknowledgedKey, looksExisting);
+  }
+
+  Future<bool> _hasDurableExistingInstallSignals(
+    SharedPreferences prefs,
+  ) async {
+    for (final key in prefs.getKeys()) {
+      if (_existingInstallPrefSignals.contains(key)) {
+        return true;
+      }
+    }
+
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final chatFile = File('${dir.path}/nexai_chats.json');
+      final notesFile = File('${dir.path}/nexai_notes.json');
+      if (await chatFile.exists() || await notesFile.exists()) {
+        return true;
+      }
+    } catch (_) {
+      // Ignore filesystem probe failures; fall through to secure checks.
+    }
+
+    try {
+      final secureKeys = <String>[
+        _kSecApiKey,
+        _kSecVertexApiKey,
+        _kSecWebdavPass,
+        _kSecUpstashToken,
+        _kSecAccessToken,
+        _kSecRefreshToken,
+      ];
+      for (final key in secureKeys) {
+        final value = await _secure.read(key: key);
+        if (value != null && value.isNotEmpty) {
+          return true;
+        }
+      }
+    } catch (_) {
+      // Ignore secure-storage probe failures for first-run classification.
+    }
+
+    return false;
   }
 
   /// One-time migration: move legacy plaintext secrets from SharedPreferences

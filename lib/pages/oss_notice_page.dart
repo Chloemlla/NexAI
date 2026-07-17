@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/oss_dependency_credits.dart';
 import '../models/oss_dependency_credit.dart';
 import '../providers/settings_provider.dart';
+import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 /// First-install notice covering OSS source, free policy, license and credits.
 class OssNoticePage extends StatefulWidget {
@@ -18,9 +21,17 @@ class _OssNoticePageState extends State<OssNoticePage> {
   bool _submitting = false;
 
   Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final uri = Uri.parse(url);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        SmartDialog.showToast('无法打开链接');
+      }
+    } catch (_) {
+      SmartDialog.showToast('无法打开链接');
     }
   }
 
@@ -41,10 +52,10 @@ class _OssNoticePageState extends State<OssNoticePage> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final mq = MediaQuery.of(context);
-    final hPad = mq.size.width > 600 ? mq.size.width * 0.1 : 16.0;
+    final hPad = LumenTokens.horizontalPaddingForWidth(mq.size.width);
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: Column(
         children: [
           Expanded(
@@ -53,13 +64,15 @@ class _OssNoticePageState extends State<OssNoticePage> {
                 SliverToBoxAdapter(
                   child: SafeArea(
                     bottom: false,
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(hPad, 28, hPad, 8),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 720),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(hPad, 28, hPad, 8),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 720),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                             Center(
                               child: Column(
                                 children: [
@@ -208,7 +221,8 @@ class _OssNoticePageState extends State<OssNoticePage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -220,11 +234,17 @@ class _OssNoticePageState extends State<OssNoticePage> {
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final credit = kOssDependencyCredits[index];
-                        return _DependencyTile(
-                          credit: credit,
-                          onOpen: credit.url == null
-                              ? null
-                              : () => _openUrl(credit.url!),
+                        return Align(
+                          alignment: Alignment.topCenter,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 720),
+                            child: _DependencyTile(
+                              credit: credit,
+                              onOpen: credit.url == null
+                                  ? null
+                                  : () => _openUrl(credit.url!),
+                            ),
+                          ),
                         );
                       },
                     ),

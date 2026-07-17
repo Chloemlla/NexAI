@@ -204,188 +204,127 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    final mq = MediaQuery.of(context);
-    final isNarrow = mq.size.width < 600;
-    final hasLeading = ModalRoute.of(context)?.canPop ?? false;
-    final hPad = LumenTokens.horizontalPaddingForWidth(mq.size.width);
 
-    return Scaffold(
-      backgroundColor: lumenScaffoldBackground(cs),
-      body: CustomScrollView(
-        slivers: [
-          // ── Hero AppBar ──
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: isNarrow ? 208 : 220,
-            backgroundColor: lumenScaffoldBackground(cs),
-            surfaceTintColor: Colors.transparent,
-            flexibleSpace: FlexibleSpaceBar(
-              collapseMode: CollapseMode.parallax,
-              titlePadding: EdgeInsets.only(
-                left: hasLeading ? (kToolbarHeight + 20) : 20,
-                right: 16,
-                bottom: 14,
-              ),
-              title: Text(
-                '日期时间转换器',
-                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              background: ColoredBox(
-                color: lumenScaffoldBackground(cs),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      hPad,
-                      kToolbarHeight + 16,
-                      hPad,
-                      28,
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const LumenIconChip(
-                            icon: Icons.access_time_filled_rounded,
-                            size: 64,
-                            iconSize: 32,
-                            shape: LumenIconChipShape.rounded,
-                          ),
-                          const SizedBox(height: 8),
-                          if (_selectedDate != null)
-                            Text(
-                              DateFormat(
-                                'yyyy-MM-dd HH:mm:ss',
-                              ).format(_selectedDate!),
-                              style: tt.bodySmall?.copyWith(
-                                color: cs.onSurfaceVariant,
-                                fontFamily: 'JetBrainsMonoNexAI',
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
 
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 40),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                // ── Quick actions ──
-                Row(
-                  children: [
-                    Expanded(
-                      child: _QuickAction(
-                        cs: cs,
-                        icon: Icons.today_rounded,
-                        label: '当前时间',
-                        color: cs.primaryContainer,
-                        iconColor: cs.onPrimaryContainer,
-                        onTap: _setNow,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _QuickAction(
-                        cs: cs,
-                        icon: Icons.calendar_month_rounded,
-                        label: '选择日期',
-                        color: cs.secondaryContainer,
-                        iconColor: cs.onSecondaryContainer,
-                        onTap: _pickDate,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _QuickAction(
-                        cs: cs,
-                        icon: Icons.content_paste_rounded,
-                        label: '从剪贴板',
-                        color: cs.tertiaryContainer,
-                        iconColor: cs.onTertiaryContainer,
-                        onTap: () async {
-                          final data = await Clipboard.getData(
-                            Clipboard.kTextPlain,
-                          );
-                          if (data?.text != null && data!.text!.isNotEmpty) {
-                            _inputController.text = data.text!;
-                            _onInputChanged(data.text!);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
 
-                // ── Input card ──
-                _buildInputCard(cs, tt, isNarrow),
-                const SizedBox(height: 20),
-
-                // ── Results section ──
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: cs.primaryContainer.withAlpha(150),
-                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.transform_rounded,
-                          size: 18,
-                          color: cs.primary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '转换结果',
-                      style: tt.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${_formatEntries.length} 种格式',
-                      style: TextStyle(fontSize: 12, color: cs.outline),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                if (_selectedDate != null)
-                  ...List.generate(_formatEntries.length, (i) {
-                    final entry = _formatEntries[i];
-                    final value = _formatDate(_selectedDate!, entry.name);
-                    final isCopied = _copiedLabel == entry.name;
-                    return _buildResultTile(
-                      cs,
-                      entry,
-                      value,
-                      isNarrow,
-                      isCopied,
-                    );
-                  }),
-              ]),
-            ),
-          ),
-        ],
+    return LumenSecondaryScaffold(
+      title: '日期时间转换器',
+      children: [
+        LumenPageIntro(
+          icon: Icons.access_time_filled_rounded,
+          title: '日期时间转换器',
+          description: '在同一页面完成时间输入、格式转换与结果复制，保持工具流连贯。',
+          chips: [
+            if (_selectedDate != null)
+              DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedDate!),
+            '多格式输出',
+            '一键复制',
+          ],
+        ),
+// ── Quick actions ──
+Row(
+  children: [
+    Expanded(
+      child: _QuickAction(
+        cs: cs,
+        icon: Icons.today_rounded,
+        label: '当前时间',
+        color: cs.primaryContainer,
+        iconColor: cs.onPrimaryContainer,
+        onTap: _setNow,
       ),
+    ),
+    const SizedBox(width: 10),
+    Expanded(
+      child: _QuickAction(
+        cs: cs,
+        icon: Icons.calendar_month_rounded,
+        label: '选择日期',
+        color: cs.secondaryContainer,
+        iconColor: cs.onSecondaryContainer,
+        onTap: _pickDate,
+      ),
+    ),
+    const SizedBox(width: 10),
+    Expanded(
+      child: _QuickAction(
+        cs: cs,
+        icon: Icons.content_paste_rounded,
+        label: '从剪贴板',
+        color: cs.tertiaryContainer,
+        iconColor: cs.onTertiaryContainer,
+        onTap: () async {
+          final data = await Clipboard.getData(
+            Clipboard.kTextPlain,
+          );
+          if (data?.text != null && data!.text!.isNotEmpty) {
+            _inputController.text = data.text!;
+            _onInputChanged(data.text!);
+          }
+        },
+      ),
+    ),
+  ],
+),
+const SizedBox(height: 20),
+
+// ── Input card ──
+_buildInputCard(cs, tt, isNarrow),
+const SizedBox(height: 20),
+
+// ── Results section ──
+Row(
+  children: [
+    Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: cs.primaryContainer.withAlpha(150),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.transform_rounded,
+          size: 18,
+          color: cs.primary,
+        ),
+      ),
+    ),
+    const SizedBox(width: 12),
+    Text(
+      '转换结果',
+      style: tt.titleSmall?.copyWith(
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0,
+      ),
+    ),
+    const Spacer(),
+    Text(
+      '${_formatEntries.length} 种格式',
+      style: TextStyle(fontSize: 12, color: cs.outline),
+    ),
+  ],
+),
+const SizedBox(height: 12),
+
+if (_selectedDate != null)
+  ...List.generate(_formatEntries.length, (i) {
+    final entry = _formatEntries[i];
+    final value = _formatDate(_selectedDate!, entry.name);
+    final isCopied = _copiedLabel == entry.name;
+    return _buildResultTile(
+      cs,
+      entry,
+      value,
+      isNarrow,
+      isCopied,
+    );
+  }),
+      ],
     );
   }
+
+
 
   Widget _buildInputCard(ColorScheme cs, TextTheme tt, bool isNarrow) {
     return LumenActionCard(

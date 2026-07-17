@@ -55,28 +55,15 @@ class _CrashReportPageState extends State<CrashReportPage> {
         ? report.stackTrace
         : stackLines.take(_collapsedStackLines).join('\n');
 
-    return Scaffold(
-      backgroundColor: lumenScaffoldBackground(cs),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: LumenTokens.maxContentWidth,
-            ),
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(
-                LumenTokens.horizontalPaddingForWidth(
-                  MediaQuery.sizeOf(context).width,
-                ),
-                LumenTokens.pagePaddingTop + 8,
-                LumenTokens.horizontalPaddingForWidth(
-                  MediaQuery.sizeOf(context).width,
-                ),
-                LumenTokens.pagePaddingBottom + 8,
-              ),
-              children: [
-                _CrashHero(cs: cs, tt: tt),
-                const SizedBox(height: 16),
+    return LumenSecondaryScaffold(
+      title: '崩溃报告',
+      children: [
+        LumenPageIntro(
+          icon: Icons.bug_report_rounded,
+          title: 'NexAI 崩溃报告',
+          description: '汇总崩溃摘要、堆栈与系统信息，便于复制、导出或继续使用应用。',
+          chips: const ['Crash', 'Stack', 'Export'],
+        ),
                 _CrashCard(
                   cs: cs,
                   children: [
@@ -226,11 +213,7 @@ class _CrashReportPageState extends State<CrashReportPage> {
                   onUploadLink: _uploadShareableLink,
                   onClear: _clearAndContinue,
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      ],
     );
   }
 

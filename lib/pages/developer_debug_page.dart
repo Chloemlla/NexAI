@@ -16,58 +16,23 @@ class DeveloperDebugPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
     final diagnostics = _buildDiagnostics(settings);
 
-    return Scaffold(
-      backgroundColor: lumenScaffoldBackground(cs),
-      appBar: AppBar(title: const Text('开发者高级调试模式')),
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          LumenTokens.pagePaddingStart,
-          LumenTokens.pagePaddingTop,
-          LumenTokens.pagePaddingEnd,
-          LumenTokens.pagePaddingBottom,
+    return LumenSecondaryScaffold(
+      title: '开发者高级调试模式',
+      children: [
+        const LumenPageIntro(
+          icon: Icons.terminal_rounded,
+          title: 'NexAI Debug Console',
+          description: '运行时诊断、崩溃报告入口与日志流。此页采用 Lumen 二级页节奏：简洁顶栏 + soft section。',
+          chips: ['Runtime', 'Crash', 'Log stream'],
         ),
-        children: [
-          LumenActionCard(
-            child: Row(
-              children: [
-                const LumenIconChip(
-                  icon: Icons.terminal_rounded,
-                  size: 42,
-                  iconSize: 22,
-                  shape: LumenIconChipShape.rounded,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'NexAI Debug Console',
-                        style: tt.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Runtime diagnostics and log stream',
-                        style: TextStyle(
-                          color: cs.onSurfaceVariant,
-                          fontFamily: SettingsProvider.monospaceFontFamily,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
+        LumenSettingsSection(
+          icon: Icons.analytics_outlined,
+          title: '运行指标',
+          subtitle: '当前模型与生成参数快照',
+          children: [
+            Wrap(
             spacing: 10,
             runSpacing: 10,
             children: [
@@ -96,53 +61,21 @@ class DeveloperDebugPage extends StatelessWidget {
                 icon: Icons.token_rounded,
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          FutureBuilder(
+            ),
+          ],
+        ),
+        FutureBuilder(
             future: CrashReporter.store.load(),
             builder: (context, snapshot) {
               final report = snapshot.data;
-              return LumenActionCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.bug_report_outlined,
-                            size: 20,
-                            color: report == null ? cs.outline : cs.error,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'CRASH REPORT',
-                              style: TextStyle(
-                                color: cs.onSurfaceVariant,
-                                fontFamily:
-                                    SettingsProvider.monospaceFontFamily,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          if (report != null)
-                            Text(
-                              report.reportId,
-                              style: TextStyle(
-                                color: cs.onSurfaceVariant,
-                                fontFamily:
-                                    SettingsProvider.monospaceFontFamily,
-                                fontSize: 12,
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
+              return LumenSettingsSection(
+                icon: Icons.bug_report_outlined,
+                title: '崩溃报告',
+                subtitle: report == null ? '当前没有已存储的崩溃报告' : report.reportId,
+                children: [
                       Text(
                         report == null
-                            ? 'No stored crash report.'
+                            ? '尚未捕获崩溃报告。'
                             : '${report.exceptionType}\n${report.crashedAtText}',
                         style: TextStyle(
                           color: cs.onSurface,
@@ -152,7 +85,6 @@ class DeveloperDebugPage extends StatelessWidget {
                         ),
                       ),
                       if (report != null) ...[
-                        const SizedBox(height: 12),
                         Row(
                           children: [
                             Expanded(
@@ -196,50 +128,28 @@ class DeveloperDebugPage extends StatelessWidget {
                           ],
                         ),
                       ],
-                    ],
-                  ),
+                ],
               );
             },
           ),
-          const SizedBox(height: 12),
-          LumenActionCard(
-            color: cs.surfaceContainerLowest,
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.article_rounded, size: 18, color: cs.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'LOG STREAM',
-                        style: TextStyle(
-                          color: cs.onSurfaceVariant,
-                          fontFamily: SettingsProvider.monospaceFontFamily,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        tooltip: '复制',
-                        onPressed: () async {
-                          HapticFeedback.selectionClick();
-                          await Clipboard.setData(
-                            ClipboardData(text: diagnostics),
-                          );
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('已复制调试日志')),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.copy_rounded, size: 18),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
+        LumenSettingsSection(
+          icon: Icons.article_rounded,
+          title: '日志流',
+          subtitle: '复制运行参数快照用于排障',
+          headerAccessory: IconButton(
+            tooltip: '复制',
+            onPressed: () async {
+              HapticFeedback.selectionClick();
+              await Clipboard.setData(ClipboardData(text: diagnostics));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('已复制调试日志')),
+                );
+              }
+            },
+            icon: const Icon(Icons.copy_rounded, size: 18),
+          ),
+          children: [
                   SelectableText(
                     diagnostics,
                     style: TextStyle(
@@ -249,11 +159,9 @@ class DeveloperDebugPage extends StatelessWidget {
                       height: 1.45,
                     ),
                   ),
-                ],
-              ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 

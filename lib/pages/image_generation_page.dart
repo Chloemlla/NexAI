@@ -255,6 +255,10 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
       backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
       appBar: AppBar(
         title: const Text('AI 绘图'),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         actions: [
           TextButton.icon(
             onPressed: _openSettings,
@@ -340,7 +344,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     );
   }
 
-  Widget _buildAndroid(BuildContext context) {
+  Widget _buildAndroid(BuildContext context) { // lumen secondary language
     final provider = context.watch<ImageGenerationProvider>();
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;

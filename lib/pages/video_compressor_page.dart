@@ -597,77 +597,57 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final mq = MediaQuery.of(context);
-    final isNarrow = mq.size.width < 600;
-    final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
     final videoInfo = _videoInfo;
 
-    return Scaffold(
-      backgroundColor: lumenScaffoldBackground(cs),
-      body: CustomScrollView(
-        slivers: [
-          ToolPageHeroSliver(
-            title: '视频压缩',
-            subtitle: '统一首屏信息层级后，用户可以先看素材状态，再决定压缩质量和是否打开高级设置。',
-            icon: Icons.video_file_rounded,
-            chips: [
-              ToolHeroChipData(
-                icon: Icons.compress_rounded,
-                label: '质量 ${_selectedQuality.name}',
-              ),
-              ToolHeroChipData(
-                icon: _isCompressing
-                    ? Icons.sync_rounded
-                    : (_compressionResult != null
-                          ? Icons.check_circle_rounded
-                          : Icons.hourglass_empty_rounded),
-                label: _isCompressing
-                    ? '${(_progress * 100).toInt()}%'
-                    : (_compressionResult != null ? '压缩完成' : '等待素材'),
-              ),
-              ToolHeroChipData(
-                icon: Icons.tune_rounded,
-                label: _showAdvancedSettings ? '高级设置展开' : '支持高级设置',
-              ),
-            ],
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
-            sliver: SliverToBoxAdapter(
-              child: ToolQuickActionsBar(
-                actions: [
-                  ToolQuickActionData(
-                    icon: Icons.video_library_rounded,
-                    label: '选择视频',
-                    backgroundColor: cs.primaryContainer,
-                    iconColor: cs.onPrimaryContainer,
-                    onTap: _isCompressing ? null : _pickVideo,
-                  ),
-                  ToolQuickActionData(
-                    icon: Icons.compress_rounded,
-                    label: '开始压缩',
-                    backgroundColor: cs.secondaryContainer,
-                    iconColor: cs.onSecondaryContainer,
-                    onTap: _videoInfo == null || _isCompressing
-                        ? null
-                        : _compressVideo,
-                  ),
-                  ToolQuickActionData(
-                    icon: Icons.save_alt_rounded,
-                    label: '保存结果',
-                    backgroundColor: cs.tertiaryContainer,
-                    iconColor: cs.onTertiaryContainer,
-                    onTap: _compressionResult == null ? null : _saveVideo,
-                  ),
-                ],
-              ),
+    return LumenSecondaryScaffold(
+      title: '视频压缩',
+      children: [
+        LumenPageIntro(
+          icon: Icons.video_file_rounded,
+          title: '视频压缩',
+          description: '统一首屏信息层级后，用户可以先看素材状态，再决定压缩质量和是否打开高级设置。',
+          chips: [
+            '质量 ${_selectedQuality.name}',
+            _isCompressing
+                ? '${(_progress * 100).toInt()}%'
+                : (_compressionResult != null ? '压缩完成' : '等待素材'),
+            _showAdvancedSettings ? '高级设置展开' : '支持高级设置',
+          ],
+        ),
+        ToolQuickActionsBar(
+          actions: [
+            ToolQuickActionData(
+              icon: Icons.video_library_rounded,
+              label: '选择视频',
+              backgroundColor: cs.primaryContainer,
+              iconColor: cs.onPrimaryContainer,
+              onTap: _isCompressing ? null : _pickVideo,
             ),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 40),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                if (_isLoadingInfo) ...[
+            ToolQuickActionData(
+              icon: Icons.compress_rounded,
+              label: '开始压缩',
+              backgroundColor: cs.secondaryContainer,
+              iconColor: cs.onSecondaryContainer,
+              onTap: _videoInfo == null || _isCompressing ? null : _compressVideo,
+            ),
+            ToolQuickActionData(
+              icon: Icons.save_alt_rounded,
+              label: '保存结果',
+              backgroundColor: cs.tertiaryContainer,
+              iconColor: cs.onTertiaryContainer,
+              onTap: _compressionResult == null ? null : _saveVideo,
+            ),
+          ],
+        ),
+        // Preserve original body composition and section order.
+        ..._buildSecondaryBody(cs, videoInfo),
+      ],
+    );
+  }
+
+  List<Widget> _buildSecondaryBody(ColorScheme cs, dynamic videoInfo) {
+    return [
+if (_isLoadingInfo) ...[
                   const ToolSectionTitle(
                     icon: Icons.sync_rounded,
                     title: '读取素材信息',
@@ -771,13 +751,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                     ),
                   ),
                 ],
-              ]),
-            ),
-          ),
-        ],
-      ),
-    );
+    ];
   }
+
 
   Widget _buildInfoCard(
     BuildContext context, {

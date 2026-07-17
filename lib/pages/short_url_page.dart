@@ -147,241 +147,200 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final mq = MediaQuery.of(context);
-    final isNarrow = mq.size.width < 600;
-    final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
-    return Scaffold(
-      backgroundColor: lumenScaffoldBackground(cs),
-      body: CustomScrollView(
-        slivers: [
-          ToolPageHeroSliver(
-            title: '短链接生成',
-            subtitle: '把输入、生成结果和后续操作收敛到一条流程里，避免用户生成后还要重新找复制或访问入口。',
-            icon: Icons.link_rounded,
-            chips: [
-              const ToolHeroChipData(
-                icon: Icons.flash_on_rounded,
-                label: '快速生成',
-              ),
-              ToolHeroChipData(
-                icon: _resultUrl == null
-                    ? Icons.hourglass_empty_rounded
-                    : Icons.check_circle_rounded,
-                label: _resultUrl == null ? '等待生成' : '结果已就绪',
-              ),
-              const ToolHeroChipData(
-                icon: Icons.history_toggle_off_rounded,
-                label: '自动记录',
-              ),
-            ],
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
-            sliver: SliverToBoxAdapter(
-              child: ToolQuickActionsBar(
-                actions: [
-                  ToolQuickActionData(
-                    icon: Icons.content_paste_rounded,
-                    label: '粘贴链接',
-                    backgroundColor: cs.primaryContainer,
-                    iconColor: cs.onPrimaryContainer,
-                    onTap: _pasteUrl,
+    return LumenSecondaryScaffold(
+      title: '短链接生成',
+      children: [
+        LumenPageIntro(
+          icon: Icons.link_rounded,
+          title: '短链接生成',
+          description: '把输入、生成结果和后续操作收敛到一条流程里，避免用户生成后还要重新找复制或访问入口。',
+          chips: [
+            '快速生成',
+            _resultUrl == null ? '等待生成' : '结果已就绪',
+            '自动记录',
+          ],
+        ),
+        ToolQuickActionsBar(
+          actions: [
+            ToolQuickActionData(
+              icon: Icons.content_paste_rounded,
+              label: '粘贴链接',
+              backgroundColor: cs.primaryContainer,
+              iconColor: cs.onPrimaryContainer,
+              onTap: _pasteUrl,
+            ),
+            ToolQuickActionData(
+              icon: Icons.cleaning_services_rounded,
+              label: '清空输入',
+              backgroundColor: cs.secondaryContainer,
+              iconColor: cs.onSecondaryContainer,
+              onTap: _clearAll,
+            ),
+            ToolQuickActionData(
+              icon: Icons.open_in_browser_rounded,
+              label: '访问结果',
+              backgroundColor: cs.tertiaryContainer,
+              iconColor: cs.onTertiaryContainer,
+              onTap: _resultUrl == null ? null : _launchResult,
+            ),
+          ],
+        ),
+        LumenSettingsSection(
+          icon: Icons.dashboard_customize_rounded,
+          title: '链接配置',
+          children: [
+            ToolPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _targetController,
+                    minLines: 1,
+                    maxLines: 4,
+                    keyboardType: TextInputType.url,
+                    decoration: InputDecoration(
+                      labelText: '目标链接',
+                      hintText: 'https://example.com/very/long/path',
+                      prefixIcon: const Icon(Icons.public_rounded),
+                      suffixIcon: _targetController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: _clearAll,
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                      ),
+                    ),
                   ),
-                  ToolQuickActionData(
-                    icon: Icons.cleaning_services_rounded,
-                    label: '清空输入',
-                    backgroundColor: cs.secondaryContainer,
-                    iconColor: cs.onSecondaryContainer,
-                    onTap: _clearAll,
-                  ),
-                  ToolQuickActionData(
-                    icon: Icons.open_in_browser_rounded,
-                    label: '访问结果',
-                    backgroundColor: cs.tertiaryContainer,
-                    iconColor: cs.onTertiaryContainer,
-                    onTap: _resultUrl == null ? null : _launchResult,
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _isLoading ? null : _createShortUrl,
+                      icon: _isLoading
+                          ? SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                                color: cs.onPrimary,
+                              ),
+                            )
+                          : const Icon(Icons.auto_awesome_rounded),
+                      label: Text(_isLoading ? '生成中...' : '生成短链接'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 40),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                const ToolSectionTitle(
-                  icon: Icons.dashboard_customize_rounded,
-                  title: '链接配置',
-                ),
-                const SizedBox(height: 12),
-                ToolPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _targetController,
-                        minLines: 1,
-                        maxLines: 4,
-                        keyboardType: TextInputType.url,
-                        decoration: InputDecoration(
-                          labelText: '目标链接',
-                          hintText: 'https://example.com/very/long/path',
-                          prefixIcon: const Icon(Icons.public_rounded),
-                          suffixIcon: _targetController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded),
-                                  onPressed: _clearAll,
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton.icon(
-                          onPressed: _isLoading ? null : _createShortUrl,
-                          icon: _isLoading
-                              ? SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.2,
-                                    color: cs.onPrimary,
-                                  ),
-                                )
-                              : const Icon(Icons.auto_awesome_rounded),
-                          label: Text(_isLoading ? '生成中...' : '生成短链接'),
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
+          ],
+        ),
+        LumenSettingsSection(
+          icon: Icons.check_circle_outline_rounded,
+          title: '生成结果',
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 250),
+              child: _resultUrl == null
+                  ? const ToolEmptyStateCard(
+                      key: ValueKey('empty'),
+                      icon: Icons.link_off_rounded,
+                      title: '还没有短链接',
+                      description: '输入目标地址并点击生成后，结果会直接显示在这里。',
+                    )
+                  : ToolPanel(
+                      key: const ValueKey('result'),
+                      color: cs.secondaryContainer.withAlpha(70),
+                      borderSide: BorderSide(color: cs.secondary.withAlpha(40)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: cs.surface,
                               borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                              border: Border.all(color: cs.outlineVariant.withAlpha(50)),
+                            ),
+                            child: SelectableText(
+                              _resultUrl!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                fontFamily: 'JetBrainsMonoNexAI',
+                                color: cs.primary,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const ToolSectionTitle(
-                  icon: Icons.check_circle_outline_rounded,
-                  title: '生成结果',
-                ),
-                const SizedBox(height: 12),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: _resultUrl == null
-                      ? const ToolEmptyStateCard(
-                          key: ValueKey('empty'),
-                          icon: Icons.link_off_rounded,
-                          title: '还没有短链接',
-                          description: '输入目标地址并点击生成后，结果会直接显示在这里。',
-                        )
-                      : ToolPanel(
-                          key: const ValueKey('result'),
-                          color: cs.secondaryContainer.withAlpha(70),
-                          borderSide: BorderSide(
-                            color: cs.secondary.withAlpha(40),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          const SizedBox(height: 16),
+                          Row(
                             children: [
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: cs.surface,
-                                  borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                                  border: Border.all(
-                                    color: cs.outlineVariant.withAlpha(50),
-                                  ),
-                                ),
-                                child: SelectableText(
-                                  _resultUrl!,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    fontFamily: 'JetBrainsMonoNexAI',
-                                    color: cs.primary,
+                              Expanded(
+                                child: FilledButton.tonalIcon(
+                                  onPressed: () => _copyToClipboard(_resultUrl!),
+                                  icon: const Icon(Icons.copy_rounded),
+                                  label: const Text('复制链接'),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                                    ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: FilledButton.tonalIcon(
-                                      onPressed: () =>
-                                          _copyToClipboard(_resultUrl!),
-                                      icon: const Icon(Icons.copy_rounded),
-                                      label: const Text('复制链接'),
-                                      style: FilledButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                      ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: FilledButton.icon(
+                                  onPressed: _launchResult,
+                                  icon: const Icon(Icons.open_in_new_rounded),
+                                  label: const Text('立即访问'),
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: FilledButton.icon(
-                                      onPressed: _launchResult,
-                                      icon: const Icon(
-                                        Icons.open_in_new_rounded,
-                                      ),
-                                      label: const Text('立即访问'),
-                                      style: FilledButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                ),
-                const SizedBox(height: 20),
-                const ToolSectionTitle(
-                  icon: Icons.tips_and_updates_rounded,
-                  title: 'UX 调整说明',
-                ),
-                const SizedBox(height: 12),
-                ToolPanel(
-                  color: cs.tertiaryContainer.withAlpha(80),
-                  borderSide: BorderSide(color: cs.tertiary.withAlpha(40)),
-                  child: Text(
-                    '原页面虽然有单独的 hero，但输入卡与结果卡的关系不够紧。现在把粘贴、生成、复制、访问拆成固定动作入口，'
-                    '并把结果展示成可直接复制的主输出区，减少生成后再找按钮的成本。',
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.6,
-                      color: cs.onTertiaryContainer,
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-              ]),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        LumenSettingsSection(
+          icon: Icons.tips_and_updates_rounded,
+          title: '体验说明',
+          children: [
+            ToolPanel(
+              color: cs.tertiaryContainer.withAlpha(80),
+              borderSide: BorderSide(color: cs.tertiary.withAlpha(40)),
+              child: Text(
+                '原页面虽然有单独的 hero，但输入卡与结果卡的关系不够紧。现在把粘贴、生成、复制、访问拆成固定动作入口，'
+                '并把结果展示成可直接复制的主输出区，减少生成后再找按钮的成本。',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.6,
+                  color: cs.onTertiaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
+
 }

@@ -687,177 +687,178 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final strength = _calculatePasswordStrength(_generatedPassword);
-    final savedCount = context.watch<PasswordProvider>().passwords.length;
+    final strength = _calculateStrength(_generatedPassword);
     final strengthLabel = strength < 40
         ? '弱'
         : strength < 70
-        ? '中等'
-        : strength < 90
-        ? '强'
-        : '极强';
-    final typeLabel = switch (_selectedType) {
+            ? '中'
+            : '强';
+    final typeLabel = switch (_passwordType) {
       PasswordType.random => '随机密码',
       PasswordType.memorable => '易记密码',
       PasswordType.pin => 'PIN 码',
     };
+    final savedCount = context.watch<PasswordProvider>().passwords.length;
 
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
-          ToolPageHeroSliver(
-            title: '密码生成器',
-            subtitle: '统一顶部信息层级后，生成、批量导出和本地保存都共享同一套视觉和快捷操作入口。',
-            icon: Icons.password_rounded,
-            chips: [
-              ToolHeroChipData(icon: Icons.badge_rounded, label: typeLabel),
-              ToolHeroChipData(
-                icon: Icons.shield_rounded,
-                label: '强度 $strengthLabel',
+      appBar: AppBar(
+        title: const Text('密码生成器'),
+        backgroundColor: cs.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        actions: [
+          PopupMenuButton(
+            icon: const Icon(Icons.more_vert_rounded),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+            ),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'backup',
+                child: Row(
+                  children: [
+                    Icon(Icons.backup_rounded, size: 20),
+                    SizedBox(width: 12),
+                    Text('创建加密备份'),
+                  ],
+                ),
               ),
-              ToolHeroChipData(
-                icon: Icons.bookmark_rounded,
-                label: '已保存 $savedCount 项',
+              const PopupMenuItem(
+                value: 'restore',
+                child: Row(
+                  children: [
+                    Icon(Icons.restore_rounded, size: 20),
+                    SizedBox(width: 12),
+                    Text('恢复备份'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'export',
+                child: Row(
+                  children: [
+                    Icon(Icons.download_rounded, size: 20),
+                    SizedBox(width: 12),
+                    Text('导出密码'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'clear',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever_rounded, size: 20, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('清空所有', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
               ),
             ],
-            actions: [
-              PopupMenuButton(
-                icon: const Icon(Icons.more_vert_rounded),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                ),
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'backup',
-                    child: Row(
-                      children: [
-                        Icon(Icons.backup_rounded, size: 20),
-                        SizedBox(width: 12),
-                        Text('创建加密备份'),
-                      ],
-                    ),
+            onSelected: (value) {
+              switch (value) {
+                case 'backup':
+                  _createBackup();
+                  break;
+                case 'restore':
+                  _restoreBackup();
+                  break;
+                case 'export':
+                  _exportSavedPasswords();
+                  break;
+                case 'clear':
+                  _clearAllPasswords();
+                  break;
+              }
+            },
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelPadding: const EdgeInsets.symmetric(vertical: 8),
+          indicatorSize: TabBarIndicatorSize.label,
+          indicatorWeight: 3,
+          tabs: const [
+            Tab(text: '生成', icon: Icon(Icons.auto_awesome_rounded, size: 22)),
+            Tab(text: '批量', icon: Icon(Icons.format_list_bulleted_rounded, size: 22)),
+            Tab(text: '已保存', icon: Icon(Icons.bookmark_rounded, size: 22)),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              LumenTokens.horizontalPaddingForWidth(MediaQuery.sizeOf(context).width),
+              LumenTokens.pagePaddingTop,
+              LumenTokens.horizontalPaddingForWidth(MediaQuery.sizeOf(context).width),
+              0,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
+              child: Column(
+                children: [
+                  LumenPageIntro(
+                    icon: Icons.password_rounded,
+                    title: '密码生成器',
+                    description: '统一顶部信息层级后，生成、批量导出和本地保存都共享同一套视觉和快捷操作入口。',
+                    chips: [
+                      typeLabel,
+                      '强度 $strengthLabel',
+                      '已保存 $savedCount 项',
+                    ],
                   ),
-                  const PopupMenuItem(
-                    value: 'restore',
-                    child: Row(
-                      children: [
-                        Icon(Icons.restore_rounded, size: 20),
-                        SizedBox(width: 12),
-                        Text('恢复备份'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'export',
-                    child: Row(
-                      children: [
-                        Icon(Icons.download_rounded, size: 20),
-                        SizedBox(width: 12),
-                        Text('导出密码'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'clear',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_forever_rounded,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        const SizedBox(width: 12),
-                        Text('清空所有', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                      ],
-                    ),
+                  const SizedBox(height: LumenTokens.sectionGap),
+                  ToolQuickActionsBar(
+                    actions: [
+                      ToolQuickActionData(
+                        icon: Icons.copy_rounded,
+                        label: '复制当前密码',
+                        backgroundColor: cs.primaryContainer,
+                        iconColor: cs.onPrimaryContainer,
+                        onTap: _generatedPassword.isEmpty
+                            ? null
+                            : () => _copyToClipboard(_generatedPassword),
+                      ),
+                      ToolQuickActionData(
+                        icon: Icons.refresh_rounded,
+                        label: '重新生成',
+                        backgroundColor: cs.secondaryContainer,
+                        iconColor: cs.onSecondaryContainer,
+                        onTap: _generatePassword,
+                      ),
+                      ToolQuickActionData(
+                        icon: Icons.save_rounded,
+                        label: '保存当前密码',
+                        backgroundColor: cs.tertiaryContainer,
+                        iconColor: cs.onTertiaryContainer,
+                        onTap: _generatedPassword.isEmpty
+                            ? null
+                            : () => _savePassword(_generatedPassword),
+                      ),
+                    ],
                   ),
                 ],
-                onSelected: (value) {
-                  switch (value) {
-                    case 'backup':
-                      _createBackup();
-                      break;
-                    case 'restore':
-                      _restoreBackup();
-                      break;
-                    case 'export':
-                      _exportSavedPasswords();
-                      break;
-                    case 'clear':
-                      _clearAllPasswords();
-                      break;
-                  }
-                },
               ),
-            ],
-            bottom: TabBar(
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: TabBarView(
               controller: _tabController,
-              labelPadding: const EdgeInsets.symmetric(vertical: 8),
-              indicatorSize: TabBarIndicatorSize.label,
-              indicatorWeight: 3,
-              tabs: const [
-                Tab(
-                  text: '生成',
-                  icon: Icon(Icons.auto_awesome_rounded, size: 22),
-                ),
-                Tab(
-                  text: '批量',
-                  icon: Icon(Icons.format_list_bulleted_rounded, size: 22),
-                ),
-                Tab(text: '已保存', icon: Icon(Icons.bookmark_rounded, size: 22)),
+              children: [
+                _buildGenerateTab(cs, strength),
+                _buildBatchTab(cs),
+                _buildSavedTab(cs),
               ],
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            sliver: SliverToBoxAdapter(
-              child: ToolQuickActionsBar(
-                actions: [
-                  ToolQuickActionData(
-                    icon: Icons.copy_rounded,
-                    label: '复制当前密码',
-                    backgroundColor: cs.primaryContainer,
-                    iconColor: cs.onPrimaryContainer,
-                    onTap: _generatedPassword.isEmpty
-                        ? null
-                        : () => _copyToClipboard(_generatedPassword),
-                  ),
-                  ToolQuickActionData(
-                    icon: Icons.refresh_rounded,
-                    label: '重新生成',
-                    backgroundColor: cs.secondaryContainer,
-                    iconColor: cs.onSecondaryContainer,
-                    onTap: _generatePassword,
-                  ),
-                  ToolQuickActionData(
-                    icon: Icons.save_rounded,
-                    label: '保存当前密码',
-                    backgroundColor: cs.tertiaryContainer,
-                    iconColor: cs.onTertiaryContainer,
-                    onTap: _generatedPassword.isEmpty
-                        ? null
-                        : () => _savePassword(_generatedPassword),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
-        body: Container(
-          color: cs.surface,
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildGenerateTab(cs, strength),
-              _buildBatchTab(cs),
-              _buildSavedTab(cs),
-            ],
-          ),
-        ),
       ),
     );
   }
+
 
   Widget _buildGenerateTab(ColorScheme cs, int strength) {
     return ListView(

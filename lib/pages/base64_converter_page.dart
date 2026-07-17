@@ -139,259 +139,227 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final mq = MediaQuery.of(context);
-    final isNarrow = mq.size.width < 600;
-    final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
-    return Scaffold(
-      backgroundColor: lumenScaffoldBackground(cs),
-      body: CustomScrollView(
-        slivers: [
-          ToolPageHeroSliver(
-            title: 'Base64 编解码',
-            subtitle: '把原始文本和 Base64 串拆成两个独立工作区，避免输入输出互相覆盖。',
-            icon: Icons.code_rounded,
-            chips: [
-              const ToolHeroChipData(
-                icon: Icons.swap_horiz_rounded,
-                label: '双向转换',
+    return LumenSecondaryScaffold(
+      title: 'Base64 编解码',
+      children: [
+        LumenPageIntro(
+          icon: Icons.code_rounded,
+          title: 'Base64 编解码',
+          description: '把原始文本和 Base64 串拆成两个独立工作区，避免输入输出互相覆盖。',
+          chips: [
+            '双向转换',
+            _encodeUrlSafe || _decodeUrlSafe ? 'URL Safe 已启用' : '支持 URL Safe',
+            '即时复制',
+          ],
+        ),
+        ToolQuickActionsBar(
+          actions: [
+            ToolQuickActionData(
+              icon: Icons.content_paste_rounded,
+              label: '粘贴待编码文本',
+              backgroundColor: cs.primaryContainer,
+              iconColor: cs.onPrimaryContainer,
+              onTap: () => _pasteToController(
+                _encodeInputController,
+                _encodeToBase64,
               ),
-              ToolHeroChipData(
-                icon: Icons.link_rounded,
-                label: _encodeUrlSafe || _decodeUrlSafe
-                    ? 'URL Safe 已启用'
-                    : '支持 URL Safe',
+            ),
+            ToolQuickActionData(
+              icon: Icons.input_rounded,
+              label: '粘贴待解码内容',
+              backgroundColor: cs.secondaryContainer,
+              iconColor: cs.onSecondaryContainer,
+              onTap: () => _pasteToController(
+                _decodeInputController,
+                _decodeFromBase64,
               ),
-              const ToolHeroChipData(
-                icon: Icons.copy_all_rounded,
-                label: '即时复制',
-              ),
-            ],
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 16, hPad, 0),
-            sliver: SliverToBoxAdapter(
-              child: ToolQuickActionsBar(
-                actions: [
-                  ToolQuickActionData(
-                    icon: Icons.content_paste_rounded,
-                    label: '粘贴待编码文本',
-                    backgroundColor: cs.primaryContainer,
-                    iconColor: cs.onPrimaryContainer,
-                    onTap: () => _pasteToController(
-                      _encodeInputController,
-                      _encodeToBase64,
+            ),
+            ToolQuickActionData(
+              icon: Icons.cleaning_services_rounded,
+              label: '清空全部',
+              backgroundColor: cs.tertiaryContainer,
+              iconColor: cs.onTertiaryContainer,
+              onTap: _clearAll,
+            ),
+          ],
+        ),
+        LumenSettingsSection(
+          icon: Icons.arrow_downward_rounded,
+          title: '字符串转 Base64',
+          subtitle: _encodeUrlSafe ? 'URL Safe 模式' : '标准模式',
+          children: [
+            ToolPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _encodeInputController,
+                    minLines: 4,
+                    maxLines: 6,
+                    onChanged: (_) => _encodeToBase64(),
+                    decoration: InputDecoration(
+                      labelText: '原始文本',
+                      hintText: '输入需要编码的文本、JSON 或 Token',
+                      errorText: _encodeError,
+                      prefixIcon: const Icon(Icons.text_snippet_rounded),
+                      suffixIcon: _encodeInputController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: () {
+                                _encodeInputController.clear();
+                                _encodeToBase64();
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                      ),
                     ),
                   ),
-                  ToolQuickActionData(
-                    icon: Icons.input_rounded,
-                    label: '粘贴待解码内容',
-                    backgroundColor: cs.secondaryContainer,
-                    iconColor: cs.onSecondaryContainer,
-                    onTap: () => _pasteToController(
-                      _decodeInputController,
-                      _decodeFromBase64,
-                    ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    value: _encodeUrlSafe,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('输出 URL Safe 结果'),
+                    subtitle: const Text('适合 URL、JWT 或查询参数传递'),
+                    secondary: Icon(Icons.link_rounded, color: cs.primary),
+                    onChanged: (value) {
+                      setState(() => _encodeUrlSafe = value);
+                      _encodeToBase64();
+                    },
                   ),
-                  ToolQuickActionData(
-                    icon: Icons.cleaning_services_rounded,
-                    label: '清空全部',
-                    backgroundColor: cs.tertiaryContainer,
-                    iconColor: cs.onTertiaryContainer,
-                    onTap: _clearAll,
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _encodeOutputController,
+                    readOnly: true,
+                    minLines: 4,
+                    maxLines: 6,
+                    style: const TextStyle(fontFamily: 'JetBrainsMonoNexAI'),
+                    decoration: InputDecoration(
+                      labelText: '编码结果',
+                      filled: true,
+                      fillColor: cs.surfaceContainerHighest.withAlpha(90),
+                      prefixIcon: const Icon(Icons.output_rounded),
+                      suffixIcon: _encodeOutputController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.copy_rounded),
+                              tooltip: '复制编码结果',
+                              onPressed: () => _copyToClipboard(
+                                _encodeOutputController.text,
+                                '编码结果',
+                              ),
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          SliverPadding(
-            padding: EdgeInsets.fromLTRB(hPad, 20, hPad, 40),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                ToolSectionTitle(
-                  icon: Icons.arrow_downward_rounded,
-                  title: '字符串转 Base64',
-                  trailing: _encodeUrlSafe ? 'URL Safe 模式' : '标准模式',
-                ),
-                const SizedBox(height: 12),
-                ToolPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _encodeInputController,
-                        minLines: 4,
-                        maxLines: 6,
-                        onChanged: (_) => _encodeToBase64(),
-                        decoration: InputDecoration(
-                          labelText: '原始文本',
-                          hintText: '输入需要编码的文本、JSON 或 Token',
-                          errorText: _encodeError,
-                          prefixIcon: const Icon(Icons.text_snippet_rounded),
-                          suffixIcon: _encodeInputController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded),
-                                  onPressed: () {
-                                    _encodeInputController.clear();
-                                    _encodeToBase64();
-                                  },
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                          ),
-                        ),
+          ],
+        ),
+        LumenSettingsSection(
+          icon: Icons.arrow_upward_rounded,
+          title: 'Base64 转字符串',
+          subtitle: _decodeUrlSafe ? 'URL Safe 解码' : '自动解析',
+          children: [
+            ToolPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _decodeInputController,
+                    minLines: 4,
+                    maxLines: 6,
+                    onChanged: (_) => _decodeFromBase64(),
+                    style: const TextStyle(fontFamily: 'JetBrainsMonoNexAI'),
+                    decoration: InputDecoration(
+                      labelText: 'Base64 内容',
+                      hintText: '输入待解码的 Base64 或 URL Safe Base64',
+                      errorText: _decodeError,
+                      prefixIcon: const Icon(Icons.input_rounded),
+                      suffixIcon: _decodeInputController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: () {
+                                _decodeInputController.clear();
+                                _decodeFromBase64();
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
-                      const SizedBox(height: 12),
-                      SwitchListTile(
-                        value: _encodeUrlSafe,
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('输出 URL Safe 结果'),
-                        subtitle: const Text('适合 URL、JWT 或查询参数传递'),
-                        secondary: Icon(Icons.link_rounded, color: cs.primary),
-                        onChanged: (value) {
-                          setState(() => _encodeUrlSafe = value);
-                          _encodeToBase64();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _encodeOutputController,
-                        readOnly: true,
-                        minLines: 4,
-                        maxLines: 6,
-                        style: const TextStyle(
-                          fontFamily: 'JetBrainsMonoNexAI',
-                        ),
-                        decoration: InputDecoration(
-                          labelText: '编码结果',
-                          filled: true,
-                          fillColor: cs.surfaceContainerHighest.withAlpha(90),
-                          prefixIcon: const Icon(Icons.output_rounded),
-                          suffixIcon: _encodeOutputController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.copy_rounded),
-                                  tooltip: '复制编码结果',
-                                  onPressed: () => _copyToClipboard(
-                                    _encodeOutputController.text,
-                                    '编码结果',
-                                  ),
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ToolSectionTitle(
-                  icon: Icons.arrow_upward_rounded,
-                  title: 'Base64 转字符串',
-                  trailing: _decodeUrlSafe ? 'URL Safe 解码' : '自动解析',
-                ),
-                const SizedBox(height: 12),
-                ToolPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
-                        controller: _decodeInputController,
-                        minLines: 4,
-                        maxLines: 6,
-                        onChanged: (_) => _decodeFromBase64(),
-                        style: const TextStyle(
-                          fontFamily: 'JetBrainsMonoNexAI',
-                        ),
-                        decoration: InputDecoration(
-                          labelText: 'Base64 内容',
-                          hintText: '输入待解码的 Base64 或 URL Safe Base64',
-                          errorText: _decodeError,
-                          prefixIcon: const Icon(Icons.input_rounded),
-                          suffixIcon: _decodeInputController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded),
-                                  onPressed: () {
-                                    _decodeInputController.clear();
-                                    _decodeFromBase64();
-                                  },
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SwitchListTile(
-                        value: _decodeUrlSafe,
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('按 URL Safe Base64 解码'),
-                        subtitle: const Text('自动补齐缺失的 = 并还原 - / _'),
-                        secondary: Icon(
-                          Icons.shield_rounded,
-                          color: cs.secondary,
-                        ),
-                        onChanged: (value) {
-                          setState(() => _decodeUrlSafe = value);
-                          _decodeFromBase64();
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _decodeOutputController,
-                        readOnly: true,
-                        minLines: 4,
-                        maxLines: 6,
-                        decoration: InputDecoration(
-                          labelText: '解码结果',
-                          filled: true,
-                          fillColor: cs.surfaceContainerHighest.withAlpha(90),
-                          prefixIcon: const Icon(Icons.text_fields_rounded),
-                          suffixIcon: _decodeOutputController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.copy_rounded),
-                                  tooltip: '复制解码结果',
-                                  onPressed: () => _copyToClipboard(
-                                    _decodeOutputController.text,
-                                    '解码结果',
-                                  ),
-                                )
-                              : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ToolSectionTitle(
-                  icon: Icons.info_outline_rounded,
-                  title: '使用提示',
-                ),
-                const SizedBox(height: 12),
-                ToolPanel(
-                  color: cs.tertiaryContainer.withAlpha(90),
-                  borderSide: BorderSide(color: cs.tertiary.withAlpha(50)),
-                  child: Text(
-                    '标准 Base64 使用 + / = 字符；URL Safe 会改写为 - 和 _，并可移除结尾填充。'
-                    '\n把编码和解码拆成两个独立输入区后，用户不会再遇到输入刚粘贴就被结果覆盖的问题。',
-                    style: TextStyle(
-                      fontSize: 13,
-                      height: 1.6,
-                      color: cs.onTertiaryContainer,
                     ),
                   ),
-                ),
-              ]),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    value: _decodeUrlSafe,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('按 URL Safe Base64 解码'),
+                    subtitle: const Text('自动补齐缺失的 = 并还原 - / _'),
+                    secondary: Icon(Icons.shield_rounded, color: cs.secondary),
+                    onChanged: (value) {
+                      setState(() => _decodeUrlSafe = value);
+                      _decodeFromBase64();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _decodeOutputController,
+                    readOnly: true,
+                    minLines: 4,
+                    maxLines: 6,
+                    decoration: InputDecoration(
+                      labelText: '解码结果',
+                      filled: true,
+                      fillColor: cs.surfaceContainerHighest.withAlpha(90),
+                      prefixIcon: const Icon(Icons.text_fields_rounded),
+                      suffixIcon: _decodeOutputController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.copy_rounded),
+                              tooltip: '复制解码结果',
+                              onPressed: () => _copyToClipboard(
+                                _decodeOutputController.text,
+                                '解码结果',
+                              ),
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        LumenSettingsSection(
+          icon: Icons.info_outline_rounded,
+          title: '使用提示',
+          initiallyExpanded: true,
+          children: [
+            ToolPanel(
+              color: cs.tertiaryContainer.withAlpha(90),
+              borderSide: BorderSide(color: cs.tertiary.withAlpha(50)),
+              child: Text(
+                '标准 Base64 使用 + / = 字符；URL Safe 会改写为 - 和 _，并可移除结尾填充。'
+                '\n把编码和解码拆成两个独立输入区后，用户不会再遇到输入刚粘贴就被结果覆盖的问题。',
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.6,
+                  color: cs.onTertiaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
+
 }

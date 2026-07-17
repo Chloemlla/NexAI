@@ -79,6 +79,7 @@ class _LoginPageState extends State<LoginPage>
         backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: SafeArea(
         child: Center(

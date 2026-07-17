@@ -141,200 +141,152 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
     final artifactsProvider = context.watch<ArtifactsProvider>();
     final artifacts = artifactsProvider.artifacts;
     final isLoggedIn = authProvider.isLoggedIn;
+    final cs = Theme.of(context).colorScheme;
 
     if (!isLoggedIn) {
-      return Scaffold(
-        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
-        body: CustomScrollView(
-          slivers: const [
-            ToolPageHeroSliver(
-              title: '我的分享',
-              subtitle: '查看并管理你已经发布的分享内容，包括复制链接、刷新列表和删除记录。',
-              icon: Icons.share_rounded,
-              chips: [
-                ToolHeroChipData(
-                  icon: Icons.lock_outline_rounded,
-                  label: '需要登录',
-                ),
-                ToolHeroChipData(icon: Icons.link_rounded, label: '集中管理'),
-              ],
-            ),
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(16, 20, 16, 40),
-              sliver: SliverToBoxAdapter(
-                child: ToolEmptyStateCard(
-                  icon: Icons.login_rounded,
-                  title: '请先登录',
-                  description: '登录后才能拉取你的分享记录并进行管理。',
-                ),
-              ),
-            ),
-          ],
-        ),
+      return LumenSecondaryScaffold(
+        title: '我的分享',
+        children: const [
+          LumenPageIntro(
+            icon: Icons.share_rounded,
+            title: '我的分享',
+            description: '查看并管理你已经发布的分享内容，包括复制链接、刷新列表和删除记录。',
+            chips: ['需要登录', '集中管理'],
+          ),
+          ToolEmptyStateCard(
+            icon: Icons.login_rounded,
+            title: '请先登录',
+            description: '登录后才能拉取你的分享记录并进行管理。',
+          ),
+        ],
       );
     }
 
-    final hero = ToolPageHeroSliver(
-      title: '我的分享',
-      subtitle: '把登录状态、空状态和列表管理统一进同一套信息层级，减少“页面空白但不知道原因”的困惑。',
+    final intro = LumenPageIntro(
       icon: Icons.share_rounded,
+      title: '我的分享',
+      description: '把登录状态、空状态和列表管理统一进同一套信息层级，减少“页面空白但不知道原因”的困惑。',
       chips: [
-        ToolHeroChipData(
-          icon: artifactsProvider.isLoading
-              ? Icons.sync_rounded
-              : Icons.inventory_2_rounded,
-          label: artifactsProvider.isLoading
-              ? '同步中'
-              : '${artifacts.length} 条记录',
-        ),
-        ToolHeroChipData(
-          icon: artifactsProvider.error == null
-              ? Icons.verified_rounded
-              : Icons.error_outline_rounded,
-          label: artifactsProvider.error == null ? '状态正常' : '加载异常',
-        ),
+        artifactsProvider.isLoading ? '同步中' : '${artifacts.length} 条记录',
+        artifactsProvider.error == null ? '状态正常' : '加载异常',
       ],
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded),
-          tooltip: '刷新',
-          onPressed: _loadArtifacts,
-        ),
-      ],
+    );
+
+    final refreshAction = IconButton(
+      icon: const Icon(Icons.refresh_rounded),
+      tooltip: '刷新',
+      onPressed: _loadArtifacts,
     );
 
     if (artifactsProvider.isLoading && artifacts.isEmpty) {
       return Scaffold(
-        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
-        body: CustomScrollView(
-          slivers: [
-            hero,
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
+        backgroundColor: lumenScaffoldBackground(cs),
+        appBar: AppBar(
+          title: const Text('我的分享'),
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          actions: [refreshAction],
+        ),
+        body: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                LumenTokens.horizontalPaddingForWidth(MediaQuery.sizeOf(context).width),
+                LumenTokens.pagePaddingTop,
+                LumenTokens.horizontalPaddingForWidth(MediaQuery.sizeOf(context).width),
+                0,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
+                child: intro,
+              ),
             ),
+            const Expanded(child: Center(child: CircularProgressIndicator())),
           ],
         ),
       );
     }
 
     if (artifactsProvider.error != null && artifacts.isEmpty) {
-      return Scaffold(
-        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
-        body: CustomScrollView(
-          slivers: [
-            hero,
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-              sliver: SliverToBoxAdapter(
-                child: ToolEmptyStateCard(
-                  icon: Icons.error_outline_rounded,
-                  title: '加载失败',
-                  description: artifactsProvider.error!,
-                  action: FilledButton.icon(
-                    onPressed: _loadArtifacts,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('重试'),
-                  ),
-                ),
-              ),
+      return LumenSecondaryScaffold(
+        title: '我的分享',
+        actions: [refreshAction],
+        children: [
+          intro,
+          ToolEmptyStateCard(
+            icon: Icons.error_outline_rounded,
+            title: '加载失败',
+            description: artifactsProvider.error!,
+            action: FilledButton.icon(
+              onPressed: _loadArtifacts,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('重试'),
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     if (artifacts.isEmpty) {
-      return Scaffold(
-        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
-        body: RefreshIndicator(
-          onRefresh: _loadArtifacts,
-          child: CustomScrollView(
-            slivers: [
-              hero,
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
-                sliver: SliverToBoxAdapter(
-                  child: ToolEmptyStateCard(
-                    icon: Icons.inbox_rounded,
-                    title: '暂无分享内容',
-                    description: '创建并分享内容后，这里会自动出现你的记录列表。',
-                    action: FilledButton.tonalIcon(
-                      onPressed: _loadArtifacts,
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('刷新'),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+      return LumenSecondaryScaffold(
+        title: '我的分享',
+        actions: [refreshAction],
+        children: [
+          intro,
+          ToolEmptyStateCard(
+            icon: Icons.inbox_rounded,
+            title: '暂无分享内容',
+            description: '创建并分享内容后，这里会自动出现你的记录列表。',
+            action: FilledButton.tonalIcon(
+              onPressed: _loadArtifacts,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('刷新'),
+            ),
           ),
-        ),
+        ],
       );
     }
 
-    return Scaffold(
-      backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
-      body: RefreshIndicator(
-        onRefresh: _loadArtifacts,
-        child: CustomScrollView(
-          slivers: [
-            hero,
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              sliver: SliverToBoxAdapter(
-                child: ToolQuickActionsBar(
-                  actions: [
-                    ToolQuickActionData(
-                      icon: Icons.refresh_rounded,
-                      label: '刷新列表',
-                      onTap: _loadArtifacts,
-                    ),
-                    ToolQuickActionData(
-                      icon: Icons.copy_rounded,
-                      label: '复制最新链接',
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.secondaryContainer,
-                      iconColor: Theme.of(
-                        context,
-                      ).colorScheme.onSecondaryContainer,
-                      onTap: () => _copyLink(artifacts.first.shortId),
-                    ),
-                  ],
-                ),
-              ),
+    return LumenSecondaryScaffold(
+      title: '我的分享',
+      actions: [refreshAction],
+      children: [
+        intro,
+        ToolQuickActionsBar(
+          actions: [
+            ToolQuickActionData(
+              icon: Icons.refresh_rounded,
+              label: '刷新列表',
+              onTap: _loadArtifacts,
             ),
-            const SliverPadding(
-              padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
-              sliver: SliverToBoxAdapter(
-                child: ToolSectionTitle(
-                  icon: Icons.view_list_rounded,
-                  title: '分享记录',
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final artifact = artifacts[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _ArtifactListItem(
-                      artifact: artifact,
-                      onDelete: () => _deleteArtifact(artifact.shortId),
-                      onCopyLink: () => _copyLink(artifact.shortId),
-                    ),
-                  );
-                }, childCount: artifacts.length),
-              ),
+            ToolQuickActionData(
+              icon: Icons.copy_rounded,
+              label: '复制最新链接',
+              backgroundColor: cs.secondaryContainer,
+              iconColor: cs.onSecondaryContainer,
+              onTap: () => _copyLink(artifacts.first.shortId),
             ),
           ],
         ),
-      ),
+        LumenSettingsSection(
+          icon: Icons.inventory_2_rounded,
+          title: '分享记录',
+          subtitle: '${artifacts.length} 条',
+          children: [
+            for (final artifact in artifacts)
+              _ArtifactListItem(
+                artifact: artifact,
+                onCopyLink: () => _copyLink(artifact.shortId),
+                onDelete: () => _deleteArtifact(artifact.shortId),
+              ),
+          ],
+        ),
+      ],
     );
   }
+
+
 }
 
 class _ArtifactListItem extends StatelessWidget {

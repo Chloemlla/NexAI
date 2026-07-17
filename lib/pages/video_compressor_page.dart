@@ -78,6 +78,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   bool _isPreviewFrameLoading = false;
   bool _isPlaying = false;
   int _previewRequestId = 0;
+  bool _showPreviewControls = true;
+  Timer? _controlsHideTimer;
 
   @override
   void dispose() {
@@ -89,6 +91,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _trimStartController.dispose();
     _trimEndController.dispose();
     _previewTimer?.cancel();
+    _controlsHideTimer?.cancel();
     _previewRequestId++;
     _deletePreviewFrame();
     super.dispose();
@@ -107,6 +110,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       _previewDuration = Duration.zero;
       _isPreviewFrameLoading = true;
       _isPlaying = false;
+      _showPreviewControls = true;
     });
 
     final duration = await _probeVideoDuration(videoPath);
@@ -118,9 +122,15 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
   void _togglePlayPause() {
     if (_previewVideoPath == null) return;
-    if (_previewDuration == Duration.zero) return;
     if (_isPlaying) {
       _stopPreviewPlayback();
+      _revealPreviewControls(autoHide: false);
+      return;
+    }
+    if (_previewDuration == Duration.zero) {
+      // Probe failed: still allow single-frame refresh feedback.
+      _revealPreviewControls(autoHide: false);
+      _renderPreviewFrame(_previewPosition);
       return;
     }
     _startPreviewPlayback();
@@ -135,10 +145,14 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       _previewPosition = Duration.zero;
     }
 
-    setState(() => _isPlaying = true);
+    setState(() {
+      _isPlaying = true;
+      _showPreviewControls = true;
+    });
+    _scheduleControlsHide();
+
     _previewTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (!mounted || _previewVideoPath == null) return;
-      if (_isPreviewFrameLoading) return;
 
       final nextPosition = _previewPosition + const Duration(seconds: 1);
       final endReached =
@@ -146,10 +160,12 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
       final target = endReached ? _previewDuration : nextPosition;
 
       setState(() => _previewPosition = target);
-      await _renderPreviewFrame(target);
+      // Fire-and-forget frame render so slow FFmpeg cannot stall the clock.
+      unawaited(_renderPreviewFrame(target));
 
       if (endReached) {
         _stopPreviewPlayback();
+        _revealPreviewControls(autoHide: false);
       }
     });
   }
@@ -157,10 +173,15 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   void _stopPreviewPlayback({bool updateState = true}) {
     _previewTimer?.cancel();
     _previewTimer = null;
+    _controlsHideTimer?.cancel();
     if (updateState && mounted) {
-      setState(() => _isPlaying = false);
+      setState(() {
+        _isPlaying = false;
+        _showPreviewControls = true;
+      });
     } else {
       _isPlaying = false;
+      _showPreviewControls = true;
     }
   }
 
@@ -169,6 +190,56 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _stopPreviewPlayback();
     setState(() => _previewPosition = Duration.zero);
     await _renderPreviewFrame(Duration.zero);
+    if (!mounted) return;
+    if (_previewDuration > Duration.zero) {
+      _startPreviewPlayback();
+    } else {
+      _revealPreviewControls(autoHide: false);
+    }
+  }
+
+  void _revealPreviewControls({bool autoHide = true}) {
+    _controlsHideTimer?.cancel();
+    if (!mounted) {
+      _showPreviewControls = true;
+      return;
+    }
+    setState(() => _showPreviewControls = true);
+    if (autoHide && _isPlaying) {
+      _scheduleControlsHide();
+    }
+  }
+
+  void _scheduleControlsHide() {
+    _controlsHideTimer?.cancel();
+    _controlsHideTimer = Timer(const Duration(milliseconds: 1600), () {
+      if (!mounted || !_isPlaying) return;
+      setState(() => _showPreviewControls = false);
+    });
+  }
+
+  void _seekPreview(Duration position) {
+    if (_previewVideoPath == null) return;
+    final wasPlaying = _isPlaying;
+    if (wasPlaying) {
+      _stopPreviewPlayback();
+    }
+    final clamped = _previewDuration > Duration.zero
+        ? Duration(
+            milliseconds: position.inMilliseconds.clamp(
+              0,
+              _previewDuration.inMilliseconds,
+            ),
+          )
+        : Duration.zero;
+    setState(() => _previewPosition = clamped);
+    _revealPreviewControls(autoHide: wasPlaying);
+    unawaited(_renderPreviewFrame(clamped).then((_) {
+      if (!mounted) return;
+      if (wasPlaying && _previewDuration > Duration.zero) {
+        _startPreviewPlayback();
+      }
+    }));
   }
 
   Future<Duration> _probeVideoDuration(String videoPath) async {
@@ -1332,6 +1403,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     final durationText = _previewDuration == Duration.zero
         ? '--:--'
         : _formatDuration(_previewDuration);
+    final progress = _previewDuration.inMilliseconds <= 0
+        ? 0.0
+        : (_previewPosition.inMilliseconds / _previewDuration.inMilliseconds)
+              .clamp(0.0, 1.0);
 
     return Card(
       elevation: 0,
@@ -1357,12 +1432,31 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                   shape: LumenIconChipShape.rounded,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  '视频预览',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '视频预览',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _previewDuration == Duration.zero
+                            ? (_isPreviewFrameLoading
+                                  ? '正在提取预览帧…'
+                                  : '仅支持关键帧预览（未读取到时长）')
+                            : (_isPlaying ? '播放中' : '已暂停'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1386,13 +1480,35 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                           ),
                   ),
                 ),
+                if (_isPreviewFrameLoading && _previewFramePath != null)
+                  const Positioned(
+                    top: 12,
+                    right: 12,
+                    child: SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
+                    ),
+                  ),
                 Positioned.fill(
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: _togglePlayPause,
-                      child: Container(
-                        color: Colors.black.withAlpha(70),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      if (_isPlaying && _showPreviewControls) {
+                        _togglePlayPause();
+                      } else if (_isPlaying && !_showPreviewControls) {
+                        _revealPreviewControls();
+                      } else {
+                        _togglePlayPause();
+                      }
+                    },
+                    child: AnimatedOpacity(
+                      opacity: (!_isPlaying || _showPreviewControls) ? 1 : 0,
+                      duration: const Duration(milliseconds: 180),
+                      child: ColoredBox(
+                        color: (!_isPlaying || _showPreviewControls)
+                            ? Colors.black.withAlpha(55)
+                            : Colors.transparent,
                         child: Center(
                           child: Container(
                             width: 64,
@@ -1418,25 +1534,71 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Column(
               children: [
-                IconButton.filledTonal(
-                  onPressed: _replayPreview,
-                  icon: const Icon(Icons.replay_rounded),
-                  tooltip: '重新播放',
-                ),
-                IconButton.filled(
-                  onPressed: _togglePlayPause,
-                  icon: Icon(
-                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 3,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 7,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 14,
+                    ),
                   ),
-                  tooltip: _isPlaying ? '暂停' : '播放',
+                  child: Slider(
+                    value: progress,
+                    onChanged: _previewDuration == Duration.zero
+                        ? null
+                        : (value) {
+                            final target = Duration(
+                              milliseconds:
+                                  (_previewDuration.inMilliseconds * value)
+                                      .round(),
+                            );
+                            setState(() => _previewPosition = target);
+                            _revealPreviewControls(autoHide: _isPlaying);
+                          },
+                    onChangeEnd: _previewDuration == Duration.zero
+                        ? null
+                        : (value) {
+                            final target = Duration(
+                              milliseconds:
+                                  (_previewDuration.inMilliseconds * value)
+                                      .round(),
+                            );
+                            _seekPreview(target);
+                          },
+                  ),
                 ),
-                Text(
-                  '${_formatDuration(_previewPosition)} / $durationText',
-                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                Row(
+                  children: [
+                    IconButton.filledTonal(
+                      onPressed: _replayPreview,
+                      icon: const Icon(Icons.replay_rounded),
+                      tooltip: '重新播放',
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: _togglePlayPause,
+                      icon: Icon(
+                        _isPlaying
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                      ),
+                      tooltip: _isPlaying ? '暂停' : '播放',
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${_formatDuration(_previewPosition)} / $durationText',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

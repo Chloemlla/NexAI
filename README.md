@@ -192,7 +192,7 @@ lib/
 └── utils/                    # Security, crypto, update check, signing, helpers
 
 android/                      # Android app + Kotlin native capability layer
-windows/                      # Windows desktop runner
+winui/                        # Native WinUI3 Windows desktop client
 web/                          # Web entry
 assets/                       # Icons, markdown CSS, fonts
 docs/                         # Security, integration, and feature specs

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../theme/lumen_tokens.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -235,7 +236,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
       ),
     );
   }
@@ -394,7 +395,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                       hintText: 'flux.1-kontext-dev',
                       prefixIcon: const Icon(Icons.memory, size: 20),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                   ),
@@ -414,7 +415,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                       hintText: 'https://...',
                       prefixIcon: const Icon(Icons.link, size: 20),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                   ),
@@ -430,7 +431,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                       labelText: '尺寸',
                       prefixIcon: const Icon(Icons.aspect_ratio, size: 20),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                     items: ['1024x1024', '1024x1792', '1792x1024', '512x512']
@@ -451,7 +452,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                       : 'a cat on the moon',
                   prefixIcon: const Icon(Icons.edit_note, size: 20),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                   ),
                 ),
               ),
@@ -486,7 +487,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: cs.errorContainer,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                     ),
                     child: Row(
                       children: [
@@ -699,7 +700,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                               labelText: '模型',
                               hintText: 'flux.1-kontext-dev',
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                               ),
                             ),
                           ),
@@ -715,7 +716,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                                   : '图片 URL (可选)',
                               hintText: 'https://...',
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                               ),
                             ),
                           ),
@@ -731,7 +732,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                                 size: 20,
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                               ),
                             ),
                             items:
@@ -762,7 +763,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                                 ? '帮我画一只宇航猫在月球漫步[1024:1024]'
                                 : 'a cat on the moon',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                             ),
                           ),
                         ),
@@ -798,7 +799,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: cs.errorContainer,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                               ),
                               child: Row(
                                 children: [

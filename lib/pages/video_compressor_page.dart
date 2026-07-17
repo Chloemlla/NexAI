@@ -357,7 +357,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                 Text('压缩完成！'),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
       }
@@ -415,7 +415,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                 Text('已保存到相册'),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
       }
@@ -1392,17 +1392,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
                     child: InkWell(
                       onTap: _togglePlayPause,
                       child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withAlpha(100),
-                              Colors.transparent,
-                              Colors.black.withAlpha(100),
-                            ],
-                          ),
-                        ),
+                        color: Colors.black.withAlpha(70),
                         child: Center(
                           child: Container(
                             width: 64,

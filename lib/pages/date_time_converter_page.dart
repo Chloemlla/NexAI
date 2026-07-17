@@ -194,7 +194,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
         duration: const Duration(milliseconds: 1200),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
@@ -339,7 +339,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
                       height: 32,
                       decoration: BoxDecoration(
                         color: cs.primaryContainer.withAlpha(150),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                       child: Center(
                         child: Icon(
@@ -480,9 +480,9 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
           color: isCopied
               ? cs.primaryContainer.withAlpha(80)
               : cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
             onTap: () => _copyToClipboard(value, entry.name),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -565,9 +565,9 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
         color: isCopied
             ? cs.primaryContainer.withAlpha(60)
             : cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
           onTap: () => _copyToClipboard(value, entry.name),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),

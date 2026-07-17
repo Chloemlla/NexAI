@@ -164,13 +164,13 @@ class _LoginPageState extends State<LoginPage>
                   Container(
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest.withAlpha(120),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                     ),
                     child: TabBar(
                       controller: _tabController,
                       indicator: BoxDecoration(
                         color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                       indicatorSize: TabBarIndicatorSize.tab,
                       indicatorPadding: const EdgeInsets.all(3),
@@ -499,7 +499,7 @@ class _LoginPageState extends State<LoginPage>
         label: Text(label),
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
           side: BorderSide(color: colorScheme.outlineVariant),
         ),

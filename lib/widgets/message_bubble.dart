@@ -235,7 +235,7 @@ class _MessageFooter extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(5),
@@ -568,7 +568,7 @@ class _MessageFooter extends StatelessWidget {
           autofocus: true,
           decoration: InputDecoration(
             hintText: '编辑您的消息...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
           ),
         ),
         actions: [
@@ -668,7 +668,7 @@ class _MessageFooter extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                   ),
                   child: Center(
                     child: Icon(
@@ -713,7 +713,7 @@ class _MessageFooter extends StatelessWidget {
                       duration: const Duration(seconds: 2),
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                   );
@@ -751,14 +751,14 @@ class _MessageFooter extends StatelessWidget {
                       return ListTile(
                         dense: true,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         leading: Container(
                           width: 32,
                           height: 32,
                           decoration: BoxDecoration(
                             color: cs.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                           ),
                           child: Center(
                             child: Icon(
@@ -800,7 +800,7 @@ class _MessageFooter extends StatelessWidget {
                               duration: const Duration(seconds: 2),
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                               ),
                             ),
                           );

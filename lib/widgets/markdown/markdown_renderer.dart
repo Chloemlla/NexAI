@@ -700,7 +700,7 @@ class _MarkdownCodeBlockState extends State<MarkdownCodeBlock> {
       margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: widget.styles.codeBackgroundColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: widget.styles.borderColor.withAlpha(180),
           width: 1,
@@ -779,7 +779,7 @@ class MarkdownTable extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: styles.borderColor, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
@@ -877,7 +877,7 @@ class MarkdownImage extends StatelessWidget {
       constraints: const BoxConstraints(maxHeight: 480),
       decoration: BoxDecoration(
         color: styles.imageBackgroundColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: styles.imageBorderColor, width: 1),
       ),
       clipBehavior: Clip.antiAlias,

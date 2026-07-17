@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../theme/lumen_tokens.dart';
 import 'package:flutter/services.dart';
 
 import '../widgets/tool_page_style.dart';
@@ -128,7 +129,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
         duration: const Duration(milliseconds: 1200),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       ),
@@ -237,7 +238,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                                 )
                               : null,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                         ),
                       ),
@@ -278,7 +279,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                                 )
                               : null,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                         ),
                       ),
@@ -319,7 +320,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                                 )
                               : null,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                         ),
                       ),
@@ -360,7 +361,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
                                 )
                               : null,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                         ),
                       ),

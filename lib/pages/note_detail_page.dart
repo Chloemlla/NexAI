@@ -385,7 +385,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         right: 16,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                       leading: Container(
                         width: 24,
@@ -580,7 +580,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         ),
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         duration: const Duration(seconds: 1),
@@ -613,7 +613,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   margin: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
                     color: cs.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                   ),
                   child: SegmentedButton<_ViewMode>(
                     segments: [
@@ -808,7 +808,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     content: const Text('已复制到剪贴板'),
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                     ),
                   ),
                 );
@@ -855,9 +855,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               ],
             ),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
             ),
           ),
         );
@@ -874,9 +874,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               ],
             ),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Theme.of(context).colorScheme.error,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
             ),
           ),
         );
@@ -960,7 +960,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           content: const Text('前置元数据已存在'),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
         ),
       );
@@ -1051,7 +1051,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                                 vertical: 10,
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                                 borderSide: BorderSide.none,
                               ),
                               filled: true,
@@ -1103,14 +1103,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                           return ListTile(
                             dense: true,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                             ),
                             leading: Container(
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
                                 color: cs.secondaryContainer,
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                               ),
                               child: Center(
                                 child: Icon(
@@ -1263,7 +1263,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
               color: cs.primaryContainer,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
             ),
             child: Text(
               '$count',
@@ -1289,13 +1289,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   Widget _linkTile(ColorScheme cs, Note note) {
     return ListTile(
       dense: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
       leading: Container(
         width: 28,
         height: 28,
         decoration: BoxDecoration(
           color: cs.primaryContainer,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
         ),
         child: Center(
           child: Icon(
@@ -1331,13 +1331,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   Widget _unlinkedTile(ColorScheme cs, Note note, NotesProvider provider) {
     return ListTile(
       dense: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
       leading: Container(
         width: 28,
         height: 28,
         decoration: BoxDecoration(
           color: cs.tertiaryContainer,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
         ),
         child: Center(
           child: Icon(
@@ -1409,7 +1409,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   ),
                   decoration: BoxDecoration(
                     color: cs.secondaryContainer.withAlpha(160),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                   ),
                   child: Text(
                     '#$t',
@@ -1615,7 +1615,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           onTap: onTap,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1754,7 +1754,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
               onTap: () => setState(() => _showToolbar = !_showToolbar),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1798,7 +1798,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withAlpha(100),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
         border: Border.all(color: cs.outlineVariant.withAlpha(60), width: 1),
       ),
       child: Row(

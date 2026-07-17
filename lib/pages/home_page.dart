@@ -488,7 +488,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                             ),
                             decoration: BoxDecoration(
                               color: cs.primaryContainer.withAlpha(120),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                             ),
                             child: Text(
                               '${chat.conversations.length}',
@@ -520,7 +520,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                             vertical: 10,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                             borderSide: BorderSide.none,
                           ),
                         ),
@@ -719,7 +719,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       color: isActive
                           ? cs.primary.withAlpha(40)
                           : cs.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                     ),
                     child: Text(
                       '${conv.messages.length}',
@@ -1139,7 +1139,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                             vertical: 6,
                                           ),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(14),
+                                        borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                                       ),
                                       selected: isActive,
                                       selectedTileColor: cs.secondaryContainer
@@ -1148,21 +1148,11 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                         width: 34,
                                         height: 34,
                                         decoration: BoxDecoration(
-                                          gradient: isActive
-                                              ? LinearGradient(
-                                                  colors: [
-                                                    cs.primary,
-                                                    cs.tertiary,
-                                                  ],
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                )
-                                              : null,
                                           color: isActive
-                                              ? null
+                                              ? cs.primaryContainer
                                               : cs.surfaceContainerHighest,
                                           borderRadius: BorderRadius.circular(
-                                            12,
+                                            LumenTokens.radiusSm,
                                           ),
                                         ),
                                         child: Icon(
@@ -1171,7 +1161,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                               : Icons.chat_outlined,
                                           size: 18,
                                           color: isActive
-                                              ? cs.onPrimary
+                                              ? cs.onPrimaryContainer
                                               : cs.onSurfaceVariant,
                                         ),
                                       ),
@@ -1243,7 +1233,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         dense: true,
                         visualDensity: VisualDensity.compact,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         selected: _currentPage == 'notes',
                         selectedTileColor: cs.secondaryContainer.withAlpha(180),
@@ -1266,7 +1256,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         dense: true,
                         visualDensity: VisualDensity.compact,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         selected: _currentPage == 'tools',
                         selectedTileColor: cs.secondaryContainer.withAlpha(180),
@@ -1289,7 +1279,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         dense: true,
                         visualDensity: VisualDensity.compact,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         selected: _currentPage == 'settings',
                         selectedTileColor: cs.secondaryContainer.withAlpha(180),
@@ -1312,7 +1302,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         dense: true,
                         visualDensity: VisualDensity.compact,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         selected: _currentPage == 'about',
                         selectedTileColor: cs.secondaryContainer.withAlpha(180),

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../theme/lumen_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:provider/provider.dart';
@@ -120,7 +121,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
       SnackBar(
         content: const Text('链接已复制到剪贴板'),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
       ),
     );
   }
@@ -231,7 +232,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
                                 )
                               : null,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                         ),
                       ),
@@ -254,7 +255,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                             ),
                           ),
                         ),
@@ -291,7 +292,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   color: cs.surface,
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                                   border: Border.all(
                                     color: cs.outlineVariant.withAlpha(50),
                                   ),

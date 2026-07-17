@@ -399,7 +399,7 @@ class _AboutPageState extends State<AboutPage> {
 
     if (onTap == null) return row;
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -416,7 +416,7 @@ class _AboutPageState extends State<AboutPage> {
           height: 28,
           decoration: BoxDecoration(
             color: cs.primaryContainer.withAlpha(100),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
           ),
           child: Center(child: Icon(icon, size: 14, color: cs.primary)),
         ),
@@ -457,7 +457,7 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(12);
+    final radius = BorderRadius.circular(LumenTokens.radiusSm);
     return Material(
       color: bg,
       borderRadius: radius,
@@ -626,7 +626,7 @@ class _CreditRow extends StatelessWidget {
 
     if (onTap == null) return content;
     return InkWell(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),

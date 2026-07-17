@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../utils/nexai_api_error.dart';
+import '../theme/lumen_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -85,7 +87,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             child: const Text('删除'),
           ),
         ],
@@ -100,13 +102,25 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
 
     if (!mounted) return;
 
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(success ? '删除成功' : '删除失败'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (success) {
+      messenger.clearSnackBars();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('删除成功'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else if (mounted) {
+      await showNexaiErrorDialog(
+        context,
+        NexaiApiError(
+          stage: 'http_status',
+          code: 'ARTIFACT_DELETE_FAILED',
+          message: artifactsProvider.error ?? '删除失败',
+        ),
+        title: '删除分享失败',
+      );
+    }
   }
 
   void _copyLink(String shortId) {
@@ -352,7 +366,7 @@ class _ArtifactListItem extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: cs.primaryContainer.withAlpha(120),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                 ),
                 child: Icon(_getContentTypeIcon(), color: cs.primary, size: 22),
               ),
@@ -409,9 +423,9 @@ class _ArtifactListItem extends StatelessWidget {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_rounded, color: Colors.red),
+                        Icon(Icons.delete_rounded, color: Theme.of(context).colorScheme.error),
                         SizedBox(width: 8),
-                        Text('删除', style: TextStyle(color: Colors.red)),
+                        Text('删除', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                       ],
                     ),
                   ),

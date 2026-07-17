@@ -213,7 +213,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                 Text('完成 $_completedCount 个，失败 $_failedCount 个'),
               ],
             ),
-            backgroundColor: _failedCount == 0 ? Colors.green : Colors.orange,
+            backgroundColor: _failedCount == 0 ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.secondary,
           ),
         );
       }
@@ -352,7 +352,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                 Text('已保存'),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
       }

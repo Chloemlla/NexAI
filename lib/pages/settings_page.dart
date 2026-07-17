@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../utils/nexai_api_error.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -234,7 +235,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
               ),
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               duration: const Duration(seconds: 2),
@@ -249,7 +250,7 @@ class _SettingsPageState extends State<SettingsPage> {
               behavior: SnackBarBehavior.floating,
               backgroundColor: cs.error,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
               ),
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             ),
@@ -277,7 +278,8 @@ class _SettingsPageState extends State<SettingsPage> {
               },
               icon: const Icon(Icons.save_rounded),
               label: const Text('保存'),
-              elevation: 3,
+              elevation: 0,
+              highlightElevation: 0,
             ),
           ),
         ),
@@ -580,7 +582,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: ButtonStyle(
                         shape: WidgetStatePropertyAll(
                           RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                           ),
                         ),
                       ),
@@ -626,7 +628,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       decoration: BoxDecoration(
                         color: cs.primaryContainer.withAlpha(80),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         border: Border.all(color: cs.primary.withAlpha(40)),
                       ),
                       child: Row(
@@ -831,7 +833,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: cs.errorContainer.withAlpha(80),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                             ),
                             child: Row(
                               children: [
@@ -882,7 +884,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: cs.errorContainer.withAlpha(80),
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                                 ),
                                 child: Text(
                                   sync.errorMessage!,
@@ -945,7 +947,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                                     SnackBarBehavior.floating,
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(12),
+                                                      BorderRadius.circular(LumenTokens.radiusSm),
                                                 ),
                                                 margin:
                                                     const EdgeInsets.fromLTRB(
@@ -981,7 +983,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                       vertical: 14,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
+                                      borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                                     ),
                                   ),
                                 ),
@@ -1069,7 +1071,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                                     SnackBarBehavior.floating,
                                                 shape: RoundedRectangleBorder(
                                                   borderRadius:
-                                                      BorderRadius.circular(12),
+                                                      BorderRadius.circular(LumenTokens.radiusSm),
                                                 ),
                                                 margin:
                                                     const EdgeInsets.fromLTRB(
@@ -1105,7 +1107,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                       vertical: 14,
                                     ),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(14),
+                                      borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                                     ),
                                   ),
                                 ),
@@ -1157,7 +1159,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             behavior: SnackBarBehavior.floating,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(12),
+                                                  BorderRadius.circular(LumenTokens.radiusSm),
                                             ),
                                             margin: const EdgeInsets.fromLTRB(
                                               16,
@@ -1187,7 +1189,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                   vertical: 14,
                                 ),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                                 ),
                               ),
                             ),
@@ -1301,7 +1303,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               minimumSize: const Size(double.infinity, 44),
                               side: BorderSide(color: cs.error.withAlpha(100)),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                               ),
                             ),
                           ),
@@ -1335,7 +1337,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       contentPadding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1352,7 +1354,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       contentPadding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1360,7 +1362,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: cs.surfaceContainerHighest.withAlpha(100),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         border: Border.all(
                           color: cs.outlineVariant.withAlpha(60),
                         ),
@@ -1424,7 +1426,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                           decoration: BoxDecoration(
                             color: cs.primaryContainer.withAlpha(120),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                           ),
                           child: Text(
                             _version.isNotEmpty ? _version : '...',
@@ -1457,7 +1459,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                             decoration: BoxDecoration(
                               color: cs.secondaryContainer.withAlpha(120),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                             ),
                             child: Text(
                               '${BuildConfig.versionCode}',
@@ -1491,7 +1493,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                           contentPadding: EdgeInsets.zero,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                         );
                       },
@@ -1513,7 +1515,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(double.infinity, 48),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                         ),
                       ),
                     ),
@@ -1539,7 +1541,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         hintText: 'your-gemini-api-key',
                         prefixIcon: Icon(Icons.key_rounded, color: cs.primary),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         helperText: '在 https://aistudio.google.com/apikey 获取',
                         helperMaxLines: 2,
@@ -1628,7 +1630,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                                 ),
                                 margin: const EdgeInsets.fromLTRB(
                                   16,
@@ -1656,7 +1658,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                 ),
                                 behavior: SnackBarBehavior.floating,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                                 ),
                                 margin: const EdgeInsets.fromLTRB(
                                   16,
@@ -1682,7 +1684,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         minimumSize: const Size(double.infinity, 44),
                         side: BorderSide(color: cs.primary.withAlpha(100)),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                         ),
                       ),
                     ),
@@ -1890,7 +1892,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: cs.error.withAlpha(120)),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                     ),
                   ),
                 ),
@@ -1951,7 +1953,7 @@ class _SettingsPageState extends State<SettingsPage> {
           style: FilledButton.styleFrom(
             minimumSize: const Size(double.infinity, 48),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
             ),
           ),
         ),
@@ -1966,7 +1968,7 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: cs.errorContainer.withAlpha(80),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
             ),
             child: Row(
               children: [
@@ -2032,7 +2034,7 @@ class _SettingsPageState extends State<SettingsPage> {
       label: const Text('使用 Google 快速登录'),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusMd)),
         side: BorderSide(color: cs.outlineVariant),
       ),
     );
@@ -2049,7 +2051,7 @@ class _SettingsPageState extends State<SettingsPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withAlpha(120),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
@@ -2224,7 +2226,7 @@ class _SettingsPageState extends State<SettingsPage> {
           style: FilledButton.styleFrom(
             minimumSize: const Size(double.infinity, 44),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
             ),
           ),
         ),
@@ -2264,15 +2266,7 @@ class _SettingsPageState extends State<SettingsPage> {
               border: isSelected
                   ? Border.all(color: cs.onSurface, width: 3)
                   : Border.all(color: displayColor.withAlpha(60), width: 1.5),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: displayColor.withAlpha(100),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : null,
+              // Selected accent uses border weight only (Lumen elevation 0).
             ),
             child: isSelected
                 ? Icon(
@@ -2369,7 +2363,7 @@ class _SliderRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: cs.primaryContainer.withAlpha(120),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
               ),
               child: Text(
                 displayValue,

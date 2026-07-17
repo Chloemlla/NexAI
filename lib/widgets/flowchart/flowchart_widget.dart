@@ -146,7 +146,7 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A1A2A) : const Color(0xFFF5F7FA),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? const Color(0xFF333355) : const Color(0xFFDDE0E6),
         ),

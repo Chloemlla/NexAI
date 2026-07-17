@@ -189,7 +189,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           ],
         ),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -219,7 +219,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                 labelText: '用途/分类',
                 hintText: '例如：微信、邮箱、淘宝',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                 ),
                 prefixIcon: const Icon(Icons.category_rounded),
               ),
@@ -230,7 +230,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
               decoration: InputDecoration(
                 labelText: '备注（可选）',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                 ),
                 prefixIcon: const Icon(Icons.note_rounded),
               ),
@@ -247,7 +247,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
               ),
             ),
             child: const Text('保存'),
@@ -313,7 +313,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           SnackBar(
             content: Text('导出成功: $path'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
       }
@@ -354,7 +354,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           SnackBar(
             content: Text('导出成功: $path'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
       }
@@ -407,7 +407,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       decoration: InputDecoration(
                         labelText: '备份口令',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                         prefixIcon: const Icon(Icons.lock_rounded),
                         suffixIcon: IconButton(
@@ -429,7 +429,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                         decoration: InputDecoration(
                           labelText: '确认口令',
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
                         ),
@@ -511,7 +511,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           SnackBar(
             content: Text('加密备份创建成功: $path'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
         );
       }
@@ -594,7 +594,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            Icon(Icons.warning_amber_rounded, color: Theme.of(context).colorScheme.error, size: 28),
             SizedBox(width: 12),
             Text('清空所有密码'),
           ],
@@ -608,10 +608,10 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
               ),
             ),
             child: const Text('确定清空'),
@@ -637,7 +637,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     Color strengthColor;
     String strengthLabel;
     if (strength < 40) {
-      strengthColor = Colors.redAccent;
+      strengthColor = Theme.of(context).colorScheme.error;
       strengthLabel = '弱 (Weak)';
     } else if (strength < 70) {
       strengthColor = Colors.orangeAccent;
@@ -646,7 +646,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       strengthColor = Colors.lightGreen;
       strengthLabel = '强 (Strong)';
     } else {
-      strengthColor = Colors.green;
+      strengthColor = Theme.of(context).colorScheme.tertiary;
       strengthLabel = '极强 (Excellent)';
     }
 
@@ -765,10 +765,10 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                         Icon(
                           Icons.delete_forever_rounded,
                           size: 20,
-                          color: Colors.red,
+                          color: Theme.of(context).colorScheme.error,
                         ),
                         SizedBox(width: 12),
-                        Text('清空所有', style: TextStyle(color: Colors.red)),
+                        Text('清空所有', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                       ],
                     ),
                   ),
@@ -929,7 +929,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                         ),
                       ),
                     ),
@@ -940,7 +940,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.all(16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                       ),
                     ),
                     child: const Icon(Icons.refresh_rounded, size: 20),
@@ -951,7 +951,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.all(16),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                       ),
                     ),
                     child: const Icon(Icons.save_rounded, size: 20),
@@ -1066,7 +1066,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           },
           secondary: Icon(Icons.font_download_rounded, color: cs.primary),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
         ),
         SwitchListTile(
@@ -1080,7 +1080,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           },
           secondary: Icon(Icons.text_fields_rounded, color: cs.primary),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
         ),
         SwitchListTile(
@@ -1094,7 +1094,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           },
           secondary: Icon(Icons.numbers_rounded, color: cs.primary),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
         ),
         SwitchListTile(
@@ -1108,7 +1108,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           },
           secondary: Icon(Icons.emoji_symbols_rounded, color: cs.primary),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
         ),
       ],
@@ -1158,7 +1158,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           },
           secondary: Icon(Icons.title_rounded, color: cs.primary),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
         ),
         SwitchListTile(
@@ -1172,7 +1172,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           },
           secondary: Icon(Icons.looks_one_rounded, color: cs.primary),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
         ),
       ],
@@ -1240,7 +1240,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                 ),
                 decoration: BoxDecoration(
                   color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                 ),
                 child: Text(
                   label,
@@ -1302,7 +1302,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                           ),
                         ),
                       ),
@@ -1318,7 +1318,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                             ),
                           ),
                         ),
@@ -1348,10 +1348,12 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
             final password = _batchPasswords[index];
             return Card(
               elevation: 0,
+              color: cs.surfaceContainerLow,
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
               margin: const EdgeInsets.only(bottom: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: cs.outlineVariant.withAlpha(50)),
+                borderRadius: LumenTokens.cardBorderRadius,
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(
@@ -1534,18 +1536,20 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                       ? '中等'
                       : '强';
                   final strengthColor = password.strength < 40
-                      ? Colors.red
+                      ? Theme.of(context).colorScheme.error
                       : password.strength < 70
-                      ? Colors.orange
-                      : Colors.green;
+                      ? Theme.of(context).colorScheme.secondary
+                      : Theme.of(context).colorScheme.tertiary;
 
                   return Card(
                     elevation: 0,
+                    color: cs.surfaceContainerLow,
+                    surfaceTintColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
                     margin: const EdgeInsets.only(bottom: 16),
                     clipBehavior: Clip.antiAlias,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(color: cs.outlineVariant.withAlpha(80)),
+                      borderRadius: LumenTokens.cardBorderRadius,
                     ),
                     child: Theme(
                       data: Theme.of(
@@ -1587,7 +1591,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                           ),
                           decoration: BoxDecoration(
                             color: strengthColor.withAlpha(20),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                             border: Border.all(
                               color: strengthColor.withAlpha(50),
                             ),
@@ -1685,10 +1689,10 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                                       ),
                                       label: const Text('删除'),
                                       style: FilledButton.styleFrom(
-                                        backgroundColor: Colors.red.withAlpha(
+                                        backgroundColor: Theme.of(context).colorScheme.error.withAlpha(
                                           20,
                                         ),
-                                        foregroundColor: Colors.red,
+                                        foregroundColor: Theme.of(context).colorScheme.error,
                                         padding: const EdgeInsets.symmetric(
                                           vertical: 12,
                                         ),

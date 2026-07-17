@@ -201,7 +201,7 @@ class _ChatPageState extends State<ChatPage> {
           ),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
           ),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         ),
@@ -702,7 +702,7 @@ class _ChatPageState extends State<ChatPage> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: cs.primaryContainer.withAlpha(120),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
               border: Border.all(color: cs.primary.withAlpha(60), width: 1),
             ),
             child: Row(
@@ -726,7 +726,7 @@ class _ChatPageState extends State<ChatPage> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: cs.secondaryContainer.withAlpha(120),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
               border: Border.all(color: cs.secondary.withAlpha(60), width: 1),
             ),
             child: Row(

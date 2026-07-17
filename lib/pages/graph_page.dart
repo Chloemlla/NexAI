@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../theme/lumen_tokens.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/notes_provider.dart';
@@ -379,7 +380,7 @@ class _GraphPageState extends State<GraphPage>
                         prefixIcon: const Icon(Icons.search_rounded, size: 20),
                         isDense: true,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         ),
                       ),
                     ),
@@ -395,7 +396,7 @@ class _GraphPageState extends State<GraphPage>
                             return ListTile(
                               dense: true,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                               ),
                               title: Text(
                                 n.title,

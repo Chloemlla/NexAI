@@ -505,7 +505,7 @@ class _NotesPageState extends State<NotesPage>
             child: Row(
               children: [
                 InkWell(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                   onTap: () => setState(() => _selectedTag = null),
                   child: Padding(
                     padding: const EdgeInsets.all(4),
@@ -540,7 +540,7 @@ class _NotesPageState extends State<NotesPage>
                   ),
                   decoration: BoxDecoration(
                     color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                   ),
                   child: Text(
                     '#$_selectedTag',
@@ -831,7 +831,7 @@ class _TagTile extends StatelessWidget {
                 height: 32,
                 decoration: BoxDecoration(
                   color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
                 ),
                 child: Center(
                   child: Icon(
@@ -934,6 +934,8 @@ class _NoteCard extends StatelessWidget {
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
+      surfaceTintColor: Colors.transparent,
+      shadowColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: LumenTokens.cardBorderRadius,
       ),
@@ -1087,7 +1089,7 @@ class _NoteCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: cs.secondaryContainer,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         border: Border.all(
                           color: cs.secondary.withAlpha(60),
                           width: 1,
@@ -1143,7 +1145,7 @@ class _NoteCard extends StatelessWidget {
                         color: taskDone == taskTotal
                             ? cs.tertiaryContainer
                             : cs.tertiaryContainer.withAlpha(120),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                         border: Border.all(
                           color: taskDone == taskTotal
                               ? cs.tertiary.withAlpha(120)

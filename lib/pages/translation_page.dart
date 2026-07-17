@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../theme/lumen_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -171,7 +172,7 @@ class _TranslationPageState extends State<TranslationPage> {
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
       ),
     );
   }
@@ -369,7 +370,7 @@ class _TranslationPageState extends State<TranslationPage> {
                                 )
                               : null,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                           ),
                         ),
                       ),
@@ -394,7 +395,7 @@ class _TranslationPageState extends State<TranslationPage> {
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                             ),
                           ),
                         ),
@@ -427,7 +428,7 @@ class _TranslationPageState extends State<TranslationPage> {
                             )
                           : null,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                   ),
@@ -493,7 +494,7 @@ class _LanguageField extends StatelessWidget {
         prefixIcon: const Icon(Icons.language_rounded),
         filled: true,
         fillColor: cs.surfaceContainerHighest.withAlpha(90),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
       ),
       items: languages.entries
           .map(

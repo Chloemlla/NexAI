@@ -18,17 +18,29 @@ public sealed class MarkdownMessagePresenter : UserControl
             typeof(MarkdownMessagePresenter),
             new PropertyMetadata(null, OnMessageChanged));
 
+    public static readonly DependencyProperty EnableAdvancedProperty =
+        DependencyProperty.Register(
+            nameof(EnableAdvanced),
+            typeof(bool),
+            typeof(MarkdownMessagePresenter),
+            new PropertyMetadata(true, OnMessageChanged));
+
     public ChatMessage? Message
     {
         get => (ChatMessage?)GetValue(MessageProperty);
         set => SetValue(MessageProperty, value);
     }
 
-    private readonly StackPanel _root;
+    public bool EnableAdvanced
+    {
+        get => (bool)GetValue(EnableAdvancedProperty);
+        set => SetValue(EnableAdvancedProperty, value);
+    }
+
+    private readonly StackPanel _root = new() { Spacing = 8 };
 
     public MarkdownMessagePresenter()
     {
-        _root = new StackPanel { Spacing = 8 };
         Content = _root;
     }
 
@@ -49,18 +61,13 @@ public sealed class MarkdownMessagePresenter : UserControl
             return;
         }
 
-        var roleRow = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-        };
+        var roleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         roleRow.Children.Add(new TextBlock
         {
             Text = FormatRole(message.Role),
             FontSize = 12,
             Opacity = 0.72,
         });
-
         if (message.IsError)
         {
             roleRow.Children.Add(new TextBlock
@@ -70,10 +77,21 @@ public sealed class MarkdownMessagePresenter : UserControl
                 FontSize = 12,
             });
         }
-
         _root.Children.Add(roleRow);
 
-        foreach (var block in BasicMarkdown.Parse(message.Content))
+        if (EnableAdvanced)
+        {
+            foreach (var advanced in AdvancedMarkdown.Extract(message.Content))
+            {
+                _root.Children.Add(CreateAdvancedCard(advanced));
+            }
+        }
+
+        var markdownSource = EnableAdvanced
+            ? AdvancedMarkdown.StripAdvanced(message.Content)
+            : message.Content;
+
+        foreach (var block in BasicMarkdown.Parse(markdownSource))
         {
             switch (block.Kind)
             {
@@ -98,17 +116,48 @@ public sealed class MarkdownMessagePresenter : UserControl
 
     private static string FormatRole(string role)
     {
-        if (string.Equals(role, ChatRoles.User, StringComparison.OrdinalIgnoreCase))
-        {
-            return "You";
-        }
-
-        if (string.Equals(role, ChatRoles.Assistant, StringComparison.OrdinalIgnoreCase))
-        {
-            return "Assistant";
-        }
-
+        if (string.Equals(role, ChatRoles.User, StringComparison.OrdinalIgnoreCase)) return "You";
+        if (string.Equals(role, ChatRoles.Assistant, StringComparison.OrdinalIgnoreCase)) return "Assistant";
         return role;
+    }
+
+    private static Border CreateAdvancedCard(AdvancedBlock block)
+    {
+        var title = block.Kind == AdvancedBlockKind.Latex ? "LaTeX" : "Mermaid";
+        var panel = new StackPanel { Spacing = 6 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"{title} block",
+            FontWeight = FontWeights.SemiBold,
+            FontSize = 12,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = block.Content,
+            FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
+            FontSize = 12.5,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = block.Kind == AdvancedBlockKind.Latex
+                ? "Rendered as source in MVP advanced mode (native equation engine deferred)."
+                : "Rendered as source graph definition (native Mermaid painter deferred).",
+            Opacity = 0.72,
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+        });
+
+        return new Border
+        {
+            Background = ResolveBrush("CardBackgroundFillColorDefaultBrush", Color.FromArgb(255, 245, 245, 245)),
+            BorderBrush = ResolveBrush("AccentFillColorDefaultBrush", Color.FromArgb(255, 0, 120, 212)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12),
+            Child = panel,
+        };
     }
 
     private static TextBlock CreateHeading(MarkdownBlock block)
@@ -120,7 +169,6 @@ public sealed class MarkdownMessagePresenter : UserControl
             3 => 18.0,
             _ => 16.0,
         };
-
         return new TextBlock
         {
             Text = block.Text,
@@ -128,7 +176,6 @@ public sealed class MarkdownMessagePresenter : UserControl
             FontWeight = FontWeights.SemiBold,
             TextWrapping = TextWrapping.WrapWholeWords,
             IsTextSelectionEnabled = true,
-            Margin = new Thickness(0, 2, 0, 2),
         };
     }
 
@@ -137,14 +184,8 @@ public sealed class MarkdownMessagePresenter : UserControl
         var panel = new StackPanel { Spacing = 6 };
         if (!string.IsNullOrWhiteSpace(block.Language))
         {
-            panel.Children.Add(new TextBlock
-            {
-                Text = block.Language,
-                Opacity = 0.72,
-                FontSize = 12,
-            });
+            panel.Children.Add(new TextBlock { Text = block.Language, Opacity = 0.72, FontSize = 12 });
         }
-
         panel.Children.Add(new TextBlock
         {
             Text = block.Text,
@@ -153,7 +194,6 @@ public sealed class MarkdownMessagePresenter : UserControl
             TextWrapping = TextWrapping.Wrap,
             IsTextSelectionEnabled = true,
         });
-
         return new Border
         {
             Background = ResolveBrush("CardBackgroundFillColorDefaultBrush", Color.FromArgb(255, 245, 245, 245)),
@@ -173,35 +213,25 @@ public sealed class MarkdownMessagePresenter : UserControl
             var row = new Grid();
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-
-            var bullet = new TextBlock
-            {
-                Text = "•",
-                Margin = new Thickness(0, 0, 8, 0),
-                Opacity = 0.8,
-            };
+            var bullet = new TextBlock { Text = "•", Margin = new Thickness(0, 0, 8, 0), Opacity = 0.8 };
             Grid.SetColumn(bullet, 0);
             row.Children.Add(bullet);
-
             var content = CreateParagraph(item);
             Grid.SetColumn(content, 1);
             row.Children.Add(content);
             panel.Children.Add(row);
         }
-
         return panel;
     }
 
     private static Border CreateQuote(MarkdownBlock block)
-    {
-        return new Border
+        => new()
         {
             BorderBrush = ResolveBrush("AccentFillColorDefaultBrush", Color.FromArgb(255, 0, 120, 212)),
             BorderThickness = new Thickness(3, 0, 0, 0),
             Padding = new Thickness(12, 4, 4, 4),
             Child = CreateParagraph(block.Text),
         };
-    }
 
     private static RichTextBlock CreateParagraph(string text)
     {
@@ -210,40 +240,24 @@ public sealed class MarkdownMessagePresenter : UserControl
             TextWrapping = TextWrapping.WrapWholeWords,
             IsTextSelectionEnabled = true,
         };
-
         var paragraph = new Paragraph();
         foreach (var span in BasicMarkdown.ParseInlines(text))
         {
             paragraph.Inlines.Add(CreateInline(span));
         }
-
         rtb.Blocks.Add(paragraph);
         return rtb;
     }
 
     private static Inline CreateInline(InlineSpan span)
-    {
-        return span.Style switch
+        => span.Style switch
         {
-            InlineStyle.Bold => new Run
-            {
-                Text = span.Text,
-                FontWeight = FontWeights.SemiBold,
-            },
-            InlineStyle.Italic => new Run
-            {
-                Text = span.Text,
-                FontStyle = Windows.UI.Text.FontStyle.Italic,
-            },
-            InlineStyle.Code => new Run
-            {
-                Text = span.Text,
-                FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
-            },
+            InlineStyle.Bold => new Run { Text = span.Text, FontWeight = FontWeights.SemiBold },
+            InlineStyle.Italic => new Run { Text = span.Text, FontStyle = Windows.UI.Text.FontStyle.Italic },
+            InlineStyle.Code => new Run { Text = span.Text, FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New") },
             InlineStyle.Link => CreateHyperlink(span),
             _ => new Run { Text = span.Text },
         };
-    }
 
     private static Inline CreateHyperlink(InlineSpan span)
     {
@@ -254,18 +268,15 @@ public sealed class MarkdownMessagePresenter : UserControl
             link.Inlines.Add(new Run { Text = span.Text });
             return link;
         }
-
         return new Run { Text = span.Text };
     }
 
     private static Brush ResolveBrush(string key, Color fallback)
     {
-        if (Application.Current.Resources.TryGetValue(key, out var resource) &&
-            resource is Brush brush)
+        if (Application.Current.Resources.TryGetValue(key, out var resource) && resource is Brush brush)
         {
             return brush;
         }
-
         return new SolidColorBrush(fallback);
     }
 }

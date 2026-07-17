@@ -100,6 +100,7 @@ public sealed class ChatSessionService
                 Model = settings.SelectedModel,
                 Temperature = settings.Temperature,
                 MaxTokens = settings.MaxTokens,
+                SystemPrompt = settings.SystemPrompt,
                 Messages = latest.Messages
                     .Where(m => m.Id != assistant.Id && !m.IsError)
                     .Select(m => m.Clone())
@@ -185,3 +186,4 @@ public sealed class ChatSessionService
 
     private void RaiseStateChanged() => StateChanged?.Invoke(this, EventArgs.Empty);
 }
+

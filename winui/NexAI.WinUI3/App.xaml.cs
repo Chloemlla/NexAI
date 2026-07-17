@@ -1,7 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using NexAI.Core.Auth;
 using NexAI.Core.Chat;
+using NexAI.Core.Migration;
+using NexAI.Core.Notes;
 using NexAI.Core.Settings;
+using NexAI.Core.Sync;
 using NexAI.Infrastructure;
 using NexAI.WinUI3.Services;
 using NexAI.WinUI3.Views;
@@ -19,11 +23,8 @@ public partial class App : Application
     }
 
     public static new App Current => (App)Application.Current;
-
     public IServiceProvider Services { get; private set; } = null!;
-
-    public Window MainWindow =>
-        _window ?? throw new InvalidOperationException("Main window is not ready.");
+    public Window MainWindow => _window ?? throw new InvalidOperationException("Main window is not ready.");
 
     protected override async void OnLaunched(LaunchActivatedEventArgs args)
     {
@@ -31,24 +32,41 @@ public partial class App : Application
 
         var settingsStore = Services.GetRequiredService<ISettingsStore>();
         var conversationStore = Services.GetRequiredService<IConversationStore>();
+        var notesStore = Services.GetRequiredService<INotesStore>();
+        var authStore = Services.GetRequiredService<IAuthSessionStore>();
+        var syncService = Services.GetRequiredService<ISyncService>();
+        var migrator = Services.GetRequiredService<IFlutterDataMigrator>();
+
         await Task.WhenAll(
             settingsStore.LoadAsync(),
-            conversationStore.LoadAsync());
+            conversationStore.LoadAsync(),
+            notesStore.LoadAsync(),
+            authStore.LoadAsync(),
+            syncService.LoadAsync());
+
+        // Best-effort one-time Flutter data migration.
+        try
+        {
+            await migrator.TryMigrateAsync();
+            // Reload after potential import.
+            await Task.WhenAll(
+                settingsStore.LoadAsync(),
+                conversationStore.LoadAsync(),
+                notesStore.LoadAsync());
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("Flutter migration failed: " + ex.Message);
+        }
 
         var themeService = Services.GetRequiredService<ThemeService>();
         _window = Services.GetRequiredService<MainWindow>();
-
         if (_window.Content is FrameworkElement root)
         {
             themeService.Attach(root);
         }
-
         themeService.Apply(settingsStore.Current.ThemeMode);
-        settingsStore.Changed += (_, _) =>
-        {
-            themeService.Apply(settingsStore.Current.ThemeMode);
-        };
-
+        settingsStore.Changed += (_, _) => themeService.Apply(settingsStore.Current.ThemeMode);
         _window.Activate();
     }
 

@@ -3,6 +3,8 @@ namespace NexAI.Core.Navigation;
 public enum AppPage
 {
     Chat,
+    Notes,
+    Tools,
     Settings,
 }
 
@@ -17,6 +19,8 @@ public static class NavigationCatalog
     public static IReadOnlyList<NavigationItem> PrimaryItems { get; } =
     [
         new(AppPage.Chat, "Chat", "\uE8BD", "chat"),
+        new(AppPage.Notes, "Notes", "\uE70B", "notes"),
+        new(AppPage.Tools, "Tools", "\uEC7A", "tools"),
         new(AppPage.Settings, "Settings", "\uE713", "settings"),
     ];
 

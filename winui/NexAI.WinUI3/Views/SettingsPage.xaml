@@ -3,12 +3,9 @@
     x:Class="NexAI.WinUI3.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    Background="Transparent"
-    mc:Ignorable="d">
+    Background="Transparent">
     <ScrollViewer Padding="24">
-        <StackPanel MaxWidth="720" Spacing="16">
+        <StackPanel MaxWidth="820" Spacing="16">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -16,88 +13,84 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Spacing="4">
                     <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Settings" />
-                    <TextBlock
-                        Opacity="0.72"
-                        Text="Configure the OpenAI-compatible endpoint used by the native Windows client." />
+                    <TextBlock Opacity="0.72" Text="API, account, sync, migration, and rendering preferences for the native Windows client." />
                 </StackPanel>
-                <Button
-                    x:Name="SaveButton"
-                    Grid.Column="1"
-                    Content="Save"
-                    MinWidth="96"
-                    MinHeight="36"
-                    Style="{StaticResource AccentButtonStyle}"
-                    Click="SaveButton_Click" />
+                <Button x:Name="SaveButton" Grid.Column="1" Content="Save" Style="{StaticResource AccentButtonStyle}" Click="SaveButton_Click" />
             </Grid>
 
-            <Border
-                Padding="16"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
                 <StackPanel Spacing="12">
                     <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="API" />
-                    <TextBox
-                        x:Name="BaseUrlBox"
-                        Header="Base URL"
-                        PlaceholderText="https://api.openai.com/v1" />
-                    <PasswordBox
-                        x:Name="ApiKeyBox"
-                        Header="API Key"
-                        PlaceholderText="sk-..." />
-                    <TextBox
-                        x:Name="ModelBox"
-                        Header="Model"
-                        PlaceholderText="gpt-4o-mini" />
-                    <NumberBox
-                        x:Name="TemperatureBox"
-                        Header="Temperature"
-                        Minimum="0"
-                        Maximum="2"
-                        SmallChange="0.1"
-                        LargeChange="0.5"
-                        SpinButtonPlacementMode="Inline"
-                        ValidationMode="InvalidInputOverwritten" />
-                    <NumberBox
-                        x:Name="MaxTokensBox"
-                        Header="Max tokens"
-                        Minimum="1"
-                        Maximum="128000"
-                        SmallChange="64"
-                        LargeChange="256"
-                        SpinButtonPlacementMode="Inline"
-                        ValidationMode="InvalidInputOverwritten" />
+                    <TextBox x:Name="BaseUrlBox" Header="OpenAI-compatible Base URL" />
+                    <PasswordBox x:Name="ApiKeyBox" Header="API Key" />
+                    <TextBox x:Name="ModelBox" Header="Model" />
+                    <TextBox x:Name="SystemPromptBox" Header="System prompt" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" />
+                    <NumberBox x:Name="TemperatureBox" Header="Temperature" Minimum="0" Maximum="2" SmallChange="0.1" SpinButtonPlacementMode="Inline" />
+                    <NumberBox x:Name="MaxTokensBox" Header="Max tokens" Minimum="1" Maximum="128000" SmallChange="64" SpinButtonPlacementMode="Inline" />
                 </StackPanel>
             </Border>
 
-            <Border
-                Padding="16"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
                 <StackPanel Spacing="12">
                     <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Appearance" />
-                    <ComboBox
-                        x:Name="ThemeBox"
-                        Header="Theme"
-                        MinWidth="220"
-                        SelectionChanged="ThemeBox_SelectionChanged">
+                    <ComboBox x:Name="ThemeBox" Header="Theme" MinWidth="220" SelectionChanged="ThemeBox_SelectionChanged">
                         <ComboBoxItem Content="System" Tag="System" />
                         <ComboBoxItem Content="Light" Tag="Light" />
                         <ComboBoxItem Content="Dark" Tag="Dark" />
                     </ComboBox>
-                    <TextBlock
-                        Opacity="0.72"
-                        Text="Theme applies immediately and is persisted when you save." />
+                    <ToggleSwitch x:Name="AdvancedRenderingToggle" Header="Advanced rendering (LaTeX / Mermaid source cards)" />
                 </StackPanel>
             </Border>
 
-            <TextBlock
-                x:Name="StatusText"
-                Opacity="0.8"
-                TextWrapping="Wrap" />
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Account" />
+                    <TextBox x:Name="BackendBaseUrlBox" Header="NexAI backend base URL" />
+                    <TextBox x:Name="LoginIdentifierBox" Header="Email / username" />
+                    <PasswordBox x:Name="LoginPasswordBox" Header="Password" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Sign in" Click="SignInButton_Click" />
+                        <Button Content="Sign out" Click="SignOutButton_Click" />
+                    </StackPanel>
+                    <TextBlock x:Name="AccountStatusText" Opacity="0.8" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Sync" />
+                    <ToggleSwitch x:Name="SyncEnabledToggle" Header="Enable sync UI" />
+                    <ComboBox x:Name="SyncMethodBox" Header="Sync method" MinWidth="220">
+                        <ComboBoxItem Content="NexAI /sync/v2" Tag="NexAI" />
+                        <ComboBoxItem Content="WebDAV" Tag="WebDAV" />
+                        <ComboBoxItem Content="UpStash" Tag="UpStash" />
+                    </ComboBox>
+                    <TextBox x:Name="WebDavServerBox" Header="WebDAV server" />
+                    <TextBox x:Name="WebDavUserBox" Header="WebDAV user" />
+                    <PasswordBox x:Name="WebDavPasswordBox" Header="WebDAV password" />
+                    <TextBox x:Name="UpstashUrlBox" Header="Upstash URL" />
+                    <PasswordBox x:Name="UpstashTokenBox" Header="Upstash token" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Upload" Click="UploadSyncButton_Click" />
+                        <Button Content="Download" Click="DownloadSyncButton_Click" />
+                        <Button Content="Export recovery key" Click="ExportKeyButton_Click" />
+                    </StackPanel>
+                    <TextBox x:Name="RecoveryKeyBox" Header="Import recovery key" />
+                    <Button Content="Import recovery key" Click="ImportKeyButton_Click" />
+                    <TextBlock x:Name="SyncStatusText" Opacity="0.8" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel Spacing="12">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Flutter migration" />
+                    <TextBlock Opacity="0.72" Text="Imports Flutter Windows chats/notes/settings into the clean WinUI local store when available." />
+                    <Button Content="Run migration now" Click="MigrateButton_Click" />
+                    <TextBlock x:Name="MigrationStatusText" Opacity="0.8" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock x:Name="StatusText" Opacity="0.8" TextWrapping="Wrap" />
         </StackPanel>
     </ScrollViewer>
 </Page>

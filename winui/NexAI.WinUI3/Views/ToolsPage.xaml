@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NexAI.WinUI3.Views.ToolsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tools="using:NexAI.Core.Tools"
+    Background="Transparent">
+    <Grid Padding="16" ColumnSpacing="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Tools" />
+                <TextBox x:Name="SearchBox" Grid.Row="1" Margin="0,12,0,12" PlaceholderText="Search tools" TextChanged="SearchBox_TextChanged" />
+                <ListView x:Name="ToolsList" Grid.Row="2" SelectionMode="Single" SelectionChanged="ToolsList_SelectionChanged">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="tools:ToolDefinition">
+                            <StackPanel Padding="4,8" Spacing="2">
+                                <TextBlock Text="{x:Bind Title}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{x:Bind Description}" Opacity="0.72" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+        </Border>
+
+        <Border
+            Grid.Column="1"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="16">
+            <ScrollViewer>
+                <StackPanel Spacing="12">
+                    <TextBlock x:Name="ToolTitle" Style="{StaticResource TitleLargeTextBlockStyle}" Text="Select a tool" />
+                    <TextBlock x:Name="ToolDescription" Opacity="0.72" TextWrapping="Wrap" />
+                    <TextBox x:Name="InputBox" Header="Input" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="RunButton" Content="Run" Style="{StaticResource AccentButtonStyle}" Click="RunButton_Click" />
+                        <Button Content="Copy output" Click="CopyButton_Click" />
+                    </StackPanel>
+                    <TextBox x:Name="OutputBox" Header="Output" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" IsReadOnly="True" />
+                    <TextBlock x:Name="ToolStatus" Opacity="0.72" TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Page>

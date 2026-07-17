@@ -9,52 +9,34 @@ winui/
   NexAI.WinUI3.sln
   Directory.Build.props
   Directory.Packages.props
-  NexAI.Core/                 # pure models and contracts
-  NexAI.Infrastructure/       # storage and OS/network adapters
-  NexAI.WinUI3/               # WinUI3 app head, shell, pages
+  NexAI.Core/
+  NexAI.Infrastructure/
+  NexAI.WinUI3/
 ```
 
-## MVP-1 status
+## Feature status
 
-MVP-1 is implemented in code:
+Implemented:
 
-- solution + three projects
-- Mica main window, custom title bar, NavigationView
-- editable Settings (Base URL / API Key / Model / Temperature / Max tokens / Theme)
-- clean local JSON settings/conversation stores
-- multi-conversation chat (create / select / delete / search)
-- OpenAI-compatible streaming chat with Send/Stop
-- basic Markdown rendering (headings, lists, quotes, fenced code, bold/italic/inline code/links)
-- Fluent-style chat density polish
+- Fluent shell (Mica, custom title bar, NavigationView)
+- Settings: API, theme, backend, sync config, recovery key, Flutter migration trigger
+- Chat: multi-conversation + OpenAI-compatible streaming + basic Markdown
+- Notes: local store, search, create/edit/delete/star, tags/wiki-link extraction
+- Tools: Base64, Date/Time, Password, AI Translation, plus stubs for media/network tools
+- Sync: AES-256-GCM record crypto + NexAI `/sync/v2` upload/download
+- Advanced rendering: LaTeX / Mermaid source cards (native equation/graph engines deferred)
+- Flutter local data migration (best-effort chats/notes/settings import)
+- Independent WinUI CI job (`build-winui`) packaging zip artifacts
 
-Still deferred beyond MVP-1:
+Local data roots:
 
-- Notes / Tools
-- full Sync
-- advanced rendering (LaTeX / chemistry / Mermaid)
-- media tools
-- Google / Passkey
-- Flutter local data migration
-- dedicated WinUI3 CI job (Flutter Windows CI remains)
+`%LocalAppData%\NexAI\WinUI3\`
 
-## Local data
-
-Settings:
-
-`%LocalAppData%\NexAI\WinUI3\settings.json`
-
-Conversations:
-
-`%LocalAppData%\NexAI\WinUI3\conversations.json`
-
-No Flutter data migration in MVP-1.
-
-## Build notes
-
-Local builds are owned by CI for this repo. When a WinUI job is wired, expected command shape:
+## Build (CI)
 
 ```powershell
-msbuild winui\NexAI.WinUI3\NexAI.WinUI3.csproj /p:Platform=x64 /p:Configuration=Release /v:m -restore
+dotnet restore winui/NexAI.WinUI3.sln
+dotnet build winui/NexAI.WinUI3/NexAI.WinUI3.csproj -c Release -p:Platform=x64
 ```
 
-Flutter `windows/` remains for the existing multi-platform client during transition.
+Local machine builds remain prohibited by repo policy; GitHub Actions owns verification.

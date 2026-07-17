@@ -10,11 +10,9 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
-
-        AppWindow.Resize(new SizeInt32(1180, 780));
+        AppWindow.Resize(new SizeInt32(1280, 840));
         AppWindow.SetIcon("Assets/icon.ico");
         Title = "NexAI";
     }
@@ -28,17 +26,10 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void RootNavigation_SelectionChanged(
-        NavigationView sender,
-        NavigationViewSelectionChangedEventArgs args)
+    private void RootNavigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
     {
-        if (args.SelectedItem is not NavigationViewItem item)
-        {
-            return;
-        }
-
-        var destination = NavigationCatalog.FindByTag(item.Tag?.ToString())?.Page
-            ?? AppPage.Chat;
+        if (args.SelectedItem is not NavigationViewItem item) return;
+        var destination = NavigationCatalog.FindByTag(item.Tag?.ToString())?.Page ?? AppPage.Chat;
         NavigateTo(destination);
     }
 
@@ -46,15 +37,13 @@ public sealed partial class MainWindow : Window
     {
         var targetType = page switch
         {
+            AppPage.Notes => typeof(NotesPage),
+            AppPage.Tools => typeof(ToolsPage),
             AppPage.Settings => typeof(SettingsPage),
             _ => typeof(ChatPage),
         };
 
-        if (ContentFrame.CurrentSourcePageType == targetType)
-        {
-            return;
-        }
-
+        if (ContentFrame.CurrentSourcePageType == targetType) return;
         ContentFrame.Navigate(targetType);
     }
 }

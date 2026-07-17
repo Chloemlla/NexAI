@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using NexAI.Core.Chat;
 using NexAI.Core.Settings;
 using NexAI.Infrastructure;
 using NexAI.WinUI3.Services;
@@ -29,7 +30,10 @@ public partial class App : Application
         Services = BuildServices();
 
         var settingsStore = Services.GetRequiredService<ISettingsStore>();
-        await settingsStore.LoadAsync();
+        var conversationStore = Services.GetRequiredService<IConversationStore>();
+        await Task.WhenAll(
+            settingsStore.LoadAsync(),
+            conversationStore.LoadAsync());
 
         var themeService = Services.GetRequiredService<ThemeService>();
         _window = Services.GetRequiredService<MainWindow>();

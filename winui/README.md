@@ -22,19 +22,22 @@ Done:
 - Mica main window, custom title bar, NavigationView
 - editable Settings (Base URL / API Key / Model / Temperature / Max tokens / Theme)
 - clean local JSON settings store with validation
-- immediate theme preview + persisted theme on save
+- multi-conversation chat store (create / select / delete / search / local draft messages)
 
 Still pending:
 
-- multi-conversation chat storage
 - streaming OpenAI-compatible client
 - basic Markdown rendering
 
 ## Local data
 
-Settings are stored under:
+Settings:
 
 `%LocalAppData%\NexAI\WinUI3\settings.json`
+
+Conversations:
+
+`%LocalAppData%\NexAI\WinUI3\conversations.json`
 
 No Flutter data migration in MVP-1.
 

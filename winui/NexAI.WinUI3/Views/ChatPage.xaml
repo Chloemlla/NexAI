@@ -5,62 +5,239 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:chat="using:NexAI.Core.Chat"
     Background="Transparent"
     mc:Ignorable="d">
-    <Grid Padding="24">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <Grid Padding="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="280" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-        <StackPanel Spacing="4">
-            <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Chat" />
-            <TextBlock
-                Opacity="0.72"
-                Style="{StaticResource BodyTextBlockStyle}"
-                Text="Native WinUI shell is ready. Streaming chat arrives in the next PR." />
-        </StackPanel>
-
+        <!-- Conversation pane -->
         <Border
-            Grid.Row="1"
-            Margin="0,20,0,20"
-            Padding="20"
+            Grid.Column="0"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1"
-            CornerRadius="8">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
-                <FontIcon Glyph="&#xE8BD;" FontSize="28" />
-                <TextBlock
-                    HorizontalAlignment="Center"
-                    Style="{StaticResource SubtitleTextBlockStyle}"
-                    Text="No conversations yet" />
-                <TextBlock
-                    HorizontalAlignment="Center"
-                    Opacity="0.72"
-                    Text="Conversation storage and streaming will land next." />
-            </StackPanel>
+            CornerRadius="8"
+            Padding="12">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="2">
+                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Conversations" />
+                        <TextBlock
+                            x:Name="ConversationCountText"
+                            Opacity="0.72"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="0 chats" />
+                    </StackPanel>
+                    <Button
+                        x:Name="NewChatButton"
+                        Grid.Column="1"
+                        Content="New"
+                        MinWidth="72"
+                        Click="NewChatButton_Click" />
+                </Grid>
+
+                <TextBox
+                    x:Name="SearchBox"
+                    Grid.Row="1"
+                    Margin="0,12,0,12"
+                    PlaceholderText="Search conversations"
+                    TextChanged="SearchBox_TextChanged" />
+
+                <Grid Grid.Row="2">
+                    <ListView
+                        x:Name="ConversationList"
+                        SelectionMode="Single"
+                        IsItemClickEnabled="True"
+                        ItemClick="ConversationList_ItemClick">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="chat:Conversation">
+                                <Grid Padding="4,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="2">
+                                        <TextBlock
+                                            Text="{x:Bind Title}"
+                                            TextWrapping="NoWrap"
+                                            TextTrimming="CharacterEllipsis"
+                                            Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                        <TextBlock
+                                            Text="{x:Bind Preview}"
+                                            Opacity="0.72"
+                                            TextWrapping="NoWrap"
+                                            TextTrimming="CharacterEllipsis"
+                                            Style="{StaticResource CaptionTextBlockStyle}" />
+                                    </StackPanel>
+                                    <Button
+                                        Grid.Column="1"
+                                        Width="32"
+                                        Height="32"
+                                        Padding="0"
+                                        VerticalAlignment="Top"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Tag="{x:Bind Id}"
+                                        Click="DeleteConversationButton_Click"
+                                        ToolTipService.ToolTip="Delete conversation">
+                                        <FontIcon Glyph="&#xE74D;" FontSize="12" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel
+                        x:Name="ConversationEmptyState"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="8"
+                        Visibility="Collapsed">
+                        <FontIcon Glyph="&#xE8BD;" FontSize="24" />
+                        <TextBlock Text="No conversations" HorizontalAlignment="Center" />
+                        <TextBlock
+                            Opacity="0.72"
+                            HorizontalAlignment="Center"
+                            Text="Create a chat to get started." />
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </Border>
 
-        <Grid Grid.Row="2" ColumnSpacing="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBox
-                IsEnabled="False"
-                PlaceholderText="Message NexAI..."
-                AcceptsReturn="True"
-                TextWrapping="Wrap"
-                MinHeight="44" />
-            <Button
-                Grid.Column="1"
-                Content="Send"
-                IsEnabled="False"
-                Style="{StaticResource AccentButtonStyle}"
-                MinWidth="96"
-                MinHeight="44" />
+        <!-- Message pane -->
+        <Grid Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="2">
+                    <TextBlock
+                        x:Name="CurrentTitleText"
+                        Style="{StaticResource TitleLargeTextBlockStyle}"
+                        Text="Chat" />
+                    <TextBlock
+                        x:Name="CurrentMetaText"
+                        Opacity="0.72"
+                        Style="{StaticResource BodyTextBlockStyle}"
+                        Text="Select or create a conversation." />
+                </StackPanel>
+                <Button
+                    x:Name="DeleteCurrentButton"
+                    Grid.Column="1"
+                    Content="Delete"
+                    IsEnabled="False"
+                    Click="DeleteCurrentButton_Click" />
+            </Grid>
+
+            <Border
+                Grid.Row="1"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12">
+                <Grid>
+                    <ListView
+                        x:Name="MessageList"
+                        SelectionMode="None"
+                        IsItemClickEnabled="False">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="chat:ChatMessage">
+                                <Border
+                                    Margin="0,0,0,10"
+                                    Padding="12"
+                                    Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock
+                                            Text="{x:Bind Role}"
+                                            Style="{StaticResource CaptionTextBlockStyle}"
+                                            Opacity="0.72" />
+                                        <TextBlock
+                                            Text="{x:Bind Content}"
+                                            TextWrapping="WrapWholeWords"
+                                            IsTextSelectionEnabled="True" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+
+                    <StackPanel
+                        x:Name="MessageEmptyState"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="10"
+                        Visibility="Collapsed">
+                        <FontIcon Glyph="&#xE8F2;" FontSize="28" />
+                        <TextBlock
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            HorizontalAlignment="Center"
+                            Text="No messages yet" />
+                        <TextBlock
+                            Opacity="0.72"
+                            HorizontalAlignment="Center"
+                            Text="Draft a message below. Streaming send lands in the next PR." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="2" Margin="0,12,0,0" ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox
+                    x:Name="ComposerBox"
+                    PlaceholderText="Message NexAI..."
+                    AcceptsReturn="True"
+                    TextWrapping="Wrap"
+                    MinHeight="72"
+                    MaxHeight="160"
+                    TextChanged="ComposerBox_TextChanged" />
+                <StackPanel Grid.Column="1" Spacing="8">
+                    <Button
+                        x:Name="AddDraftButton"
+                        Content="Add draft"
+                        MinWidth="108"
+                        MinHeight="36"
+                        Style="{StaticResource AccentButtonStyle}"
+                        IsEnabled="False"
+                        Click="AddDraftButton_Click"
+                        ToolTipService.ToolTip="Store a local user message for this conversation" />
+                    <TextBlock
+                        x:Name="ComposerHintText"
+                        Width="108"
+                        Opacity="0.72"
+                        TextWrapping="Wrap"
+                        Style="{StaticResource CaptionTextBlockStyle}"
+                        Text="Local only" />
+                </StackPanel>
+            </Grid>
         </Grid>
     </Grid>
 </Page>

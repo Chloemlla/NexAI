@@ -161,13 +161,6 @@ class _TranslationPageState extends State<TranslationPage> {
     });
   }
 
-  void _clearAll() {
-    setState(() {
-      _sourceController.clear();
-      _targetController.clear();
-    });
-  }
-
   void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();

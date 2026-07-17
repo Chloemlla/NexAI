@@ -29,21 +29,21 @@ class Artifact {
   });
 
   factory Artifact.fromJson(Map<String, dynamic> json) {
+    final createdAtRaw = json['createdAt'] ?? json['created_at'];
+    final expiresAtRaw = json['expiresAt'] ?? json['expires_at'];
     return Artifact(
-      id: json['_id'] ?? json['id'],
-      shortId: json['shortId'],
-      title: json['title'],
-      contentType: json['contentType'],
-      language: json['language'],
-      content: json['content'],
-      description: json['description'],
-      tags: List<String>.from(json['tags'] ?? []),
-      visibility: json['visibility'],
-      viewCount: json['viewCount'] ?? 0,
-      createdAt: DateTime.parse(json['createdAt']),
-      expiresAt: json['expiresAt'] != null
-          ? DateTime.parse(json['expiresAt'])
-          : null,
+      id: (json['_id'] ?? json['id'] ?? '').toString(),
+      shortId: (json['shortId'] ?? json['short_id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      contentType: (json['contentType'] ?? json['content_type'] ?? '').toString(),
+      language: json['language']?.toString(),
+      content: (json['content'] ?? '').toString(),
+      description: json['description']?.toString(),
+      tags: List<String>.from(json['tags'] ?? const <dynamic>[]),
+      visibility: (json['visibility'] ?? 'public').toString(),
+      viewCount: int.tryParse('${json['viewCount'] ?? json['view_count'] ?? 0}') ?? 0,
+      createdAt: DateTime.parse(createdAtRaw.toString()),
+      expiresAt: expiresAtRaw != null ? DateTime.tryParse(expiresAtRaw.toString()) : null,
     );
   }
 }

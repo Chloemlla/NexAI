@@ -1,44 +1,120 @@
 /// NexAI Security API Service
 ///
-/// Provides API endpoints for security event reporting, device tracking,
-/// and anomaly detection.
+/// Uses the same signed/pinned backend client as auth/sync/artifacts so
+/// security endpoints share one request pipeline.
 library;
 
-import 'package:dio/dio.dart';
+import 'dart:convert';
+
+import 'nexai_backend_client.dart';
 
 class NexAISecurityService {
-  final Dio _dio;
-  static const String baseUrl = 'https://tts.chloemlla.com/api/nexai';
+  static const String defaultBaseUrl = 'https://tts.chloemlla.com/api/nexai';
+  static String _baseUrl = defaultBaseUrl;
 
-  NexAISecurityService(this._dio);
+  /// Optional constructor arg retained for call-site compatibility.
+  /// The Dio instance is ignored; requests go through [NexaiBackendClient].
+  NexAISecurityService([Object? _ignoredClient]);
+
+  static void setBaseUrl(String url) {
+    _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
+  }
+
+  static String get baseUrl => _baseUrl;
+
+  Map<String, String> _jsonHeaders({String? accessToken}) {
+    return <String, String>{
+      'Content-Type': 'application/json',
+      if (accessToken != null && accessToken.isNotEmpty)
+        'Authorization': 'Bearer $accessToken',
+    };
+  }
+
+  Map<String, dynamic>? _decode(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(body);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Report security event
   Future<SecurityEventResponse> reportSecurityEvent(
-    SecurityEventRequest request,
-  ) async {
-    final response = await _dio.post(
-      '$baseUrl/security/report',
-      data: request.toJson(),
+    SecurityEventRequest request, {
+    String? accessToken,
+  }) async {
+    final response = await NexaiBackendClient.post(
+      Uri.parse('$_baseUrl/security/report'),
+      headers: _jsonHeaders(accessToken: accessToken),
+      body: jsonEncode(request.toJson()),
     );
-    return SecurityEventResponse.fromJson(response.data);
+    final json = _decode(response.body);
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        json != null) {
+      return SecurityEventResponse.fromJson(json);
+    }
+    throw Exception(
+      json?['error']?.toString() ??
+          'security report failed (${response.statusCode})',
+    );
   }
 
   /// Get device security status
-  Future<SecurityStatusResponse> getSecurityStatus() async {
-    final response = await _dio.get('$baseUrl/security/status');
-    return SecurityStatusResponse.fromJson(response.data);
+  Future<SecurityStatusResponse> getSecurityStatus({String? accessToken}) async {
+    final response = await NexaiBackendClient.get(
+      Uri.parse('$_baseUrl/security/status'),
+      headers: _jsonHeaders(accessToken: accessToken),
+    );
+    final json = _decode(response.body);
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        json != null) {
+      return SecurityStatusResponse.fromJson(json);
+    }
+    throw Exception(
+      json?['error']?.toString() ??
+          'security status failed (${response.statusCode})',
+    );
   }
 
   /// Check anomalies (requires authentication)
-  Future<AnomaliesResponse> checkAnomalies() async {
-    final response = await _dio.get('$baseUrl/security/anomalies');
-    return AnomaliesResponse.fromJson(response.data);
+  Future<AnomaliesResponse> checkAnomalies({required String accessToken}) async {
+    final response = await NexaiBackendClient.get(
+      Uri.parse('$_baseUrl/security/anomalies'),
+      headers: _jsonHeaders(accessToken: accessToken),
+    );
+    final json = _decode(response.body);
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        json != null) {
+      return AnomaliesResponse.fromJson(json);
+    }
+    throw Exception(
+      json?['error']?.toString() ??
+          'security anomalies failed (${response.statusCode})',
+    );
   }
 
   /// Track device (requires authentication)
-  Future<TrackDeviceResponse> trackDevice() async {
-    final response = await _dio.post('$baseUrl/security/track');
-    return TrackDeviceResponse.fromJson(response.data);
+  Future<TrackDeviceResponse> trackDevice({required String accessToken}) async {
+    final response = await NexaiBackendClient.post(
+      Uri.parse('$_baseUrl/security/track'),
+      headers: _jsonHeaders(accessToken: accessToken),
+      body: jsonEncode(<String, dynamic>{}),
+    );
+    final json = _decode(response.body);
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        json != null) {
+      return TrackDeviceResponse.fromJson(json);
+    }
+    throw Exception(
+      json?['error']?.toString() ??
+          'security track failed (${response.statusCode})',
+    );
   }
 }
 
@@ -75,9 +151,9 @@ class SecurityEventResponse {
 
   factory SecurityEventResponse.fromJson(Map<String, dynamic> json) {
     return SecurityEventResponse(
-      status: json['status'] as String,
-      action: json['action'] as String,
-      message: json['message'] as String,
+      status: json['status']?.toString() ?? 'recorded',
+      action: json['action']?.toString() ?? 'monitor',
+      message: json['message']?.toString() ?? '',
     );
   }
 }
@@ -98,12 +174,15 @@ class SecurityStatusResponse {
   });
 
   factory SecurityStatusResponse.fromJson(Map<String, dynamic> json) {
+    final restrictionsRaw = json['restrictions'];
     return SecurityStatusResponse(
-      deviceFingerprint: json['device_fingerprint'] as String,
-      status: json['status'] as String,
-      riskLevel: json['risk_level'] as String,
-      restrictions: (json['restrictions'] as List).cast<String>(),
-      message: json['message'] as String,
+      deviceFingerprint: json['device_fingerprint']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'unknown',
+      riskLevel: json['risk_level']?.toString() ?? 'SAFE',
+      restrictions: restrictionsRaw is List
+          ? restrictionsRaw.map((e) => e.toString()).toList()
+          : const <String>[],
+      message: json['message']?.toString() ?? '',
     );
   }
 }
@@ -122,11 +201,17 @@ class AnomaliesResponse {
   });
 
   factory AnomaliesResponse.fromJson(Map<String, dynamic> json) {
+    final anomaliesRaw = json['anomalies'];
+    final detailsRaw = json['details'];
     return AnomaliesResponse(
-      deviceFingerprint: json['device_fingerprint'] as String,
-      userId: json['user_id'] as String,
-      anomalies: Anomalies.fromJson(json['anomalies'] as Map<String, dynamic>),
-      details: AnomalyDetails.fromJson(json['details'] as Map<String, dynamic>),
+      deviceFingerprint: json['device_fingerprint']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
+      anomalies: Anomalies.fromJson(
+        anomaliesRaw is Map<String, dynamic> ? anomaliesRaw : const {},
+      ),
+      details: AnomalyDetails.fromJson(
+        detailsRaw is Map<String, dynamic> ? detailsRaw : const {},
+      ),
     );
   }
 }
@@ -142,8 +227,8 @@ class Anomalies {
 
   factory Anomalies.fromJson(Map<String, dynamic> json) {
     return Anomalies(
-      multiAccount: json['multi_account'] as bool,
-      frequentDeviceSwitch: json['frequent_device_switch'] as bool,
+      multiAccount: json['multi_account'] == true,
+      frequentDeviceSwitch: json['frequent_device_switch'] == true,
     );
   }
 }
@@ -159,8 +244,8 @@ class AnomalyDetails {
 
   factory AnomalyDetails.fromJson(Map<String, dynamic> json) {
     return AnomalyDetails(
-      accountCount: json['account_count'] as int,
-      deviceCount: json['device_count'] as int,
+      accountCount: int.tryParse('${json['account_count'] ?? 0}') ?? 0,
+      deviceCount: int.tryParse('${json['device_count'] ?? 0}') ?? 0,
     );
   }
 }
@@ -180,10 +265,10 @@ class TrackDeviceResponse {
 
   factory TrackDeviceResponse.fromJson(Map<String, dynamic> json) {
     return TrackDeviceResponse(
-      status: json['status'] as String,
-      deviceFingerprint: json['device_fingerprint'] as String,
-      riskLevel: json['risk_level'] as String,
-      riskScore: json['risk_score'] as int,
+      status: json['status']?.toString() ?? 'tracked',
+      deviceFingerprint: json['device_fingerprint']?.toString() ?? '',
+      riskLevel: json['risk_level']?.toString() ?? 'SAFE',
+      riskScore: int.tryParse('${json['risk_score'] ?? 0}') ?? 0,
     );
   }
 }

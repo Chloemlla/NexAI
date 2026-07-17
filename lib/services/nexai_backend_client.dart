@@ -31,8 +31,27 @@ class NexaiBackendClient {
   }
 
   static Map<String, String> _base([Map<String, String>? extra]) {
-    final headers = <String, String>{...?extra};
-    if (AppSecurity.instance.isCompromised) {
+    final security = AppSecurity.instance;
+    final headers = <String, String>{
+      ...?extra,
+      'X-Device-Risk-Score': security.riskScore.toString(),
+      'X-Device-Risk-Level': security.riskLevel,
+      'X-Device-Compromised': security.isCompromised ? '1' : '0',
+      'X-Device-Root': security.isCompromised ? '1' : '0',
+      'X-Device-Debugger': security.isDebuggerAttached ? '1' : '0',
+      'X-Device-Adb': security.isAdbEnabled ? '1' : '0',
+      'X-Device-Dev-Settings':
+          security.isDevelopmentSettingsEnabled ? '1' : '0',
+      'X-Device-Debug-Build': security.isDebugBuild ? '1' : '0',
+      'X-Device-Tracer': security.isTracerAttached ? '1' : '0',
+      'X-Device-Anti-Debug-Score':
+          security.antiDebugScore.toStringAsFixed(2),
+      'X-Device-Emulator': security.isEmulator ? '1' : '0',
+      'X-Device-VPN': security.isVpnActive ? '1' : '0',
+      'X-Device-Signature-Valid': security.isSignatureValid ? '1' : '0',
+      'X-Device-Hash-Valid': security.isApkHashValid ? '1' : '0',
+    };
+    if (security.isCompromised) {
       headers['X-NexAI-Device'] = 'flagged';
     }
     return headers;

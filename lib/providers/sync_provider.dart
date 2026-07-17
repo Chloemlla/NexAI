@@ -188,18 +188,36 @@ class SyncProvider extends ChangeNotifier {
 
   /// 清除所有云端同步数据
   Future<bool> clearCloudData({required AuthProvider authProvider}) async {
-    if (authProvider.accessToken == null) return false;
+    if (authProvider.accessToken == null) {
+      _errorMessage = NexaiApiError(
+        stage: 'auth_session',
+        code: 'CLIENT_AUTH_REQUIRED',
+        message: '请先登录后再清除云端数据',
+      ).toDialogBody();
+      notifyListeners();
+      return false;
+    }
     try {
       final success = await NexaiSyncApi.deleteSyncDataV2(
         accessToken: authProvider.accessToken!,
       );
       if (success) {
         _lastSyncedAt = null;
+        _errorMessage = null;
+        notifyListeners();
+      } else {
+        _errorMessage = NexaiApiError(
+          stage: 'server_validation',
+          code: 'SYNC_CLEAR_FAILED',
+          message: '清除云端数据失败：服务器未返回成功结果',
+        ).toDialogBody();
         notifyListeners();
       }
       return success;
     } catch (e) {
       debugPrint('NexAI Sync: clearCloudData error: $e');
+      _errorMessage = _formatSyncError(e, '清除云端数据失败');
+      notifyListeners();
       return false;
     }
   }

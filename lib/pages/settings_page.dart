@@ -922,42 +922,32 @@ class _SettingsPageState extends State<SettingsPage> {
                                             shortUrlProvider: urlProv,
                                           );
                                           if (ctx.mounted) {
-                                            ScaffoldMessenger.of(
-                                              ctx,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Row(
-                                                  children: [
-                                                    Icon(
-                                                      ok
-                                                          ? Icons
-                                                                .check_circle_rounded
-                                                          : Icons
-                                                                .cancel_rounded,
-                                                      size: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text(
-                                                      ok ? '数据已上传到云端' : '上传失败',
-                                                    ),
-                                                  ],
+                                            if (ok) {
+                                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                                SnackBar(
+                                                  content: Row(
+                                                    children: const [
+                                                      Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
+                                                      SizedBox(width: 8),
+                                                      Text('数据已上传到云端'),
+                                                    ],
+                                                  ),
+                                                  behavior: SnackBarBehavior.floating,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                                 ),
-                                                behavior:
-                                                    SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(LumenTokens.radiusSm),
+                                              );
+                                            } else {
+                                              await showNexaiErrorDialog(
+                                                ctx,
+                                                NexaiApiError(
+                                                  stage: 'http_status',
+                                                  code: 'SYNC_UPLOAD_FAILED',
+                                                  message: sync.errorMessage ?? '操作失败',
                                                 ),
-                                                margin:
-                                                    const EdgeInsets.fromLTRB(
-                                                      16,
-                                                      0,
-                                                      16,
-                                                      16,
-                                                    ),
-                                              ),
-                                            );
+                                                title: '云端同步失败',
+                                              );
+                                            }
                                           }
                                         },
                                   icon: sync.status == SyncStatus.uploading
@@ -1046,42 +1036,32 @@ class _SettingsPageState extends State<SettingsPage> {
                                             shortUrlProvider: urlProv,
                                           );
                                           if (ctx.mounted) {
-                                            ScaffoldMessenger.of(
-                                              ctx,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Row(
-                                                  children: [
-                                                    Icon(
-                                                      ok
-                                                          ? Icons
-                                                                .check_circle_rounded
-                                                          : Icons
-                                                                .cancel_rounded,
-                                                      size: 16,
-                                                      color: Colors.white,
-                                                    ),
-                                                    SizedBox(width: 8),
-                                                    Text(
-                                                      ok ? '数据已从云端恢复' : '恢复失败',
-                                                    ),
-                                                  ],
+                                            if (ok) {
+                                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                                SnackBar(
+                                                  content: Row(
+                                                    children: const [
+                                                      Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
+                                                      SizedBox(width: 8),
+                                                      Text('数据已从云端恢复'),
+                                                    ],
+                                                  ),
+                                                  behavior: SnackBarBehavior.floating,
+                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                                                 ),
-                                                behavior:
-                                                    SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(LumenTokens.radiusSm),
+                                              );
+                                            } else {
+                                              await showNexaiErrorDialog(
+                                                ctx,
+                                                NexaiApiError(
+                                                  stage: 'http_status',
+                                                  code: 'SYNC_DOWNLOAD_FAILED',
+                                                  message: sync.errorMessage ?? '操作失败',
                                                 ),
-                                                margin:
-                                                    const EdgeInsets.fromLTRB(
-                                                      16,
-                                                      0,
-                                                      16,
-                                                      16,
-                                                    ),
-                                              ),
-                                            );
+                                                title: '云端恢复失败',
+                                              );
+                                            }
                                           }
                                         },
                                   icon: sync.status == SyncStatus.downloading
@@ -1140,36 +1120,31 @@ class _SettingsPageState extends State<SettingsPage> {
                                         shortUrlProvider: urlProv,
                                       );
                                       if (ctx.mounted) {
+                                      if (ok) {
                                         ScaffoldMessenger.of(ctx).showSnackBar(
                                           SnackBar(
                                             content: Row(
-                                              children: [
-                                                Icon(
-                                                  ok
-                                                      ? Icons
-                                                            .check_circle_rounded
-                                                      : Icons.cancel_rounded,
-                                                  size: 16,
-                                                  color: Colors.white,
-                                                ),
+                                              children: const [
+                                                Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                                                 SizedBox(width: 8),
-                                                Text(ok ? '增量同步完成' : '增量同步失败'),
+                                                Text('增量同步完成'),
                                               ],
                                             ),
                                             behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(LumenTokens.radiusSm),
-                                            ),
-                                            margin: const EdgeInsets.fromLTRB(
-                                              16,
-                                              0,
-                                              16,
-                                              16,
-                                            ),
                                           ),
                                         );
+                                      } else {
+                                        await showNexaiErrorDialog(
+                                          ctx,
+                                          NexaiApiError(
+                                            stage: 'http_status',
+                                            code: 'SYNC_INCREMENTAL_FAILED',
+                                            message: sync.errorMessage ?? '操作失败',
+                                          ),
+                                          title: '增量同步失败',
+                                        );
                                       }
+                                    }
                                     },
                               icon: sync.isSyncing
                                   ? SizedBox(
@@ -1259,35 +1234,30 @@ class _SettingsPageState extends State<SettingsPage> {
                                       authProvider: auth,
                                     );
                                     if (ctx.mounted) {
-                                      ScaffoldMessenger.of(ctx).showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              Icon(
-                                                ok
-                                                    ? Icons.check_circle_rounded
-                                                    : Icons.cancel_rounded,
-                                                size: 16,
-                                                color: Colors.white,
-                                              ),
-                                              SizedBox(width: 8),
-                                              Text(ok ? '云端数据已清除' : '清除失败'),
-                                            ],
-                                          ),
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
+                                      if (ok) {
+                                        ScaffoldMessenger.of(ctx).showSnackBar(
+                                          SnackBar(
+                                            content: Row(
+                                              children: const [
+                                                Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
+                                                SizedBox(width: 8),
+                                                Text('云端数据已清除'),
+                                              ],
                                             ),
+                                            behavior: SnackBarBehavior.floating,
                                           ),
-                                          margin: const EdgeInsets.fromLTRB(
-                                            16,
-                                            0,
-                                            16,
-                                            16,
+                                        );
+                                      } else {
+                                        await showNexaiErrorDialog(
+                                          ctx,
+                                          NexaiApiError(
+                                            stage: 'http_status',
+                                            code: 'SYNC_CLEAR_FAILED',
+                                            message: sync.errorMessage ?? '操作失败',
                                           ),
-                                        ),
-                                      );
+                                          title: '清除云端失败',
+                                        );
+                                      }
                                     }
                                   },
                             icon: Icon(

@@ -303,6 +303,8 @@ jobs:
   build-windows:
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.build_target == 'windows' || github.event.inputs.build_target == 'all' }}
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
@@ -359,11 +361,73 @@ jobs:
           path: debug_symbols\windows
           retention-days: 90
 
+      - name: Package Windows full zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = if ($env:VERSION_NAME -and $env:SHORT_HASH) {
+            "$env:VERSION_NAME-$env:SHORT_HASH"
+          } elseif ($env:version) {
+            $env:version
+          } else {
+            'dev'
+          }
+          $source = 'build\windows\x64\runner\Release'
+          if (-not (Test-Path $source)) {
+            throw "Windows release output not found: $source"
+          }
+          $zipName = "NexAI_windows_${version}_x64.zip"
+          $zipPath = Join-Path $PWD $zipName
+          if (Test-Path $zipPath) {
+            Remove-Item -Force $zipPath
+          }
+          # Package the full runnable desktop folder (exe + dll + data).
+          Compress-Archive -Path (Join-Path $source '*') -DestinationPath $zipPath -Force
+          Get-Item $zipPath | Format-List FullName, Length
+          "WINDOWS_ZIP_NAME=$zipName" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "WINDOWS_ZIP_PATH=$zipPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Generate Windows checksums
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zipPath = $env:WINDOWS_ZIP_PATH
+          if (-not (Test-Path $zipPath)) {
+            throw "Windows zip not found: $zipPath"
+          }
+          $hash = (Get-FileHash -Algorithm SHA256 -Path $zipPath).Hash.ToLowerInvariant()
+          $sumPath = Join-Path $PWD 'WINDOWS_SHA256SUMS.txt'
+          $name = Split-Path $zipPath -Leaf
+          Set-Content -Path $sumPath -Value "$hash  $name" -Encoding utf8
+          Get-Content $sumPath
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: NexAI-Windows
-          path: build/windows/x64/runner/Release/
+          path: |
+            ${{ env.WINDOWS_ZIP_PATH }}
+            WINDOWS_SHA256SUMS.txt
           retention-days: 30
 
+      - name: Publish Windows zip to GitHub Release
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          make_latest: true
+          tag_name: "v${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
+          prerelease: false
+          name: "NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}"
+          body: |
+            ## NexAI ${{ env.VERSION_NAME }}-${{ env.SHORT_HASH }}
+
+            ### Windows
+            - Full runnable package: `${{ env.WINDOWS_ZIP_NAME }}`
+            - Contains `Release` folder contents (exe/dll/data)
+            - Checksum file: `WINDOWS_SHA256SUMS.txt`
+          files: |
+            ${{ env.WINDOWS_ZIP_PATH }}
+            WINDOWS_SHA256SUMS.txt
 
 

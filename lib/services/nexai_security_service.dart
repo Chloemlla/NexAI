@@ -14,7 +14,7 @@ class NexAISecurityService {
 
   /// Optional constructor arg retained for call-site compatibility.
   /// The Dio instance is ignored; requests go through [NexaiBackendClient].
-  NexAISecurityService([Object? _ignoredClient]);
+  NexAISecurityService([Object? ignoredClient]);
 
   static void setBaseUrl(String url) {
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;

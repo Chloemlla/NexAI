@@ -234,7 +234,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
                     padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 24),
                     sliver: SliverList.separated(
                       itemCount: kOssDependencyCredits.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final credit = kOssDependencyCredits[index];
                         return Align(

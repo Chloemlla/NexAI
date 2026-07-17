@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 
 import '../providers/notes_provider.dart';
 import 'note_detail_page.dart';
-import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
 
 class GraphPage extends StatefulWidget {

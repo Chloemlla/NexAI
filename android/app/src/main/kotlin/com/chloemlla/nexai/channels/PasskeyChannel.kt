@@ -298,6 +298,11 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                 if (googleOnly || isUserCancellation(error) || !shouldFallbackFromGoogleProvider(error)) {
                     throw error
                 }
+            } catch (error: SecurityException) {
+                if (isUserCancellation(error) || !shouldFallbackFromAllowedProvidersSecurity(error)) {
+                    throw error
+                }
+                // Continue to unrestricted provider set.
             }
         } else if (googleOnly) {
             error("Google Password Manager is required but not available on this device")
@@ -346,6 +351,11 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
                 )
             } catch (error: GetCredentialException) {
                 if (googleOnly || isUserCancellation(error) || !shouldFallbackFromGoogleProvider(error)) {
+                    throw error
+                }
+            } catch (error: SecurityException) {
+                // Permission/OEM denials around allowedProviders must never hard-fail login.
+                if (isUserCancellation(error) || !shouldFallbackFromAllowedProvidersSecurity(error)) {
                     throw error
                 }
             }
@@ -468,6 +478,17 @@ class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodC
             message.contains("not available") ||
             message.contains("no credentials available") ||
             message.contains("cannot find a provider")
+    }
+
+    private fun shouldFallbackFromAllowedProvidersSecurity(error: Throwable): Boolean {
+        if (isUserCancellation(error)) return false
+        if (error is SecurityException) return true
+
+        val message = (error.message ?: "").lowercase()
+        return message.contains("credential_manager_set_allowed_providers") ||
+            message.contains("does not have android.permission.credential_manager_set_allowed_providers") ||
+            message.contains("allowedproviders") ||
+            message.contains("allowed providers")
     }
 
     private fun requestJson(call: MethodCall): String? {

@@ -427,9 +427,17 @@ class _AboutPageState extends State<AboutPage> {
   }
 
   Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final uri = Uri.parse(url);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        SmartDialog.showToast('无法打开链接');
+      }
+    } catch (_) {
+      SmartDialog.showToast('无法打开链接');
     }
   }
 }

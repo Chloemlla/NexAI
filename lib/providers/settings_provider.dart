@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../utils/local_data_presence.dart';
 
 class SettingsProvider extends ChangeNotifier {
   static const String defaultOpenaiBaseUrl =
@@ -18,6 +17,7 @@ class SettingsProvider extends ChangeNotifier {
   static const _secure = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    wOptions: WindowsOptions(useBackwardCompatibility: false),
   );
   static const _kSecApiKey = 'sec.apiKey';
   static const _kSecWebdavPass = 'sec.webdavPassword';
@@ -162,7 +162,7 @@ class SettingsProvider extends ChangeNotifier {
     'systemPrompt',
     'temperature',
     'maxTokens',
-    // Valid only because we resolve BEFORE this key is auto-written on first run.
+    // Only safe because first-run resolution runs before auto-write.
     'openaiBaseUrl',
     'nexai_short_url_history',
     'nexai_translation_history',
@@ -299,21 +299,13 @@ class SettingsProvider extends ChangeNotifier {
   Future<bool> _hasDurableExistingInstallSignals(
     SharedPreferences prefs,
   ) async {
-    for (final key in prefs.getKeys()) {
-      if (_existingInstallPrefSignals.contains(key)) {
-        return true;
-      }
+    // Prefer value-aware checks so empty/default leftovers do not auto-skip.
+    if (_prefsContainUserConfiguration(prefs)) {
+      return true;
     }
 
-    try {
-      final dir = await getApplicationDocumentsDirectory();
-      final chatFile = File('${dir.path}/nexai_chats.json');
-      final notesFile = File('${dir.path}/nexai_notes.json');
-      if (await chatFile.exists() || await notesFile.exists()) {
-        return true;
-      }
-    } catch (_) {
-      // Ignore filesystem probe failures; fall through to secure checks.
+    if (await hasLocalDocumentDataTraces()) {
+      return true;
     }
 
     try {
@@ -335,6 +327,40 @@ class SettingsProvider extends ChangeNotifier {
       // Ignore secure-storage probe failures for first-run classification.
     }
 
+    return false;
+  }
+
+  bool _prefsContainUserConfiguration(SharedPreferences prefs) {
+    for (final key in prefs.getKeys()) {
+      if (!_existingInstallPrefSignals.contains(key)) continue;
+
+      final value = prefs.get(key);
+      if (value == null) continue;
+
+      if (value is String) {
+        final trimmed = value.trim();
+        if (trimmed.isEmpty) continue;
+        // Ignore pure default strings that do not prove user activity.
+        if (key == 'vertexLocation' && trimmed == 'global') continue;
+        if (key == 'syncMethod' &&
+            (trimmed == 'WebDAV' || trimmed == 'UpStash')) {
+          // Presence of method alone is weak; require server/url keys instead.
+          continue;
+        }
+        if (key == 'apiMode' && (trimmed == 'OpenAI' || trimmed == 'Vertex')) {
+          continue;
+        }
+        if (key == 'fontFamily' && trimmed == 'System') continue;
+        // openaiBaseUrl presence before first-run write is strong enough:
+        // fresh installs do not have this key yet at resolution time.
+        return true;
+      }
+
+      if (value is bool || value is num) {
+        // Any explicit bool/num preference means a prior settings write.
+        return true;
+      }
+    }
     return false;
   }
 

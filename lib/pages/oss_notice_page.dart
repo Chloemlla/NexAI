@@ -254,7 +254,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
             ),
           ),
           Material(
-            color: cs.surface,
+            color: lumenScaffoldBackground(cs),
             child: SafeArea(
               top: false,
               child: Container(
@@ -317,6 +317,9 @@ class _InfoPanel extends StatelessWidget {
 
     return LumenActionCard(
       color: bg,
+      borderSide: emphasize
+          ? BorderSide(color: cs.error.withAlpha(90))
+          : BorderSide(color: cs.outlineVariant.withAlpha(90)),
       child: child,
     );
   }

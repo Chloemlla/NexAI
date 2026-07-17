@@ -22,11 +22,11 @@ Done:
 - Mica main window, custom title bar, NavigationView
 - editable Settings (Base URL / API Key / Model / Temperature / Max tokens / Theme)
 - clean local JSON settings store with validation
-- multi-conversation chat store (create / select / delete / search / local draft messages)
+- multi-conversation chat store (create / select / delete / search)
+- OpenAI-compatible streaming chat client with Send/Stop
 
 Still pending:
 
-- streaming OpenAI-compatible client
 - basic Markdown rendering
 
 ## Local data

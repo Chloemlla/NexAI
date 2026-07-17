@@ -57,6 +57,7 @@ public partial class App : Application
         var services = new ServiceCollection();
         services.AddNexAIInfrastructure();
         services.AddSingleton<ThemeService>();
+        services.AddSingleton<ChatSessionService>();
         services.AddSingleton<MainWindow>();
         return services.BuildServiceProvider();
     }

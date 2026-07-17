@@ -15,7 +15,6 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Conversation pane -->
         <Border
             Grid.Column="0"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -119,7 +118,6 @@
             </Grid>
         </Border>
 
-        <!-- Message pane -->
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -201,7 +199,7 @@
                         <TextBlock
                             Opacity="0.72"
                             HorizontalAlignment="Center"
-                            Text="Draft a message below. Streaming send lands in the next PR." />
+                            Text="Send a message to start streaming from your configured API." />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -221,21 +219,27 @@
                     TextChanged="ComposerBox_TextChanged" />
                 <StackPanel Grid.Column="1" Spacing="8">
                     <Button
-                        x:Name="AddDraftButton"
-                        Content="Add draft"
+                        x:Name="SendButton"
+                        Content="Send"
                         MinWidth="108"
                         MinHeight="36"
                         Style="{StaticResource AccentButtonStyle}"
                         IsEnabled="False"
-                        Click="AddDraftButton_Click"
-                        ToolTipService.ToolTip="Store a local user message for this conversation" />
+                        Click="SendButton_Click" />
+                    <Button
+                        x:Name="StopButton"
+                        Content="Stop"
+                        MinWidth="108"
+                        MinHeight="36"
+                        Visibility="Collapsed"
+                        Click="StopButton_Click" />
                     <TextBlock
                         x:Name="ComposerHintText"
                         Width="108"
                         Opacity="0.72"
                         TextWrapping="Wrap"
                         Style="{StaticResource CaptionTextBlockStyle}"
-                        Text="Local only" />
+                        Text="Ready" />
                 </StackPanel>
             </Grid>
         </Grid>

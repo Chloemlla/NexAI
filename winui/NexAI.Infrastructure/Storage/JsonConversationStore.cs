@@ -207,33 +207,78 @@ public sealed class JsonConversationStore : IConversationStore
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task AppendMessageAsync(
+    public async Task<ChatMessage> AppendMessageAsync(
         string conversationId,
         ChatMessage message,
+        bool persist = true,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
         ArgumentNullException.ThrowIfNull(message);
 
+        ChatMessage stored;
         lock (_gate)
         {
             var conversation = _conversations.FirstOrDefault(c => c.Id == conversationId)
                 ?? throw new InvalidOperationException("Conversation was not found.");
 
-            conversation.Messages.Add(message.Clone());
+            stored = message.Clone();
+            if (string.IsNullOrWhiteSpace(stored.Id))
+            {
+                stored.Id = Guid.NewGuid().ToString("D");
+            }
+
+            conversation.Messages.Add(stored.Clone());
             conversation.UpdatedAt = DateTime.UtcNow;
             if (conversation.Title is "New chat" or "新对话" &&
-                string.Equals(message.Role, ChatRoles.User, StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(message.Content))
+                string.Equals(stored.Role, ChatRoles.User, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(stored.Content))
             {
-                var title = message.Content.ReplaceLineEndings(" ").Trim();
+                var title = stored.Content.ReplaceLineEndings(" ").Trim();
                 conversation.Title = title.Length <= 32 ? title : title[..32] + "…";
             }
 
             ResortUnlocked();
         }
 
-        await SaveAsync(cancellationToken).ConfigureAwait(false);
+        if (persist)
+        {
+            await SaveAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+        return stored.Clone();
+    }
+
+    public async Task UpdateMessageAsync(
+        string conversationId,
+        string messageId,
+        string content,
+        bool isError = false,
+        bool persist = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(conversationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
+
+        lock (_gate)
+        {
+            var conversation = _conversations.FirstOrDefault(c => c.Id == conversationId)
+                ?? throw new InvalidOperationException("Conversation was not found.");
+            var message = conversation.Messages.FirstOrDefault(m => m.Id == messageId)
+                ?? throw new InvalidOperationException("Message was not found.");
+
+            message.Content = content ?? string.Empty;
+            message.IsError = isError;
+            conversation.UpdatedAt = DateTime.UtcNow;
+            ResortUnlocked();
+        }
+
+        if (persist)
+        {
+            await SaveAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -278,6 +323,14 @@ public sealed class JsonConversationStore : IConversationStore
         }
 
         clone.Messages ??= [];
+        foreach (var message in clone.Messages)
+        {
+            if (string.IsNullOrWhiteSpace(message.Id))
+            {
+                message.Id = Guid.NewGuid().ToString("D");
+            }
+        }
+
         return clone;
     }
 

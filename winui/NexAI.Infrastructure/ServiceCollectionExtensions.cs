@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NexAI.Core.Chat;
 using NexAI.Core.Settings;
+using NexAI.Infrastructure.Chat;
 using NexAI.Infrastructure.Storage;
 
 namespace NexAI.Infrastructure;
@@ -11,6 +12,8 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<ISettingsStore, JsonSettingsStore>();
         services.AddSingleton<IConversationStore, JsonConversationStore>();
+        services.AddSingleton<HttpClient>();
+        services.AddSingleton<IChatStreamingClient, OpenAiCompatibleChatClient>();
         return services;
     }
 }

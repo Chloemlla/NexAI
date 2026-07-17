@@ -9,6 +9,7 @@ public static class ChatRoles
 
 public sealed class ChatMessage
 {
+    public string Id { get; set; } = Guid.NewGuid().ToString("D");
     public string Role { get; set; } = ChatRoles.User;
     public string Content { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
@@ -16,6 +17,7 @@ public sealed class ChatMessage
 
     public ChatMessage Clone() => new()
     {
+        Id = Id,
         Role = Role,
         Content = Content,
         Timestamp = Timestamp,
@@ -69,8 +71,34 @@ public interface IConversationStore
     Task SelectAsync(string conversationId, CancellationToken cancellationToken = default);
     Task DeleteAsync(string conversationId, CancellationToken cancellationToken = default);
     Task RenameAsync(string conversationId, string title, CancellationToken cancellationToken = default);
-    Task AppendMessageAsync(
+    Task<ChatMessage> AppendMessageAsync(
         string conversationId,
         ChatMessage message,
+        bool persist = true,
+        CancellationToken cancellationToken = default);
+    Task UpdateMessageAsync(
+        string conversationId,
+        string messageId,
+        string content,
+        bool isError = false,
+        bool persist = true,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class ChatCompletionRequest
+{
+    public required string BaseUrl { get; init; }
+    public required string ApiKey { get; init; }
+    public required string Model { get; init; }
+    public required double Temperature { get; init; }
+    public required int MaxTokens { get; init; }
+    public string SystemPrompt { get; init; } = string.Empty;
+    public required IReadOnlyList<ChatMessage> Messages { get; init; }
+}
+
+public interface IChatStreamingClient
+{
+    IAsyncEnumerable<string> StreamAsync(
+        ChatCompletionRequest request,
         CancellationToken cancellationToken = default);
 }

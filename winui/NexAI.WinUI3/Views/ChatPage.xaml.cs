@@ -3,12 +3,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using NexAI.Core.Chat;
+using NexAI.WinUI3.Services;
 
 namespace NexAI.WinUI3.Views;
 
 public sealed partial class ChatPage : Page
 {
     private readonly IConversationStore _conversationStore;
+    private readonly ChatSessionService _chatSession;
     private string _searchQuery = string.Empty;
     private bool _isBusy;
 
@@ -16,18 +18,21 @@ public sealed partial class ChatPage : Page
     {
         InitializeComponent();
         _conversationStore = App.Current.Services.GetRequiredService<IConversationStore>();
+        _chatSession = App.Current.Services.GetRequiredService<ChatSessionService>();
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         _conversationStore.Changed += OnConversationStoreChanged;
+        _chatSession.StateChanged += OnChatSessionStateChanged;
         RefreshUi();
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
     {
         _conversationStore.Changed -= OnConversationStoreChanged;
+        _chatSession.StateChanged -= OnChatSessionStateChanged;
         base.OnNavigatedFrom(e);
     }
 
@@ -36,9 +41,14 @@ public sealed partial class ChatPage : Page
         DispatcherQueue.TryEnqueue(RefreshUi);
     }
 
+    private void OnChatSessionStateChanged(object? sender, EventArgs e)
+    {
+        DispatcherQueue.TryEnqueue(RefreshUi);
+    }
+
     private async void NewChatButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_isBusy)
+        if (_isBusy || _chatSession.IsStreaming)
         {
             return;
         }
@@ -65,6 +75,12 @@ public sealed partial class ChatPage : Page
 
     private async void ConversationList_ItemClick(object sender, ItemClickEventArgs e)
     {
+        if (_chatSession.IsStreaming)
+        {
+            await ShowInfoAsync("Streaming in progress", "Stop the current response before switching chats.");
+            return;
+        }
+
         if (e.ClickedItem is not Conversation conversation)
         {
             return;
@@ -103,6 +119,13 @@ public sealed partial class ChatPage : Page
 
     private async Task DeleteConversationAsync(string conversationId)
     {
+        if (_chatSession.IsStreaming &&
+            string.Equals(conversationId, _conversationStore.CurrentConversationId, StringComparison.Ordinal))
+        {
+            await ShowInfoAsync("Streaming in progress", "Stop the current response before deleting this chat.");
+            return;
+        }
+
         var dialog = new ContentDialog
         {
             Title = "Delete conversation",
@@ -137,42 +160,43 @@ public sealed partial class ChatPage : Page
 
     private void ComposerBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        AddDraftButton.IsEnabled =
-            _conversationStore.CurrentConversation is not null &&
-            !string.IsNullOrWhiteSpace(ComposerBox.Text);
+        UpdateComposerState();
     }
 
-    private async void AddDraftButton_Click(object sender, RoutedEventArgs e)
+    private async void SendButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_chatSession.IsStreaming)
+        {
+            return;
+        }
+
         var content = ComposerBox.Text?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(content))
         {
             return;
         }
 
-        var conversation = _conversationStore.CurrentConversation;
-        if (conversation is null)
-        {
-            conversation = await _conversationStore.CreateAsync();
-        }
+        ComposerBox.Text = string.Empty;
+        UpdateComposerState();
 
         try
         {
-            await _conversationStore.AppendMessageAsync(
-                conversation.Id,
-                new ChatMessage
-                {
-                    Role = ChatRoles.User,
-                    Content = content,
-                    Timestamp = DateTime.UtcNow,
-                });
-            ComposerBox.Text = string.Empty;
-            AddDraftButton.IsEnabled = false;
+            await _chatSession.SendAsync(content);
         }
         catch (Exception ex)
         {
-            await ShowInfoAsync("Could not save draft message", ex.Message);
+            await ShowInfoAsync("Could not send message", ex.Message);
         }
+        finally
+        {
+            RefreshUi();
+        }
+    }
+
+    private void StopButton_Click(object sender, RoutedEventArgs e)
+    {
+        _chatSession.Stop();
+        UpdateComposerState();
     }
 
     private void RefreshUi()
@@ -189,14 +213,7 @@ public sealed partial class ChatPage : Page
         if (current is not null)
         {
             var match = filtered.FirstOrDefault(c => c.Id == current.Id);
-            if (match is not null)
-            {
-                ConversationList.SelectedItem = match;
-            }
-            else
-            {
-                ConversationList.SelectedItem = null;
-            }
+            ConversationList.SelectedItem = match;
         }
         else
         {
@@ -206,19 +223,41 @@ public sealed partial class ChatPage : Page
         CurrentTitleText.Text = current?.Title ?? "Chat";
         CurrentMetaText.Text = current is null
             ? "Select or create a conversation."
-            : $"{current.Messages.Count} message{(current.Messages.Count == 1 ? string.Empty : "s")} · local store";
-        DeleteCurrentButton.IsEnabled = current is not null;
+            : _chatSession.IsStreaming
+                ? $"{current.Messages.Count} messages · streaming"
+                : $"{current.Messages.Count} message{(current.Messages.Count == 1 ? string.Empty : "s")} · local store";
+        DeleteCurrentButton.IsEnabled = current is not null && !_chatSession.IsStreaming;
 
         var messages = current?.Messages ?? [];
         MessageList.ItemsSource = messages;
         MessageEmptyState.Visibility =
             current is null || messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        AddDraftButton.IsEnabled =
-            current is not null && !string.IsNullOrWhiteSpace(ComposerBox.Text);
-        ComposerHintText.Text = current is null
-            ? "Create a chat first"
-            : "Local draft only";
+        if (messages.Count > 0)
+        {
+            MessageList.ScrollIntoView(messages[^1]);
+        }
+
+        UpdateComposerState();
+    }
+
+    private void UpdateComposerState()
+    {
+        var hasText = !string.IsNullOrWhiteSpace(ComposerBox.Text);
+        var streaming = _chatSession.IsStreaming;
+
+        SendButton.Visibility = streaming ? Visibility.Collapsed : Visibility.Visible;
+        StopButton.Visibility = streaming ? Visibility.Visible : Visibility.Collapsed;
+        SendButton.IsEnabled = !streaming && hasText;
+        StopButton.IsEnabled = streaming;
+        ComposerBox.IsEnabled = !streaming;
+        NewChatButton.IsEnabled = !streaming && !_isBusy;
+
+        ComposerHintText.Text = streaming
+            ? "Streaming..."
+            : hasText
+                ? "Press Send"
+                : "Ready";
     }
 
     private IEnumerable<Conversation> FilterConversations(IReadOnlyList<Conversation> source)

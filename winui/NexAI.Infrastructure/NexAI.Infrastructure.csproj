@@ -5,6 +5,9 @@
     <AssemblyName>NexAI.Infrastructure</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\NexAI.Core\NexAI.Core.csproj" />
   </ItemGroup>
 </Project>

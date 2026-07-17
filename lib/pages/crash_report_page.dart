@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import '../models/crash_report.dart';
 import '../providers/settings_provider.dart';
 import '../services/crash_reporter.dart';
+import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class CrashReportPage extends StatefulWidget {
   const CrashReportPage({
@@ -47,13 +49,22 @@ class _CrashReportPageState extends State<CrashReportPage> {
         : stackLines.take(_collapsedStackLines).join('\n');
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              padding: EdgeInsets.fromLTRB(
+                LumenTokens.horizontalPaddingForWidth(
+                  MediaQuery.sizeOf(context).width,
+                ),
+                LumenTokens.pagePaddingTop + 8,
+                LumenTokens.horizontalPaddingForWidth(
+                  MediaQuery.sizeOf(context).width,
+                ),
+                LumenTokens.pagePaddingBottom + 8,
+              ),
               children: [
                 _CrashHero(cs: cs, tt: tt),
                 const SizedBox(height: 16),

@@ -8,6 +8,7 @@ import '../providers/password_provider.dart';
 import '../models/saved_password.dart';
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
+import '../widgets/lumen/lumen.dart';
 
 enum PasswordType { random, memorable, pin }
 
@@ -701,7 +702,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     };
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           ToolPageHeroSliver(

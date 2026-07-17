@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/oss_dependency_credits.dart';
 import '../providers/settings_provider.dart';
 import '../utils/build_config.dart';
+import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -44,10 +46,10 @@ class _AboutPageState extends State<AboutPage> {
     final mq = MediaQuery.of(context);
     final isWide = mq.size.width > 600;
     final hasLeading = ModalRoute.of(context)?.canPop ?? false;
-    final hPad = isWide ? mq.size.width * 0.1 : 16.0;
+    final hPad = LumenTokens.horizontalPaddingForWidth(mq.size.width);
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: DefaultTextStyle.merge(
         style: const TextStyle(decoration: TextDecoration.none),
         child: Stack(
@@ -62,7 +64,7 @@ class _AboutPageState extends State<AboutPage> {
                     pinned: true,
                     expandedHeight: isWide ? 250 : 270,
                     backgroundColor: cs.surface,
-                    surfaceTintColor: cs.surfaceTint,
+                    surfaceTintColor: Colors.transparent,
                     flexibleSpace: FlexibleSpaceBar(
                       collapseMode: CollapseMode.parallax,
                       titlePadding: EdgeInsets.only(
@@ -79,29 +81,20 @@ class _AboutPageState extends State<AboutPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       background: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              cs.primaryContainer.withAlpha(130),
-                              cs.tertiaryContainer.withAlpha(60),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
+                        color: lumenScaffoldBackground(cs),
                         child: SafeArea(
                           bottom: false,
                           child: Padding(
                             padding: EdgeInsets.fromLTRB(
-                              24,
+                              hPad,
                               kToolbarHeight + 16,
-                              24,
+                              hPad,
                               28,
                             ),
                             child: Center(
                               child: ConstrainedBox(
                                 constraints: const BoxConstraints(
-                                  maxWidth: 560,
+                                  maxWidth: LumenTokens.maxContentWidth,
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -355,40 +348,15 @@ class _AboutPageState extends State<AboutPage> {
     String title,
     List<Widget> children,
   ) {
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer.withAlpha(150),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(child: Icon(icon, size: 18, color: cs.primary)),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: tt.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            ...children,
-          ],
-        ),
+    return LumenActionCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LumenSectionHeader(icon: icon, title: title),
+          const SizedBox(height: 18),
+          ...children,
+        ],
       ),
     );
   }
@@ -577,46 +545,37 @@ class _ActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-          child: Column(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(150),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(child: Icon(icon, size: 18, color: iconColor)),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                sublabel,
-                style: TextStyle(fontSize: 10, color: cs.outline),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+    return LumenActionCard(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Column(
+        children: [
+          LumenIconChip(
+            icon: icon,
+            size: 36,
+            iconSize: 18,
+            backgroundColor: color.withAlpha(150),
+            foregroundColor: iconColor,
+            shape: LumenIconChipShape.rounded,
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            sublabel,
+            style: TextStyle(fontSize: 10, color: cs.outline),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

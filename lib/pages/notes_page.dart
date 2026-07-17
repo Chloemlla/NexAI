@@ -7,6 +7,7 @@ import '../providers/notes_provider.dart';
 import 'note_detail_page.dart';
 import 'graph_page.dart';
 import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 final _taskItemRegex = RegExp(r'^\s*-\s+\[([ xX])\]\s+', multiLine: true);
 
@@ -77,9 +78,7 @@ class _NotesPageState extends State<NotesPage>
         child: Focus(
           autofocus: true,
           child: Scaffold(
-            backgroundColor: cs.brightness == Brightness.dark
-                ? LumenTokens.backgroundDark
-                : LumenTokens.background,
+            backgroundColor: lumenScaffoldBackground(cs),
             body: Column(
               children: [
                 // Search bar (toggleable)
@@ -767,71 +766,16 @@ class _NotesPageState extends State<NotesPage>
   }
 
   Widget _buildEmptyState(ColorScheme cs, NotesProvider provider) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primaryContainer, cs.secondaryContainer],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: cs.primary.withAlpha(40),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.note_add_rounded,
-                  size: 48,
-                  color: cs.onPrimaryContainer,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              '还没有笔记',
-              style: TextStyle(
-                color: cs.onSurface,
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
-                letterSpacing: 0.15,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '创建您的第一条笔记以开始',
-              style: TextStyle(
-                color: cs.onSurfaceVariant,
-                fontSize: 14,
-                letterSpacing: 0.25,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              onPressed: () => _createAndOpen(context, provider),
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('创建笔记'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-            ),
-          ],
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: LumenEmptyState(
+        icon: Icons.note_add_rounded,
+        title: '还没有笔记',
+        message: '创建您的第一条笔记以开始',
+        action: FilledButton.icon(
+          onPressed: () => _createAndOpen(context, provider),
+          icon: const Icon(Icons.add_rounded, size: 20),
+          label: const Text('创建笔记'),
         ),
       ),
     );

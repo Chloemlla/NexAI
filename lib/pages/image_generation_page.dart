@@ -13,6 +13,7 @@ import '../providers/image_generation_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/navigation_helper.dart';
 import '../utils/file_access_helper.dart';
+import '../widgets/lumen/lumen.dart';
 
 class ImageGenerationPage extends StatefulWidget {
   const ImageGenerationPage({super.key});
@@ -248,6 +249,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         : _buildAndroid(context);
 
     return Scaffold(
+      backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
       appBar: AppBar(
         title: const Text('AI 绘图'),
         actions: [

@@ -25,6 +25,7 @@ import 'about_page.dart';
 import 'developer_debug_page.dart';
 import 'login_page.dart';
 import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -190,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     if (!settings.loaded) {
       return Scaffold(
-        backgroundColor: cs.surface,
+        backgroundColor: lumenScaffoldBackground(cs),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -258,9 +259,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     return Scaffold(
-      backgroundColor: cs.brightness == Brightness.dark
-          ? LumenTokens.backgroundDark
-          : LumenTokens.background,
+      backgroundColor: lumenScaffoldBackground(cs),
       // FAB-style save button that appears when dirty
       floatingActionButton: IgnorePointer(
         ignoring: !_isDirty,
@@ -2308,30 +2307,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: cs.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: tt.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-            color: cs.onSurface,
-          ),
-        ),
-      ],
-    );
+    return LumenSectionHeader(icon: icon, title: label);
   }
 }
 
@@ -2342,19 +2318,10 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: cs.surfaceContainerLow,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: LumenTokens.cardBorderRadius,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
+    return LumenActionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }

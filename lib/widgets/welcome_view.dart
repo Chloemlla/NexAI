@@ -5,6 +5,7 @@ import '../providers/chat_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/navigation_helper.dart';
 import '../theme/lumen_tokens.dart';
+import 'lumen/lumen.dart';
 
 class WelcomeView extends StatelessWidget {
   const WelcomeView({super.key});
@@ -140,7 +141,6 @@ class WelcomeView extends StatelessWidget {
     SettingsProvider settings,
     bool isLoading,
   ) {
-    final tt = Theme.of(context).textTheme;
     final statusTitle = settings.isConfigured
         ? settings.selectedModel
         : '需要完成 API 配置';
@@ -158,67 +158,22 @@ class WelcomeView extends StatelessWidget {
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLow,
-          borderRadius: LumenTokens.cardBorderRadius,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: settings.isConfigured
-                    ? cs.primaryContainer
-                    : cs.errorContainer.withAlpha(160),
-                borderRadius: LumenTokens.chipBorderRadius,
-              ),
-              child: Icon(
-                settings.isConfigured
-                    ? Icons.check_circle_rounded
-                    : Icons.warning_amber_rounded,
-                color: settings.isConfigured
-                    ? cs.onPrimaryContainer
-                    : cs.onErrorContainer,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    statusTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: tt.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    statusDetail,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: cs.onSurfaceVariant,
-                      fontSize: 12,
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: NavigationHelper.goToSettings,
-              tooltip: '打开设置',
-              icon: const Icon(Icons.tune_rounded, size: 20),
-            ),
-          ],
+      child: LumenStatusLine(
+        icon: settings.isConfigured
+            ? Icons.check_circle_rounded
+            : Icons.warning_amber_rounded,
+        title: statusTitle,
+        detail: statusDetail,
+        iconBackgroundColor: settings.isConfigured
+            ? cs.primaryContainer
+            : cs.errorContainer.withAlpha(160),
+        iconForegroundColor: settings.isConfigured
+            ? cs.onPrimaryContainer
+            : cs.onErrorContainer,
+        trailing: IconButton(
+          onPressed: NavigationHelper.goToSettings,
+          tooltip: '打开设置',
+          icon: const Icon(Icons.tune_rounded, size: 20),
         ),
       ),
     );
@@ -234,61 +189,42 @@ class WelcomeView extends StatelessWidget {
   ) {
     return SizedBox(
       width: width,
-      child: Card(
+      child: LumenActionCard(
         color: cs.surfaceContainerHighest.withAlpha(160),
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: LumenTokens.cardBorderRadius,
-        ),
-        child: InkWell(
-          onTap: isLoading
-              ? null
-              : () => _sendPrompt(context, settings, item.prompt),
-          borderRadius: LumenTokens.cardBorderRadius,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
-            child: Column(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: LumenTokens.chipBorderRadius,
-                  ),
-                  child: Center(
-                    child: Icon(
-                      item.icon,
-                      size: 22,
-                      color: cs.onPrimaryContainer,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    letterSpacing: 0,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  item.prompt,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.onSurfaceVariant,
-                    height: 1.35,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+        onTap: isLoading
+            ? null
+            : () => _sendPrompt(context, settings, item.prompt),
+        child: Column(
+          children: [
+            LumenIconChip(
+              icon: item.icon,
+              size: 44,
+              iconSize: 22,
+              shape: LumenIconChipShape.rounded,
             ),
-          ),
+            const SizedBox(height: 12),
+            Text(
+              item.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              item.prompt,
+              style: TextStyle(
+                fontSize: 12,
+                color: cs.onSurfaceVariant,
+                height: 1.35,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

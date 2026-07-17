@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../widgets/tool_page_style.dart';
+import '../widgets/lumen/lumen.dart';
 
 class Base64ConverterPage extends StatefulWidget {
   const Base64ConverterPage({super.key});
@@ -142,7 +143,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
     final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
         slivers: [
           ToolPageHeroSliver(

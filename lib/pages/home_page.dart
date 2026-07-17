@@ -23,6 +23,7 @@ import 'about_page.dart';
 import 'graph_page.dart';
 import 'tools_page.dart';
 import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -219,11 +220,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
     final fullScreen = settings.fullScreenMode && isChat;
 
     return Scaffold(
-      backgroundColor: isAndroid
-          ? (cs.brightness == Brightness.dark
-                ? LumenTokens.backgroundDark
-                : LumenTokens.background)
-          : cs.surface,
+      backgroundColor: isAndroid ? lumenScaffoldBackground(cs) : cs.surface,
       appBar: fullScreen
           ? null
           : AppBar(

@@ -11,6 +11,7 @@ import '../utils/google_font_paint.dart';
 import '../utils/app_security.dart';
 import '../widgets/passkey_debug_dialog.dart';
 import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -67,21 +68,28 @@ class _LoginPageState extends State<LoginPage>
     final googleSection = _buildGoogleSection(auth, colorScheme);
 
     return Scaffold(
+      backgroundColor: lumenScaffoldBackground(colorScheme),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
           tooltip: '返回',
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(
+              horizontal: LumenTokens.horizontalPaddingForWidth(
+                MediaQuery.sizeOf(context).width,
+              ),
+              vertical: LumenTokens.pagePaddingTop,
+            ),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
+              constraints: const BoxConstraints(maxWidth: 480),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

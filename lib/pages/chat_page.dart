@@ -273,7 +273,12 @@ class _ChatPageState extends State<ChatPage> {
     // Responsive horizontal padding: wider on tablets
     final screenWidth = mq.size.width;
     final isWide = screenWidth > 600;
-    final horizontalPad = isWide ? screenWidth * 0.1 : 14.0;
+    final horizontalPad = isWide
+        ? (screenWidth - LumenTokens.maxContentWidth).clamp(0, double.infinity) /
+              2
+        : LumenTokens.pagePaddingStart;
+    final contentHorizontalPad =
+        isWide ? horizontalPad + LumenTokens.pagePaddingStart : horizontalPad;
 
     _syncVisibleConversation(chat);
 
@@ -301,9 +306,9 @@ class _ChatPageState extends State<ChatPage> {
                             keyboardDismissBehavior:
                                 ScrollViewKeyboardDismissBehavior.onDrag,
                             padding: EdgeInsets.fromLTRB(
-                              horizontalPad,
+                              contentHorizontalPad,
                               10,
-                              horizontalPad,
+                              contentHorizontalPad,
                               10,
                             ),
                             itemCount:
@@ -352,9 +357,9 @@ class _ChatPageState extends State<ChatPage> {
             bottom: !keyboardVisible,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                isWide ? horizontalPad : LumenTokens.pagePaddingStart,
+                contentHorizontalPad,
                 8,
-                isWide ? horizontalPad : LumenTokens.pagePaddingEnd,
+                contentHorizontalPad,
                 8,
               ),
               child: Row(

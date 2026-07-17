@@ -6,6 +6,8 @@ import '../providers/settings_provider.dart';
 import '../services/crash_reporter.dart';
 import '../utils/build_config.dart';
 import 'crash_report_page.dart';
+import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class DeveloperDebugPage extends StatelessWidget {
   const DeveloperDebugPage({super.key});
@@ -18,54 +20,50 @@ class DeveloperDebugPage extends StatelessWidget {
     final diagnostics = _buildDiagnostics(settings);
 
     return Scaffold(
+      backgroundColor: lumenScaffoldBackground(cs),
       appBar: AppBar(title: const Text('开发者高级调试模式')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          LumenTokens.pagePaddingStart,
+          LumenTokens.pagePaddingTop,
+          LumenTokens.pagePaddingEnd,
+          LumenTokens.pagePaddingBottom,
+        ),
         children: [
-          Card(
-            color: cs.surfaceContainerLow,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.terminal_rounded,
-                      color: cs.onPrimaryContainer,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'NexAI Debug Console',
-                          style: tt.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0,
-                          ),
+          LumenActionCard(
+            child: Row(
+              children: [
+                const LumenIconChip(
+                  icon: Icons.terminal_rounded,
+                  size: 42,
+                  iconSize: 22,
+                  shape: LumenIconChipShape.rounded,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'NexAI Debug Console',
+                        style: tt.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
                         ),
-                        const SizedBox(height: 3),
-                        Text(
-                          'Runtime diagnostics and log stream',
-                          style: TextStyle(
-                            color: cs.onSurfaceVariant,
-                            fontFamily: SettingsProvider.monospaceFontFamily,
-                            fontSize: 12,
-                          ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Runtime diagnostics and log stream',
+                        style: TextStyle(
+                          color: cs.onSurfaceVariant,
+                          fontFamily: SettingsProvider.monospaceFontFamily,
+                          fontSize: 12,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),

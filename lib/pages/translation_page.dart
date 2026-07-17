@@ -7,6 +7,7 @@ import '../providers/settings_provider.dart';
 import '../providers/translation_provider.dart';
 import '../utils/model_request_budget.dart';
 import '../widgets/tool_page_style.dart';
+import '../widgets/lumen/lumen.dart';
 
 class TranslationPage extends StatefulWidget {
   const TranslationPage({super.key});
@@ -185,7 +186,7 @@ class _TranslationPageState extends State<TranslationPage> {
     final hasApiKey = settings.vertexApiKey.isNotEmpty;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
         slivers: [
           ToolPageHeroSliver(

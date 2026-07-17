@@ -10,6 +10,7 @@ import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:path/path.dart' as p;
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
+import '../widgets/lumen/lumen.dart';
 
 enum AudioFormat { mp3, aac, flac, wav, ogg }
 
@@ -385,7 +386,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
     final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
         slivers: [
           ToolPageHeroSliver(

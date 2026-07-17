@@ -298,21 +298,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: cs.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: tt.titleSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
-        ),
-      ],
-    );
+    return LumenSectionHeader(icon: icon, title: title);
   }
 }
 
@@ -328,17 +314,10 @@ class _InfoPanel extends StatelessWidget {
     final bg = emphasize
         ? cs.errorContainer.withAlpha(120)
         : cs.surfaceContainerLow;
-    final border = emphasize
-        ? cs.error.withAlpha(90)
-        : cs.outlineVariant.withAlpha(110);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: border),
-      ),
-      child: Padding(padding: const EdgeInsets.all(16), child: child),
+    return LumenActionCard(
+      color: bg,
+      child: child,
     );
   }
 }

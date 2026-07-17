@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/lumen/lumen.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
@@ -209,14 +210,14 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
     final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
         slivers: [
           // ── Hero AppBar ──
           SliverAppBar(
             pinned: true,
             expandedHeight: isNarrow ? 208 : 220,
-            backgroundColor: cs.surface,
+            backgroundColor: lumenScaffoldBackground(cs),
             surfaceTintColor: cs.surfaceTint,
             flexibleSpace: FlexibleSpaceBar(
               collapseMode: CollapseMode.parallax,

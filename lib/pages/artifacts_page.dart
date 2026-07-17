@@ -7,6 +7,7 @@ import '../models/artifact.dart';
 import '../providers/artifacts_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/tool_page_style.dart';
+import '../widgets/lumen/lumen.dart';
 
 class ArtifactsPage extends StatefulWidget {
   const ArtifactsPage({super.key});
@@ -129,6 +130,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
 
     if (!isLoggedIn) {
       return Scaffold(
+        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
         body: CustomScrollView(
           slivers: const [
             ToolPageHeroSliver(
@@ -189,6 +191,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
 
     if (artifactsProvider.isLoading && artifacts.isEmpty) {
       return Scaffold(
+        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
         body: CustomScrollView(
           slivers: [
             hero,
@@ -203,6 +206,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
 
     if (artifactsProvider.error != null && artifacts.isEmpty) {
       return Scaffold(
+        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
         body: CustomScrollView(
           slivers: [
             hero,
@@ -228,6 +232,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
 
     if (artifacts.isEmpty) {
       return Scaffold(
+        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
         body: RefreshIndicator(
           onRefresh: _loadArtifacts,
           child: CustomScrollView(
@@ -255,6 +260,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
     }
 
     return Scaffold(
+      backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
       body: RefreshIndicator(
         onRefresh: _loadArtifacts,
         child: CustomScrollView(

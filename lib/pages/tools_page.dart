@@ -10,6 +10,7 @@ import 'translation_page.dart';
 import 'video_compressor_page.dart';
 import 'video_to_audio_page.dart';
 import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class ToolsPage extends StatefulWidget {
   const ToolsPage({super.key});
@@ -31,11 +32,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.media,
       icon: Icons.video_file_rounded,
       pageBuilder: () => const VideoCompressorPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.primaryContainer, cs.secondaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: '视频转音频',
@@ -44,11 +40,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.media,
       icon: Icons.audiotrack_rounded,
       pageBuilder: () => const VideoToAudioPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.tertiaryContainer, cs.secondaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: '日期时间转换',
@@ -57,11 +48,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.convert,
       icon: Icons.access_time_rounded,
       pageBuilder: () => const DateTimeConverterPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.tertiaryContainer, cs.primaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: 'Base64 编解码',
@@ -70,11 +56,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.convert,
       icon: Icons.code_rounded,
       pageBuilder: () => const Base64ConverterPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.secondaryContainer, cs.tertiaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: '密码生成器',
@@ -83,11 +64,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.security,
       icon: Icons.password_rounded,
       pageBuilder: () => const PasswordGeneratorPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.primaryContainer, cs.tertiaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: '短链接生成',
@@ -96,11 +72,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.network,
       icon: Icons.link_rounded,
       pageBuilder: () => const ShortUrlPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.secondaryContainer, cs.primaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: '内容分享',
@@ -109,11 +80,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.network,
       icon: Icons.share_rounded,
       pageBuilder: () => const ArtifactsPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.tertiaryContainer, cs.primaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: 'AI 翻译',
@@ -122,11 +88,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.ai,
       icon: Icons.translate_rounded,
       pageBuilder: () => const TranslationPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.primaryContainer, cs.secondaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
     _ToolEntry(
       title: 'AI 绘图',
@@ -135,11 +96,6 @@ class _ToolsPageState extends State<ToolsPage> {
       category: _ToolCategory.ai,
       icon: Icons.brush_rounded,
       pageBuilder: () => const ImageGenerationPage(),
-      gradientBuilder: (cs) => LinearGradient(
-        colors: [cs.tertiaryContainer, cs.secondaryContainer],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
     ),
   ];
 
@@ -212,9 +168,7 @@ class _ToolsPageState extends State<ToolsPage> {
     final groupedTools = _groupTools(filteredTools);
 
     return Scaffold(
-      backgroundColor: cs.brightness == Brightness.dark
-          ? LumenTokens.backgroundDark
-          : LumenTokens.background,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
         key: const PageStorageKey('tools_page_scroll'),
         slivers: [
@@ -247,10 +201,9 @@ class _ToolsPageState extends State<ToolsPage> {
             ...groupedTools.entries.expand((entry) {
               final category = entry.key;
               final tools = entry.value;
-              return [
+                  return [
                 SliverToBoxAdapter(
                   child: _SectionHeader(
-                    cs: cs,
                     icon: category.icon,
                     title: category.title,
                     subtitle: category.subtitle,
@@ -273,7 +226,6 @@ class _ToolsPageState extends State<ToolsPage> {
                         icon: tool.icon,
                         title: tool.title,
                         description: tool.description,
-                        gradient: tool.gradientBuilder(cs),
                         onTap: () => _openTool(tool),
                       );
                     }, childCount: tools.length),
@@ -288,27 +240,15 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
   Widget _buildIntroCard(ColorScheme cs, TextTheme tt) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: LumenTokens.cardBorderRadius,
-      ),
+    return LumenActionCard(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: cs.primaryContainer,
-              borderRadius: LumenTokens.chipBorderRadius,
-            ),
-            child: Icon(
-              Icons.build_circle_rounded,
-              size: 24,
-              color: cs.onPrimaryContainer,
-            ),
+          const LumenIconChip(
+            icon: Icons.build_circle_rounded,
+            size: 44,
+            iconSize: 24,
+            shape: LumenIconChipShape.rounded,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -341,12 +281,7 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
   Widget _buildSearchPanel(ColorScheme cs, TextTheme tt, int resultCount) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: LumenTokens.cardBorderRadius,
-      ),
+    return LumenActionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -439,56 +374,14 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
   Widget _buildEmptyState(ColorScheme cs) {
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLow,
-          borderRadius: LumenTokens.cardBorderRadius,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.search_off_rounded,
-                size: 34,
-                color: cs.onPrimaryContainer,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '没有找到匹配工具',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '换个关键词，或者先清除分类筛选再试一次。',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: cs.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.tonalIcon(
-              onPressed: _resetFilters,
-              icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: const Text('清除筛选'),
-            ),
-          ],
-        ),
+    return LumenEmptyState(
+      icon: Icons.search_off_rounded,
+      title: '没有找到匹配工具',
+      message: '换个关键词，或者先清除分类筛选再试一次。',
+      action: FilledButton.tonalIcon(
+        onPressed: _resetFilters,
+        icon: const Icon(Icons.restart_alt_rounded, size: 18),
+        label: const Text('清除筛选'),
       ),
     );
   }
@@ -537,8 +430,6 @@ class _ToolEntry {
   final _ToolCategory category;
   final IconData icon;
   final Widget Function() pageBuilder;
-  final Gradient Function(ColorScheme colorScheme) gradientBuilder;
-
   const _ToolEntry({
     required this.title,
     required this.description,
@@ -546,7 +437,6 @@ class _ToolEntry {
     required this.category,
     required this.icon,
     required this.pageBuilder,
-    required this.gradientBuilder,
   });
 
   String get searchText =>
@@ -555,7 +445,6 @@ class _ToolEntry {
 }
 
 class _SectionHeader extends StatelessWidget {
-  final ColorScheme cs;
   final IconData icon;
   final String title;
   final String subtitle;
@@ -563,7 +452,6 @@ class _SectionHeader extends StatelessWidget {
   final String? trailing;
 
   const _SectionHeader({
-    required this.cs,
     required this.icon,
     required this.title,
     required this.subtitle,
@@ -573,48 +461,15 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final cs = Theme.of(context).colorScheme;
+    return LumenSectionHeader(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
       padding: padding,
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: cs.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                    letterSpacing: 0,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: cs.outline,
-                    letterSpacing: 0.1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (trailing != null)
-            Text(
+      trailing: trailing == null
+          ? null
+          : Text(
               trailing!,
               style: TextStyle(
                 fontSize: 12,
@@ -622,8 +477,6 @@ class _SectionHeader extends StatelessWidget {
                 color: cs.outline,
               ),
             ),
-        ],
-      ),
     );
   }
 }
@@ -632,14 +485,12 @@ class _ToolCard extends StatefulWidget {
   final IconData icon;
   final String title;
   final String description;
-  final Gradient gradient;
   final VoidCallback onTap;
 
   const _ToolCard({
     required this.icon,
     required this.title,
     required this.description,
-    required this.gradient,
     required this.onTap,
   });
 
@@ -686,10 +537,8 @@ class _ToolCardState extends State<_ToolCard> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      gradient: widget.gradient,
-                      borderRadius: BorderRadius.circular(
-                        LumenTokens.radiusMd,
-                      ),
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                     ),
                     child: Icon(
                       widget.icon,

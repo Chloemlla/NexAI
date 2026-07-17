@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/lumen_tokens.dart';
+import 'lumen/lumen.dart';
 
 class ToolHeroChipData {
   final IconData icon;
@@ -98,7 +99,7 @@ class ToolPageHeroSliver extends StatelessWidget {
       pinned: true,
       expandedHeight: effectiveExpandedHeight,
       backgroundColor: cs.surface,
-      surfaceTintColor: cs.surfaceTint,
+      surfaceTintColor: Colors.transparent,
       actions: actions,
       bottom: bottom,
       flexibleSpace: FlexibleSpaceBar(
@@ -115,45 +116,30 @@ class ToolPageHeroSliver extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                cs.primaryContainer.withAlpha(130),
-                cs.tertiaryContainer.withAlpha(80),
-                cs.surface,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+          color: lumenScaffoldBackground(cs),
           child: SafeArea(
             bottom: false,
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                24,
+                LumenTokens.pagePaddingStart + 4,
                 kToolbarHeight + 16,
-                24,
+                LumenTokens.pagePaddingEnd + 4,
                 bottomHeight + 28,
               ),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
+                  constraints: const BoxConstraints(
+                    maxWidth: LumenTokens.maxContentWidth,
+                  ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: cs.primaryContainer,
-                          borderRadius: LumenTokens.cardBorderRadius,
-                        ),
-                        child: Icon(
-                          icon,
-                          size: 32,
-                          color: cs.onPrimaryContainer,
-                        ),
+                      LumenIconChip(
+                        icon: icon,
+                        size: 64,
+                        iconSize: 32,
+                        shape: LumenIconChipShape.rounded,
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -315,34 +301,16 @@ class ToolSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
 
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: cs.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: tt.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
-        ),
-        if (trailing != null) ...[
-          const Spacer(),
-          Text(trailing!, style: TextStyle(fontSize: 12, color: cs.outline)),
-        ],
-      ],
+    return LumenSectionHeader(
+      icon: icon,
+      title: title,
+      trailing: trailing == null
+          ? null
+          : Text(
+              trailing!,
+              style: TextStyle(fontSize: 12, color: cs.outline),
+            ),
     );
   }
 }
@@ -365,15 +333,10 @@ class ToolPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Card(
-      elevation: 0,
+    return LumenActionCard(
       color: color ?? cs.surfaceContainerLow,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: LumenTokens.cardBorderRadius,
-        side: borderSide ?? BorderSide.none,
-      ),
-      child: Padding(padding: padding, child: child),
+      padding: padding,
+      child: child,
     );
   }
 }
@@ -394,40 +357,11 @@ class ToolEmptyStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-
-    return ToolPanel(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: cs.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 34, color: cs.onPrimaryContainer),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: tt.bodyMedium?.copyWith(
-              color: cs.onSurfaceVariant,
-              height: 1.5,
-            ),
-          ),
-          if (action != null) ...[const SizedBox(height: 16), action!],
-        ],
-      ),
+    return LumenEmptyState(
+      icon: icon,
+      title: title,
+      message: description,
+      action: action,
     );
   }
 }

@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
+import '../widgets/lumen/lumen.dart';
 
 class VideoCompressorPage extends StatefulWidget {
   const VideoCompressorPage({super.key});
@@ -530,7 +531,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     final videoInfo = _videoInfo;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
         slivers: [
           ToolPageHeroSliver(

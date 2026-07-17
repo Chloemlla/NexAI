@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/short_url_provider.dart';
 import '../widgets/tool_page_style.dart';
+import '../widgets/lumen/lumen.dart';
 
 class ShortUrlPage extends StatefulWidget {
   const ShortUrlPage({super.key});
@@ -147,7 +148,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
     final hPad = isNarrow ? 16.0 : mq.size.width * 0.06;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
         slivers: [
           ToolPageHeroSliver(

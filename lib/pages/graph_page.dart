@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../providers/notes_provider.dart';
 import 'note_detail_page.dart';
+import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 class GraphPage extends StatefulWidget {
   const GraphPage({super.key});
@@ -164,8 +166,10 @@ class _GraphPageState extends State<GraphPage>
     }
 
     return Scaffold(
+      backgroundColor: lumenScaffoldBackground(cs),
       appBar: AppBar(
-        surfaceTintColor: cs.surfaceTint,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: cs.surface,
         title: Row(
           children: [
             Icon(Icons.hub_rounded, size: 22, color: cs.primary),

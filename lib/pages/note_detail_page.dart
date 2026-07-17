@@ -9,6 +9,8 @@ import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/rich_content_view.dart';
 import '../utils/file_access_helper.dart';
+import '../theme/lumen_tokens.dart';
+import '../widgets/lumen/lumen.dart';
 
 /// Regex to find headings in markdown for outline generation
 final _headingRegex = RegExp(r'^(#{1,6})\s+(.+)$', multiLine: true);
@@ -442,6 +444,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         .firstOrNull;
     if (note == null) {
       return Scaffold(
+        backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
         appBar: AppBar(title: const Text('笔记')),
         body: const Center(child: Text('未找到笔记')),
       );
@@ -521,7 +524,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           autofocus: true,
           child: Scaffold(
             appBar: AppBar(
-              surfaceTintColor: cs.surfaceTint,
+              surfaceTintColor: Colors.transparent,
               elevation: 0,
               titleSpacing: 0,
               backgroundColor: cs.surface,
@@ -1850,9 +1853,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _buildFocusMode(ColorScheme cs, String noteContent) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF121212)
-          : const Color(0xFFFAFAFA),
+      backgroundColor: lumenScaffoldBackground(cs),
       body: SafeArea(
         child: Column(
           children: [

@@ -16,12 +16,14 @@ public static partial class Program
     {
         XamlCheckProcessRequirements();
         ComWrappersSupport.InitializeComWrappers();
-        Application.Start(_ =>
+        Application.Start(p =>
         {
             var context = new DispatcherQueueSynchronizationContext(
                 DispatcherQueue.GetForCurrentThread());
             SynchronizationContext.SetSynchronizationContext(context);
-            _ = new App();
+            // Do not assign into the callback parameter (named discard would
+            // still be typed as ApplicationInitializationCallbackParams).
+            new App();
         });
     }
 }

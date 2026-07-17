@@ -219,6 +219,117 @@ scripts/                      # Build metadata, font subsetting, icons helpers
 - Android release signing is expected via GitHub Actions secrets, not hardcoded credentials.
 - Review `docs/SERVER_API_SECURITY.md` and related contracts before changing request signing, pinning, sync, or device security code.
 
+## 更新日志
+
+### 2026 年 7 月
+
+本月提交按时间从旧到新整理，涵盖 Android 安全/适配、Passkey、Lumen UI 重写、开源声明、崩溃上报与客户端签名等。
+
+#### 07-04
+
+- `1fb6d8b` 调整 Android 构建，排除媒体库并清理插件注册
+- `a880b35` Android 原生存储改用 MMKV
+- `336dc7b` 新增完整代码审计报告
+- `af69238` 加固同步发布与后端安全
+- `de28495` 恢复媒体与对话框编译兼容
+- `3bc2b81` 移除无用 media kit 启动逻辑
+- `e53080a` 处理 analyzer 问题
+- `c07af6f` 加固视频压缩元数据加载
+- `14228f4` 强化 Android release 混淆
+- `394360f` 强化 release shrinking
+
+#### 07-07
+
+- `eb5ed47` 对齐 Passkey Credential Manager 集成
+- `7e4cae5` 接入 credential manager signal API
+- `8b1da0c` 更新 `auth_provider.dart`
+
+#### 07-12
+
+- `c1429c6` Android 栈升级到 AGP 9.2.1 / compileSdk 37
+- `a5132a7` NexAI Passkey 流程对齐 Happy-TTS WebAuthn 契约
+- `fbc2e19` 支持无用户名的 discoverable Passkey 登录
+
+#### 07-13
+
+- `c9f0ddf` Passkey 用户取消按软取消处理
+
+#### 07-15
+
+- `a43ab16` 按当前功能与技术栈完善 README
+- `a2da906` 防止 Google 头像网络失败导致崩溃
+- `e802003` 加固密码备份、离线鉴权与完整性校验
+- `3b37c24` 集成 Lumen Crash SDK 用于 Android 宿主崩溃
+
+#### 07-16
+
+**构建 / 崩溃**
+
+- `364fd9b` 满足 auth 初始化 prefer_conditional_assignment
+- `94009a4` CrashGate 报告状态改为可空类型
+- `3a84d44` 修复 lumen-crash 空 POM 版本的 Compose 依赖声明
+- `d548ff9` 防止 lumen-crash release 冷启动白屏
+- `3f02e71` 桥接 Flutter 崩溃到 lumen-crash
+- `2697c5a` 回退 Android 上的 Flutter lumen-crash bridge
+- `85ded7b` 为 Android 构建离线预置 lumen-crash-core
+
+**Passkey / 安全**
+
+- `0d68857` Passkey 优先使用 Google Password Manager
+- `b00429f` 新增 Google-only Passkey provider 开关
+- `ebbf401` 增加 Passkey provider 诊断
+- `0c36958` 启动时建立安全快照
+- `8f3d15d` 稳定后台任务与通知
+- `3367247` 强化更新包校验
+- `99ebdd8` 扩展 anti-debug 与指纹信号
+- `8dc6b13` 诊断 Android apk-key-hash base64 origin 不匹配
+
+**Android 适配 / UI**
+
+- `a12b2bc` 保持聊天布局在键盘上方
+- `d7c1e05` 规划 Android Kotlin 边界加固
+- `7971a74` 固化 Android Kotlin 边界加固计划
+- `e8f02fa` 按 Vivo Android 13–17 指引适配 NexAI
+- `8b41061` 补充 Android 11 Vivo 适配文档与更新说明
+- `8052059` 修复 release Kotlin 构建，并处理 Android 11 包可见性
+- `651bcf1` 以 Project Lumen 主题重绘 soft surfaces
+
+#### 07-17
+
+**Passkey / 鉴权 / 安全**
+
+- `7a1a910` auth 诊断使用 null-aware map entry
+- `47baa14` 修正 Passkey apk-key-hash 编码不匹配检测
+- `5de8036` 对齐 NexAI 客户端安全/API 与后端契约
+- `c4198d5` 实现 NexAI sig-v2 客户端签名与分阶段错误弹窗
+- `dcfc8c8` 同步/分享失败分阶段弹窗，refresh 使用 refreshToken 签名
+
+**首次安装开源声明**
+
+- `a9e932f` 新增首次安装开源声明页
+- `a27fbc6` 加固首次安装开源声明生命周期
+- `ee73adc` 加固多平台开源声明安装检测
+- `87229ba` 收口首次安装开源声明剩余边界问题
+- `26a4980` 清理 lumen 与 oss notice 的 analyzer 警告
+
+**Android Lumen UI 重写与收口**
+
+- `8c30698` 全量 Project-Lumen soft-surface UI/UX 重写
+- `6430e5c` 重写后恢复 Lumen soft-surface 契约
+- `af775a9` 清理残留 marketing gradient
+- `18a52c5` 继续硬化剩余 soft-surface 残留
+- `8375135` 迁移漏掉的 soft-surface 页面壳
+- `d932dad` 视频工具 raw Card helper 重写为 Lumen 表面
+- `c998e59` 执行 Android Lumen UI 绝对 0 残留清理
+- `d82cdd4` 完成 100% Lumen kit 收口
+
+**崩溃上报 / UX 修复**
+
+- `afbf354` 从 lumen-crash 适配 NexAI 崩溃上报
+- `eefcdcd` 修复视频预览播放器 UX
+- `7e97f8d` 修复跨页面交互 UX：图谱可点、笔记 FAB 遮挡、空剪贴板反馈、绘图失败提示
+- `ec03166` 修复 login/sync 与 `const Theme.of` 相关 analyzer 错误
+
 ## License
 
 [GPL-3.0](LICENSE)

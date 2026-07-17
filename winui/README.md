@@ -16,18 +16,26 @@ winui/
 
 ## MVP-1 status
 
-Done:
+MVP-1 is implemented in code:
 
 - solution + three projects
 - Mica main window, custom title bar, NavigationView
 - editable Settings (Base URL / API Key / Model / Temperature / Max tokens / Theme)
-- clean local JSON settings store with validation
-- multi-conversation chat store (create / select / delete / search)
-- OpenAI-compatible streaming chat client with Send/Stop
+- clean local JSON settings/conversation stores
+- multi-conversation chat (create / select / delete / search)
+- OpenAI-compatible streaming chat with Send/Stop
+- basic Markdown rendering (headings, lists, quotes, fenced code, bold/italic/inline code/links)
+- Fluent-style chat density polish
 
-Still pending:
+Still deferred beyond MVP-1:
 
-- basic Markdown rendering
+- Notes / Tools
+- full Sync
+- advanced rendering (LaTeX / chemistry / Mermaid)
+- media tools
+- Google / Passkey
+- Flutter local data migration
+- dedicated WinUI3 CI job (Flutter Windows CI remains)
 
 ## Local data
 
@@ -43,7 +51,7 @@ No Flutter data migration in MVP-1.
 
 ## Build notes
 
-Local builds are owned by CI for this repo. When CI is wired, expected command shape:
+Local builds are owned by CI for this repo. When a WinUI job is wired, expected command shape:
 
 ```powershell
 msbuild winui\NexAI.WinUI3\NexAI.WinUI3.csproj /p:Platform=x64 /p:Configuration=Release /v:m -restore

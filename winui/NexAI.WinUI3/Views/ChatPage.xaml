@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:chat="using:NexAI.Core.Chat"
+    xmlns:controls="using:NexAI.WinUI3.Controls"
     Background="Transparent"
     mc:Ignorable="d">
     <Grid Padding="16">
@@ -47,6 +48,7 @@
                         Grid.Column="1"
                         Content="New"
                         MinWidth="72"
+                        Style="{StaticResource AccentButtonStyle}"
                         Click="NewChatButton_Click" />
                 </Grid>
 
@@ -63,9 +65,16 @@
                         SelectionMode="Single"
                         IsItemClickEnabled="True"
                         ItemClick="ConversationList_ItemClick">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="4,2" />
+                                <Setter Property="MinHeight" Value="0" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="chat:Conversation">
-                                <Grid Padding="4,8">
+                                <Grid Padding="8,8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -155,31 +164,29 @@
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1"
                 CornerRadius="8"
-                Padding="12">
+                Padding="8">
                 <Grid>
                     <ListView
                         x:Name="MessageList"
                         SelectionMode="None"
                         IsItemClickEnabled="False">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="4,4" />
+                                <Setter Property="MinHeight" Value="0" />
+                            </Style>
+                        </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="chat:ChatMessage">
                                 <Border
-                                    Margin="0,0,0,10"
-                                    Padding="12"
+                                    Margin="4,4"
+                                    Padding="14,12"
                                     Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
                                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
                                     CornerRadius="8">
-                                    <StackPanel Spacing="6">
-                                        <TextBlock
-                                            Text="{x:Bind Role}"
-                                            Style="{StaticResource CaptionTextBlockStyle}"
-                                            Opacity="0.72" />
-                                        <TextBlock
-                                            Text="{x:Bind Content}"
-                                            TextWrapping="WrapWholeWords"
-                                            IsTextSelectionEnabled="True" />
-                                    </StackPanel>
+                                    <controls:MarkdownMessagePresenter Message="{x:Bind}" />
                                 </Border>
                             </DataTemplate>
                         </ListView.ItemTemplate>
@@ -204,44 +211,53 @@
                 </Grid>
             </Border>
 
-            <Grid Grid.Row="2" Margin="0,12,0,0" ColumnSpacing="12">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBox
-                    x:Name="ComposerBox"
-                    PlaceholderText="Message NexAI..."
-                    AcceptsReturn="True"
-                    TextWrapping="Wrap"
-                    MinHeight="72"
-                    MaxHeight="160"
-                    TextChanged="ComposerBox_TextChanged" />
-                <StackPanel Grid.Column="1" Spacing="8">
-                    <Button
-                        x:Name="SendButton"
-                        Content="Send"
-                        MinWidth="108"
-                        MinHeight="36"
-                        Style="{StaticResource AccentButtonStyle}"
-                        IsEnabled="False"
-                        Click="SendButton_Click" />
-                    <Button
-                        x:Name="StopButton"
-                        Content="Stop"
-                        MinWidth="108"
-                        MinHeight="36"
-                        Visibility="Collapsed"
-                        Click="StopButton_Click" />
-                    <TextBlock
-                        x:Name="ComposerHintText"
-                        Width="108"
-                        Opacity="0.72"
+            <Border
+                Grid.Row="2"
+                Margin="0,12,0,0"
+                Padding="12"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox
+                        x:Name="ComposerBox"
+                        PlaceholderText="Message NexAI..."
+                        AcceptsReturn="True"
                         TextWrapping="Wrap"
-                        Style="{StaticResource CaptionTextBlockStyle}"
-                        Text="Ready" />
-                </StackPanel>
-            </Grid>
+                        MinHeight="72"
+                        MaxHeight="160"
+                        TextChanged="ComposerBox_TextChanged" />
+                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Bottom">
+                        <Button
+                            x:Name="SendButton"
+                            Content="Send"
+                            MinWidth="108"
+                            MinHeight="36"
+                            Style="{StaticResource AccentButtonStyle}"
+                            IsEnabled="False"
+                            Click="SendButton_Click" />
+                        <Button
+                            x:Name="StopButton"
+                            Content="Stop"
+                            MinWidth="108"
+                            MinHeight="36"
+                            Visibility="Collapsed"
+                            Click="StopButton_Click" />
+                        <TextBlock
+                            x:Name="ComposerHintText"
+                            Width="108"
+                            Opacity="0.72"
+                            TextWrapping="Wrap"
+                            Style="{StaticResource CaptionTextBlockStyle}"
+                            Text="Ready" />
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
     </Grid>
 </Page>

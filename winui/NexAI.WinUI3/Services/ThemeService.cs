@@ -6,15 +6,19 @@ namespace NexAI.WinUI3.Services;
 public sealed class ThemeService
 {
     private FrameworkElement? _root;
+    private AppThemeMode _mode = AppThemeMode.System;
+
+    public AppThemeMode CurrentMode => _mode;
 
     public void Attach(FrameworkElement root)
     {
         _root = root;
-        // Ensure newly attached trees inherit the last requested mode.
+        Apply(_mode);
     }
 
     public void Apply(AppThemeMode mode)
     {
+        _mode = mode;
         if (_root is null)
         {
             return;

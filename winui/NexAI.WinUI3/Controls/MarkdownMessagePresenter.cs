@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using NexAI.Core.Chat;
 using NexAI.Core.Markdown;
 using Windows.UI;
+using Windows.UI.Text;
 
 namespace NexAI.WinUI3.Controls;
 
@@ -131,23 +132,43 @@ public sealed class MarkdownMessagePresenter : UserControl
             FontWeight = FontWeights.SemiBold,
             FontSize = 12,
         });
-        panel.Children.Add(new TextBlock
+
+        if (block.Kind == AdvancedBlockKind.Latex)
         {
-            Text = block.Content,
-            FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
-            FontSize = 12.5,
-            TextWrapping = TextWrapping.Wrap,
-            IsTextSelectionEnabled = true,
-        });
-        panel.Children.Add(new TextBlock
+            panel.Children.Add(CreateLatexPreview(block.Content));
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Source",
+                Opacity = 0.72,
+                FontSize = 11,
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Text = block.Content,
+                FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                IsTextSelectionEnabled = true,
+            });
+        }
+        else
         {
-            Text = block.Kind == AdvancedBlockKind.Latex
-                ? "Rendered as source in MVP advanced mode (native equation engine deferred)."
-                : "Rendered as source graph definition (native Mermaid painter deferred).",
-            Opacity = 0.72,
-            FontSize = 11,
-            TextWrapping = TextWrapping.Wrap,
-        });
+            panel.Children.Add(CreateMermaidPreview(block.Content));
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Graph definition",
+                Opacity = 0.72,
+                FontSize = 11,
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Text = block.Content,
+                FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                IsTextSelectionEnabled = true,
+            });
+        }
 
         return new Border
         {
@@ -158,6 +179,108 @@ public sealed class MarkdownMessagePresenter : UserControl
             Padding = new Thickness(12),
             Child = panel,
         };
+    }
+
+    private static UIElement CreateLatexPreview(string latex)
+    {
+        // Lightweight native-ish math preview: normalize common TeX tokens into readable Unicode/math text.
+        var normalized = (latex ?? string.Empty)
+            .Replace(@"\cdot", "·")
+            .Replace(@"\times", "×")
+            .Replace(@"\div", "÷")
+            .Replace(@"\pm", "±")
+            .Replace(@"\leq", "≤")
+            .Replace(@"\geq", "≥")
+            .Replace(@"\neq", "≠")
+            .Replace(@"\approx", "≈")
+            .Replace(@"\infty", "∞")
+            .Replace(@"\pi", "π")
+            .Replace(@"\theta", "θ")
+            .Replace(@"\alpha", "α")
+            .Replace(@"\beta", "β")
+            .Replace(@"\gamma", "γ")
+            .Replace(@"\lambda", "λ")
+            .Replace(@"\sum", "∑")
+            .Replace(@"\int", "∫")
+            .Replace(@"\sqrt", "√")
+            .Replace(@"\left", string.Empty)
+            .Replace(@"\right", string.Empty)
+            .Replace("{", string.Empty)
+            .Replace("}", string.Empty)
+            .Replace(@"\\", "  ")
+            .Trim();
+
+        return new Border
+        {
+            Background = ResolveBrush("CardBackgroundFillColorSecondaryBrush", Color.FromArgb(255, 250, 250, 250)),
+            BorderBrush = ResolveBrush("CardStrokeColorDefaultBrush", Color.FromArgb(255, 220, 220, 220)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12),
+            Child = new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(normalized) ? latex : normalized,
+                FontSize = 18,
+                FontStyle = FontStyle.Italic,
+                TextWrapping = TextWrapping.WrapWholeWords,
+                IsTextSelectionEnabled = true,
+            },
+        };
+    }
+
+    private static UIElement CreateMermaidPreview(string source)
+    {
+        var lines = (source ?? string.Empty)
+            .Replace("\r\n", "\n")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(l => !l.StartsWith("graph", StringComparison.OrdinalIgnoreCase) &&
+                        !l.StartsWith("flowchart", StringComparison.OrdinalIgnoreCase) &&
+                        !l.StartsWith("sequenceDiagram", StringComparison.OrdinalIgnoreCase))
+            .Take(12)
+            .ToList();
+
+        var panel = new StackPanel { Spacing = 6 };
+        if (lines.Count == 0)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Mermaid diagram",
+                Opacity = 0.8,
+            });
+        }
+        else
+        {
+            foreach (var line in lines)
+            {
+                var pretty = line
+                    .Replace("-->", " → ")
+                    .Replace("---|", " → ")
+                    .Replace("--", " — ")
+                    .Replace("->>", " ⇒ ")
+                    .Replace("->", " → ")
+                    .Replace("[", " ")
+                    .Replace("]", " ")
+                    .Replace("(", " ")
+                    .Replace(")", " ")
+                    .Trim();
+                panel.Children.Add(new Border
+                {
+                    Background = ResolveBrush("CardBackgroundFillColorSecondaryBrush", Color.FromArgb(255, 250, 250, 250)),
+                    BorderBrush = ResolveBrush("CardStrokeColorDefaultBrush", Color.FromArgb(255, 220, 220, 220)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(10, 6, 10, 6),
+                    Child = new TextBlock
+                    {
+                        Text = pretty,
+                        TextWrapping = TextWrapping.WrapWholeWords,
+                        IsTextSelectionEnabled = true,
+                    },
+                });
+            }
+        }
+
+        return panel;
     }
 
     private static TextBlock CreateHeading(MarkdownBlock block)

@@ -17,7 +17,7 @@ public sealed class ChatMessage
 
     public ChatMessage Clone() => new()
     {
-        Id = Id,
+        Id = string.IsNullOrWhiteSpace(Id) ? Guid.NewGuid().ToString("D") : Id,
         Role = Role,
         Content = Content,
         Timestamp = Timestamp,
@@ -38,11 +38,7 @@ public sealed class Conversation
         get
         {
             var last = Messages.LastOrDefault(m => !string.IsNullOrWhiteSpace(m.Content));
-            if (last is null)
-            {
-                return "No messages yet";
-            }
-
+            if (last is null) return "No messages yet";
             var text = last.Content.ReplaceLineEndings(" ").Trim();
             return text.Length <= 96 ? text : text[..96] + "…";
         }
@@ -50,11 +46,11 @@ public sealed class Conversation
 
     public Conversation Clone() => new()
     {
-        Id = Id,
-        Title = Title,
-        CreatedAt = CreatedAt,
-        UpdatedAt = UpdatedAt,
-        Messages = Messages.Select(m => m.Clone()).ToList(),
+        Id = string.IsNullOrWhiteSpace(Id) ? Guid.NewGuid().ToString("D") : Id,
+        Title = string.IsNullOrWhiteSpace(Title) ? "New chat" : Title,
+        CreatedAt = CreatedAt == default ? DateTime.UtcNow : CreatedAt,
+        UpdatedAt = UpdatedAt == default ? DateTime.UtcNow : UpdatedAt,
+        Messages = (Messages ?? []).Select(m => m.Clone()).ToList(),
     };
 }
 
@@ -71,6 +67,10 @@ public interface IConversationStore
     Task SelectAsync(string conversationId, CancellationToken cancellationToken = default);
     Task DeleteAsync(string conversationId, CancellationToken cancellationToken = default);
     Task RenameAsync(string conversationId, string title, CancellationToken cancellationToken = default);
+    Task ReplaceAllAsync(
+        IEnumerable<Conversation> conversations,
+        string? currentConversationId = null,
+        CancellationToken cancellationToken = default);
     Task<ChatMessage> AppendMessageAsync(
         string conversationId,
         ChatMessage message,

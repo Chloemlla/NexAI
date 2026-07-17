@@ -443,20 +443,24 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+
       - name: Restore WinUI solution
         shell: pwsh
         run: |
-          dotnet restore winui/NexAI.WinUI3.sln
+          msbuild winui\NexAI.WinUI3.sln /t:Restore /p:Configuration=Release /p:Platform=x64 /v:m
 
       - name: Build WinUI3 client
         shell: pwsh
         run: |
-          dotnet build winui/NexAI.WinUI3/NexAI.WinUI3.csproj `
-            -c Release `
-            -p:Platform=x64 `
-            -p:WindowsPackageType=None `
-            -p:WindowsAppSDKSelfContained=true `
-            --no-restore
+          msbuild winui\NexAI.WinUI3\NexAI.WinUI3.csproj `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:WindowsPackageType=None `
+            /p:WindowsAppSDKSelfContained=true `
+            /p:Restore=false `
+            /v:m
 
       - name: Package WinUI3 zip
         shell: pwsh
@@ -468,11 +472,27 @@ jobs:
             'winui/NexAI.WinUI3/bin/x64/Release/net9.0-windows10.0.19041.0/win-x64',
             'winui/NexAI.WinUI3/bin/Release/net9.0-windows10.0.19041.0/win-x64'
           )
-          $source = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          $source = $null
+          foreach ($candidate in $candidates) {
+            if (Test-Path $candidate) {
+              $exe = Get-ChildItem -Path $candidate -Filter NexAI.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($exe) {
+                $source = $exe.Directory.FullName
+                break
+              }
+              $source = (Resolve-Path $candidate).Path
+              break
+            }
+          }
+          if (-not $source) {
+            $exe = Get-ChildItem -Path 'winui/NexAI.WinUI3/bin' -Filter NexAI.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($exe) { $source = $exe.Directory.FullName }
+          }
           if (-not $source) {
             Get-ChildItem -Recurse winui/NexAI.WinUI3/bin -ErrorAction SilentlyContinue | Select-Object -First 50 FullName
             throw 'WinUI build output not found.'
           }
+          Write-Host "Packaging from: $source"
           $zipName = 'NexAI_WinUI3_x64.zip'
           if (Test-Path $zipName) { Remove-Item -Force $zipName }
           Compress-Archive -Path (Join-Path $source '*') -DestinationPath $zipName -Force

@@ -309,22 +309,23 @@ public sealed class NexaiSyncService : ISyncService
 
         await _notesStore.ReplaceAllAsync(notes, cancellationToken).ConfigureAwait(false);
 
-        // Replace conversations by delete+create via store APIs.
-        foreach (var existing in _conversationStore.Conversations.ToList())
-        {
-            await _conversationStore.DeleteAsync(existing.Id, cancellationToken).ConfigureAwait(false);
-        }
-
-        foreach (var conversation in conversations.OrderByDescending(c => c.UpdatedAt))
-        {
-            var created = await _conversationStore.CreateAsync(cancellationToken).ConfigureAwait(false);
-            await _conversationStore.RenameAsync(created.Id, conversation.Title, cancellationToken).ConfigureAwait(false);
-            foreach (var message in conversation.Messages)
+        // Atomic conversation replace preserves ids and avoids multi-step delete/create races.
+        var ordered = conversations
+            .Select(c =>
             {
-                await _conversationStore.AppendMessageAsync(created.Id, message, persist: true, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-        }
+                var clone = c.Clone();
+                if (clone.UpdatedAt == default)
+                {
+                    clone.UpdatedAt = clone.Messages.LastOrDefault()?.Timestamp ?? clone.CreatedAt;
+                }
+                return clone;
+            })
+            .OrderByDescending(c => c.UpdatedAt)
+            .ToList();
+        await _conversationStore.ReplaceAllAsync(
+            ordered,
+            currentConversationId: ordered.FirstOrDefault()?.Id,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static Conversation ParseConversation(Dictionary<string, object?> payload)

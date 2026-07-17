@@ -72,7 +72,7 @@ class LumenStatusLine extends StatelessWidget {
               ],
             ),
           ),
-          ?trailing,
+          if (trailing != null) trailing!,
         ],
       ),
     );

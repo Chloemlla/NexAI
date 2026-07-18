@@ -160,7 +160,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     }
   }
 
-  void _saveNote() async {
+  Future<void> _saveNote() async {
     final provider = _notesProvider ?? context.read<NotesProvider>();
     final settings = _settingsProvider ?? context.read<SettingsProvider>();
 
@@ -602,9 +602,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             canPop: !_dirty || (_settingsProvider?.notesAutoSave ?? true),
             onPopInvokedWithResult: (didPop, result) async {
               if (didPop) return;
+              final navigator = Navigator.of(context);
               final ok = await _confirmLeaveIfDirty();
               if (ok && mounted) {
-                Navigator.of(context).pop();
+                navigator.pop();
               }
             },
             child: Scaffold(

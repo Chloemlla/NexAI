@@ -1707,7 +1707,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                                             return AlertDialog(
                                               title: const Text('删除密码'),
                                               content: Text(
-                                                '删除 "${password.title}"？此操作无法撤销。',
+                                                '删除该密码条目？此操作无法撤销。',
                                               ),
                                               actions: [
                                                 TextButton(

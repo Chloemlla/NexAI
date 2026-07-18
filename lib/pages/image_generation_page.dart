@@ -580,7 +580,8 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         return Image.memory(
           bytes,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => placeholder(message: 'Base64 预览失败'),
+          errorBuilder: (context, error, stackTrace) =>
+              placeholder(message: 'Base64 预览失败'),
         );
       } catch (_) {
         return placeholder(message: 'Base64 数据无效');
@@ -591,7 +592,8 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
       return Image.network(
         image.url,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => placeholder(message: '图片加载失败'),
+        errorBuilder: (context, error, stackTrace) =>
+            placeholder(message: '图片加载失败'),
       );
     }
 

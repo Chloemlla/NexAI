@@ -253,10 +253,13 @@ jobs:
       - name: Build WinUI3 client
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force -Path artifacts | Out-Null
-          $log = 'artifacts/winui-build.log'
-          $cmd = @(
-            'winui\NexAI.WinUI3\NexAI.WinUI3.csproj',
+          $log = (Join-Path $PWD 'artifacts/winui-build.log')
+          # Avoid ';' inside /flp: PowerShell/GHA argument parsing can split it and
+          # MSBuild then treats the log path as a second project (MSB1008).
+          $msbuildArgs = @(
+            'winui/NexAI.WinUI3/NexAI.WinUI3.csproj',
             '/p:Configuration=Release',
             '/p:Platform=x64',
             '/p:WindowsPackageType=None',
@@ -264,16 +267,20 @@ jobs:
             '/p:Restore=false',
             '/v:n',
             '/fl',
-            '/flp:LogFile=' + $log + ';Verbosity=normal'
+            "/flp:LogFile=$log",
+            '/flp:Verbosity=normal'
           )
-          Write-Host "msbuild $($cmd -join ' ')"
-          & msbuild @cmd
-          if ($LASTEXITCODE -ne 0) {
+          Write-Host ("msbuild " + ($msbuildArgs -join ' '))
+          & msbuild @msbuildArgs
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
             Write-Host '--- WinUI build failed. Emitting error/warning summary from log ---'
-            if (Test-Path $log) {
-              Select-String -Path $log -Pattern 'error |warning ' | ForEach-Object { $_.Line }
+            if (Test-Path -LiteralPath $log) {
+              Select-String -LiteralPath $log -Pattern ' error | warning ' | ForEach-Object { $_.Line }
+            } else {
+              Write-Host "Log file not found: $log"
             }
-            exit $LASTEXITCODE
+            exit $code
           }
 
       - name: Upload WinUI build log on failure

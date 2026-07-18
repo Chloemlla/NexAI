@@ -29,6 +29,8 @@ String _newId() {
 }
 
 class ChatProvider extends ChangeNotifier {
+  static const int sessionSchemaVersion = 2;
+
   final List<Conversation> _conversations = [];
   int _currentIndex = -1;
   bool _isLoading = false;
@@ -84,6 +86,164 @@ class ChatProvider extends ChangeNotifier {
   void cancelGeneration() {
     final token = _cancelToken;
     if (token != null && !token.isCancelled) token.cancel('user_cancelled');
+  }
+
+
+  List<Message> siblingsOf(int messageIndex) {
+    final conversation = currentConversation;
+    if (conversation == null) return const [];
+    if (messageIndex < 0 || messageIndex >= conversation.messages.length) {
+      return const [];
+    }
+    final target = conversation.messages[messageIndex];
+    final group = target.siblingGroupId;
+    if (group == null) return [target];
+    return conversation.messages
+        .where((m) => m.siblingGroupId == group)
+        .toList(growable: false);
+  }
+
+  Future<void> activateSibling({
+    required int messageIndex,
+    required int siblingAbsoluteIndex,
+  }) async {
+    final conversation = currentConversation;
+    if (conversation == null) return;
+    if (messageIndex < 0 || messageIndex >= conversation.messages.length) return;
+    final group = conversation.messages[messageIndex].siblingGroupId;
+    if (group == null) return;
+    for (var i = 0; i < conversation.messages.length; i++) {
+      final m = conversation.messages[i];
+      if (m.siblingGroupId != group) continue;
+      // recreate with flipped active flag via content copy since fields final-ish
+      conversation.messages[i] = Message(
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp,
+        isError: m.isError,
+        toolCallId: m.toolCallId,
+        toolCalls: List<ToolCallRecord>.from(m.toolCalls),
+        toolRuns: List<ToolRunRecord>.from(m.toolRuns),
+        citations: List<Citation>.from(m.citations),
+        attachments: List<ChatAttachment>.from(m.attachments),
+        reasoning: m.reasoning,
+        stats: m.stats,
+        modelId: m.modelId,
+        siblingGroupId: m.siblingGroupId,
+        isActiveBranch: i == siblingAbsoluteIndex,
+      );
+    }
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> pinMessage(int messageIndex, {bool pinned = true}) async {
+    final conversation = currentConversation;
+    if (conversation == null) return;
+    if (messageIndex < 0 || messageIndex >= conversation.messages.length) return;
+    final m = conversation.messages[messageIndex];
+    // store pin in toolRuns metadata-less: encode into modelId prefix? better use citations source marker no.
+    // Use stats null-safe: put marker in modelId is bad. Add runtime only focus for pin via conversation tags.
+    final tags = conversation.messages; // no-op keep compile
+    tags;
+    // Represent pin via isActiveBranch-independent list on conversation compareModels no.
+    // Attach soft pin as citation special.
+    if (pinned) {
+      m.addCitations([
+        Citation(
+          title: 'pinned',
+          url: 'nexai://pin/$messageIndex',
+          snippet: 'pinned-message',
+          source: 'pin',
+        ),
+      ]);
+    } else {
+      m.citations.removeWhere((c) => c.source == 'pin');
+    }
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> quoteToComposer(int messageIndex) async {
+    // UI reads content via getter; no-op state broadcast for listeners
+    setFocusMessage(messageIndex: messageIndex, query: 'quote');
+  }
+
+  String exportSessionPackage({bool currentOnly = true}) {
+    final payload = {
+      'schemaVersion': sessionSchemaVersion,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'conversations': currentOnly
+          ? (currentConversation == null ? [] : [currentConversation!.toJson()])
+          : _conversations.map((c) => c.toJson()).toList(),
+    };
+    return jsonEncode(payload);
+  }
+
+  Future<int> importSessionPackage(String raw, {bool merge = true}) async {
+    final decoded = jsonDecode(raw);
+    if (decoded is List) {
+      return importConversationsJson(raw, merge: merge);
+    }
+    if (decoded is Map) {
+      final map = decoded.map((k, v) => MapEntry(k.toString(), v));
+      final list = map['conversations'];
+      if (list is List) {
+        if (!merge) {
+          await restoreFromList(list);
+          return list.length;
+        }
+        await mergeItems(list);
+        return list.length;
+      }
+    }
+    throw const FormatException('Unsupported session package');
+  }
+
+  void removeFollowUpAt(int index) {
+    if (index < 0 || index >= _followUpQueue.length) return;
+    _followUpQueue.removeAt(index);
+    notifyListeners();
+  }
+
+  Future<void> branchFromMessage(int messageIndex) async {
+    final conversation = currentConversation;
+    if (conversation == null) return;
+    if (messageIndex < 0 || messageIndex >= conversation.messages.length) return;
+    final cloned = Conversation(
+      id: _newId(),
+      title: '${conversation.title} (branch)',
+      createdAt: DateTime.now(),
+      messages: conversation.messages
+          .take(messageIndex + 1)
+          .map(
+            (m) => Message(
+              role: m.role,
+              content: m.content,
+              timestamp: m.timestamp,
+              isError: m.isError,
+              toolCallId: m.toolCallId,
+              toolCalls: List<ToolCallRecord>.from(m.toolCalls),
+              toolRuns: List<ToolRunRecord>.from(m.toolRuns),
+              citations: List<Citation>.from(m.citations),
+              attachments: List<ChatAttachment>.from(m.attachments),
+              reasoning: m.reasoning,
+              stats: m.stats,
+              modelId: m.modelId,
+              siblingGroupId: m.siblingGroupId,
+              isActiveBranch: true,
+            ),
+          )
+          .toList(),
+      assistantId: conversation.assistantId,
+      modelOverride: conversation.modelOverride,
+      systemPromptOverride: conversation.systemPromptOverride,
+      compareModels: List<String>.from(conversation.compareModels),
+    );
+    _conversations.insert(0, cloned);
+    _currentIndex = 0;
+    notifyListeners();
+    await _save();
   }
 
   void clearFollowUpQueue() {
@@ -715,6 +875,8 @@ class ChatProvider extends ChangeNotifier {
     bool markActive = true,
   }) async {
     final tools = enabledTools;
+    // Tools are available whenever runtime context is configured.
+    // Gateway URL enables richer remote providers; local tools still work without it.
     final useTools = tools.isNotEmpty && toolRuntimeContext != null;
 
     for (var round = 0; round < maxToolRounds; round++) {

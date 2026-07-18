@@ -219,6 +219,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                         messageIndex: widget.messageIndex,
                         repaintKey: _repaintKey,
                       ),
+                      if (!isUser) _SiblingSwitcher(messageIndex: widget.messageIndex),
                     ],
                   ),
                 ),
@@ -315,6 +316,24 @@ class _MessageFooter extends StatelessWidget {
             cs,
           ),
         ],
+        _footerIcon(
+          Icons.format_quote_rounded,
+          '引用到输入框',
+          () => _quoteMessage(context),
+          cs,
+        ),
+        _footerIcon(
+          Icons.push_pin_outlined,
+          '固定/取消固定',
+          () => _togglePin(context),
+          cs,
+        ),
+        _footerIcon(
+          Icons.call_split_rounded,
+          '从这里分支',
+          () => _branchFromHere(context),
+          cs,
+        ),
         _footerIcon(
           Icons.ios_share_rounded,
           '分享或导出',
@@ -726,6 +745,10 @@ class _MessageFooter extends StatelessWidget {
               mcpServers: settings.remoteMcpEnabled
                   ? settings.mcpServers.where((s) => s.enabled).toList()
                   : const <McpServerConfig>[],
+              webSearchProviders: settings.webSearchProviders,
+              activeWebSearchProviderId: settings.activeWebSearchProviderId,
+              toolGatewayBaseUrl: settings.toolGatewayBaseUrl,
+              semanticKnowledgeSearch: settings.semanticKnowledgeSearch,
               baseUrl: settings.baseUrl,
               apiKey: settings.apiKey,
               selectedModel: settings.selectedModel,
@@ -779,6 +802,37 @@ class _MessageFooter extends StatelessWidget {
   }
 
 
+
+
+  Future<void> _quoteMessage(BuildContext context) async {
+    final chat = context.read<ChatProvider>();
+    await chat.quoteToComposer(messageIndex);
+    // composer page listens focusQuery == quote via parent; also copy helper text
+    await Clipboard.setData(ClipboardData(text: '> ${message.content}\n\n'));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已引用（并复制到剪贴板，可粘贴到输入框）'), duration: Duration(seconds: 2)),
+    );
+  }
+
+  Future<void> _togglePin(BuildContext context) async {
+    final chat = context.read<ChatProvider>();
+    final pinned = message.citations.any((c) => c.source == 'pin');
+    await chat.pinMessage(messageIndex, pinned: !pinned);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(pinned ? '已取消固定' : '已固定消息'), duration: const Duration(seconds: 1)),
+    );
+  }
+
+  Future<void> _branchFromHere(BuildContext context) async {
+    final chat = context.read<ChatProvider>();
+    await chat.branchFromMessage(messageIndex);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已创建会话分支'), duration: Duration(seconds: 1)),
+    );
+  }
 
   Future<void> _speakMessage(BuildContext context) async {
     final content = message.content.trim();
@@ -1082,12 +1136,20 @@ class _MessageFooter extends StatelessWidget {
 }
 
 
-class _ToolRunChip extends StatelessWidget {
+class _ToolRunChip extends StatefulWidget {
   final ToolRunRecord run;
   const _ToolRunChip({required this.run});
 
   @override
+  State<_ToolRunChip> createState() => _ToolRunChipState();
+}
+
+class _ToolRunChipState extends State<_ToolRunChip> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
+    final run = widget.run;
     final cs = Theme.of(context).colorScheme;
     final color = switch (run.status) {
       ChatToolRunStatus.success => cs.primary,
@@ -1108,21 +1170,50 @@ class _ToolRunChip extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${run.name} · ${run.status.name}',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: color,
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${run.name} · ${run.status.name}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                    ),
+                  ),
+                ),
+                Icon(_expanded ? Icons.expand_less : Icons.expand_more, size: 16, color: color),
+              ],
             ),
           ),
           if (run.resultPreview.trim().isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(
+            SelectableText(
               run.resultPreview,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
+              maxLines: _expanded ? null : 3,
               style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ],
+          if (_expanded) ...[
+            const SizedBox(height: 6),
+            SelectableText(
+              run.argumentsJson,
+              style: TextStyle(fontSize: 11, color: cs.outline, fontFamily: 'monospace'),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: run.resultPreview.isEmpty ? run.argumentsJson : run.resultPreview));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已复制工具输出'), duration: Duration(seconds: 1)),
+                  );
+                },
+                icon: const Icon(Icons.copy, size: 14),
+                label: const Text('复制输出'),
+              ),
             ),
           ],
         ],
@@ -1218,6 +1309,52 @@ class _ReasoningPanelState extends State<_ReasoningPanel> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class _SiblingSwitcher extends StatelessWidget {
+  final int messageIndex;
+  const _SiblingSwitcher({required this.messageIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    final chat = context.watch<ChatProvider>();
+    final siblings = chat.siblingsOf(messageIndex);
+    if (siblings.length <= 1) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    final activeIdx = siblings.indexWhere((m) => m.isActiveBranch);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Icon(Icons.account_tree_outlined, size: 14, color: cs.outline),
+          const SizedBox(width: 6),
+          Text('分支 ${ (activeIdx < 0 ? 1 : activeIdx + 1) }/${siblings.length}', style: TextStyle(fontSize: 11, color: cs.outline)),
+          const Spacer(),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: activeIdx <= 0
+                ? null
+                : () {
+                    final abs = chat.messages.indexOf(siblings[activeIdx - 1]);
+                    if (abs >= 0) chat.activateSibling(messageIndex: messageIndex, siblingAbsoluteIndex: abs);
+                  },
+            icon: const Icon(Icons.chevron_left, size: 18),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            onPressed: activeIdx >= siblings.length - 1
+                ? null
+                : () {
+                    final abs = chat.messages.indexOf(siblings[activeIdx + 1]);
+                    if (abs >= 0) chat.activateSibling(messageIndex: messageIndex, siblingAbsoluteIndex: abs);
+                  },
+            icon: const Icon(Icons.chevron_right, size: 18),
+          ),
         ],
       ),
     );

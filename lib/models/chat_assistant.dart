@@ -8,6 +8,10 @@ class ChatAssistant {
   final String description;
   final String systemPrompt;
   final String? preferredModel;
+  final bool enableWebSearch;
+  final bool enableKnowledge;
+  final bool enableMcp;
+  final bool enableImage;
 
   const ChatAssistant({
     required this.id,
@@ -16,6 +20,10 @@ class ChatAssistant {
     required this.description,
     required this.systemPrompt,
     this.preferredModel,
+    this.enableWebSearch = true,
+    this.enableKnowledge = true,
+    this.enableMcp = false,
+    this.enableImage = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -25,6 +33,10 @@ class ChatAssistant {
     'description': description,
     'systemPrompt': systemPrompt,
     if (preferredModel != null) 'preferredModel': preferredModel,
+    'enableWebSearch': enableWebSearch,
+    'enableKnowledge': enableKnowledge,
+    'enableMcp': enableMcp,
+    'enableImage': enableImage,
   };
 
   factory ChatAssistant.fromJson(Map<String, dynamic> json) => ChatAssistant(
@@ -34,6 +46,10 @@ class ChatAssistant {
     description: (json['description'] ?? '').toString(),
     systemPrompt: (json['systemPrompt'] ?? '').toString(),
     preferredModel: json['preferredModel']?.toString(),
+    enableWebSearch: json['enableWebSearch'] as bool? ?? true,
+    enableKnowledge: json['enableKnowledge'] as bool? ?? true,
+    enableMcp: json['enableMcp'] as bool? ?? false,
+    enableImage: json['enableImage'] as bool? ?? false,
   );
 }
 
@@ -66,6 +82,9 @@ class ChatAssistantCatalog {
       description: '适合检索整理与带来源的分析。',
       systemPrompt:
           'You are a careful research assistant. Prefer verified facts, cite sources when tools provide them, and separate facts from speculation.',
+      enableWebSearch: true,
+      enableKnowledge: true,
+      enableMcp: true,
     ),
     ChatAssistant(
       id: 'translator',

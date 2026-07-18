@@ -146,6 +146,19 @@ class SettingsProvider extends ChangeNotifier {
   static const int maxCompareModels = 3;
   String _imageToolModel = '';
   List<McpServerConfig> _mcpServers = [];
+  List<WebSearchProviderConfig> _webSearchProviders = [
+    const WebSearchProviderConfig(
+      id: 'ddg',
+      name: 'DuckDuckGo',
+      type: 'duckduckgo',
+      enabled: true,
+    ),
+  ];
+  String _activeWebSearchProviderId = 'ddg';
+  String _toolGatewayBaseUrl = '';
+  bool _composerShowToolChips = true;
+  bool _semanticKnowledgeSearch = true;
+  double _reasoningBudget = 0.5; // 0..1 soft preference
 
   bool get chatToolsEnabled => _chatToolsEnabled;
   bool get toolWebSearchEnabled => _toolWebSearchEnabled;
@@ -160,6 +173,13 @@ class SettingsProvider extends ChangeNotifier {
   int get compareModelLimit => maxCompareModels;
   String get imageToolModel => _imageToolModel;
   List<McpServerConfig> get mcpServers => List.unmodifiable(_mcpServers);
+  List<WebSearchProviderConfig> get webSearchProviders =>
+      List.unmodifiable(_webSearchProviders);
+  String get activeWebSearchProviderId => _activeWebSearchProviderId;
+  String get toolGatewayBaseUrl => _toolGatewayBaseUrl;
+  bool get composerShowToolChips => _composerShowToolChips;
+  bool get semanticKnowledgeSearch => _semanticKnowledgeSearch;
+  double get reasoningBudget => _reasoningBudget;
 
   bool _loaded = false;
   bool get loaded => _loaded;
@@ -297,6 +317,28 @@ class SettingsProvider extends ChangeNotifier {
           prefs.getBool(_chatToolsOnboardingDismissedKey) ??
               _chatToolsOnboardingDismissed;
       final mcpRaw = prefs.getString('mcpServersJson');
+      final searchRaw = prefs.getString('webSearchProvidersJson');
+      if (searchRaw != null && searchRaw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(searchRaw);
+          if (decoded is List) {
+            _webSearchProviders = decoded
+                .whereType<Object>()
+                .map((e) => WebSearchProviderConfig.fromJson(
+                      Map<String, dynamic>.from(e as Map),
+                    ))
+                .toList();
+          }
+        } catch (_) {}
+      }
+      _activeWebSearchProviderId =
+          prefs.getString('activeWebSearchProviderId') ?? _activeWebSearchProviderId;
+      _toolGatewayBaseUrl = prefs.getString('toolGatewayBaseUrl') ?? _toolGatewayBaseUrl;
+      _composerShowToolChips =
+          prefs.getBool('composerShowToolChips') ?? _composerShowToolChips;
+      _semanticKnowledgeSearch =
+          prefs.getBool('semanticKnowledgeSearch') ?? _semanticKnowledgeSearch;
+      _reasoningBudget = prefs.getDouble('reasoningBudget') ?? _reasoningBudget;
       if (mcpRaw != null && mcpRaw.isNotEmpty) {
         try {
           final decoded = jsonDecode(mcpRaw);
@@ -509,6 +551,15 @@ class SettingsProvider extends ChangeNotifier {
       'mcpServersJson',
       jsonEncode(_mcpServers.map((e) => e.toJson()).toList()),
     );
+    await prefs.setString(
+      'webSearchProvidersJson',
+      jsonEncode(_webSearchProviders.map((e) => e.toJson()).toList()),
+    );
+    await prefs.setString('activeWebSearchProviderId', _activeWebSearchProviderId);
+    await prefs.setString('toolGatewayBaseUrl', _toolGatewayBaseUrl);
+    await prefs.setBool('composerShowToolChips', _composerShowToolChips);
+    await prefs.setBool('semanticKnowledgeSearch', _semanticKnowledgeSearch);
+    await prefs.setDouble('reasoningBudget', _reasoningBudget);
 
     await prefs.setDouble('fontSize', _fontSize);
     await prefs.setString('fontFamily', _fontFamily);
@@ -729,6 +780,46 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setToolKnowledgeEnabled(bool value) async {
     _toolKnowledgeEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setWebSearchProviders(List<WebSearchProviderConfig> providers) async {
+    _webSearchProviders = List<WebSearchProviderConfig>.from(providers);
+    if (!_webSearchProviders.any((p) => p.id == _activeWebSearchProviderId) &&
+        _webSearchProviders.isNotEmpty) {
+      _activeWebSearchProviderId = _webSearchProviders.first.id;
+    }
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setActiveWebSearchProviderId(String id) async {
+    _activeWebSearchProviderId = id;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolGatewayBaseUrl(String value) async {
+    _toolGatewayBaseUrl = value.trim();
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setComposerShowToolChips(bool value) async {
+    _composerShowToolChips = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setSemanticKnowledgeSearch(bool value) async {
+    _semanticKnowledgeSearch = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setReasoningBudget(double value) async {
+    _reasoningBudget = value.clamp(0.0, 1.0);
     notifyListeners();
     await _save();
   }

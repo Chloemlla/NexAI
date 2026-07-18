@@ -15,6 +15,8 @@ class ChatToolCatalog {
   static const createNote = 'create_note';
   static const knowledgeSearch = 'knowledge_search';
   static const knowledgeRead = 'knowledge_read';
+  static const knowledgeManage = 'knowledge_manage';
+  static const getCurrentTime = 'get_current_time';
 
   static const List<ChatToolDefinition> all = [
     ChatToolDefinition(
@@ -213,6 +215,46 @@ class ChatToolCatalog {
         'required': ['doc_id'],
       },
     ),
+    ChatToolDefinition(
+      name: knowledgeManage,
+      description:
+          'Manage local knowledge docs: create/update/delete text docs in a knowledge base.',
+      approval: ChatToolApprovalPolicy.prompt,
+      readOnly: false,
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'action': {
+            'type': 'string',
+            'description': 'create | update | delete',
+          },
+          'doc_id': {'type': 'string'},
+          'base_id': {'type': 'string'},
+          'title': {'type': 'string'},
+          'content': {'type': 'string'},
+          'folder': {'type': 'string'},
+          'tags': {
+            'type': 'array',
+            'items': {'type': 'string'},
+          },
+        },
+        'required': ['action'],
+      },
+    ),
+    ChatToolDefinition(
+      name: getCurrentTime,
+      description: 'Get the current local datetime ISO string.',
+      approval: ChatToolApprovalPolicy.auto,
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'timezone': {
+            'type': 'string',
+            'description': 'Optional IANA timezone hint; ignored if unsupported.',
+          },
+        },
+      },
+    ),
   ];
 
   static ChatToolDefinition? byName(String name) {
@@ -230,6 +272,7 @@ class ChatToolCatalog {
     required bool fetchUrlEnabled,
     required bool createNoteEnabled,
     required bool knowledgeEnabled,
+    bool timeEnabled = true,
   }) {
     return all.where((tool) {
       switch (tool.name) {
@@ -248,7 +291,10 @@ class ChatToolCatalog {
           return createNoteEnabled;
         case knowledgeSearch:
         case knowledgeRead:
+        case knowledgeManage:
           return knowledgeEnabled;
+        case getCurrentTime:
+          return timeEnabled;
         default:
           return false;
       }

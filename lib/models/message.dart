@@ -54,6 +54,47 @@ class MessageStats {
     estimatedCost: other.estimatedCost ?? estimatedCost,
   );
 
+
+  List<Map<String, dynamic>> toParts() {
+    final parts = <Map<String, dynamic>>[];
+    if (_reasoning.isNotEmpty) {
+      parts.add({'type': 'reasoning', 'text': _reasoning});
+    }
+    for (final a in attachments) {
+      parts.add({
+        'type': a.type == 'image' ? 'image' : 'file',
+        'name': a.name,
+        'path': a.path,
+        if (a.mimeType != null) 'mimeType': a.mimeType,
+      });
+    }
+    for (final run in toolRuns) {
+      parts.add({
+        'type': 'tool',
+        'callId': run.callId,
+        'name': run.name,
+        'status': run.status.name,
+        'resultPreview': run.resultPreview,
+      });
+    }
+    if (_content.isNotEmpty) {
+      parts.add({'type': 'text', 'text': _content});
+    }
+    for (final c in citations) {
+      parts.add({
+        'type': 'citation',
+        'title': c.title,
+        'url': c.url,
+        'snippet': c.snippet,
+        if (c.source != null) 'source': c.source,
+      });
+    }
+    if (stats != null) {
+      parts.add({'type': 'stats', 'data': stats!.toJson()});
+    }
+    return parts;
+  }
+
   Map<String, dynamic> toJson() => {
     if (promptTokens != null) 'promptTokens': promptTokens,
     if (completionTokens != null) 'completionTokens': completionTokens,
@@ -106,6 +147,47 @@ class ChatAttachment {
     this.mimeType,
     this.sizeBytes,
   });
+
+
+  List<Map<String, dynamic>> toParts() {
+    final parts = <Map<String, dynamic>>[];
+    if (_reasoning.isNotEmpty) {
+      parts.add({'type': 'reasoning', 'text': _reasoning});
+    }
+    for (final a in attachments) {
+      parts.add({
+        'type': a.type == 'image' ? 'image' : 'file',
+        'name': a.name,
+        'path': a.path,
+        if (a.mimeType != null) 'mimeType': a.mimeType,
+      });
+    }
+    for (final run in toolRuns) {
+      parts.add({
+        'type': 'tool',
+        'callId': run.callId,
+        'name': run.name,
+        'status': run.status.name,
+        'resultPreview': run.resultPreview,
+      });
+    }
+    if (_content.isNotEmpty) {
+      parts.add({'type': 'text', 'text': _content});
+    }
+    for (final c in citations) {
+      parts.add({
+        'type': 'citation',
+        'title': c.title,
+        'url': c.url,
+        'snippet': c.snippet,
+        if (c.source != null) 'source': c.source,
+      });
+    }
+    if (stats != null) {
+      parts.add({'type': 'stats', 'data': stats!.toJson()});
+    }
+    return parts;
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -209,6 +291,47 @@ class Message {
     }
   }
 
+
+  List<Map<String, dynamic>> toParts() {
+    final parts = <Map<String, dynamic>>[];
+    if (_reasoning.isNotEmpty) {
+      parts.add({'type': 'reasoning', 'text': _reasoning});
+    }
+    for (final a in attachments) {
+      parts.add({
+        'type': a.type == 'image' ? 'image' : 'file',
+        'name': a.name,
+        'path': a.path,
+        if (a.mimeType != null) 'mimeType': a.mimeType,
+      });
+    }
+    for (final run in toolRuns) {
+      parts.add({
+        'type': 'tool',
+        'callId': run.callId,
+        'name': run.name,
+        'status': run.status.name,
+        'resultPreview': run.resultPreview,
+      });
+    }
+    if (_content.isNotEmpty) {
+      parts.add({'type': 'text', 'text': _content});
+    }
+    for (final c in citations) {
+      parts.add({
+        'type': 'citation',
+        'title': c.title,
+        'url': c.url,
+        'snippet': c.snippet,
+        if (c.source != null) 'source': c.source,
+      });
+    }
+    if (stats != null) {
+      parts.add({'type': 'stats', 'data': stats!.toJson()});
+    }
+    return parts;
+  }
+
   Map<String, dynamic> toJson() => {
     'role': role,
     'content': _content,
@@ -224,6 +347,7 @@ class Message {
       'citations': citations.map((c) => c.toJson()).toList(),
     if (attachments.isNotEmpty)
       'attachments': attachments.map((a) => a.toJson()).toList(),
+    'parts': toParts(),
     if (stats != null) 'stats': stats!.toJson(),
     if (modelId != null && modelId!.isNotEmpty) 'modelId': modelId,
     if (siblingGroupId != null) 'siblingGroupId': siblingGroupId,
@@ -312,6 +436,47 @@ class Conversation {
     this.systemPromptOverride,
     List<String>? compareModels,
   }) : compareModels = compareModels ?? <String>[];
+
+
+  List<Map<String, dynamic>> toParts() {
+    final parts = <Map<String, dynamic>>[];
+    if (_reasoning.isNotEmpty) {
+      parts.add({'type': 'reasoning', 'text': _reasoning});
+    }
+    for (final a in attachments) {
+      parts.add({
+        'type': a.type == 'image' ? 'image' : 'file',
+        'name': a.name,
+        'path': a.path,
+        if (a.mimeType != null) 'mimeType': a.mimeType,
+      });
+    }
+    for (final run in toolRuns) {
+      parts.add({
+        'type': 'tool',
+        'callId': run.callId,
+        'name': run.name,
+        'status': run.status.name,
+        'resultPreview': run.resultPreview,
+      });
+    }
+    if (_content.isNotEmpty) {
+      parts.add({'type': 'text', 'text': _content});
+    }
+    for (final c in citations) {
+      parts.add({
+        'type': 'citation',
+        'title': c.title,
+        'url': c.url,
+        'snippet': c.snippet,
+        if (c.source != null) 'source': c.source,
+      });
+    }
+    if (stats != null) {
+      parts.add({'type': 'stats', 'data': stats!.toJson()});
+    }
+    return parts;
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

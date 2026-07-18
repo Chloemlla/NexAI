@@ -630,7 +630,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: settings.toolKnowledgeEnabled,
                         onChanged: settings.setToolKnowledgeEnabled,
                         title: Text('知识库 knowledge_*', style: tt.bodyMedium),
-                        subtitle: Text('仅支持文本文件导入（txt/md/json/csv/log）', style: tt.bodySmall),
+                        subtitle: Text('支持多库/目录；txt/md/json/csv/log，实验性 pdf/docx 文本提取', style: tt.bodySmall),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
@@ -652,6 +652,56 @@ class _SettingsPageState extends State<SettingsPage> {
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () => _editMcpServers(context, settings),
                         ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.composerShowToolChips,
+                        onChanged: settings.setComposerShowToolChips,
+                        title: Text('输入框工具芯片', style: tt.bodyMedium),
+                        subtitle: Text('在聊天输入区快速开关联网/知识库/绘图/MCP', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.semanticKnowledgeSearch,
+                        onChanged: settings.setSemanticKnowledgeSearch,
+                        title: Text('知识库语义加权', style: tt.bodyMedium),
+                        subtitle: Text('在关键词检索上叠加本地词频语义分', style: tt.bodySmall),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('工具网关 Base URL', style: tt.bodyMedium),
+                        subtitle: Text(
+                          settings.toolGatewayBaseUrl.isEmpty
+                              ? '未配置（搜索/抓取优先本地回退）'
+                              : settings.toolGatewayBaseUrl,
+                          style: tt.bodySmall,
+                        ),
+                        trailing: const Icon(Icons.edit_outlined),
+                        onTap: () => _editToolGateway(context, settings),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('联网搜索 Provider', style: tt.bodyMedium),
+                        subtitle: Text(
+                          settings.webSearchProviders.isEmpty
+                              ? 'DuckDuckGo 默认'
+                              : '当前：${settings.activeWebSearchProviderId}（共 ${settings.webSearchProviders.length}）',
+                          style: tt.bodySmall,
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => _editWebSearchProviders(context, settings),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('Reasoning 强度', style: tt.bodyMedium),
+                        subtitle: Text('${(settings.reasoningBudget * 100).round()}%', style: tt.bodySmall),
+                        trailing: SizedBox(
+                          width: 140,
+                          child: Slider(
+                            value: settings.reasoningBudget,
+                            onChanged: (v) => settings.setReasoningBudget(v),
+                          ),
+                        ),
+                      ),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text('最大工具轮次', style: tt.bodyMedium),

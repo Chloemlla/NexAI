@@ -278,6 +278,10 @@ class _ChatPageState extends State<ChatPage> {
               mcpServers: settings.remoteMcpEnabled
                   ? settings.mcpServers.where((s) => s.enabled).toList()
                   : const <McpServerConfig>[],
+              webSearchProviders: settings.webSearchProviders,
+              activeWebSearchProviderId: settings.activeWebSearchProviderId,
+              toolGatewayBaseUrl: settings.toolGatewayBaseUrl,
+              semanticKnowledgeSearch: settings.semanticKnowledgeSearch,
               baseUrl: settings.baseUrl,
               apiKey: settings.apiKey,
               selectedModel: settings.selectedModel,
@@ -764,6 +768,11 @@ class _ChatPageState extends State<ChatPage> {
       await chat.newConversation();
     }
     await chat.updateConversationSettings(assistantId: selected);
+    final assistant = ChatAssistantCatalog.byId(selected);
+    // Soft policy: do not force-disable user choices, only suggest enable for research-like assistants.
+    if (assistant.enableWebSearch && !settings.toolWebSearchEnabled) {
+      // leave as-is; chips remain user controlled
+    }
     if (!mounted) return;
     setState(() {});
   }
@@ -840,29 +849,51 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildFollowUpQueueBar(ColorScheme cs, ChatProvider chat) {
-    if (chat.followUpQueueLength == 0) return const SizedBox.shrink();
+    if (chat.followUpQueueLength <= 0) return const SizedBox.shrink();
+    final items = chat.followUpQueue;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: cs.secondaryContainer.withAlpha(120),
         borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.queue_rounded, size: 16, color: cs.secondary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '已排队 ${chat.followUpQueueLength} 条后续消息',
-              style: TextStyle(fontSize: 12, color: cs.onSecondaryContainer),
-            ),
+          Row(
+            children: [
+              Icon(Icons.queue_rounded, size: 16, color: cs.secondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '已排队 ${chat.followUpQueueLength} 条后续消息',
+                  style: TextStyle(fontSize: 12, color: cs.onSecondaryContainer),
+                ),
+              ),
+              TextButton(
+                onPressed: chat.clearFollowUpQueue,
+                child: const Text('清空'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: chat.clearFollowUpQueue,
-            child: const Text('清空'),
-          ),
+          ...List.generate(items.length, (i) {
+            return ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                items[i],
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.close, size: 16),
+                onPressed: () => chat.removeFollowUpAt(i),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -872,6 +903,69 @@ class _ChatPageState extends State<ChatPage> {
   int _lineCount(String text) {
     if (text.isEmpty) return 0;
     return '\n'.allMatches(text).length + 1;
+  }
+
+
+  Widget _buildComposerToolChips(ColorScheme cs, SettingsProvider settings) {
+    if (!settings.composerShowToolChips || !settings.chatToolsEnabled) {
+      return const SizedBox.shrink();
+    }
+    Widget chip({
+      required String label,
+      required bool value,
+      required ValueChanged<bool> onChanged,
+      required IconData icon,
+    }) {
+      return FilterChip(
+        selected: value,
+        label: Text(label),
+        avatar: Icon(icon, size: 16),
+        onSelected: (v) => onChanged(v),
+        visualDensity: VisualDensity.compact,
+      );
+    }
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          chip(
+            label: '联网',
+            value: settings.toolWebSearchEnabled,
+            icon: Icons.travel_explore,
+            onChanged: settings.setToolWebSearchEnabled,
+          ),
+          const SizedBox(width: 6),
+          chip(
+            label: '笔记',
+            value: settings.toolNotesEnabled,
+            icon: Icons.note_alt_outlined,
+            onChanged: settings.setToolNotesEnabled,
+          ),
+          const SizedBox(width: 6),
+          chip(
+            label: '知识库',
+            value: settings.toolKnowledgeEnabled,
+            icon: Icons.menu_book_outlined,
+            onChanged: settings.setToolKnowledgeEnabled,
+          ),
+          const SizedBox(width: 6),
+          chip(
+            label: '绘图',
+            value: settings.toolImageEnabled,
+            icon: Icons.image_outlined,
+            onChanged: settings.setToolImageEnabled,
+          ),
+          const SizedBox(width: 6),
+          chip(
+            label: 'MCP',
+            value: settings.remoteMcpEnabled,
+            icon: Icons.hub_outlined,
+            onChanged: settings.setRemoteMcpEnabled,
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -961,6 +1055,11 @@ class _ChatPageState extends State<ChatPage> {
 
         if (_hasText) _buildComposerActionBar(cs),
         if (_showComposerPreview && _hasText) _buildPreviewBubble(cs),
+        if (settings.composerShowToolChips)
+          Padding(
+            padding: EdgeInsets.fromLTRB(contentHorizontalPad, 0, contentHorizontalPad, 0),
+            child: _buildComposerToolChips(cs, settings),
+          ),
         _buildFollowUpQueueBar(cs, chat),
         if (_pendingAttachments.isNotEmpty)
           Padding(
@@ -1871,6 +1970,8 @@ class _ThinkingDotsState extends State<_ThinkingDots>
     _ctrl.dispose();
     super.dispose();
   }
+
+
 
   @override
   Widget build(BuildContext context) {

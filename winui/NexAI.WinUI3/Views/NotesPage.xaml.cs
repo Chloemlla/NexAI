@@ -19,7 +19,7 @@ public sealed partial class NotesPage : Page
         InitializeComponent();
         _notesStore = App.Current.Services.GetRequiredService<INotesStore>();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
-        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(RefreshList);
+        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(() => { ApplyStaticLocalization(); RefreshList(); });
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -37,6 +37,19 @@ public sealed partial class NotesPage : Page
     }
 
     private void OnChanged(object? sender, EventArgs e) => DispatcherQueue.TryEnqueue(RefreshList);
+
+
+    private void ApplyStaticLocalization()
+    {
+        NotesTitleText.Text = _localization.GetString("Notes.Title");
+        NewNoteButton.Content = _localization.GetString("Common.New");
+        SearchBox.PlaceholderText = _localization.GetString("Notes.SearchPlaceholder");
+        TitleBox.Header = _localization.GetString("Notes.Title");
+        TitleBox.PlaceholderText = _localization.GetString("Notes.Untitled");
+        DeleteButton.Content = _localization.GetString("Common.Delete");
+        ContentBox.PlaceholderText = _localization.GetString("Notes.EditorPlaceholder");
+        SaveButton.Content = _localization.GetString("Common.Save");
+    }
 
     private void RefreshList()
     {

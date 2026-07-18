@@ -15,7 +15,6 @@ public sealed partial class PasswordToolPage : Page
 {
     private readonly IPasswordVaultStore _vault;
     private readonly List<string> _batch = [];
-    private bool _suppressGenerate;
 
     public PasswordToolPage()
     {
@@ -69,7 +68,7 @@ public sealed partial class PasswordToolPage : Page
 
     private void GenerateCurrent()
     {
-        if (_suppressGenerate || GeneratedBox is null) return;
+        if (GeneratedBox is null) return;
         var password = PasswordGenerator.Generate(BuildOptions());
         GeneratedBox.Text = password;
         var strength = PasswordGenerator.CalculateStrength(password);

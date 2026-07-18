@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -7,6 +8,7 @@ namespace NexAI.Infrastructure.Security;
 /// DPAPI helper for current-user secret protection on Windows.
 /// Values are stored as: "dpapi:" + base64(protectedBytes)
 /// </summary>
+[SupportedOSPlatform("windows")]
 public static class SecretProtector
 {
     private const string Prefix = "dpapi:";

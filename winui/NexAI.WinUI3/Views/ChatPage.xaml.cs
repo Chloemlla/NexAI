@@ -203,6 +203,22 @@ public sealed partial class ChatPage : Page
         UpdateComposerState();
     }
 
+
+    private void ApplyStaticLocalization()
+    {
+        ConversationsTitleText.Text = _localization.GetString("Chat.Conversations");
+        NewChatButton.Content = _localization.GetString("Common.New");
+        SearchBox.PlaceholderText = _localization.GetString("Chat.SearchPlaceholder");
+        ConversationEmptyTitleText.Text = _localization.GetString("Chat.EmptyTitle");
+        ConversationEmptySubtitleText.Text = _localization.GetString("Chat.EmptySubtitle");
+        DeleteCurrentButton.Content = _localization.GetString("Common.Delete");
+        MessageEmptyTitleText.Text = _localization.GetString("Chat.NoMessagesTitle");
+        MessageEmptySubtitleText.Text = _localization.GetString("Chat.NoMessagesSubtitle");
+        ComposerBox.PlaceholderText = _localization.GetString("Chat.ComposerPlaceholder");
+        SendButton.Content = _localization.GetString("Common.Send");
+        StopButton.Content = _localization.GetString("Common.Stop");
+    }
+
     private void RefreshUi()
     {
         ApplyStaticLocalization();

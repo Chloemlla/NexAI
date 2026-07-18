@@ -23,15 +23,56 @@ DateTime _dateTimeValue(Map<String, dynamic> json, String key) {
   throw FormatException('Expected "$key" to be an ISO-8601 timestamp');
 }
 
+
+class ChatAttachment {
+  final String id;
+  final String type; // image | file
+  final String name;
+  final String path;
+  final String? mimeType;
+  final int? sizeBytes;
+
+  const ChatAttachment({
+    required this.id,
+    required this.type,
+    required this.name,
+    required this.path,
+    this.mimeType,
+    this.sizeBytes,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'type': type,
+    'name': name,
+    'path': path,
+    if (mimeType != null) 'mimeType': mimeType,
+    if (sizeBytes != null) 'sizeBytes': sizeBytes,
+  };
+
+  factory ChatAttachment.fromJson(Map<String, dynamic> json) => ChatAttachment(
+    id: (json['id'] ?? '').toString(),
+    type: (json['type'] ?? 'file').toString(),
+    name: (json['name'] ?? '').toString(),
+    path: (json['path'] ?? '').toString(),
+    mimeType: json['mimeType']?.toString(),
+    sizeBytes: json['sizeBytes'] is int
+        ? json['sizeBytes'] as int
+        : int.tryParse(json['sizeBytes']?.toString() ?? ''),
+  );
+}
+
 class Message {
   final String role;
   String _content;
+  String _reasoning;
   final DateTime timestamp;
   bool _isError;
   final String? toolCallId;
   final List<ToolCallRecord> toolCalls;
   final List<ToolRunRecord> toolRuns;
   final List<Citation> citations;
+  final List<ChatAttachment> attachments;
 
   Message({
     required this.role,
@@ -42,19 +83,34 @@ class Message {
     List<ToolCallRecord>? toolCalls,
     List<ToolRunRecord>? toolRuns,
     List<Citation>? citations,
+    List<ChatAttachment>? attachments,
+    String reasoning = '',
   }) : _content = content,
+       _reasoning = reasoning,
        _isError = isError,
        toolCalls = toolCalls ?? <ToolCallRecord>[],
        toolRuns = toolRuns ?? <ToolRunRecord>[],
-       citations = citations ?? <Citation>[];
+       citations = citations ?? <Citation>[],
+       attachments = attachments ?? <ChatAttachment>[];
 
   String get content => _content;
+  String get reasoning => _reasoning;
   bool get isError => _isError;
   bool get hasToolCalls => toolCalls.isNotEmpty;
   bool get isToolResult => role == 'tool';
+  bool get hasAttachments => attachments.isNotEmpty;
 
   void updateContent(String newContent) {
     _content = newContent;
+  }
+
+  void updateReasoning(String value) {
+    _reasoning = value;
+  }
+
+  void appendReasoning(String delta) {
+    if (delta.isEmpty) return;
+    _reasoning = '$_reasoning$delta';
   }
 
   void markAsError() {
@@ -84,6 +140,7 @@ class Message {
     'content': _content,
     'timestamp': timestamp.toIso8601String(),
     'isError': _isError,
+    if (_reasoning.isNotEmpty) 'reasoning': _reasoning,
     if (toolCallId != null) 'toolCallId': toolCallId,
     if (toolCalls.isNotEmpty)
       'toolCalls': toolCalls.map((c) => c.toJson()).toList(),
@@ -91,6 +148,8 @@ class Message {
       'toolRuns': toolRuns.map((r) => r.toJson()).toList(),
     if (citations.isNotEmpty)
       'citations': citations.map((c) => c.toJson()).toList(),
+    if (attachments.isNotEmpty)
+      'attachments': attachments.map((a) => a.toJson()).toList(),
   };
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -108,6 +167,8 @@ class Message {
       toolCalls: _parseToolCalls(toolCallsRaw),
       toolRuns: _parseToolRuns(toolRunsRaw),
       citations: _parseCitations(citationsRaw),
+      attachments: _parseAttachments(json['attachments']),
+      reasoning: (json['reasoning'] ?? '').toString(),
     );
   }
 }
@@ -141,12 +202,18 @@ class Conversation {
   String title;
   final List<Message> messages;
   final DateTime createdAt;
+  String assistantId;
+  String? modelOverride;
+  String? systemPromptOverride;
 
   Conversation({
     required this.id,
     required this.title,
     required this.messages,
     required this.createdAt,
+    this.assistantId = 'general',
+    this.modelOverride,
+    this.systemPromptOverride,
   });
 
   Map<String, dynamic> toJson() => {
@@ -154,6 +221,11 @@ class Conversation {
     'title': title,
     'messages': messages.map((m) => m.toJson()).toList(),
     'createdAt': createdAt.toIso8601String(),
+    'assistantId': assistantId,
+    if (modelOverride != null && modelOverride!.isNotEmpty)
+      'modelOverride': modelOverride,
+    if (systemPromptOverride != null && systemPromptOverride!.isNotEmpty)
+      'systemPromptOverride': systemPromptOverride,
   };
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
@@ -163,6 +235,9 @@ class Conversation {
       json['messages'],
     ).map((m) => Message.fromJson(asStringMap(m, 'message'))).toList(),
     createdAt: _dateTimeValue(json, 'createdAt'),
+    assistantId: (json['assistantId'] ?? 'general').toString(),
+    modelOverride: json['modelOverride']?.toString(),
+    systemPromptOverride: json['systemPromptOverride']?.toString(),
   );
 
   static String encodeList(List<Conversation> list) =>

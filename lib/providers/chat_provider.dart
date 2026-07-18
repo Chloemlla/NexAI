@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/chat_assistant.dart';
 import '../models/chat_tool.dart';
 import '../models/message.dart';
 import '../models/search_result.dart';
@@ -34,6 +35,7 @@ class ChatProvider extends ChangeNotifier {
   String? _activeToolName;
   CancelToken? _cancelToken;
   int _runSerial = 0;
+  final List<_QueuedChatTurn> _followUpQueue = [];
 
   ToolApprovalHandler? approvalHandler;
   ChatToolRuntimeContext? toolRuntimeContext;
@@ -53,6 +55,9 @@ class ChatProvider extends ChangeNotifier {
   int get currentIndex => _currentIndex;
   bool get isLoading => _isLoading;
   String? get activeToolName => _activeToolName;
+  List<String> get followUpQueue =>
+      _followUpQueue.map((item) => item.content).toList(growable: false);
+  int get followUpQueueLength => _followUpQueue.length;
   Conversation? get currentConversation =>
       _currentIndex >= 0 && _currentIndex < _conversations.length
       ? _conversations[_currentIndex]
@@ -74,6 +79,61 @@ class ChatProvider extends ChangeNotifier {
   void cancelGeneration() {
     final token = _cancelToken;
     if (token != null && !token.isCancelled) token.cancel('user_cancelled');
+  }
+
+  void clearFollowUpQueue() {
+    if (_followUpQueue.isEmpty) return;
+    _followUpQueue.clear();
+    notifyListeners();
+  }
+
+  Future<void> updateConversationSettings({
+    String? assistantId,
+    String? modelOverride,
+    String? systemPromptOverride,
+    bool clearModelOverride = false,
+    bool clearSystemPromptOverride = false,
+  }) async {
+    final conversation = currentConversation;
+    if (conversation == null) return;
+    if (assistantId != null && assistantId.isNotEmpty) {
+      conversation.assistantId = assistantId;
+    }
+    if (clearModelOverride) {
+      conversation.modelOverride = null;
+    } else if (modelOverride != null) {
+      conversation.modelOverride =
+          modelOverride.trim().isEmpty ? null : modelOverride.trim();
+    }
+    if (clearSystemPromptOverride) {
+      conversation.systemPromptOverride = null;
+    } else if (systemPromptOverride != null) {
+      conversation.systemPromptOverride = systemPromptOverride.trim().isEmpty
+          ? null
+          : systemPromptOverride.trim();
+    }
+    notifyListeners();
+    await _save();
+  }
+
+  String resolveSystemPrompt(String fallback) {
+    final conversation = currentConversation;
+    final override = conversation?.systemPromptOverride?.trim();
+    if (override != null && override.isNotEmpty) return override;
+    final assistant = ChatAssistantCatalog.byId(conversation?.assistantId);
+    if (assistant.systemPrompt.trim().isNotEmpty) return assistant.systemPrompt;
+    return fallback;
+  }
+
+  String resolveModel(String fallback) {
+    final conversation = currentConversation;
+    final override = conversation?.modelOverride?.trim();
+    if (override != null && override.isNotEmpty) return override;
+    final preferred = ChatAssistantCatalog.byId(conversation?.assistantId)
+        .preferredModel
+        ?.trim();
+    if (preferred != null && preferred.isNotEmpty) return preferred;
+    return fallback;
   }
 
   static bool _isSensitiveKey(String key) {
@@ -250,26 +310,35 @@ class ChatProvider extends ChangeNotifier {
     required String systemPrompt,
     required String vertexProjectId,
     required String vertexLocation,
+    List<ChatAttachment> attachments = const [],
   }) async {
-    if (_isLoading) return;
+    final trimmed = content.trim();
+    if (trimmed.isEmpty && attachments.isEmpty) return;
+
     if (currentConversation == null) await newConversation();
     final conversation = currentConversation!;
-    conversation.messages.add(Message(role: 'user', content: content, timestamp: DateTime.now()));
-    if (conversation.messages.where((m) => m.role == 'user').length == 1) {
-      conversation.title = content.length > 30 ? '${content.substring(0, 30)}...' : content;
-    }
-    await _performApiCall(
-      conversation: conversation,
+
+    final turn = _QueuedChatTurn(
+      content: trimmed,
+      attachments: List<ChatAttachment>.from(attachments),
       apiMode: apiMode,
       baseUrl: baseUrl,
       apiKey: apiKey,
-      model: model,
+      model: resolveModel(model),
       temperature: temperature,
       maxTokens: maxTokens,
-      systemPrompt: systemPrompt,
+      systemPrompt: resolveSystemPrompt(systemPrompt),
       vertexProjectId: vertexProjectId,
       vertexLocation: vertexLocation,
     );
+
+    if (_isLoading) {
+      _followUpQueue.add(turn);
+      notifyListeners();
+      return;
+    }
+
+    await _runQueuedTurn(conversation: conversation, turn: turn);
   }
 
   Future<void> resendMessage({
@@ -296,10 +365,10 @@ class ChatProvider extends ChangeNotifier {
       apiMode: apiMode,
       baseUrl: baseUrl,
       apiKey: apiKey,
-      model: model,
+      model: resolveModel(model),
       temperature: temperature,
       maxTokens: maxTokens,
-      systemPrompt: systemPrompt,
+      systemPrompt: resolveSystemPrompt(systemPrompt),
       vertexProjectId: vertexProjectId,
       vertexLocation: vertexLocation,
     );
@@ -331,10 +400,10 @@ class ChatProvider extends ChangeNotifier {
       apiMode: apiMode,
       baseUrl: baseUrl,
       apiKey: apiKey,
-      model: model,
+      model: resolveModel(model),
       temperature: temperature,
       maxTokens: maxTokens,
-      systemPrompt: systemPrompt,
+      systemPrompt: resolveSystemPrompt(systemPrompt),
       vertexProjectId: vertexProjectId,
       vertexLocation: vertexLocation,
     );
@@ -421,7 +490,53 @@ class ChatProvider extends ChangeNotifier {
       _cancelToken = null;
       notifyListeners();
       await _save();
+      await _drainFollowUpQueue(conversation);
     }
+  }
+
+  Future<void> _runQueuedTurn({
+    required Conversation conversation,
+    required _QueuedChatTurn turn,
+  }) async {
+    conversation.messages.add(
+      Message(
+        role: 'user',
+        content: turn.content,
+        timestamp: DateTime.now(),
+        attachments: turn.attachments,
+      ),
+    );
+    if (conversation.messages.where((m) => m.role == 'user').length == 1) {
+      final titleSource = turn.content.isNotEmpty
+          ? turn.content
+          : (turn.attachments.isNotEmpty ? turn.attachments.first.name : '新对话');
+      conversation.title = titleSource.length > 30
+          ? '${titleSource.substring(0, 30)}...'
+          : titleSource;
+    }
+    await _performApiCall(
+      conversation: conversation,
+      apiMode: turn.apiMode,
+      baseUrl: turn.baseUrl,
+      apiKey: turn.apiKey,
+      model: turn.model,
+      temperature: turn.temperature,
+      maxTokens: turn.maxTokens,
+      systemPrompt: turn.systemPrompt,
+      vertexProjectId: turn.vertexProjectId,
+      vertexLocation: turn.vertexLocation,
+    );
+  }
+
+  Future<void> _drainFollowUpQueue(Conversation conversation) async {
+    if (_isLoading || _followUpQueue.isEmpty) return;
+    if (currentConversation?.id != conversation.id) {
+      // Keep queue for the active conversation only.
+      return;
+    }
+    final next = _followUpQueue.removeAt(0);
+    notifyListeners();
+    await _runQueuedTurn(conversation: conversation, turn: next);
   }
 
   Future<void> _performOpenAiToolLoop({
@@ -574,6 +689,14 @@ class ChatProvider extends ChangeNotifier {
           if (content is String && content.isNotEmpty) {
             buffer.write(content);
             assistantMessage.updateContent(buffer.toString());
+            notifyListeners();
+          }
+
+          final reasoningDelta = deltaMap['reasoning_content'] ??
+              deltaMap['reasoning'] ??
+              (deltaMap['delta'] is Map ? (deltaMap['delta'] as Map)['reasoning'] : null);
+          if (reasoningDelta is String && reasoningDelta.isNotEmpty) {
+            assistantMessage.appendReasoning(reasoningDelta);
             notifyListeners();
           }
           final toolCalls = deltaMap['tool_calls'];
@@ -759,7 +882,49 @@ class ChatProvider extends ChangeNotifier {
         'tool_calls': msg.toolCalls.map((c) => c.toOpenAiToolCall()).toList(),
       };
     }
+    if (msg.role == 'user' && msg.hasAttachments) {
+      return {
+        'role': 'user',
+        'content': _messageContentForApi(msg),
+      };
+    }
     return {'role': msg.role, 'content': msg.content};
+  }
+
+  dynamic _messageContentForApi(Message msg) {
+    if (!msg.hasAttachments) return msg.content;
+    final parts = <Map<String, dynamic>>[];
+    final text = msg.content.trim();
+    if (text.isNotEmpty) {
+      parts.add({'type': 'text', 'text': text});
+    } else {
+      parts.add({'type': 'text', 'text': '请结合附件回答。'});
+    }
+    for (final attachment in msg.attachments) {
+      if (attachment.type != 'image') continue;
+      try {
+        final bytes = File(attachment.path).readAsBytesSync();
+        final b64 = base64Encode(bytes);
+        final mime = attachment.mimeType ?? _guessImageMime(attachment.name);
+        parts.add({
+          'type': 'image_url',
+          'image_url': {
+            'url': 'data:$mime;base64,$b64',
+          },
+        });
+      } catch (e) {
+        debugPrint('NexAI: failed to encode attachment ${attachment.path}: $e');
+      }
+    }
+    return parts;
+  }
+
+  String _guessImageMime(String name) {
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
   }
 
   String _toolSummary(String name, Map<String, dynamic> args) {
@@ -936,4 +1101,33 @@ class _ToolCallBuffer {
   String id = '';
   String name = '';
   final StringBuffer arguments = StringBuffer();
+}
+
+
+class _QueuedChatTurn {
+  final String content;
+  final List<ChatAttachment> attachments;
+  final String apiMode;
+  final String baseUrl;
+  final String apiKey;
+  final String model;
+  final double temperature;
+  final int maxTokens;
+  final String systemPrompt;
+  final String vertexProjectId;
+  final String vertexLocation;
+
+  const _QueuedChatTurn({
+    required this.content,
+    required this.attachments,
+    required this.apiMode,
+    required this.baseUrl,
+    required this.apiKey,
+    required this.model,
+    required this.temperature,
+    required this.maxTokens,
+    required this.systemPrompt,
+    required this.vertexProjectId,
+    required this.vertexLocation,
+  });
 }

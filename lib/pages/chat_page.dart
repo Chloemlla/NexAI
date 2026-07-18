@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +14,8 @@ import '../providers/settings_provider.dart';
 import '../services/chat_tool_catalog.dart';
 import '../services/chat_tool_executor.dart';
 import '../models/chat_tool.dart';
+import '../utils/file_access_helper.dart';
+import '../models/chat_assistant.dart';
 import '../models/message.dart';
 import '../utils/navigation_helper.dart';
 import '../widgets/message_bubble.dart';
@@ -28,6 +32,9 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  final List<ChatAttachment> _pendingAttachments = [];
+  final _rng = Random.secure();
+
   List<({Message message, int originalIndex})> _visibleEntries(List<Message> messages) {
     final entries = <({Message message, int originalIndex})>[];
     for (var i = 0; i < messages.length; i++) {
@@ -289,7 +296,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _send() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _pendingAttachments.isEmpty) return;
 
     final settings = context.read<SettingsProvider>();
     if (!settings.isConfigured) {
@@ -319,11 +326,13 @@ class _ChatPageState extends State<ChatPage> {
       return;
     }
 
+    final attachments = List<ChatAttachment>.from(_pendingAttachments);
     _controller.clear();
     _saveDraftForConversation(_activeConversationId, '');
-    if (_showComposerPreview) {
-      setState(() => _showComposerPreview = false);
-    }
+    setState(() {
+      _pendingAttachments.clear();
+      _showComposerPreview = false;
+    });
     final chat = context.read<ChatProvider>();
     _configureChatTools(chat, settings);
 
@@ -341,6 +350,7 @@ class _ChatPageState extends State<ChatPage> {
         systemPrompt: settings.systemPrompt,
         vertexProjectId: settings.vertexProjectId,
         vertexLocation: settings.vertexLocation,
+        attachments: attachments,
       );
     } catch (e) {
       // Error is already handled inside ChatProvider
@@ -361,6 +371,176 @@ class _ChatPageState extends State<ChatPage> {
     _controller.clear();
     _focusNode.requestFocus();
   }
+
+  String _newAttachmentId() {
+    final bytes = List<int>.generate(8, (_) => _rng.nextInt(256));
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  Future<void> _pickChatImage() async {
+    final path = await FileAccessHelper.pickImage();
+    if (path == null || path.isEmpty) return;
+    final file = File(path);
+    if (!await file.exists()) return;
+    final name = path.split(RegExp(r'[\\/]')).last;
+    setState(() {
+      _pendingAttachments.add(
+        ChatAttachment(
+          id: _newAttachmentId(),
+          type: 'image',
+          name: name,
+          path: path,
+          mimeType: name.toLowerCase().endsWith('.png')
+              ? 'image/png'
+              : (name.toLowerCase().endsWith('.webp') ? 'image/webp' : 'image/jpeg'),
+          sizeBytes: file.lengthSync(),
+        ),
+      );
+    });
+  }
+
+  void _removePendingAttachment(String id) {
+    setState(() {
+      _pendingAttachments.removeWhere((item) => item.id == id);
+    });
+  }
+
+  Future<void> _showAssistantPicker(SettingsProvider settings) async {
+    final chat = context.read<ChatProvider>();
+    final current = chat.currentConversation;
+    final selectedId = current?.assistantId ?? ChatAssistantCatalog.generalId;
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const ListTile(title: Text('选择助手人设')),
+              ...ChatAssistantCatalog.presets.map((assistant) {
+                return RadioListTile<String>(
+                  value: assistant.id,
+                  groupValue: selectedId,
+                  title: Text('${assistant.emoji} ${assistant.name}'),
+                  subtitle: Text(assistant.description),
+                  onChanged: (value) => Navigator.pop(ctx, value),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null) return;
+    if (chat.currentConversation == null) {
+      await chat.newConversation();
+    }
+    await chat.updateConversationSettings(assistantId: selected);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _showPromptTemplates() async {
+    final selected = await showModalBottomSheet<PromptTemplate>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              const ListTile(title: Text('插入提示模板')),
+              ...PromptTemplateCatalog.all.map((template) {
+                return ListTile(
+                  title: Text(template.title),
+                  subtitle: Text(template.description ?? ''),
+                  onTap: () => Navigator.pop(ctx, template),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+    if (selected == null) return;
+    final expanded = PromptTemplateCatalog.expand(selected, _controller.text);
+    _replaceComposerText(expanded);
+    setState(() {});
+  }
+
+  Widget _buildPendingAttachments(ColorScheme cs) {
+    if (_pendingAttachments.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 78,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _pendingAttachments.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final item = _pendingAttachments[index];
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                child: Image.file(
+                  File(item.path),
+                  width: 72,
+                  height: 72,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: InkWell(
+                  onTap: () => _removePendingAttachment(item.id),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: cs.error,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(Icons.close, size: 14, color: cs.onError),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFollowUpQueueBar(ColorScheme cs, ChatProvider chat) {
+    if (chat.followUpQueueLength == 0) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: cs.secondaryContainer.withAlpha(120),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.queue_rounded, size: 16, color: cs.secondary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '已排队 ${chat.followUpQueueLength} 条后续消息',
+              style: TextStyle(fontSize: 12, color: cs.onSecondaryContainer),
+            ),
+          ),
+          TextButton(
+            onPressed: chat.clearFollowUpQueue,
+            child: const Text('清空'),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   int _lineCount(String text) {
     if (text.isEmpty) return 0;
@@ -451,6 +631,12 @@ class _ChatPageState extends State<ChatPage> {
 
         if (_hasText) _buildComposerActionBar(cs),
         if (_showComposerPreview && _hasText) _buildPreviewBubble(cs),
+        _buildFollowUpQueueBar(cs, chat),
+        if (_pendingAttachments.isNotEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(contentHorizontalPad, 0, contentHorizontalPad, 8),
+            child: _buildPendingAttachments(cs),
+          ),
 
         // ── Input bar ──
         // AnimatedPadding so the bar slides up smoothly with the keyboard
@@ -473,23 +659,58 @@ class _ChatPageState extends State<ChatPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Image generation button
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: IconButton(
+                      icon: Icon(Icons.attach_file_rounded, color: cs.primary, size: 22),
+                      onPressed: _pickChatImage,
+                      tooltip: '添加图片附件',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: IconButton(
+                      icon: Icon(Icons.smart_toy_outlined, color: cs.primary, size: 22),
+                      onPressed: () => _showAssistantPicker(settings),
+                      tooltip: '选择助手',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: IconButton(
+                      icon: Icon(Icons.auto_awesome_outlined, color: cs.primary, size: 22),
+                      onPressed: _showPromptTemplates,
+                      tooltip: '提示模板',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2, right: 8),
                     child: IconButton(
-                      icon: Icon(
-                        Icons.image_outlined,
-                        color: cs.primary,
-                        size: 24,
-                      ),
+                      icon: Icon(Icons.image_outlined, color: cs.primary, size: 22),
                       onPressed: () => _openImageGenerationPage(context),
                       tooltip: '打开绘图页面',
                       style: IconButton.styleFrom(
                         backgroundColor: cs.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            LumenTokens.radiusMd,
-                          ),
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
                         ),
                       ),
                     ),
@@ -800,14 +1021,23 @@ class _ChatPageState extends State<ChatPage> {
           Icon(Icons.smart_toy_outlined, size: 16, color: cs.primary),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              settings.selectedModel,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-              ),
-              overflow: TextOverflow.ellipsis,
+            child: Builder(
+              builder: (context) {
+                final chat = context.watch<ChatProvider>();
+                final assistant = ChatAssistantCatalog.byId(
+                  chat.currentConversation?.assistantId,
+                );
+                final model = chat.resolveModel(settings.selectedModel);
+                return Text(
+                  '${assistant.emoji} ${assistant.name} · $model',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                );
+              },
             ),
           ),
           Container(
@@ -876,7 +1106,7 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildSendButton(ColorScheme cs, bool isLoading) {
-    final canSend = _hasText && !isLoading;
+    final canSend = (_hasText || _pendingAttachments.isNotEmpty) && !isLoading;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -1179,7 +1409,7 @@ class _ChatPageState extends State<ChatPage> {
                   FilledButton.icon(
                     onPressed: chat.isLoading
                         ? () => chat.cancelGeneration()
-                        : (!_hasText ? null : _send),
+                        : ((!_hasText && _pendingAttachments.isEmpty) ? null : _send),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,

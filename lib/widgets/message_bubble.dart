@@ -19,6 +19,8 @@ import '../providers/image_generation_provider.dart';
 import '../providers/artifacts_provider.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/translation_provider.dart';
+import '../services/lumen_translation_client.dart';
 import '../providers/auth_provider.dart';
 import '../utils/file_access_helper.dart';
 import 'rich_content_view.dart';
@@ -115,6 +117,41 @@ class _MessageBubbleState extends State<MessageBubble> {
                             child: _ToolRunChip(run: run),
                           );
                         }),
+                      ],
+                      if (!isUser && widget.message.reasoning.trim().isNotEmpty) ...[
+                        _ReasoningPanel(reasoning: widget.message.reasoning),
+                        const SizedBox(height: 8),
+                      ],
+                      if (widget.message.attachments.isNotEmpty) ...[
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: widget.message.attachments.map((attachment) {
+                            if (attachment.type == 'image') {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                                child: Image.file(
+                                  File(attachment.path),
+                                  width: 140,
+                                  height: 140,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Container(
+                                    width: 140,
+                                    height: 140,
+                                    color: cs.surfaceContainerHighest,
+                                    alignment: Alignment.center,
+                                    child: const Icon(Icons.broken_image_outlined),
+                                  ),
+                                ),
+                              );
+                            }
+                            return Chip(
+                              avatar: const Icon(Icons.attach_file, size: 16),
+                              label: Text(attachment.name),
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 8),
                       ],
                       if (isUser)
                         RepaintBoundary(
@@ -230,6 +267,12 @@ class _MessageFooter extends StatelessWidget {
               ),
             );
           }, cs),
+          _footerIcon(
+            Icons.translate_rounded,
+            '翻译消息',
+            () => _translateMessage(context),
+            cs,
+          ),
         ],
         _footerIcon(
           Icons.ios_share_rounded,
@@ -687,6 +730,79 @@ class _MessageFooter extends StatelessWidget {
     );
   }
 
+
+  Future<void> _translateMessage(BuildContext context) async {
+    final content = message.content.trim();
+    if (content.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('正在翻译...'), duration: Duration(seconds: 1)),
+    );
+    try {
+      final client = LumenTranslationClient();
+      final clipped = content.length > LumenTranslationClient.maxInputChars
+          ? content.substring(0, LumenTranslationClient.maxInputChars)
+          : content;
+      final result = await client.translate(
+        text: clipped,
+        targetLang: 'ZH',
+        sourceLang: 'auto',
+      );
+      if (!context.mounted) return;
+      final translationProvider = context.read<TranslationProvider>();
+      await translationProvider.addRecord(
+        TranslationRecord(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          sourceLanguage: result.sourceLang,
+          targetLanguage: result.targetLang,
+          sourceText: content,
+          translatedText: result.translatedText,
+          createdAt: DateTime.now(),
+        ),
+      );
+      if (!context.mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (ctx) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('翻译结果', style: Theme.of(ctx).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  SelectableText(result.translatedText),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(
+                          ClipboardData(text: result.translatedText),
+                        );
+                        Navigator.pop(ctx);
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: const Text('复制译文'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('翻译失败：$e')));
+    }
+  }
+
   void _showSaveToNoteSheet(BuildContext context) {
     final notesProvider = context.read<NotesProvider>();
     final cs = Theme.of(context).colorScheme;
@@ -947,6 +1063,77 @@ class _CitationChip extends StatelessWidget {
         if (uri == null) return;
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       },
+    );
+  }
+}
+
+
+class _ReasoningPanel extends StatefulWidget {
+  final String reasoning;
+  const _ReasoningPanel({required this.reasoning});
+
+  @override
+  State<_ReasoningPanel> createState() => _ReasoningPanelState();
+}
+
+class _ReasoningPanelState extends State<_ReasoningPanel> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh.withAlpha(120),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+        border: Border.all(color: cs.outlineVariant.withAlpha(80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.psychology_alt_outlined, size: 16, color: cs.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      _expanded ? '收起思考过程' : '查看思考过程',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: cs.primary,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: cs.primary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_expanded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+              child: SelectableText(
+                widget.reasoning,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

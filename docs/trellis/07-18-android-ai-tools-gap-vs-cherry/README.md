@@ -232,3 +232,17 @@ Android 最值得补的不是桌面 Agent 全家桶，而是：
 
 说明：Vertex 模式仍为纯文本流式，不走 tools。
 
+## 11. Phase 1 implementation snapshot (2026-07-18)
+
+在既有 tool-calling 基础上补齐真正工具对话体验：
+
+- 图片附件 + Vision 请求（OpenAI content parts）
+- 助手人设目录 + 会话级 assistant/model/prompt 覆盖
+- Reasoning 折叠面板
+- Prompt 模板插入
+- 生成中 Follow-up 排队
+- 消息翻译动作（复用 Lumen DeepLX 公共翻译）
+- 对话内 generate_image / report_artifacts / notes / web_search 已在前序提交
+
+仍属 Phase 2：多模型同问、远程 MCP、文档知识库导入、语音 STT/TTS。
+

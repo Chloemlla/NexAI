@@ -93,25 +93,15 @@ public static class PasswordBackupCrypto
             return DecryptV2(root, normalized).Select(SavedPassword.FromDictionary).ToList();
         }
 
-        // Legacy v1: plaintext list + checksum integrity only.
-        if (!root.TryGetProperty("checksum", out var checksumEl) ||
-            !root.TryGetProperty("passwords", out var passwordsEl) ||
-            passwordsEl.ValueKind != JsonValueKind.Array)
+        // Legacy v1 is plaintext + checksum only (no confidentiality).
+        // Keep parser available for an explicit UI confirmation path.
+        if (!IsLegacyV1(root))
         {
             throw new PasswordBackupException("Unsupported or invalid password backup.");
         }
 
-        var passwordsJson = passwordsEl.GetRawText();
-        var expected = checksumEl.GetString() ?? string.Empty;
-        var actual = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(passwordsJson))).ToLowerInvariant();
-        if (!string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new PasswordBackupException("Backup checksum mismatch.");
-        }
-
-        return passwordsEl.EnumerateArray()
-            .Select(item => SavedPassword.FromJsonElement(item))
-            .ToList();
+        throw new PasswordBackupException(
+            "This is a legacy plaintext backup (v1). Confirm import explicitly before restoring.");
     }
 
     private static List<Dictionary<string, object?>> DecryptV2(JsonElement root, string passphrase)
@@ -178,6 +168,64 @@ public static class PasswordBackupCrypto
         {
             throw new PasswordBackupException("Wrong passphrase or corrupted backup.");
         }
+    }
+
+
+    public static bool IsLegacyPlaintextBackup(string backupJson)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(backupJson) ? "{}" : backupJson);
+            return IsLegacyV1(doc.RootElement);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static IReadOnlyList<SavedPassword> RestoreLegacyPlaintextBackup(string backupJson)
+    {
+        using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(backupJson) ? "{}" : backupJson);
+        var root = doc.RootElement;
+        if (!IsLegacyV1(root))
+        {
+            throw new PasswordBackupException("Not a legacy plaintext backup.");
+        }
+
+        if (!root.TryGetProperty("checksum", out var checksumEl) ||
+            !root.TryGetProperty("passwords", out var passwordsEl) ||
+            passwordsEl.ValueKind != JsonValueKind.Array)
+        {
+            throw new PasswordBackupException("Unsupported or invalid password backup.");
+        }
+
+        var passwordsJson = passwordsEl.GetRawText();
+        var expected = checksumEl.GetString() ?? string.Empty;
+        var actual = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(passwordsJson))).ToLowerInvariant();
+        if (!string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new PasswordBackupException("Backup checksum mismatch.");
+        }
+
+        return passwordsEl.EnumerateArray()
+            .Select(item => SavedPassword.FromJsonElement(item))
+            .ToList();
+    }
+
+    private static bool IsLegacyV1(JsonElement root)
+    {
+        if (!root.TryGetProperty("checksum", out _) ||
+            !root.TryGetProperty("passwords", out var passwordsEl) ||
+            passwordsEl.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        var format = root.TryGetProperty("format", out var formatEl) ? formatEl.GetString() : null;
+        var version = root.TryGetProperty("version", out var versionEl) ? versionEl.GetString() : null;
+        return !string.Equals(format, EncryptedBackupFormat, StringComparison.Ordinal) &&
+               !string.Equals(version, EncryptedBackupVersion, StringComparison.Ordinal);
     }
 
     private static byte[] DeriveKey(string passphrase, byte[] salt, int iterations)

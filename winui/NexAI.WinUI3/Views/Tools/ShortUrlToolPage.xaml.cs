@@ -114,9 +114,11 @@ public sealed partial class ShortUrlToolPage : Page
 
     private async void OpenButton_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_resultUrl) || !Uri.TryCreate(_resultUrl, UriKind.Absolute, out var uri))
+        if (string.IsNullOrWhiteSpace(_resultUrl) ||
+            !Uri.TryCreate(_resultUrl, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            StatusText.Text = "No valid result to open.";
+            StatusText.Text = "Only http(s) results can be opened.";
             return;
         }
 

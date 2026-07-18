@@ -71,6 +71,12 @@ public sealed partial class TranslationToolPage : Page
             return;
         }
 
+        if (text.Length > ToolInputLimits.MaxTranslationInputChars)
+        {
+            StatusText.Text = $"Text is too long. Keep it under {ToolInputLimits.MaxTranslationInputChars} characters.";
+            return;
+        }
+
         var source = ReadLanguage(SourceLanguageBox) ?? "en";
         var target = ReadLanguage(TargetLanguageBox) ?? "zh-CN";
         TranslateButton.IsEnabled = false;

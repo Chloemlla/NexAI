@@ -98,11 +98,11 @@ public static class PasswordGenerator
         }
 
         var alphabet = chars.ToString();
-        var bytes = RandomNumberGenerator.GetBytes(length);
         var result = new char[length];
         for (var i = 0; i < length; i++)
         {
-            result[i] = alphabet[bytes[i] % alphabet.Length];
+            // Rejection-free uniform selection (no modulo bias from raw bytes).
+            result[i] = alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];
         }
 
         return new string(result);
@@ -138,11 +138,10 @@ public static class PasswordGenerator
     private static string GeneratePin(PasswordGeneratorOptions options)
     {
         var length = Math.Clamp(options.PinLength, 4, 12);
-        var bytes = RandomNumberGenerator.GetBytes(length);
         var chars = new char[length];
         for (var i = 0; i < length; i++)
         {
-            chars[i] = (char)('0' + (bytes[i] % 10));
+            chars[i] = (char)('0' + RandomNumberGenerator.GetInt32(10));
         }
 
         return new string(chars);

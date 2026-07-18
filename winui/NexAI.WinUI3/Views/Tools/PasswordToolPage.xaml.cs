@@ -130,6 +130,11 @@ public sealed partial class PasswordToolPage : Page
             return;
         }
 
+        if (!await ConfirmSensitiveExportAsync("Export batch passwords as plaintext CSV?"))
+        {
+            return;
+        }
+
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("Index,Password,Strength");
         for (var i = 0; i < _batch.Count; i++)
@@ -178,6 +183,12 @@ public sealed partial class PasswordToolPage : Page
 
     private async void ExportSaved_Click(object sender, RoutedEventArgs e)
     {
+        if (!await ConfirmSensitiveExportAsync(
+                "Export saved passwords as plaintext CSV? Prefer encrypted backup for safer transfer."))
+        {
+            return;
+        }
+
         await SaveTextFileAsync(
             $"saved_passwords_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
             _vault.ExportCsv());
@@ -210,6 +221,20 @@ public sealed partial class PasswordToolPage : Page
             if (file is null) return;
 
             var json = await File.ReadAllTextAsync(file.Path);
+            if (PasswordBackupCrypto.IsLegacyPlaintextBackup(json))
+            {
+                if (!await ConfirmSensitiveExportAsync(
+                        "This backup is legacy plaintext (v1). Importing will replace the vault with unprotected data. Continue?"))
+                {
+                    return;
+                }
+
+                var legacy = PasswordBackupCrypto.RestoreLegacyPlaintextBackup(json);
+                await _vault.ReplaceAllAsync(legacy);
+                await ShowMessageAsync("Legacy plaintext backup restored.");
+                return;
+            }
+
             string? passphrase = null;
             if (json.Contains(PasswordBackupCrypto.EncryptedBackupFormat, StringComparison.Ordinal) ||
                 json.Contains(PasswordBackupCrypto.EncryptedBackupVersion, StringComparison.Ordinal))
@@ -304,6 +329,21 @@ public sealed partial class PasswordToolPage : Page
         }
 
         return passphrase;
+    }
+
+
+    private async Task<bool> ConfirmSensitiveExportAsync(string message)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Security confirmation",
+            Content = message,
+            PrimaryButtonText = "Continue",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
     }
 
     private async Task SaveTextFileAsync(string fileName, string content)

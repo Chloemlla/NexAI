@@ -2,9 +2,12 @@ namespace NexAI.Core.Tools;
 
 public static class Base64Codec
 {
+    public const int MaxInputChars = 5 * 1024 * 1024;
+
     public static string Encode(string input, bool urlSafe = false)
     {
         input ??= string.Empty;
+        EnsureWithinLimit(input);
         var encoded = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(input));
         if (!urlSafe)
         {
@@ -22,6 +25,7 @@ public static class Base64Codec
         }
 
         var normalized = input.Trim();
+        EnsureWithinLimit(normalized);
         if (urlSafe)
         {
             normalized = normalized.Replace('-', '+').Replace('_', '/');
@@ -34,5 +38,14 @@ public static class Base64Codec
 
         var bytes = Convert.FromBase64String(normalized);
         return System.Text.Encoding.UTF8.GetString(bytes);
+    }
+
+    private static void EnsureWithinLimit(string value)
+    {
+        if (value.Length > MaxInputChars)
+        {
+            throw new InvalidOperationException(
+                $"Base64 input is too large. Keep it under {MaxInputChars / (1024 * 1024)} MB.");
+        }
     }
 }

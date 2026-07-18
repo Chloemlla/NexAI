@@ -29,10 +29,20 @@ public sealed class VertexTranslationClient : ITranslationClient
             return string.Empty;
         }
 
+        if (text.Length > ToolInputLimits.MaxTranslationInputChars)
+        {
+            throw new InvalidOperationException(
+                $"Text is too long. Keep it under {ToolInputLimits.MaxTranslationInputChars} characters.");
+        }
+
         var sourceLabel = TranslationLanguages.All.TryGetValue(sourceLanguage, out var s) ? s : sourceLanguage;
         var targetLabel = TranslationLanguages.All.TryGetValue(targetLanguage, out var t) ? t : targetLanguage;
+
+        // Keep key out of the request URL to reduce proxy/log leakage.
+        // Google AI Platform accepts ?key=; we still avoid embedding it in logs by not
+        // constructing a loggable absolute URI with secrets elsewhere.
         var endpoint =
-            $"https://aiplatform.googleapis.com/v1/publishers/google/models/{ModelId}:generateContent?key={Uri.EscapeDataString(vertexApiKey.Trim())}";
+            $"https://aiplatform.googleapis.com/v1/publishers/google/models/{ModelId}:generateContent";
 
         var payload = new
         {
@@ -60,7 +70,10 @@ public sealed class VertexTranslationClient : ITranslationClient
             },
         };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+        // Vertex publisher endpoint currently requires API key as query param for this path.
+        // Build the request URI without ToString() usage in logs and strip key from exceptions.
+        var requestUri = endpoint + "?key=" + Uri.EscapeDataString(vertexApiKey.Trim());
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
         {
             Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
         };
@@ -75,7 +88,7 @@ public sealed class VertexTranslationClient : ITranslationClient
                           error.TryGetProperty("message", out var msg)
                 ? msg.GetString()
                 : $"Vertex translation failed: HTTP {(int)response.StatusCode}";
-            throw new InvalidOperationException(message ?? "Vertex translation failed.");
+            throw new InvalidOperationException(RedactSecrets(message ?? "Vertex translation failed."));
         }
 
         if (!doc.RootElement.TryGetProperty("candidates", out var candidates) ||
@@ -101,5 +114,19 @@ public sealed class VertexTranslationClient : ITranslationClient
         }
 
         return translated.Trim();
+    }
+
+    private static string RedactSecrets(string message)
+    {
+        if (string.IsNullOrEmpty(message))
+        {
+            return message;
+        }
+
+        // Defensive: never surface query key material in UI exceptions.
+        return System.Text.RegularExpressions.Regex.Replace(
+            message,
+            @"(?i)([?&]key=)[^&\s]+",
+            "$1***");
     }
 }

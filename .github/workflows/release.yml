@@ -243,16 +243,47 @@ jobs:
         run: |
           msbuild winui\NexAI.WinUI3.sln /t:Restore /p:Configuration=Release /p:Platform=x64 /v:m
 
+      - name: Precheck WinUI resource keys
+        shell: pwsh
+        run: |
+          # Fail fast with ALL PRI resource/scope collisions in one pass.
+          # MSBuild PRI generation typically only surfaces the first collision.
+          pwsh -File scripts/check-winui-resw.ps1 -CheckCodeReferences
+
       - name: Build WinUI3 client
         shell: pwsh
         run: |
-          msbuild winui\NexAI.WinUI3\NexAI.WinUI3.csproj `
-            /p:Configuration=Release `
-            /p:Platform=x64 `
-            /p:WindowsPackageType=None `
-            /p:WindowsAppSDKSelfContained=true `
-            /p:Restore=false `
-            /v:m
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          $log = 'artifacts/winui-build.log'
+          $cmd = @(
+            'winui\NexAI.WinUI3\NexAI.WinUI3.csproj',
+            '/p:Configuration=Release',
+            '/p:Platform=x64',
+            '/p:WindowsPackageType=None',
+            '/p:WindowsAppSDKSelfContained=true',
+            '/p:Restore=false',
+            '/v:n',
+            '/fl',
+            '/flp:LogFile=' + $log + ';Verbosity=normal'
+          )
+          Write-Host "msbuild $($cmd -join ' ')"
+          & msbuild @cmd
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '--- WinUI build failed. Emitting error/warning summary from log ---'
+            if (Test-Path $log) {
+              Select-String -Path $log -Pattern 'error |warning ' | ForEach-Object { $_.Line }
+            }
+            exit $LASTEXITCODE
+          }
+
+      - name: Upload WinUI build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: winui-build-log
+          path: artifacts/winui-build.log
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Compress Windows Build
         shell: pwsh

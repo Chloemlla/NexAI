@@ -2598,6 +2598,198 @@ class _SettingsPageState extends State<SettingsPage> {
       bearerToken: tokenCtrl.text.trim().isEmpty ? null : tokenCtrl.text.trim(),
     );
   }
+
+  Future<void> _editToolGateway(
+    BuildContext context,
+    SettingsProvider settings,
+  ) async {
+    final controller = TextEditingController(text: settings.toolGatewayBaseUrl);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('工具网关 Base URL'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Base URL',
+            hintText: 'https://example.com/api/tools',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await settings.setToolGatewayBaseUrl(controller.text.trim());
+  }
+
+  Future<void> _editWebSearchProviders(
+    BuildContext context,
+    SettingsProvider settings,
+  ) async {
+    final providers =
+        List<WebSearchProviderConfig>.from(settings.webSearchProviders);
+    var activeId = settings.activeWebSearchProviderId;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModal) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const ListTile(
+                      title: Text('联网搜索 Provider'),
+                      subtitle: Text('选择默认 Provider，或添加自定义端点'),
+                    ),
+                    if (providers.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text('尚未配置 Provider（将回退 DuckDuckGo）'),
+                      ),
+                    ...providers.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final provider = entry.value;
+                      return RadioListTile<String>(
+                        value: provider.id,
+                        groupValue: activeId,
+                        title: Text(provider.name),
+                        subtitle: Text(
+                          provider.endpoint.isEmpty
+                              ? provider.type
+                              : provider.endpoint,
+                        ),
+                        secondary: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () {
+                            setModal(() {
+                              providers.removeAt(index);
+                              if (activeId == provider.id) {
+                                activeId = providers.isEmpty
+                                    ? ''
+                                    : providers.first.id;
+                              }
+                            });
+                          },
+                        ),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setModal(() => activeId = value);
+                        },
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                    FilledButton.tonalIcon(
+                      onPressed: () async {
+                        final created = await _promptWebSearchProvider(ctx);
+                        if (created == null) return;
+                        setModal(() {
+                          providers.add(created);
+                          activeId = created.id;
+                        });
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('添加 Provider'),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: () async {
+                        await settings.setWebSearchProviders(providers);
+                        if (activeId.isNotEmpty) {
+                          await settings.setActiveWebSearchProviderId(activeId);
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: const Text('保存'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<WebSearchProviderConfig?> _promptWebSearchProvider(
+    BuildContext context,
+  ) async {
+    final nameCtrl = TextEditingController(text: 'Custom Search');
+    final typeCtrl = TextEditingController(text: 'tavily');
+    final endpointCtrl = TextEditingController(text: 'https://');
+    final keyCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('添加搜索 Provider'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: '名称'),
+            ),
+            TextField(
+              controller: typeCtrl,
+              decoration: const InputDecoration(
+                labelText: '类型',
+                hintText: 'duckduckgo / tavily / searxng / exa / jina / nexai_gateway',
+              ),
+            ),
+            TextField(
+              controller: endpointCtrl,
+              decoration: const InputDecoration(labelText: 'Endpoint'),
+            ),
+            TextField(
+              controller: keyCtrl,
+              decoration: const InputDecoration(labelText: 'API Key（可选）'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('添加'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return null;
+    return WebSearchProviderConfig(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: nameCtrl.text.trim().isEmpty
+          ? 'Custom Search'
+          : nameCtrl.text.trim(),
+      type: typeCtrl.text.trim().isEmpty ? 'tavily' : typeCtrl.text.trim(),
+      endpoint: endpointCtrl.text.trim(),
+      apiKey: keyCtrl.text.trim().isEmpty ? null : keyCtrl.text.trim(),
+      enabled: true,
+    );
+  }
+
 }
 
 // ── Shared M3 helpers ──
@@ -2701,5 +2893,4 @@ class _SliderRow extends StatelessWidget {
       ],
     );
   }
-
-
+}

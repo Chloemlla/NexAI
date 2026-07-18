@@ -398,7 +398,7 @@ class ChatToolExecutor {
             : provider.endpoint.trim();
         _assertSafeEndpoint(endpoint, requireHttps: true);
         final response = await _dio.get<String>(
-          endpoint + Uri.encodeComponent(query),
+          '$endpoint${Uri.encodeComponent(query)}',
           options: Options(
             headers: {
               if ((provider.apiKey ?? '').trim().isNotEmpty)
@@ -427,7 +427,7 @@ class ChatToolExecutor {
             ? context.toolGatewayBaseUrl.trim()
             : provider.endpoint.trim();
         if (gateway.isEmpty) break;
-        final gatewayUrl = gateway.replaceAll(RegExp(r'/+$'), '') + '/tools/web_search';
+        final gatewayUrl = '${gateway.replaceAll(RegExp(r'/+$'), '')}/tools/web_search';
         _assertSafeEndpoint(gatewayUrl, requireHttps: true);
         final response = await _dio.post<Map<String, dynamic>>(
           gatewayUrl,

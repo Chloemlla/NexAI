@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using NexAI.Core;
 using NexAI.Core.Tools;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Storage;
 
@@ -150,14 +151,39 @@ public sealed class ProtectedPasswordVaultStore : IPasswordVaultStore
             var existing = (await File.ReadAllTextAsync(AppPaths.PasswordsKeyFilePath, cancellationToken).ConfigureAwait(false)).Trim();
             if (!string.IsNullOrWhiteSpace(existing))
             {
-                return Base64UrlDecode(existing);
+                try
+                {
+                    if (SecretProtector.IsProtected(existing))
+                    {
+                        return SecretProtector.UnprotectBytes(
+                            Convert.FromBase64String(existing["dpapi:".Length..]));
+                    }
+
+                    // Legacy plaintext key on disk: re-protect with DPAPI.
+                    var legacy = Base64UrlDecode(existing);
+                    await PersistKeyAsync(legacy, cancellationToken).ConfigureAwait(false);
+                    return legacy;
+                }
+                catch
+                {
+                    // Fall through and rotate if unreadable.
+                }
             }
         }
 
         var key = RandomNumberGenerator.GetBytes(32);
-        await File.WriteAllTextAsync(AppPaths.PasswordsKeyFilePath, Base64UrlEncode(key), cancellationToken)
-            .ConfigureAwait(false);
+        await PersistKeyAsync(key, cancellationToken).ConfigureAwait(false);
         return key;
+    }
+
+    private static async Task PersistKeyAsync(byte[] key, CancellationToken cancellationToken)
+    {
+        var protectedBytes = SecretProtector.ProtectBytes(key);
+        await File.WriteAllTextAsync(
+                AppPaths.PasswordsKeyFilePath,
+                "dpapi:" + Convert.ToBase64String(protectedBytes),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static byte[] Encrypt(byte[] plaintext, byte[] key)

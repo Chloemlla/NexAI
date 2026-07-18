@@ -35,6 +35,10 @@ Implemented:
   - Full-page bilingual coverage for Chat / Notes / Tools / Settings (static + dynamic UI strings)
 - CI/release Windows packaging builds this WinUI3 client only
 
+Security notes:
+- Settings/auth secrets and vault/sync key material are DPAPI-protected at rest (`dpapi:` prefix)
+- ffmpeg invocations use `ArgumentList` with path validation (no shell string concatenation)
+
 Local data roots:
 
 `%LocalAppData%\NexAI\WinUI3\`

@@ -91,8 +91,12 @@ class NexaiBackendClient {
         keyId: overrideKeyId,
       );
     } on RequestSigningException catch (e) {
-      // Soft-client: allow unsigned when no key yet (login before secret/token).
-      if (e.code == 'CLIENT_SIGN_NO_KEY' || e.code == 'CLIENT_SIGN_WEB') {
+      final hasBearer = _hasBearer(headers) || _hasBearer(base);
+      // Soft-client: allow unsigned ONLY when not authenticated yet
+      // (login/bootstrap before token/app secret). Once Authorization is present,
+      // unsigned requests are forbidden.
+      if (!hasBearer &&
+          (e.code == 'CLIENT_SIGN_NO_KEY' || e.code == 'CLIENT_SIGN_WEB')) {
         debugPrint('NexAI Backend: signing skipped (${e.code}): ${e.message}');
         return {
           ...base,
@@ -117,6 +121,16 @@ class NexaiBackendClient {
         cause: e,
       );
     }
+  }
+
+  static bool _hasBearer(Map<String, String>? headers) {
+    if (headers == null) return false;
+    final auth = headers['Authorization'] ?? headers['authorization'];
+    if (auth == null) return false;
+    final trimmed = auth.trimLeft();
+    return trimmed.length > 7 &&
+        trimmed.substring(0, 6).toLowerCase() == 'bearer' &&
+        (trimmed.codeUnitAt(6) == 0x20 || trimmed.codeUnitAt(6) == 0x09);
   }
 
   static Future<http.Response> _send(

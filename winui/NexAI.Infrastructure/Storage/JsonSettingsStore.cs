@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using NexAI.Core;
 using NexAI.Core.Settings;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Storage;
 
@@ -47,7 +48,7 @@ public sealed class JsonSettingsStore : ISettingsStore
 
         lock (_gate)
         {
-            _current = AppSettingsValidator.Normalize(loaded ?? new AppSettings());
+            _current = AppSettingsValidator.Normalize(UnprotectSecrets(loaded ?? new AppSettings()));
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -67,11 +68,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         AppPaths.EnsureRoot();
         var path = AppPaths.SettingsFilePath;
         var tempPath = path + ".tmp";
+        var toPersist = ProtectSecrets(snapshot);
 
         await using (var stream = File.Create(tempPath))
         {
             await JsonSerializer
-                .SerializeAsync(stream, snapshot, SerializerOptions, cancellationToken)
+                .SerializeAsync(stream, toPersist, SerializerOptions, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -84,5 +86,25 @@ public sealed class JsonSettingsStore : ISettingsStore
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static AppSettings ProtectSecrets(AppSettings settings)
+    {
+        var protectedCopy = settings.Clone();
+        protectedCopy.ApiKey = SecretProtector.Protect(protectedCopy.ApiKey);
+        protectedCopy.VertexApiKey = SecretProtector.Protect(protectedCopy.VertexApiKey);
+        protectedCopy.WebDavPassword = SecretProtector.Protect(protectedCopy.WebDavPassword);
+        protectedCopy.UpstashToken = SecretProtector.Protect(protectedCopy.UpstashToken);
+        return protectedCopy;
+    }
+
+    private static AppSettings UnprotectSecrets(AppSettings settings)
+    {
+        var plain = settings.Clone();
+        plain.ApiKey = SecretProtector.Unprotect(plain.ApiKey);
+        plain.VertexApiKey = SecretProtector.Unprotect(plain.VertexApiKey);
+        plain.WebDavPassword = SecretProtector.Unprotect(plain.WebDavPassword);
+        plain.UpstashToken = SecretProtector.Unprotect(plain.UpstashToken);
+        return plain;
     }
 }

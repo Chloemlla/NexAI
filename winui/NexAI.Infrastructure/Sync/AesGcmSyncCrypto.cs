@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using NexAI.Core;
 using NexAI.Core.Sync;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Sync;
 
@@ -26,8 +27,7 @@ public sealed class AesGcmSyncCrypto : ISyncCrypto
         }
 
         AppPaths.EnsureRoot();
-        await File.WriteAllTextAsync(AppPaths.SyncKeyFilePath, Base64UrlEncode(bytes), cancellationToken)
-            .ConfigureAwait(false);
+        await PersistKeyAsync(bytes, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Dictionary<string, object?>> EncryptRecordAsync(
@@ -124,14 +124,38 @@ public sealed class AesGcmSyncCrypto : ISyncCrypto
             var existing = (await File.ReadAllTextAsync(AppPaths.SyncKeyFilePath, cancellationToken).ConfigureAwait(false)).Trim();
             if (!string.IsNullOrWhiteSpace(existing))
             {
-                return Base64UrlDecode(existing);
+                try
+                {
+                    if (SecretProtector.IsProtected(existing))
+                    {
+                        return SecretProtector.UnprotectBytes(
+                            Convert.FromBase64String(existing["dpapi:".Length..]));
+                    }
+
+                    var legacy = Base64UrlDecode(existing);
+                    await PersistKeyAsync(legacy, cancellationToken).ConfigureAwait(false);
+                    return legacy;
+                }
+                catch
+                {
+                    // Fall through and create a new key.
+                }
             }
         }
 
         var key = RandomNumberGenerator.GetBytes(32);
-        await File.WriteAllTextAsync(AppPaths.SyncKeyFilePath, Base64UrlEncode(key), cancellationToken)
-            .ConfigureAwait(false);
+        await PersistKeyAsync(key, cancellationToken).ConfigureAwait(false);
         return key;
+    }
+
+    private static async Task PersistKeyAsync(byte[] key, CancellationToken cancellationToken)
+    {
+        var protectedBytes = SecretProtector.ProtectBytes(key);
+        await File.WriteAllTextAsync(
+                AppPaths.SyncKeyFilePath,
+                "dpapi:" + Convert.ToBase64String(protectedBytes),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static string Base64UrlEncode(byte[] bytes)

@@ -12,24 +12,24 @@ public sealed class FfmpegMediaToolService : IMediaToolService
         int crf = 28,
         CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(inputPath))
-        {
-            throw new FileNotFoundException("Input video not found.", inputPath);
-        }
-
+        var safeInput = ValidateExistingMediaPath(inputPath, nameof(inputPath));
         crf = Math.Clamp(crf, 18, 40);
-        var output = outputPath;
-        if (string.IsNullOrWhiteSpace(output))
-        {
-            var dir = Path.Combine(Path.GetTempPath(), "NexAI", "media");
-            Directory.CreateDirectory(dir);
-            output = Path.Combine(
-                dir,
-                Path.GetFileNameWithoutExtension(inputPath) + $"_compressed_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
-        }
+        var safeOutput = string.IsNullOrWhiteSpace(outputPath)
+            ? CreateManagedOutputPath(safeInput, "compressed", "mp4")
+            : ValidateOutputPath(outputPath, nameof(outputPath));
 
-        var args = $"-y -i \"{inputPath}\" -vcodec libx264 -crf {crf} -preset medium -acodec aac -b:a 128k \"{output}\"";
-        return RunFfmpegAsync(inputPath, output!, args, cancellationToken);
+        var args = new[]
+        {
+            "-y",
+            "-i", safeInput,
+            "-vcodec", "libx264",
+            "-crf", crf.ToString(),
+            "-preset", "medium",
+            "-acodec", "aac",
+            "-b:a", "128k",
+            safeOutput,
+        };
+        return RunFfmpegAsync(safeInput, safeOutput, args, cancellationToken);
     }
 
     public Task<MediaProcessResult> ExtractAudioAsync(
@@ -38,37 +38,34 @@ public sealed class FfmpegMediaToolService : IMediaToolService
         string format = "mp3",
         CancellationToken cancellationToken = default)
     {
-        if (!File.Exists(inputPath))
+        var safeInput = ValidateExistingMediaPath(inputPath, nameof(inputPath));
+        format = string.IsNullOrWhiteSpace(format) ? "mp3" : format.Trim().TrimStart('.').ToLowerInvariant();
+        if (format is not ("mp3" or "aac" or "wav"))
         {
-            throw new FileNotFoundException("Input video not found.", inputPath);
+            throw new ArgumentOutOfRangeException(nameof(format), "Supported formats: mp3, aac, wav.");
         }
 
-        format = string.IsNullOrWhiteSpace(format) ? "mp3" : format.Trim().TrimStart('.').ToLowerInvariant();
         var codecArgs = format switch
         {
-            "aac" => "-c:a aac -b:a 192k",
-            "wav" => "-c:a pcm_s16le",
-            _ => "-c:a libmp3lame -b:a 192k",
+            "aac" => new[] { "-c:a", "aac", "-b:a", "192k" },
+            "wav" => new[] { "-c:a", "pcm_s16le" },
+            _ => new[] { "-c:a", "libmp3lame", "-b:a", "192k" },
         };
 
-        var output = outputPath;
-        if (string.IsNullOrWhiteSpace(output))
-        {
-            var dir = Path.Combine(Path.GetTempPath(), "NexAI", "media");
-            Directory.CreateDirectory(dir);
-            output = Path.Combine(
-                dir,
-                Path.GetFileNameWithoutExtension(inputPath) + $"_{DateTime.Now:yyyyMMdd_HHmmss}.{format}");
-        }
+        var safeOutput = string.IsNullOrWhiteSpace(outputPath)
+            ? CreateManagedOutputPath(safeInput, "audio", format)
+            : ValidateOutputPath(outputPath, nameof(outputPath));
 
-        var args = $"-y -i \"{inputPath}\" -vn {codecArgs} \"{output}\"";
-        return RunFfmpegAsync(inputPath, output!, args, cancellationToken);
+        var args = new List<string> { "-y", "-i", safeInput, "-vn" };
+        args.AddRange(codecArgs);
+        args.Add(safeOutput);
+        return RunFfmpegAsync(safeInput, safeOutput, args, cancellationToken);
     }
 
     private static async Task<MediaProcessResult> RunFfmpegAsync(
         string inputPath,
         string outputPath,
-        string args,
+        IReadOnlyList<string> args,
         CancellationToken cancellationToken)
     {
         var ffmpeg = ResolveFfmpegPath();
@@ -81,12 +78,15 @@ public sealed class FfmpegMediaToolService : IMediaToolService
         var psi = new ProcessStartInfo
         {
             FileName = ffmpeg,
-            Arguments = args,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
+        foreach (var arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
 
         using var process = new Process { StartInfo = psi };
         var stdout = new StringBuilder();
@@ -119,7 +119,7 @@ public sealed class FfmpegMediaToolService : IMediaToolService
         {
             InputPath = inputPath,
             OutputPath = outputPath,
-            Command = $"ffmpeg {args}",
+            Command = "ffmpeg " + string.Join(' ', args.Select(QuoteForDisplay)),
             ExitCode = process.ExitCode,
             StdOut = stdout.ToString(),
             StdErr = stderr.ToString(),
@@ -146,4 +146,87 @@ public sealed class FfmpegMediaToolService : IMediaToolService
 
         return null;
     }
+
+    private static string ValidateExistingMediaPath(string path, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Media path is required.", paramName);
+        }
+
+        string full;
+        try
+        {
+            full = Path.GetFullPath(path);
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentException("Invalid media path.", paramName, ex);
+        }
+
+        if (!File.Exists(full))
+        {
+            throw new FileNotFoundException("Input video not found.", full);
+        }
+
+        // Reject shell metacharacters that should never appear in validated absolute paths
+        // for this tool surface.
+        if (full.IndexOfAny(['\r', '\n', '\0']) >= 0)
+        {
+            throw new ArgumentException("Media path contains illegal control characters.", paramName);
+        }
+
+        return full;
+    }
+
+    private static string ValidateOutputPath(string path, string paramName)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Output path is required.", paramName);
+        }
+
+        string full;
+        try
+        {
+            full = Path.GetFullPath(path);
+        }
+        catch (Exception ex)
+        {
+            throw new ArgumentException("Invalid output path.", paramName, ex);
+        }
+
+        var dir = Path.GetDirectoryName(full);
+        if (string.IsNullOrWhiteSpace(dir))
+        {
+            throw new ArgumentException("Output path must include a directory.", paramName);
+        }
+
+        Directory.CreateDirectory(dir);
+        if (full.IndexOfAny(['\r', '\n', '\0']) >= 0)
+        {
+            throw new ArgumentException("Output path contains illegal control characters.", paramName);
+        }
+
+        return full;
+    }
+
+    private static string CreateManagedOutputPath(string inputPath, string suffix, string extension)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "NexAI", "media");
+        Directory.CreateDirectory(dir);
+        var name = Path.GetFileNameWithoutExtension(inputPath);
+        // Keep generated names filesystem-safe and free of quote/space surprises.
+        foreach (var c in Path.GetInvalidFileNameChars())
+        {
+            name = name.Replace(c, '_');
+        }
+
+        return Path.Combine(dir, $"{name}_{suffix}_{DateTime.Now:yyyyMMdd_HHmmss}.{extension}");
+    }
+
+    private static string QuoteForDisplay(string value) =>
+        value.Contains(' ') || value.Contains('"')
+            ? "\"" + value.Replace("\"", "\\\"") + "\""
+            : value;
 }

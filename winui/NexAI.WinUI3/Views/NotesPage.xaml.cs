@@ -44,7 +44,6 @@ public sealed partial class NotesPage : Page
         NotesTitleText.Text = _localization.GetString("Notes.Title");
         NewNoteButton.Content = _localization.GetString("Common.New");
         SearchBox.PlaceholderText = _localization.GetString("Notes.SearchPlaceholder");
-        TitleBox.Header = _localization.GetString("Notes.Title");
         TitleBox.PlaceholderText = _localization.GetString("Notes.Untitled");
         DeleteButton.Content = _localization.GetString("Common.Delete");
         ContentBox.PlaceholderText = _localization.GetString("Notes.EditorPlaceholder");

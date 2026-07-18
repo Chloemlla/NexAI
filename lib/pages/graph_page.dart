@@ -30,6 +30,7 @@ class _GraphPageState extends State<GraphPage>
   late GraphData _graphData;
   bool _layoutDone = false;
   String _layoutSignature = '';
+  final Map<String, Offset> _nodePositions = {};
 
   @override
   void initState() {
@@ -49,10 +50,24 @@ class _GraphPageState extends State<GraphPage>
     final nodes = _graphData.nodes;
     final edges = _graphData.edges;
 
-    // Initialize random positions
+    // Preserve previous positions for known nodes (title/content edits keep signature
+    // unchanged but getGraphData returns fresh GraphNode instances at 0,0).
     for (final n in nodes) {
-      n.x = rng.nextDouble() * size.width * 0.6 + size.width * 0.2;
-      n.y = rng.nextDouble() * size.height * 0.6 + size.height * 0.2;
+      final prev = _nodePositions[n.id];
+      if (prev != null) {
+        n.x = prev.dx;
+        n.y = prev.dy;
+      } else {
+        n.x = rng.nextDouble() * size.width * 0.6 + size.width * 0.2;
+        n.y = rng.nextDouble() * size.height * 0.6 + size.height * 0.2;
+      }
+    }
+
+    // Only re-run force layout when topology changed (_layoutDone is false).
+    // When signature is unchanged we already restored positions above.
+    if (_layoutDone) {
+      _storeNodePositions(nodes);
+      return;
     }
 
     // Build adjacency for quick lookup
@@ -134,6 +149,13 @@ class _GraphPageState extends State<GraphPage>
     }
 
     _layoutDone = true;
+    _storeNodePositions(nodes);
+  }
+
+  void _storeNodePositions(List<GraphNode> nodes) {
+    _nodePositions
+      ..clear()
+      ..addEntries(nodes.map((n) => MapEntry(n.id, Offset(n.x, n.y))));
   }
 
   String _computeLayoutSignature(GraphData graphData) {
@@ -158,10 +180,25 @@ class _GraphPageState extends State<GraphPage>
     if (layoutSignature != _layoutSignature) {
       _layoutSignature = layoutSignature;
       _layoutDone = false;
+      // Drop positions for removed nodes; keep survivors for warm start.
+      final liveIds = _graphData.nodes.map((n) => n.id).toSet();
+      _nodePositions.removeWhere((id, _) => !liveIds.contains(id));
       _transformController.value = Matrix4.identity();
       if (_highlightedNodeId != null &&
           !_graphData.nodes.any((node) => node.id == _highlightedNodeId)) {
         _highlightedNodeId = null;
+      }
+    } else {
+      // Topology unchanged: restore coordinates onto fresh GraphNode instances.
+      for (final n in _graphData.nodes) {
+        final prev = _nodePositions[n.id];
+        if (prev != null) {
+          n.x = prev.dx;
+          n.y = prev.dy;
+        }
+      }
+      if (_nodePositions.isNotEmpty) {
+        _layoutDone = true;
       }
     }
 
@@ -477,7 +514,7 @@ class _GraphPageState extends State<GraphPage>
           Icon(Icons.hub_outlined, size: 64, color: cs.outlineVariant),
           const SizedBox(height: 16),
           Text(
-            '还没有连接',
+            '还没有笔记节点',
             style: TextStyle(
               color: cs.outline,
               fontSize: 16,
@@ -486,7 +523,8 @@ class _GraphPageState extends State<GraphPage>
           ),
           const SizedBox(height: 8),
           Text(
-            '在笔记中使用 [[笔记名称]] 来创建链接',
+            '创建笔记后会出现在图谱中；使用 [[笔记名称]] 可建立连接',
+            textAlign: TextAlign.center,
             style: TextStyle(color: cs.outlineVariant, fontSize: 13),
           ),
         ],

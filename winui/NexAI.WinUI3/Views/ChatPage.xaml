@@ -169,7 +169,8 @@
                     <ListView
                         x:Name="MessageList"
                         SelectionMode="None"
-                        IsItemClickEnabled="False">
+                        IsItemClickEnabled="False"
+                        ContainerContentChanging="MessageList_ContainerContentChanging">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -231,7 +232,8 @@
                         TextWrapping="Wrap"
                         MinHeight="72"
                         MaxHeight="160"
-                        TextChanged="ComposerBox_TextChanged" />
+                        TextChanged="ComposerBox_TextChanged"
+                        PreviewKeyDown="ComposerBox_PreviewKeyDown" />
                     <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Bottom">
                         <Button
                             x:Name="SendButton"

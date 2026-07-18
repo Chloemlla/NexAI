@@ -440,6 +440,75 @@ class _TranslationPageState extends State<TranslationPage> {
             ),
           ],
         ),
+        _buildTranslationHistorySection(cs),
+      ],
+    );
+  }
+
+  Widget _buildTranslationHistorySection(ColorScheme cs) {
+    final history = context.watch<TranslationProvider>().history;
+    return LumenSettingsSection(
+      icon: Icons.history_rounded,
+      title: '翻译历史',
+      children: [
+        if (history.isEmpty)
+          const ToolEmptyStateCard(
+            icon: Icons.history_toggle_off_rounded,
+            title: '暂无记录',
+            description: '翻译成功后会自动记录在这里，可一键恢复原文与译文。',
+          )
+        else
+          ToolPanel(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      await context.read<TranslationProvider>().clearHistory();
+                      if (!mounted) return;
+                      _showMessage('已清空翻译历史');
+                    },
+                    icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                    label: const Text('清空历史'),
+                  ),
+                ),
+                ...history.take(20).map((record) {
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      record.translatedText,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      '${record.sourceLanguage} → ${record.targetLanguage} · ${record.sourceText}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: IconButton(
+                      tooltip: '删除',
+                      icon: Icon(Icons.close_rounded, color: cs.error),
+                      onPressed: () => context
+                          .read<TranslationProvider>()
+                          .deleteRecord(record.id),
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _sourceController.text = record.sourceText;
+                        _targetController.text = record.translatedText;
+                        _sourceLanguage = record.sourceLanguage;
+                        _targetLanguage = record.targetLanguage;
+                        _alternatives = const [];
+                      });
+                      _showMessage('已恢复到输入区');
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
       ],
     );
   }

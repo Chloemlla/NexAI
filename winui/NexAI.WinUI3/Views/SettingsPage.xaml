@@ -68,8 +68,8 @@
                     <ToggleSwitch x:Name="SyncEnabledToggle" Header="Enable sync UI" />
                     <ComboBox x:Name="SyncMethodBox" Header="Sync method" MinWidth="220">
                         <ComboBoxItem Content="NexAI /sync/v2" Tag="NexAI" />
-                        <ComboBoxItem Content="WebDAV" Tag="WebDAV" />
-                        <ComboBoxItem Content="UpStash" Tag="UpStash" />
+                        <ComboBoxItem Content="WebDAV (not implemented)" Tag="WebDAV" IsEnabled="False" />
+                        <ComboBoxItem Content="UpStash (not implemented)" Tag="UpStash" IsEnabled="False" />
                     </ComboBox>
                     <TextBox x:Name="WebDavServerBox" Header="WebDAV server" />
                     <TextBox x:Name="WebDavUserBox" Header="WebDAV user" />

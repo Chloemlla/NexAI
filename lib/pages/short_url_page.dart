@@ -199,6 +199,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
                     minLines: 1,
                     maxLines: 4,
                     keyboardType: TextInputType.url,
+                    onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
                       labelText: '目标链接',
                       hintText: 'https://example.com/very/long/path',
@@ -320,9 +321,86 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
             ),
           ],
         ),
-        
+        _buildShortUrlHistorySection(cs),
       ],
     );
   }
 
+  Widget _buildShortUrlHistorySection(ColorScheme cs) {
+    final history = context.watch<ShortUrlProvider>().history;
+    return LumenSettingsSection(
+      icon: Icons.history_rounded,
+      title: '历史记录',
+      children: [
+        if (history.isEmpty)
+          const ToolEmptyStateCard(
+            icon: Icons.history_toggle_off_rounded,
+            title: '暂无记录',
+            description: '生成短链后会自动记录，可复制或再次打开。',
+          )
+        else
+          ToolPanel(
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () async {
+                      await context.read<ShortUrlProvider>().clearHistory();
+                      if (!mounted) return;
+                      SmartDialog.showToast('已清空历史');
+                    },
+                    icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                    label: const Text('清空历史'),
+                  ),
+                ),
+                ...history.take(20).map((record) {
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      record.shortUrl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: cs.primary,
+                        fontFamily: 'JetBrainsMonoNexAI',
+                      ),
+                    ),
+                    subtitle: Text(
+                      record.originalUrl,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: '复制',
+                          icon: const Icon(Icons.copy_rounded, size: 18),
+                          onPressed: () => _copyToClipboard(record.shortUrl),
+                        ),
+                        IconButton(
+                          tooltip: '删除',
+                          icon: Icon(Icons.close_rounded, color: cs.error),
+                          onPressed: () => context
+                              .read<ShortUrlProvider>()
+                              .deleteRecord(record.id),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _targetController.text = record.originalUrl;
+                        _resultUrl = record.shortUrl;
+                      });
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }

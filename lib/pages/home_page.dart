@@ -459,120 +459,14 @@ class _HomePageState extends State<HomePage> with WindowListener {
           maxChildSize: 0.9,
           expand: false,
           builder: (_, scrollController) {
-            return StatefulBuilder(
-              builder: (context, setSheetState) {
-                String searchQuery = '';
-                List<SearchResult> searchResults = [];
-
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 4,
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: cs.primaryContainer,
-                              borderRadius: BorderRadius.circular(
-                                LumenTokens.radiusSm,
-                              ),
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.history_rounded,
-                                size: 20,
-                                color: cs.onPrimaryContainer,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            '对话',
-                            style: Theme.of(ctx).textTheme.titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0,
-                                ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: cs.primaryContainer.withAlpha(120),
-                              borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                            ),
-                            child: Text(
-                              '${chat.conversations.length}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: cs.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // ── Search Bar ──
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: '搜索消息...',
-                          prefixIcon: const Icon(
-                            Icons.search_rounded,
-                            size: 20,
-                          ),
-                          filled: true,
-                          fillColor: cs.surfaceContainerHighest.withAlpha(150),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        onChanged: (v) {
-                          setSheetState(() {
-                            searchQuery = v;
-                            searchResults = chat.searchMessages(v);
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
-                    Expanded(
-                      child: searchQuery.isEmpty
-                          ? _buildConversationList(
-                              chat,
-                              cs,
-                              scrollController,
-                              ctx,
-                            )
-                          : _buildSearchResultsList(
-                              searchResults,
-                              searchQuery,
-                              cs,
-                              scrollController,
-                              chat,
-                              ctx,
-                            ),
-                    ),
-                  ],
-                );
-              },
+            // State must live outside the builder body so setState rebuilds keep it.
+            return _ConversationSheetBody(
+              chat: chat,
+              colorScheme: cs,
+              scrollController: scrollController,
+              sheetContext: ctx,
+              buildConversationList: _buildConversationList,
+              buildSearchResultsList: _buildSearchResultsList,
             );
           },
         );
@@ -1403,6 +1297,154 @@ class WindowButtons extends StatelessWidget {
           onPressed: () => windowManager.close(),
           visualDensity: VisualDensity.compact,
           tooltip: '关闭',
+        ),
+      ],
+    );
+  }
+}
+
+/// Holds conversation-sheet search state outside the rebuild body so results stick.
+class _ConversationSheetBody extends StatefulWidget {
+  const _ConversationSheetBody({
+    required this.chat,
+    required this.colorScheme,
+    required this.scrollController,
+    required this.sheetContext,
+    required this.buildConversationList,
+    required this.buildSearchResultsList,
+  });
+
+  final ChatProvider chat;
+  final ColorScheme colorScheme;
+  final ScrollController scrollController;
+  final BuildContext sheetContext;
+  final Widget Function(
+    ChatProvider chat,
+    ColorScheme cs,
+    ScrollController scrollController,
+    BuildContext ctx,
+  )
+  buildConversationList;
+  final Widget Function(
+    List<SearchResult> results,
+    String query,
+    ColorScheme cs,
+    ScrollController scrollController,
+    ChatProvider chat,
+    BuildContext ctx,
+  )
+  buildSearchResultsList;
+
+  @override
+  State<_ConversationSheetBody> createState() => _ConversationSheetBodyState();
+}
+
+class _ConversationSheetBodyState extends State<_ConversationSheetBody> {
+  String _searchQuery = '';
+  List<SearchResult> _searchResults = const [];
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.colorScheme;
+    final chat = widget.chat;
+    final ctx = widget.sheetContext;
+    final scrollController = widget.scrollController;
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.history_rounded,
+                    size: 20,
+                    color: cs.onPrimaryContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '对话',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer.withAlpha(120),
+                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                ),
+                child: Text(
+                  '${chat.conversations.length}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: '搜索消息...',
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              filled: true,
+              fillColor: cs.surfaceContainerHighest.withAlpha(150),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: (v) {
+              setState(() {
+                _searchQuery = v;
+                _searchResults = chat.searchMessages(v);
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
+        Expanded(
+          child: _searchQuery.isEmpty
+              ? widget.buildConversationList(
+                  chat,
+                  cs,
+                  scrollController,
+                  ctx,
+                )
+              : widget.buildSearchResultsList(
+                  _searchResults,
+                  _searchQuery,
+                  cs,
+                  scrollController,
+                  chat,
+                  ctx,
+                ),
         ),
       ],
     );

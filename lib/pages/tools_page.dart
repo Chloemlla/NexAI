@@ -28,7 +28,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: '视频压缩',
       description: '减小视频体积',
-      keywords: const ['视频', '压缩', '媒体', '体积'],
+      keywords: const ['视频', '压缩', '媒体', '体积', 'video', 'compress'],
       category: _ToolCategory.media,
       icon: Icons.video_file_rounded,
       pageBuilder: () => const VideoCompressorPage(),
@@ -36,7 +36,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: '视频转音频',
       description: '批量提取音频',
-      keywords: const ['视频', '音频', '提取', '媒体'],
+      keywords: const ['视频', '音频', '提取', '媒体', 'video', 'audio', 'mp3', 'extract'],
       category: _ToolCategory.media,
       icon: Icons.audiotrack_rounded,
       pageBuilder: () => const VideoToAudioPage(),
@@ -44,7 +44,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: '日期时间转换',
       description: '多种格式互转',
-      keywords: const ['时间戳', '日期', '时间', '转换'],
+      keywords: const ['时间戳', '日期', '时间', '转换', 'timestamp', 'datetime', 'date', 'time'],
       category: _ToolCategory.convert,
       icon: Icons.access_time_rounded,
       pageBuilder: () => const DateTimeConverterPage(),
@@ -52,7 +52,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: 'Base64 编解码',
       description: '字符串编码解码',
-      keywords: const ['base64', '编码', '解码', '转换'],
+      keywords: const ['base64', '编码', '解码', '转换', 'encode', 'decode'],
       category: _ToolCategory.convert,
       icon: Icons.code_rounded,
       pageBuilder: () => const Base64ConverterPage(),
@@ -60,7 +60,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: '密码生成器',
       description: '安全随机密码',
-      keywords: const ['密码', '随机', '安全'],
+      keywords: const ['密码', '随机', '安全', 'password', 'generator', 'vault'],
       category: _ToolCategory.security,
       icon: Icons.password_rounded,
       pageBuilder: () => const PasswordGeneratorPage(),
@@ -68,7 +68,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: '短链接生成',
       description: '缩短长链接，便于分享',
-      keywords: const ['短链', '短链接', '链接', 'URL', '分享'],
+      keywords: const ['短链', '短链接', '链接', 'URL', '分享', 'short', 'url', 'link'],
       category: _ToolCategory.network,
       icon: Icons.link_rounded,
       pageBuilder: () => const ShortUrlPage(),
@@ -76,7 +76,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: '内容分享',
       description: '分享代码与文档',
-      keywords: const ['分享', 'artifact', '文档', '代码'],
+      keywords: const ['分享', 'artifact', '文档', '代码', 'share', 'paste'],
       category: _ToolCategory.network,
       icon: Icons.share_rounded,
       pageBuilder: () => const ArtifactsPage(),
@@ -84,7 +84,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: 'AI 翻译',
       description: 'DeepLX 公共翻译',
-      keywords: const ['翻译', 'AI', '语言'],
+      keywords: const ['翻译', 'AI', '语言', 'translate', 'translation', 'deeplx'],
       category: _ToolCategory.ai,
       icon: Icons.translate_rounded,
       pageBuilder: () => const TranslationPage(),
@@ -92,7 +92,7 @@ class _ToolsPageState extends State<ToolsPage> {
     _ToolEntry(
       title: 'AI 绘图',
       description: '使用 NexAI API 端点生成图片',
-      keywords: const ['图片', '图像', '生成', 'AI', '绘图'],
+      keywords: const ['图片', '图像', '生成', 'AI', '绘图', 'image', 'draw', 'generate'],
       category: _ToolCategory.ai,
       icon: Icons.brush_rounded,
       pageBuilder: () => const ImageGenerationPage(),

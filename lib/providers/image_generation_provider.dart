@@ -221,7 +221,7 @@ class ImageGenerationProvider extends ChangeNotifier {
             }
             _error = null;
           } else {
-            _error = 'No image URL found in response';
+            _error = '响应中未找到图片地址';
           }
         }
       } else {
@@ -243,13 +243,13 @@ class ImageGenerationProvider extends ChangeNotifier {
           _error = 'HTTP ${e.response!.statusCode}';
         }
       } else {
-        _error = e.message ?? 'Connection error';
+        _error = e.message ?? '连接失败';
       }
       if (isHandshakeError) {
         _error = CertificateErrorHelper.handshakeUserMessage();
       }
     } catch (e) {
-      _error = 'Error: $e';
+      _error = '请求失败：$e';
     }
 
     _isLoading = false;
@@ -343,13 +343,13 @@ class ImageGenerationProvider extends ChangeNotifier {
           _error = 'HTTP ${e.response!.statusCode}';
         }
       } else {
-        _error = e.message ?? 'Connection error';
+        _error = e.message ?? '连接失败';
       }
       if (isHandshakeError) {
         _error = CertificateErrorHelper.handshakeUserMessage();
       }
     } catch (e) {
-      _error = 'Error: $e';
+      _error = '请求失败：$e';
     }
 
     _isLoading = false;
@@ -425,13 +425,13 @@ class ImageGenerationProvider extends ChangeNotifier {
           _error = 'HTTP ${e.response!.statusCode}';
         }
       } else {
-        _error = e.message ?? 'Connection error';
+        _error = e.message ?? '连接失败';
       }
       if (isHandshakeError) {
         _error = CertificateErrorHelper.handshakeUserMessage();
       }
     } catch (e) {
-      _error = 'Error: $e';
+      _error = '请求失败：$e';
     }
 
     _isLoading = false;

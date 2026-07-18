@@ -169,7 +169,7 @@ _m3Section(cs, tt, Icons.auto_awesome_rounded, '功能', [
   _m3Feature(
     cs,
     Icons.color_lens_rounded,
-    'Material You 动态颜色（Android）',
+    'Lumen 柔和界面（Android）',
   ),
   const SizedBox(height: 8),
   _m3Feature(

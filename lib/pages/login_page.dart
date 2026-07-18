@@ -190,16 +190,14 @@ class _LoginPageState extends State<LoginPage>
                   ),
                   const SizedBox(height: 24),
 
-                  // Tab content
-                  SizedBox(
-                    height: 360,
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildLoginForm(auth, colorScheme),
-                        _buildRegisterForm(auth, colorScheme),
-                      ],
-                    ),
+                  // Tab content — avoid fixed height which clips on small screens.
+                  AnimatedBuilder(
+                    animation: _tabController,
+                    builder: (context, _) {
+                      return _tabController.index == 0
+                          ? _buildLoginForm(auth, colorScheme)
+                          : _buildRegisterForm(auth, colorScheme);
+                    },
                   ),
 
                   const SizedBox(height: 16),
@@ -650,12 +648,18 @@ class _LoginPageState extends State<LoginPage>
             onPressed: () async {
               if (emailController.text.trim().isEmpty) return;
               Navigator.of(ctx).pop();
-              await NexaiAuthApi.forgotPassword(
-                email: emailController.text.trim(),
-              );
-              if (mounted) {
+              try {
+                await NexaiAuthApi.forgotPassword(
+                  email: emailController.text.trim(),
+                );
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('如果邮箱已注册，您将收到密码重置指引')),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('发送失败：$e')),
                 );
               }
             },

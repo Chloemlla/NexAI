@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../main.dart' show isAndroid, isDesktop;
 import '../models/message.dart';
@@ -180,14 +181,18 @@ class _MessageBubbleState extends State<MessageBubble> {
                             content: widget.message.content,
                           ),
                         ),
-                      if (!isUser && widget.message.citations.isNotEmpty) ...[
+                      if (!isUser &&
+                          widget.message.citations
+                              .where((c) => c.source != 'pin')
+                              .isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: widget.message.citations.map((c) {
-                            return _CitationChip(citation: c);
-                          }).toList(),
+                          children: widget.message.citations
+                              .where((c) => c.source != 'pin')
+                              .map((c) => _CitationChip(citation: c))
+                              .toList(),
                         ),
                       ],
                       if (!isUser &&
@@ -586,11 +591,25 @@ class _MessageFooter extends StatelessWidget {
     }
   }
 
-  void _shareToShareGPT(BuildContext context) {
+  Future<void> _shareToShareGPT(BuildContext context) async {
     if (isAndroid) Navigator.pop(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('正在连接 ShareGPT...')));
+    final text = message.content.trim();
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('消息为空，无法分享')),
+      );
+      return;
+    }
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: text, subject: 'NexAI 消息分享'),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('分享失败：$e')),
+      );
+    }
   }
 
   void _generateArtifact(BuildContext context) {
@@ -868,6 +887,7 @@ class _MessageFooter extends StatelessWidget {
       systemPrompt: settings.systemPrompt,
       vertexProjectId: settings.vertexProjectId,
       vertexLocation: settings.vertexLocation,
+      assistantMessageIndex: messageIndex,
     );
   }
 
@@ -967,7 +987,7 @@ class _MessageFooter extends StatelessWidget {
                     Icon(Icons.note_add_rounded, size: 20, color: cs.primary),
                     const SizedBox(width: 10),
                     Text(
-                      'Save to Note',
+                      '保存到笔记',
                       style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -995,11 +1015,11 @@ class _MessageFooter extends StatelessWidget {
                   ),
                 ),
                 title: const Text(
-                  'Create new note',
+                  '创建新笔记',
                   style: TextStyle(fontWeight: FontWeight.w500),
                 ),
                 subtitle: Text(
-                  'Save as a new note',
+                  '将内容保存为新笔记',
                   style: TextStyle(fontSize: 12, color: cs.outline),
                 ),
                 onTap: () async {
@@ -1023,7 +1043,7 @@ class _MessageFooter extends StatelessWidget {
                             color: Colors.white,
                           ),
                           SizedBox(width: 8),
-                          Text('Saved to new note'),
+                          Text('已保存为新笔记'),
                         ],
                       ),
                       duration: const Duration(seconds: 2),
@@ -1109,7 +1129,7 @@ class _MessageFooter extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                    child: Text('Appended to "${note.title}"'),
+                                    child: Text('已追加到「${note.title}」'),
                                   ),
                                 ],
                               ),

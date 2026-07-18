@@ -10,6 +10,7 @@ import '../providers/artifacts_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/tool_page_style.dart';
 import '../widgets/lumen/lumen.dart';
+import 'login_page.dart';
 
 class ArtifactsPage extends StatefulWidget {
   const ArtifactsPage({super.key});
@@ -146,17 +147,26 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
     if (!isLoggedIn) {
       return LumenSecondaryScaffold(
         title: '我的分享',
-        children: const [
-          LumenPageIntro(
+        children: [
+          const LumenPageIntro(
             icon: Icons.share_rounded,
             title: '我的分享',
             description: '查看已发布分享，支持复制链接、刷新列表和删除记录。',
             chips: ['需要登录', '集中管理'],
           ),
-          ToolEmptyStateCard(
+          const ToolEmptyStateCard(
             icon: Icons.login_rounded,
             title: '请先登录',
             description: '登录后才能拉取你的分享记录并进行管理。',
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const LoginPage()),
+              );
+            },
+            icon: const Icon(Icons.login_rounded),
+            label: const Text('前往登录'),
           ),
         ],
       );

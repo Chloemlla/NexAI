@@ -47,9 +47,23 @@ class _ChatPageState extends State<ChatPage> {
     for (var i = 0; i < messages.length; i++) {
       final msg = messages[i];
       if (msg.role == 'tool') continue;
+      // Multi-model compare: only show the active sibling branch.
+      if (msg.siblingGroupId != null && !msg.isActiveBranch) continue;
       entries.add((message: msg, originalIndex: i));
     }
     return entries;
+  }
+
+  /// True when the trailing assistant bubble is still streaming/empty.
+  bool _hasInProgressAssistant(
+    List<({Message message, int originalIndex})> visibleEntries,
+  ) {
+    if (visibleEntries.isEmpty) return false;
+    final last = visibleEntries.last.message;
+    if (last.role != 'assistant' || last.isError) return false;
+    return last.content.trim().isEmpty &&
+        last.reasoning.trim().isEmpty &&
+        last.toolRuns.isEmpty;
   }
 
   final _controller = TextEditingController();
@@ -172,6 +186,21 @@ class _ChatPageState extends State<ChatPage> {
 
     _activeConversationId = conversationId;
     _observedMessageCount = messageCount;
+
+    // "引用到输入框" sets focusQuery=quote; insert quoted text into composer.
+    if (chat.focusQuery == 'quote' && chat.focusMessageIndex != null) {
+      final idx = chat.focusMessageIndex!;
+      final messages = chat.messages;
+      if (idx >= 0 && idx < messages.length) {
+        final quoted = '> ${messages[idx].content.trim()}\n\n';
+        final merged = _controller.text.isEmpty
+            ? quoted
+            : '$quoted${_controller.text}';
+        _replaceComposerText(merged);
+        _focusNode.requestFocus();
+      }
+      chat.clearFocusMessage();
+    }
 
     if (conversationChanged) {
       _restoreDraftForConversation(conversationId);
@@ -506,8 +535,6 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  // Kept for future chat backup UX entrypoint.
-  // ignore: unused_element
   Future<void> _importChatJson() async {
     final chat = context.read<ChatProvider>();
     final messenger = ScaffoldMessenger.of(context);
@@ -526,6 +553,97 @@ class _ChatPageState extends State<ChatPage> {
         SnackBar(content: Text('导入失败：$e')),
       );
     }
+  }
+
+  Future<void> _showComposerMoreActions(SettingsProvider settings) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        Widget tile({
+          required IconData icon,
+          required String title,
+          required String subtitle,
+          required VoidCallback onTap,
+        }) {
+          return ListTile(
+            leading: Icon(icon, color: cs.primary),
+            title: Text(title),
+            subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+            onTap: () {
+              Navigator.pop(ctx);
+              onTap();
+            },
+          );
+        }
+
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '更多聊天工具',
+                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                tile(
+                  icon: Icons.smart_toy_outlined,
+                  title: '选择助手',
+                  subtitle: '切换系统提示与默认模型',
+                  onTap: () => _showAssistantPicker(settings),
+                ),
+                tile(
+                  icon: Icons.auto_awesome_outlined,
+                  title: '提示模板',
+                  subtitle: '快速填入常用提示词',
+                  onTap: _showPromptTemplates,
+                ),
+                tile(
+                  icon: Icons.menu_book_outlined,
+                  title: '导入知识文档',
+                  subtitle: 'txt / md / json 等文本知识库',
+                  onTap: _importKnowledgeDoc,
+                ),
+                tile(
+                  icon: Icons.compare_arrows_rounded,
+                  title: '多模型对比',
+                  subtitle: '同一问题并行多个模型回答',
+                  onTap: () => _editCompareModels(settings),
+                ),
+                tile(
+                  icon: Icons.ios_share_outlined,
+                  title: '导出会话 JSON',
+                  subtitle: '分享或备份当前会话',
+                  onTap: _exportChatJson,
+                ),
+                tile(
+                  icon: Icons.file_upload_outlined,
+                  title: '导入会话 JSON',
+                  subtitle: '从备份文件合并会话',
+                  onTap: _importChatJson,
+                ),
+                tile(
+                  icon: Icons.image_outlined,
+                  title: 'AI 绘图',
+                  subtitle: '打开图片生成工具页',
+                  onTap: () => _openImageGenerationPage(context),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _editCompareModels(SettingsProvider settings) async {
@@ -1023,10 +1141,15 @@ class _ChatPageState extends State<ChatPage> {
                               contentHorizontalPad,
                               10,
                             ),
-                            itemCount:
-                                visibleEntries.length + (chat.isLoading ? 1 : 0),
+                            itemCount: visibleEntries.length +
+                                (chat.isLoading &&
+                                        !_hasInProgressAssistant(visibleEntries)
+                                    ? 1
+                                    : 0),
                             itemBuilder: (context, index) {
-                              if (index == visibleEntries.length && chat.isLoading) {
+                              if (index == visibleEntries.length &&
+                                  chat.isLoading &&
+                                  !_hasInProgressAssistant(visibleEntries)) {
                                 return _buildThinkingIndicator(cs, chat);
                               }
                               return RepaintBoundary(
@@ -1113,34 +1236,6 @@ class _ChatPageState extends State<ChatPage> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2, right: 4),
                     child: IconButton(
-                      icon: Icon(Icons.smart_toy_outlined, color: cs.primary, size: 22),
-                      onPressed: () => _showAssistantPicker(settings),
-                      tooltip: '选择助手',
-                      style: IconButton.styleFrom(
-                        backgroundColor: cs.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, right: 4),
-                    child: IconButton(
-                      icon: Icon(Icons.auto_awesome_outlined, color: cs.primary, size: 22),
-                      onPressed: _showPromptTemplates,
-                      tooltip: '提示模板',
-                      style: IconButton.styleFrom(
-                        backgroundColor: cs.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, right: 4),
-                    child: IconButton(
                       icon: Icon(
                         _isListening ? Icons.mic : Icons.mic_none_rounded,
                         color: _isListening ? cs.error : cs.primary,
@@ -1159,51 +1254,9 @@ class _ChatPageState extends State<ChatPage> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2, right: 4),
                     child: IconButton(
-                      icon: Icon(Icons.menu_book_outlined, color: cs.primary, size: 22),
-                      onPressed: _importKnowledgeDoc,
-                      tooltip: '导入知识文档',
-                      style: IconButton.styleFrom(
-                        backgroundColor: cs.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, right: 4),
-                    child: IconButton(
-                      icon: Icon(Icons.hub_outlined, color: cs.primary, size: 22),
-                      onPressed: () => _editCompareModels(settings),
-                      tooltip: '多模型对比',
-                      style: IconButton.styleFrom(
-                        backgroundColor: cs.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, right: 4),
-                    child: IconButton(
-                      icon: Icon(Icons.ios_share_outlined, color: cs.primary, size: 22),
-                      onPressed: _exportChatJson,
-                      tooltip: '导出会话 JSON',
-                      style: IconButton.styleFrom(
-                        backgroundColor: cs.surfaceContainerHighest,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 2, right: 8),
-                    child: IconButton(
-                      icon: Icon(Icons.image_outlined, color: cs.primary, size: 22),
-                      onPressed: () => _openImageGenerationPage(context),
-                      tooltip: '打开绘图页面',
+                      icon: Icon(Icons.add_circle_outline_rounded, color: cs.primary, size: 22),
+                      onPressed: () => _showComposerMoreActions(settings),
+                      tooltip: '更多工具',
                       style: IconButton.styleFrom(
                         backgroundColor: cs.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(
@@ -1603,7 +1656,20 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildSendButton(ColorScheme cs, bool isLoading) {
-    final canSend = (_hasText || _pendingAttachments.isNotEmpty) && !isLoading;
+    final hasPayload = _hasText || _pendingAttachments.isNotEmpty;
+    // While generating: empty composer → Stop; non-empty → queue follow-up.
+    final canQueue = isLoading && hasPayload;
+    final canSend = !isLoading && hasPayload;
+    final showStop = isLoading && !hasPayload;
+
+    final Color bg;
+    if (showStop) {
+      bg = cs.error;
+    } else if (canSend || canQueue) {
+      bg = cs.primary;
+    } else {
+      bg = cs.surfaceContainerHighest;
+    }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -1611,27 +1677,32 @@ class _ChatPageState extends State<ChatPage> {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        color: isLoading
-            ? cs.error
-            : (canSend ? cs.primary : cs.surfaceContainerHighest),
+        color: bg,
         borderRadius: BorderRadius.circular(23),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(23),
-          onTap: isLoading
+          onTap: showStop
               ? () => context.read<ChatProvider>().cancelGeneration()
-              : (canSend ? _send : null),
+              : ((canSend || canQueue) ? _send : null),
           child: Center(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
-              child: isLoading
+              child: showStop
                   ? Icon(
                       Icons.stop_rounded,
                       key: const ValueKey('stop'),
                       size: 22,
                       color: cs.onError,
+                    )
+                  : canQueue
+                  ? Icon(
+                      Icons.playlist_add_check_rounded,
+                      key: const ValueKey('queue'),
+                      size: 22,
+                      color: cs.onPrimary,
                     )
                   : Icon(
                       Icons.arrow_upward_rounded,

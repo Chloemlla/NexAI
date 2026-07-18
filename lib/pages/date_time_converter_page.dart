@@ -3,6 +3,7 @@ import '../widgets/lumen/lumen.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../theme/lumen_tokens.dart';
+import '../widgets/tool_page_style.dart';
 
 class DateTimeConverterPage extends StatefulWidget {
   const DateTimeConverterPage({super.key});
@@ -113,7 +114,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
   void _onInputChanged(String value) {
     if (value.isEmpty) {
       setState(() {
-        _selectedDate = DateTime.now();
+        _selectedDate = null;
         _errorMessage = null;
       });
       return;
@@ -322,7 +323,16 @@ if (_selectedDate != null)
       isNarrow,
       isCopied,
     );
-  }),
+  })
+else
+  const Padding(
+    padding: EdgeInsets.symmetric(vertical: 24),
+    child: ToolEmptyStateCard(
+      icon: Icons.schedule_rounded,
+      title: '输入或选择时间',
+      description: '清空输入不会自动使用当前时间；点击「当前时间」可快速填入。',
+    ),
+  ),
       ],
     );
   }

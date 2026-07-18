@@ -1,9 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using NexAI.Core.Chat;
+using NexAI.Core.Settings;
+using NexAI.WinUI3.Controls;
 using NexAI.WinUI3.Services;
+using Windows.System;
 
 namespace NexAI.WinUI3.Views;
 
@@ -11,17 +15,21 @@ public sealed partial class ChatPage : Page
 {
     private readonly IConversationStore _conversationStore;
     private readonly ChatSessionService _chatSession;
+    private readonly ISettingsStore _settingsStore;
     private readonly ILocalizationService _localization;
     private string _searchQuery = string.Empty;
     private bool _isBusy;
+    private bool _advancedRenderingEnabled = true;
 
     public ChatPage()
     {
         InitializeComponent();
         _conversationStore = App.Current.Services.GetRequiredService<IConversationStore>();
         _chatSession = App.Current.Services.GetRequiredService<ChatSessionService>();
+        _settingsStore = App.Current.Services.GetRequiredService<ISettingsStore>();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
         _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(RefreshUi);
+        _advancedRenderingEnabled = _settingsStore.Current.AdvancedRenderingEnabled;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -29,6 +37,8 @@ public sealed partial class ChatPage : Page
         base.OnNavigatedTo(e);
         _conversationStore.Changed += OnConversationStoreChanged;
         _chatSession.StateChanged += OnChatSessionStateChanged;
+        _settingsStore.Changed += OnSettingsChanged;
+        _advancedRenderingEnabled = _settingsStore.Current.AdvancedRenderingEnabled;
         ApplyStaticLocalization();
         RefreshUi();
     }
@@ -37,6 +47,7 @@ public sealed partial class ChatPage : Page
     {
         _conversationStore.Changed -= OnConversationStoreChanged;
         _chatSession.StateChanged -= OnChatSessionStateChanged;
+        _settingsStore.Changed -= OnSettingsChanged;
         base.OnNavigatedFrom(e);
     }
 
@@ -48,6 +59,24 @@ public sealed partial class ChatPage : Page
     private void OnChatSessionStateChanged(object? sender, EventArgs e)
     {
         DispatcherQueue.TryEnqueue(RefreshUi);
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            var next = _settingsStore.Current.AdvancedRenderingEnabled;
+            if (next == _advancedRenderingEnabled)
+            {
+                return;
+            }
+
+            _advancedRenderingEnabled = next;
+            // Force rebind so MarkdownMessagePresenter picks up EnableAdvanced.
+            var current = _conversationStore.CurrentConversation;
+            MessageList.ItemsSource = null;
+            MessageList.ItemsSource = current?.Messages ?? [];
+        });
     }
 
     private async void NewChatButton_Click(object sender, RoutedEventArgs e)
@@ -169,6 +198,61 @@ public sealed partial class ChatPage : Page
 
     private async void SendButton_Click(object sender, RoutedEventArgs e)
     {
+        await TrySendAsync();
+    }
+
+    private async void ComposerBox_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != VirtualKey.Enter)
+        {
+            return;
+        }
+
+        var shiftDown = (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift)
+            & Windows.UI.Core.CoreVirtualKeyStates.Down) == Windows.UI.Core.CoreVirtualKeyStates.Down;
+        if (shiftDown)
+        {
+            // Shift+Enter inserts a newline (TextBox default with AcceptsReturn).
+            return;
+        }
+
+        // Enter sends; mark handled so AcceptsReturn does not insert a newline.
+        e.Handled = true;
+        await TrySendAsync();
+    }
+
+    private void MessageList_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue)
+        {
+            return;
+        }
+
+        ApplyAdvancedRendering(args.ItemContainer?.ContentTemplateRoot);
+        if (args.ItemContainer?.ContentTemplateRoot is null)
+        {
+            args.RegisterUpdateCallback((_, e) =>
+            {
+                ApplyAdvancedRendering(e.ItemContainer?.ContentTemplateRoot);
+            });
+        }
+    }
+
+    private void ApplyAdvancedRendering(DependencyObject? root)
+    {
+        switch (root)
+        {
+            case MarkdownMessagePresenter presenter:
+                presenter.EnableAdvanced = _advancedRenderingEnabled;
+                break;
+            case Border border when border.Child is MarkdownMessagePresenter nested:
+                nested.EnableAdvanced = _advancedRenderingEnabled;
+                break;
+        }
+    }
+
+    private async Task TrySendAsync()
+    {
         if (_chatSession.IsStreaming)
         {
             return;
@@ -180,19 +264,54 @@ public sealed partial class ChatPage : Page
             return;
         }
 
-        ComposerBox.Text = string.Empty;
-        UpdateComposerState();
+        // Clear only after the session accepts the message (streaming starts).
+        // Early validation failures throw before StateChanged / IsStreaming.
+        var draft = ComposerBox.Text ?? string.Empty;
+        var cleared = false;
 
+        void OnStateChanged(object? sender, EventArgs e)
+        {
+            if (cleared || !_chatSession.IsStreaming)
+            {
+                return;
+            }
+
+            cleared = true;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (string.Equals(ComposerBox.Text, draft, StringComparison.Ordinal) ||
+                    string.Equals(ComposerBox.Text?.Trim(), content, StringComparison.Ordinal))
+                {
+                    ComposerBox.Text = string.Empty;
+                    UpdateComposerState();
+                }
+            });
+        }
+
+        _chatSession.StateChanged += OnStateChanged;
         try
         {
             await _chatSession.SendAsync(content);
+            if (!cleared)
+            {
+                ComposerBox.Text = string.Empty;
+                UpdateComposerState();
+            }
         }
         catch (Exception ex)
         {
+            if (!cleared)
+            {
+                // Validation / accept failed — keep (or restore) the draft.
+                ComposerBox.Text = draft;
+                UpdateComposerState();
+            }
+
             await ShowInfoAsync(_localization.GetString("Chat.SendFailedTitle"), ex.Message);
         }
         finally
         {
+            _chatSession.StateChanged -= OnStateChanged;
             RefreshUi();
         }
     }
@@ -281,7 +400,7 @@ public sealed partial class ChatPage : Page
         ComposerHintText.Text = streaming
             ? _localization.GetString("Chat.HintStreaming")
             : hasText
-                ? _localization.GetString("Chat.HintPressSend")
+                ? _localization.GetString("Chat.HintEnterToSend")
                 : _localization.GetString("Chat.HintReady");
     }
 

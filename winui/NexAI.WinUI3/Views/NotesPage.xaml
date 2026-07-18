@@ -67,7 +67,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBox x:Name="TitleBox" Header="Title" PlaceholderText="Untitled Note" />
+                    <TextBox x:Name="TitleBox" Header="Title" PlaceholderText="Untitled Note" TextChanged="TitleBox_TextChanged" />
                     <Button x:Name="StarButton" Grid.Column="1" Content="Star" Click="StarButton_Click" />
                     <Button x:Name="DeleteButton" Grid.Column="2" Content="Delete" Click="DeleteButton_Click" />
                 </Grid>
@@ -77,7 +77,8 @@
                     AcceptsReturn="True"
                     TextWrapping="Wrap"
                     PlaceholderText="Write markdown notes with #tags and [[wiki-links]]..."
-                    ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                    ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    TextChanged="ContentBox_TextChanged" />
                 <Grid Grid.Row="2" ColumnSpacing="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />

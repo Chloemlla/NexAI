@@ -136,6 +136,7 @@
   <data name="Chat.SendFailedTitle" xml:space="preserve"><value>无法发送消息</value></data>
   <data name="Chat.HintStreaming" xml:space="preserve"><value>流式输出中...</value></data>
   <data name="Chat.HintPressSend" xml:space="preserve"><value>点击发送</value></data>
+  <data name="Chat.HintEnterToSend" xml:space="preserve"><value>Enter 发送 · Shift+Enter 换行</value></data>
   <data name="Chat.HintReady" xml:space="preserve"><value>就绪</value></data>
 
   <data name="Notes.Title" xml:space="preserve"><value>笔记</value></data>
@@ -151,6 +152,9 @@
   <data name="Notes.DeleteBody" xml:space="preserve"><value>确定永久删除这条笔记吗？</value></data>
   <data name="Notes.Updated" xml:space="preserve"><value>更新于 {0}</value></data>
   <data name="Notes.TagsUpdated" xml:space="preserve"><value>标签：{0} · 更新于 {1}</value></data>
+  <data name="Notes.UnsavedTitle" xml:space="preserve"><value>未保存的更改</value></data>
+  <data name="Notes.UnsavedBody" xml:space="preserve"><value>继续前是否保存对当前笔记的更改？</value></data>
+  <data name="Notes.Discard" xml:space="preserve"><value>丢弃</value></data>
 
   <data name="Settings.SignedInAs" xml:space="preserve"><value>已登录：{0}。</value></data>
   <data name="Settings.NotSignedIn" xml:space="preserve"><value>未登录。</value></data>
@@ -165,6 +169,10 @@
   <data name="Settings.Sync.NexAI" xml:space="preserve"><value>NexAI /sync/v2</value></data>
   <data name="Settings.Sync.WebDAV" xml:space="preserve"><value>WebDAV</value></data>
   <data name="Settings.Sync.UpStash" xml:space="preserve"><value>UpStash</value></data>
+  <data name="Settings.Sync.Unimplemented" xml:space="preserve"><value>未实现</value></data>
+  <data name="Settings.Sync.NotImplemented" xml:space="preserve"><value>{0} 同步尚未在 Windows 客户端实现，请使用 NexAI /sync/v2。</value></data>
+  <data name="Settings.Sync.DownloadConfirmTitle" xml:space="preserve"><value>替换本地数据？</value></data>
+  <data name="Settings.Sync.DownloadConfirmBody" xml:space="preserve"><value>下载将用云端快照替换本地会话与笔记，此操作无法在本客户端撤销。</value></data>
 
   <data name="SoftSig.Title" xml:space="preserve"><value>签名校验提示</value></data>
   <data name="SoftSig.Generic" xml:space="preserve"><value>服务端 soft 模式已放行请求，但签名校验未通过</value></data>

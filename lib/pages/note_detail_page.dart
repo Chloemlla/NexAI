@@ -42,6 +42,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   bool _focusMode = false;
   bool _initialized = false;
   bool _showToolbar = true;
+  bool _dirty = false;
+  String _savedTitle = '';
+  String _savedContent = '';
+  NotesProvider? _notesProvider;
+  SettingsProvider? _settingsProvider;
 
   // Stats
   int _wordCount = 0;
@@ -58,24 +63,27 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     _editorScroll = ScrollController();
     _previewScroll = ScrollController();
     _contentController.addListener(_onContentChanged);
+    _titleController.addListener(_onContentChanged);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _notesProvider = context.read<NotesProvider>();
+    _settingsProvider = context.read<SettingsProvider>();
     if (!_initialized) {
-      final note = context
-          .read<NotesProvider>()
-          .notes
+      final note = _notesProvider!.notes
           .where((n) => n.id == widget.noteId)
           .firstOrNull;
       if (note != null) {
         _titleController.text = note.title;
         _contentController.text = note.content;
+        _savedTitle = note.title;
+        _savedContent = note.content;
         _viewMode = note.content.isEmpty ? _ViewMode.edit : _ViewMode.split;
         _updateStats(note.content);
         // Mark as recently viewed
-        context.read<NotesProvider>().markViewed(widget.noteId);
+        _notesProvider!.markViewed(widget.noteId);
       }
       _initialized = true;
     }
@@ -83,13 +91,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   @override
   void dispose() {
-    // Auto-save based on settings
-    final settings = context.read<SettingsProvider>();
-    if (settings.notesAutoSave) {
-      _saveNote();
+    // Auto-save based on settings — use cached providers (context is unsafe in dispose).
+    final settings = _settingsProvider;
+    if (settings != null && settings.notesAutoSave && _dirty) {
+      _saveNoteSync();
     }
     _statsDebounceTimer?.cancel();
     _contentController.removeListener(_onContentChanged);
+    _titleController.removeListener(_onContentChanged);
     _titleController.dispose();
     _contentController.dispose();
     _editorFocus.dispose();
@@ -107,6 +116,13 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   }
 
   void _onContentChanged() {
+    final dirty = _titleController.text != _savedTitle ||
+        _contentController.text != _savedContent;
+    if (dirty != _dirty) {
+      setState(() => _dirty = dirty);
+    } else if (dirty) {
+      // still dirty — no setState needed beyond stats
+    }
     // Debounce stats update to avoid excessive rebuilds during typing
     _debounceStatsUpdate();
   }
@@ -145,21 +161,26 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   }
 
   void _saveNote() async {
-    final provider = context.read<NotesProvider>();
-    final settings = context.read<SettingsProvider>();
+    final provider = _notesProvider ?? context.read<NotesProvider>();
+    final settings = _settingsProvider ?? context.read<SettingsProvider>();
+
+    final title = _titleController.text.trim().isEmpty
+        ? 'Untitled Note'
+        : _titleController.text.trim();
+    final content = _contentController.text;
 
     await provider.updateNote(
       widget.noteId,
-      title: _titleController.text.trim().isEmpty
-          ? 'Untitled Note'
-          : _titleController.text.trim(),
-      content: _contentController.text,
+      title: title,
+      content: content,
     );
+    _savedTitle = title;
+    _savedContent = content;
+    if (mounted) setState(() => _dirty = false);
 
     // Auto-generate title if it's "Untitled Note" or empty and API is configured
-    if ((_titleController.text.trim().isEmpty ||
-            _titleController.text.trim() == 'Untitled Note') &&
-        _contentController.text.trim().isNotEmpty &&
+    if ((title.isEmpty || title == 'Untitled Note') &&
+        content.trim().isNotEmpty &&
         settings.isConfigured &&
         settings.aiTitleGeneration) {
       provider
@@ -177,10 +198,65 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             if (note != null && note.title != 'Untitled Note' && mounted) {
               setState(() {
                 _titleController.text = note.title;
+                _savedTitle = note.title;
+                _dirty = false;
               });
             }
           });
     }
+  }
+
+  void _saveNoteSync() {
+    final provider = _notesProvider;
+    if (provider == null) return;
+    final title = _titleController.text.trim().isEmpty
+        ? 'Untitled Note'
+        : _titleController.text.trim();
+    // Fire-and-forget is intentional from dispose; provider persists async.
+    unawaited(
+      provider.updateNote(
+        widget.noteId,
+        title: title,
+        content: _contentController.text,
+      ),
+    );
+  }
+
+  Future<bool> _confirmLeaveIfDirty() async {
+    if (!_dirty) return true;
+    final settings = _settingsProvider ?? context.read<SettingsProvider>();
+    if (settings.notesAutoSave) {
+      await _saveNote();
+      return true;
+    }
+    if (!mounted) return false;
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('未保存的更改'),
+        content: const Text('当前笔记有未保存的修改，是否保存？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('discard'),
+            child: const Text('不保存'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop('cancel'),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop('save'),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (action == 'save') {
+      await _saveNote();
+      return true;
+    }
+    if (action == 'discard') return true;
+    return false;
   }
 
   // ─── Toolbar formatting helpers ───
@@ -522,7 +598,16 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         },
         child: Focus(
           autofocus: true,
-          child: Scaffold(
+          child: PopScope(
+            canPop: !_dirty || (_settingsProvider?.notesAutoSave ?? true),
+            onPopInvokedWithResult: (didPop, result) async {
+              if (didPop) return;
+              final ok = await _confirmLeaveIfDirty();
+              if (ok && mounted) {
+                Navigator.of(context).pop();
+              }
+            },
+            child: Scaffold(
             backgroundColor: lumenScaffoldBackground(cs),
             appBar: AppBar(
               surfaceTintColor: Colors.transparent,
@@ -727,6 +812,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 _buildBottomBar(cs),
               ],
             ),
+            ),
           ),
         ),
       ),
@@ -770,6 +856,30 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         _showExportDialog();
         break;
       case 'delete':
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) {
+            final cs = Theme.of(ctx).colorScheme;
+            return AlertDialog(
+              title: const Text('删除笔记'),
+              content: Text(
+                '删除 "${_titleController.text.trim().isEmpty ? 'Untitled Note' : _titleController.text.trim()}"？此操作无法撤销。',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('取消'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  style: FilledButton.styleFrom(backgroundColor: cs.error),
+                  child: const Text('删除'),
+                ),
+              ],
+            );
+          },
+        );
+        if (confirmed != true || !mounted) return;
         await context.read<NotesProvider>().deleteNote(widget.noteId);
         if (!mounted) return;
         Navigator.of(context).pop();

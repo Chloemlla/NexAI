@@ -1336,7 +1336,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                               children: const [
                                                 Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                                                 SizedBox(width: 8),
-                                                Text('增量同步完成'),
+                                                Text('完整同步完成'),
                                               ],
                                             ),
                                             behavior: SnackBarBehavior.floating,
@@ -1350,7 +1350,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                             code: 'SYNC_INCREMENTAL_FAILED',
                                             message: sync.errorMessage ?? '操作失败',
                                           ),
-                                          title: '增量同步失败',
+                                          title: '同步失败',
                                         );
                                       }
                                     }
@@ -1366,7 +1366,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     )
                                   : const Icon(Icons.sync_rounded, size: 18),
                               label: Text(
-                                sync.isSyncing ? '同步中...' : '增量同步（仅传输变更）',
+                                sync.isSyncing ? '同步中...' : '完整同步（上传全部数据）',
                               ),
                               style: FilledButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(

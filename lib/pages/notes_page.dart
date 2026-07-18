@@ -869,7 +869,7 @@ class _TagTile extends StatelessWidget {
                       ),
                     ),
                   Text(
-                    '${tag.count} 条笔记${tag.count != 1 ? 's' : ''}',
+                    '${tag.count} 条笔记',
                     style: TextStyle(fontSize: 11, color: cs.outline),
                   ),
                 ],

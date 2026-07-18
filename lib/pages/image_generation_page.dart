@@ -88,7 +88,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
   }
 
   void _openSettings() {
-    Navigator.of(context).pop();
+    // Keep this tool on the stack so back returns here after settings.
     NavigationHelper.goToSettings();
   }
 
@@ -165,7 +165,10 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
   Future<void> _generate() async {
     final prompt = _promptController.text.trim();
-    if (prompt.isEmpty) return;
+    if (prompt.isEmpty) {
+      _showError('请输入提示词后再生成');
+      return;
+    }
 
     final settings = context.read<SettingsProvider>();
     if (!_supportsImageEndpoint(settings)) {
@@ -548,6 +551,53 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     );
   }
 
+  Widget _buildImagePreview(GeneratedImage image, ColorScheme cs) {
+    Widget placeholder({String? message}) => Container(
+      color: cs.surfaceContainerHighest,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.broken_image_outlined, color: cs.outline),
+          if (message != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: cs.outline),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    if (image.b64Json != null && image.b64Json!.isNotEmpty) {
+      try {
+        final bytes = base64Decode(image.b64Json!);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => placeholder(message: 'Base64 预览失败'),
+        );
+      } catch (_) {
+        return placeholder(message: 'Base64 数据无效');
+      }
+    }
+
+    if (image.url.trim().isNotEmpty) {
+      return Image.network(
+        image.url,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder(message: '图片加载失败'),
+      );
+    }
+
+    return placeholder(message: '无预览，可尝试保存');
+  }
+
   Widget _buildImageCard(
     BuildContext context,
     GeneratedImage image,
@@ -561,14 +611,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: Image.network(
-              image.url,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
-                color: cs.surfaceContainerHighest,
-                child: Icon(Icons.broken_image, color: cs.outline),
-              ),
-            ),
+            child: _buildImagePreview(image, cs),
           ),
           Container(
             padding: const EdgeInsets.all(8),

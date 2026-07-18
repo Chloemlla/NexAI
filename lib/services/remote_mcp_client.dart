@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/chat_knowledge.dart';
 import '../models/chat_tool.dart';
+import '../utils/network_safety.dart';
 
 class RemoteMcpTool {
   final String serverId;
@@ -125,6 +126,10 @@ class RemoteMcpClient {
     required String method,
     required Map<String, dynamic> params,
   }) async {
+    final urlErr = NetworkSafety.validatePublicHttpUrl(server.url, requireHttps: true);
+    if (urlErr != null) {
+      throw StateError('blocked_mcp_url:$urlErr');
+    }
     final id = _rpcId++;
     final payload = {
       'jsonrpc': '2.0',

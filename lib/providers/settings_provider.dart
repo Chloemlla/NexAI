@@ -25,6 +25,7 @@ class SettingsProvider extends ChangeNotifier {
   static const _kSecWebdavPass = 'sec.webdavPassword';
   static const _kSecUpstashToken = 'sec.upstashToken';
   static const _kSecVertexApiKey = 'sec.vertexApiKey';
+  static const _kSecToolSecrets = 'sec.toolSecretsJson';
   static const _kSecAccessToken = 'nexai_access_token';
   static const _kSecRefreshToken = 'nexai_refresh_token';
   static const _kSecUserJson = 'nexai_user_json';
@@ -339,6 +340,7 @@ class SettingsProvider extends ChangeNotifier {
       _semanticKnowledgeSearch =
           prefs.getBool('semanticKnowledgeSearch') ?? _semanticKnowledgeSearch;
       _reasoningBudget = prefs.getDouble('reasoningBudget') ?? _reasoningBudget;
+      await _restoreToolSecrets();
       if (mcpRaw != null && mcpRaw.isNotEmpty) {
         try {
           final decoded = jsonDecode(mcpRaw);
@@ -516,6 +518,95 @@ class SettingsProvider extends ChangeNotifier {
     await migrate('vertexApiKey', _kSecVertexApiKey);
   }
 
+
+  Map<String, String> _collectToolSecrets() {
+    final secrets = <String, String>{};
+    for (final p in _webSearchProviders) {
+      final key = (p.apiKey ?? '').trim();
+      if (key.isNotEmpty) secrets['search:${p.id}'] = key;
+    }
+    for (final s in _mcpServers) {
+      final token = (s.bearerToken ?? '').trim();
+      if (token.isNotEmpty) secrets['mcp:${s.id}'] = token;
+    }
+    return secrets;
+  }
+
+  List<WebSearchProviderConfig> _providersWithoutSecrets(
+    List<WebSearchProviderConfig> input,
+  ) {
+    return input
+        .map(
+          (p) => WebSearchProviderConfig(
+            id: p.id,
+            name: p.name,
+            type: p.type,
+            endpoint: p.endpoint,
+            apiKey: null,
+            enabled: p.enabled,
+          ),
+        )
+        .toList();
+  }
+
+  List<McpServerConfig> _mcpWithoutSecrets(List<McpServerConfig> input) {
+    return input
+        .map(
+          (s) => McpServerConfig(
+            id: s.id,
+            name: s.name,
+            url: s.url,
+            enabled: s.enabled,
+            bearerToken: null,
+            allowTools: s.allowTools,
+            lastHealthyAt: s.lastHealthyAt,
+            lastError: s.lastError,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> _persistToolSecrets() async {
+    final secrets = _collectToolSecrets();
+    await _secure.write(key: _kSecToolSecrets, value: jsonEncode(secrets));
+  }
+
+  Future<void> _restoreToolSecrets() async {
+    final raw = await _secure.read(key: _kSecToolSecrets);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return;
+      final secrets = decoded.map((k, v) => MapEntry(k.toString(), v.toString()));
+      _webSearchProviders = _webSearchProviders.map((p) {
+        final key = secrets['search:${p.id}'];
+        if (key == null || key.isEmpty) return p;
+        return WebSearchProviderConfig(
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          endpoint: p.endpoint,
+          apiKey: key,
+          enabled: p.enabled,
+        );
+      }).toList();
+      _mcpServers = _mcpServers.map((s) {
+        final token = secrets['mcp:${s.id}'];
+        if (token == null || token.isEmpty) return s;
+        return McpServerConfig(
+          id: s.id,
+          name: s.name,
+          url: s.url,
+          enabled: s.enabled,
+          bearerToken: token,
+          allowTools: s.allowTools,
+          lastHealthyAt: s.lastHealthyAt,
+          lastError: s.lastError,
+        );
+      }).toList();
+    } catch (_) {}
+  }
+
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -547,13 +638,14 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool('remoteMcpEnabled', _remoteMcpEnabled);
     await prefs.setInt('maxToolRounds', _maxToolRounds);
     await prefs.setString('imageToolModel', _imageToolModel);
+    await _persistToolSecrets();
     await prefs.setString(
       'mcpServersJson',
-      jsonEncode(_mcpServers.map((e) => e.toJson()).toList()),
+      jsonEncode(_mcpWithoutSecrets(_mcpServers).map((e) => e.toJson()).toList()),
     );
     await prefs.setString(
       'webSearchProvidersJson',
-      jsonEncode(_webSearchProviders.map((e) => e.toJson()).toList()),
+      jsonEncode(_providersWithoutSecrets(_webSearchProviders).map((e) => e.toJson()).toList()),
     );
     await prefs.setString('activeWebSearchProviderId', _activeWebSearchProviderId);
     await prefs.setString('toolGatewayBaseUrl', _toolGatewayBaseUrl);

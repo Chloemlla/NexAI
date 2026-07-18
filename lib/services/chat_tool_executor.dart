@@ -15,6 +15,7 @@ import '../providers/knowledge_provider.dart';
 import '../providers/notes_provider.dart';
 import 'chat_tool_catalog.dart';
 import 'remote_mcp_client.dart';
+import '../utils/network_safety.dart';
 
 class ChatToolRuntimeContext {
   final NotesProvider notesProvider;
@@ -67,6 +68,16 @@ class ChatToolExecutor {
 
   final Dio _dio;
   final RemoteMcpClient _mcpClient = RemoteMcpClient();
+
+  void _assertSafeEndpoint(String raw, {bool requireHttps = false}) {
+    final err = NetworkSafety.validatePublicHttpUrl(raw, requireHttps: requireHttps);
+    if (err != null) {
+      throw StateError('blocked_url:$err');
+    }
+  }
+
+  String _safeToolContent(String content) => NetworkSafety.redactSecrets(content);
+
 
   Future<ToolExecutionResult> execute({
     required String name,
@@ -293,6 +304,7 @@ class ChatToolExecutor {
         final endpoint = provider.endpoint.trim().isEmpty
             ? 'https://api.tavily.com/search'
             : provider.endpoint.trim();
+        _assertSafeEndpoint(endpoint, requireHttps: true);
         final response = await _dio.post<Map<String, dynamic>>(
           endpoint,
           data: {
@@ -323,6 +335,7 @@ class ChatToolExecutor {
       case 'searxng':
         final endpoint = provider.endpoint.trim();
         if (endpoint.isEmpty) break;
+        _assertSafeEndpoint(endpoint, requireHttps: true);
         final response = await _dio.get<Map<String, dynamic>>(
           endpoint,
           queryParameters: {'q': query, 'format': 'json'},
@@ -351,6 +364,7 @@ class ChatToolExecutor {
         final endpoint = provider.endpoint.trim().isEmpty
             ? 'https://api.exa.ai/search'
             : provider.endpoint.trim();
+        _assertSafeEndpoint(endpoint, requireHttps: true);
         final response = await _dio.post<Map<String, dynamic>>(
           endpoint,
           data: {
@@ -382,6 +396,7 @@ class ChatToolExecutor {
         final endpoint = provider.endpoint.trim().isEmpty
             ? 'https://s.jina.ai/'
             : provider.endpoint.trim();
+        _assertSafeEndpoint(endpoint, requireHttps: true);
         final response = await _dio.get<String>(
           endpoint + Uri.encodeComponent(query),
           options: Options(
@@ -412,8 +427,10 @@ class ChatToolExecutor {
             ? context.toolGatewayBaseUrl.trim()
             : provider.endpoint.trim();
         if (gateway.isEmpty) break;
+        final gatewayUrl = gateway.replaceAll(RegExp(r'/+$'), '') + '/tools/web_search';
+        _assertSafeEndpoint(gatewayUrl, requireHttps: true);
         final response = await _dio.post<Map<String, dynamic>>(
-          gateway.replaceAll(RegExp(r'/+$'), '') + '/tools/web_search',
+          gatewayUrl,
           data: {'query': query, 'max_results': maxResults},
           options: Options(
             headers: {
@@ -722,37 +739,53 @@ class ChatToolExecutor {
 
   Future<ToolExecutionResult> _fetchUrl(Map<String, dynamic> args) async {
     final rawUrl = (args['url'] ?? '').toString().trim();
-    if (rawUrl.isEmpty) {
-      return const ToolExecutionResult(
-        content: '{"error":"url_required"}',
+    final urlErr = NetworkSafety.validatePublicHttpUrl(rawUrl);
+    if (urlErr != null) {
+      return ToolExecutionResult(
+        content: jsonEncode({'error': urlErr}),
         isError: true,
       );
     }
-    final uri = Uri.tryParse(rawUrl);
-    if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
-      return const ToolExecutionResult(
-        content: '{"error":"invalid_url"}',
-        isError: true,
-      );
-    }
+    final uri = Uri.parse(rawUrl);
     final maxChars = _clampInt(args['max_chars'], fallback: 6000, min: 500, max: 20000);
-    final response = await _dio.get<String>(
+    final response = await _dio.get<List<int>>(
       uri.toString(),
       options: Options(
-        responseType: ResponseType.plain,
+        responseType: ResponseType.bytes,
         followRedirects: true,
+        maxRedirects: NetworkSafety.maxRedirects,
         validateStatus: (code) => code != null && code < 400,
       ),
     );
-    final body = response.data ?? '';
+    // Re-validate final URL after redirects.
+    final finalUri = response.realUri;
+    final finalErr = NetworkSafety.validatePublicHttpUrl(finalUri.toString());
+    if (finalErr != null) {
+      return ToolExecutionResult(
+        content: jsonEncode({'error': finalErr, 'finalUrl': finalUri.toString()}),
+        isError: true,
+      );
+    }
+    final bytes = response.data ?? <int>[];
+    if (bytes.length > NetworkSafety.maxDownloadBytes) {
+      return ToolExecutionResult(
+        content: jsonEncode({
+          'error': 'response_too_large',
+          'maxBytes': NetworkSafety.maxDownloadBytes,
+          'actualBytes': bytes.length,
+        }),
+        isError: true,
+      );
+    }
+    final body = utf8.decode(bytes, allowMalformed: true);
     final text = _htmlToText(body);
     final clipped = text.length > maxChars ? text.substring(0, maxChars) : text;
     final title = _extractHtmlTitle(body) ?? uri.host;
     return ToolExecutionResult(
       content: jsonEncode({
-        'url': uri.toString(),
+        'url': finalUri.toString(),
         'title': title,
-        'content': clipped,
+        'content': _safeToolContent(clipped),
         'truncated': text.length > maxChars,
         'totalChars': text.length,
       }),
@@ -775,6 +808,12 @@ class ChatToolExecutor {
     if (content.trim().isEmpty) {
       return const ToolExecutionResult(
         content: '{"error":"content_required"}',
+        isError: true,
+      );
+    }
+    if (content.length > 20000) {
+      return const ToolExecutionResult(
+        content: '{"error":"content_too_large","maxChars":20000}',
         isError: true,
       );
     }
@@ -899,10 +938,26 @@ class ChatToolExecutor {
         isError: true,
       );
     }
-    return _mcpClient.callTool(
+    if (server.allowTools.isNotEmpty && !server.allowTools.contains(toolName)) {
+      return ToolExecutionResult(
+        content: jsonEncode({
+          'error': 'mcp_tool_not_allowed',
+          'serverId': serverId,
+          'tool': toolName,
+          'allowTools': server.allowTools,
+        }),
+        isError: true,
+      );
+    }
+    final mcpResult = await _mcpClient.callTool(
       server: server,
       toolName: toolName,
       arguments: args,
+    );
+    return ToolExecutionResult(
+      content: _safeToolContent(mcpResult.content),
+      citations: mcpResult.citations,
+      isError: mcpResult.isError,
     );
   }
 
@@ -919,6 +974,9 @@ class ChatToolExecutor {
         final content = (args['content'] ?? '').toString();
         if (content.trim().isEmpty) {
           return const ToolExecutionResult(content: '{"error":"content_required"}', isError: true);
+        }
+        if (content.length > 20000) {
+          return const ToolExecutionResult(content: '{"error":"content_too_large","maxChars":20000}', isError: true);
         }
         final tags = args['tags'] is List
             ? (args['tags'] as List).map((e) => e.toString()).toList()

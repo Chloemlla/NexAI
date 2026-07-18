@@ -15,6 +15,7 @@ import '../services/chat_tool_catalog.dart';
 import '../services/chat_tool_executor.dart';
 import '../utils/atomic_file_writer.dart';
 import '../utils/certificate_error_helper.dart';
+import '../utils/network_safety.dart';
 
 typedef ToolApprovalHandler = Future<bool> Function(ToolApprovalRequest request);
 
@@ -1213,7 +1214,7 @@ class ChatProvider extends ChangeNotifier {
       }
       conversation.messages.add(Message(
         role: 'tool',
-        content: result.content,
+        content: NetworkSafety.redactSecrets(result.content),
         timestamp: DateTime.now(),
         toolCallId: call.id,
         citations: result.citations,
@@ -1260,10 +1261,21 @@ class ChatProvider extends ChangeNotifier {
     } else {
       parts.add({'type': 'text', 'text': '请结合附件回答。'});
     }
+    var imageCount = 0;
     for (final attachment in msg.attachments) {
       if (attachment.type != 'image') continue;
+      if (imageCount >= NetworkSafety.maxImagesPerMessage) break;
       try {
-        final bytes = File(attachment.path).readAsBytesSync();
+        final file = File(attachment.path);
+        final size = file.lengthSync();
+        if (size <= 0 || size > NetworkSafety.maxImageBytes) {
+          debugPrint(
+            'NexAI: skip attachment ${attachment.path}, size=$size limit=${NetworkSafety.maxImageBytes}',
+          );
+          continue;
+        }
+        final bytes = file.readAsBytesSync();
+        if (bytes.length > NetworkSafety.maxImageBytes) continue;
         final b64 = base64Encode(bytes);
         final mime = attachment.mimeType ?? _guessImageMime(attachment.name);
         parts.add({
@@ -1272,6 +1284,7 @@ class ChatProvider extends ChangeNotifier {
             'url': 'data:$mime;base64,$b64',
           },
         });
+        imageCount += 1;
       } catch (e) {
         debugPrint('NexAI: failed to encode attachment ${attachment.path}: $e');
       }

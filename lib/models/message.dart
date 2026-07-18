@@ -24,6 +24,72 @@ DateTime _dateTimeValue(Map<String, dynamic> json, String key) {
 }
 
 
+
+class MessageStats {
+  final int? promptTokens;
+  final int? completionTokens;
+  final int? totalTokens;
+  final int? thoughtsTokens;
+  final int? timeToFirstTokenMs;
+  final int? completionMs;
+  final double? estimatedCost;
+
+  const MessageStats({
+    this.promptTokens,
+    this.completionTokens,
+    this.totalTokens,
+    this.thoughtsTokens,
+    this.timeToFirstTokenMs,
+    this.completionMs,
+    this.estimatedCost,
+  });
+
+  MessageStats merge(MessageStats other) => MessageStats(
+    promptTokens: other.promptTokens ?? promptTokens,
+    completionTokens: other.completionTokens ?? completionTokens,
+    totalTokens: other.totalTokens ?? totalTokens,
+    thoughtsTokens: other.thoughtsTokens ?? thoughtsTokens,
+    timeToFirstTokenMs: other.timeToFirstTokenMs ?? timeToFirstTokenMs,
+    completionMs: other.completionMs ?? completionMs,
+    estimatedCost: other.estimatedCost ?? estimatedCost,
+  );
+
+  Map<String, dynamic> toJson() => {
+    if (promptTokens != null) 'promptTokens': promptTokens,
+    if (completionTokens != null) 'completionTokens': completionTokens,
+    if (totalTokens != null) 'totalTokens': totalTokens,
+    if (thoughtsTokens != null) 'thoughtsTokens': thoughtsTokens,
+    if (timeToFirstTokenMs != null) 'timeToFirstTokenMs': timeToFirstTokenMs,
+    if (completionMs != null) 'completionMs': completionMs,
+    if (estimatedCost != null) 'estimatedCost': estimatedCost,
+  };
+
+  factory MessageStats.fromJson(Map<String, dynamic> json) => MessageStats(
+    promptTokens: _statsAsInt(json['promptTokens'] ?? json['prompt_tokens']),
+    completionTokens: _statsAsInt(
+      json['completionTokens'] ?? json['completion_tokens'],
+    ),
+    totalTokens: _statsAsInt(json['totalTokens'] ?? json['total_tokens']),
+    thoughtsTokens: _statsAsInt(
+      json['thoughtsTokens'] ?? json['reasoning_tokens'] ?? json['thoughts_tokens'],
+    ),
+    timeToFirstTokenMs: _statsAsInt(json['timeToFirstTokenMs']),
+    completionMs: _statsAsInt(json['completionMs']),
+    estimatedCost: _statsAsDouble(json['estimatedCost']),
+  );
+}
+
+int? _statsAsInt(Object? value) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? '');
+}
+
+double? _statsAsDouble(Object? value) {
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
+}
+
 class ChatAttachment {
   final String id;
   final String type; // image | file
@@ -73,6 +139,10 @@ class Message {
   final List<ToolRunRecord> toolRuns;
   final List<Citation> citations;
   final List<ChatAttachment> attachments;
+  MessageStats? stats;
+  final String? modelId;
+  final int? siblingGroupId;
+  final bool isActiveBranch;
 
   Message({
     required this.role,
@@ -85,6 +155,10 @@ class Message {
     List<Citation>? citations,
     List<ChatAttachment>? attachments,
     String reasoning = '',
+    this.stats,
+    this.modelId,
+    this.siblingGroupId,
+    this.isActiveBranch = true,
   }) : _content = content,
        _reasoning = reasoning,
        _isError = isError,
@@ -150,6 +224,10 @@ class Message {
       'citations': citations.map((c) => c.toJson()).toList(),
     if (attachments.isNotEmpty)
       'attachments': attachments.map((a) => a.toJson()).toList(),
+    if (stats != null) 'stats': stats!.toJson(),
+    if (modelId != null && modelId!.isNotEmpty) 'modelId': modelId,
+    if (siblingGroupId != null) 'siblingGroupId': siblingGroupId,
+    'isActiveBranch': isActiveBranch,
   };
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -169,6 +247,14 @@ class Message {
       citations: _parseCitations(citationsRaw),
       attachments: _parseAttachments(json['attachments']),
       reasoning: (json['reasoning'] ?? '').toString(),
+      stats: json['stats'] is Map
+          ? MessageStats.fromJson(asStringMap(json['stats'], 'stats'))
+          : null,
+      modelId: json['modelId']?.toString(),
+      siblingGroupId: json['siblingGroupId'] is int
+          ? json['siblingGroupId'] as int
+          : int.tryParse(json['siblingGroupId']?.toString() ?? ''),
+      isActiveBranch: json['isActiveBranch'] as bool? ?? true,
     );
   }
 }
@@ -205,6 +291,7 @@ class Conversation {
   String assistantId;
   String? modelOverride;
   String? systemPromptOverride;
+  List<String> compareModels;
 
   Conversation({
     required this.id,
@@ -214,7 +301,8 @@ class Conversation {
     this.assistantId = 'general',
     this.modelOverride,
     this.systemPromptOverride,
-  });
+    List<String>? compareModels,
+  }) : compareModels = compareModels ?? <String>[];
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -226,6 +314,7 @@ class Conversation {
       'modelOverride': modelOverride,
     if (systemPromptOverride != null && systemPromptOverride!.isNotEmpty)
       'systemPromptOverride': systemPromptOverride,
+    if (compareModels.isNotEmpty) 'compareModels': compareModels,
   };
 
   factory Conversation.fromJson(Map<String, dynamic> json) => Conversation(
@@ -238,6 +327,9 @@ class Conversation {
     assistantId: (json['assistantId'] ?? 'general').toString(),
     modelOverride: json['modelOverride']?.toString(),
     systemPromptOverride: json['systemPromptOverride']?.toString(),
+    compareModels: json['compareModels'] is List
+        ? (json['compareModels'] as List).map((e) => e.toString()).toList()
+        : <String>[],
   );
 
   static String encodeList(List<Conversation> list) =>

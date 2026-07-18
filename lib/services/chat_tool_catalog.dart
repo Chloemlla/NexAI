@@ -13,6 +13,8 @@ class ChatToolCatalog {
   static const reportArtifacts = 'report_artifacts';
   static const fetchUrl = 'fetch_url';
   static const createNote = 'create_note';
+  static const knowledgeSearch = 'knowledge_search';
+  static const knowledgeRead = 'knowledge_read';
 
   static const List<ChatToolDefinition> all = [
     ChatToolDefinition(
@@ -171,6 +173,46 @@ class ChatToolCatalog {
         'required': ['content'],
       },
     ),
+
+    ChatToolDefinition(
+      name: knowledgeSearch,
+      description:
+          'Search imported local knowledge documents (txt/md/json/csv/log).',
+      approval: ChatToolApprovalPolicy.auto,
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'query': {
+            'type': 'string',
+            'description': 'Keywords to search imported knowledge docs.',
+          },
+          'limit': {
+            'type': 'integer',
+            'description': 'Max hits (1-20). Default 8.',
+          },
+        },
+        'required': ['query'],
+      },
+    ),
+    ChatToolDefinition(
+      name: knowledgeRead,
+      description: 'Read one imported knowledge document by id.',
+      approval: ChatToolApprovalPolicy.auto,
+      parameters: {
+        'type': 'object',
+        'properties': {
+          'doc_id': {
+            'type': 'string',
+            'description': 'Document id from knowledge_search.',
+          },
+          'max_chars': {
+            'type': 'integer',
+            'description': 'Max characters to return. Default 5000.',
+          },
+        },
+        'required': ['doc_id'],
+      },
+    ),
   ];
 
   static ChatToolDefinition? byName(String name) {
@@ -187,6 +229,7 @@ class ChatToolCatalog {
     required bool artifactsEnabled,
     required bool fetchUrlEnabled,
     required bool createNoteEnabled,
+    required bool knowledgeEnabled,
   }) {
     return all.where((tool) {
       switch (tool.name) {
@@ -203,9 +246,28 @@ class ChatToolCatalog {
           return fetchUrlEnabled;
         case createNote:
           return createNoteEnabled;
+        case knowledgeSearch:
+        case knowledgeRead:
+          return knowledgeEnabled;
         default:
           return false;
       }
     }).toList(growable: false);
+  }
+
+  static bool isMcpTool(String name) => name.startsWith('mcp__');
+
+  static String? mcpServerId(String name) {
+    if (!isMcpTool(name)) return null;
+    final parts = name.split('__');
+    if (parts.length < 3) return null;
+    return parts[1];
+  }
+
+  static String? mcpToolName(String name) {
+    if (!isMcpTool(name)) return null;
+    final parts = name.split('__');
+    if (parts.length < 3) return null;
+    return parts.sublist(2).join('__');
   }
 }

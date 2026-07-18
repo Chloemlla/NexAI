@@ -246,3 +246,19 @@ Android 最值得补的不是桌面 Agent 全家桶，而是：
 
 仍属 Phase 2：多模型同问、远程 MCP、文档知识库导入、语音 STT/TTS。
 
+## 12. Phase 2 implementation snapshot (2026-07-18)
+
+已落地增强与生态能力：
+
+- `fetch_url` 延续可用；新增 `knowledge_search` / `knowledge_read`
+- 本地文档知识库导入（txt/md/json/csv/log）
+- 多模型对比（会话级 compareModels，顺序生成 sibling 回答）
+- usage / latency 统计（tokens + ttft + completionMs）
+- STT 语音输入 + TTS 朗读
+- 远程 MCP（HTTP/SSE JSON-RPC）服务器配置与工具刷新
+- 会话 JSON 导出/导入
+- 全局搜索命中跳转并高亮目标消息
+- 助手消息重新生成
+
+依赖新增（pubspec）：`speech_to_text`、`flutter_tts`、`share_plus`、`uuid`
+

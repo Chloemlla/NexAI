@@ -80,6 +80,7 @@ void main() {
       artifactsEnabled: true,
       fetchUrlEnabled: false,
       createNoteEnabled: true,
+      knowledgeEnabled: false,
     );
     final names = tools.map((t) => t.name).toSet();
     expect(names, contains(ChatToolCatalog.webSearch));

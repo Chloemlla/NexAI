@@ -18,6 +18,9 @@ import '../services/chat_tool_catalog.dart';
 import '../providers/image_generation_provider.dart';
 import '../providers/artifacts_provider.dart';
 import '../providers/notes_provider.dart';
+import '../services/chat_speech_service.dart';
+import '../models/chat_knowledge.dart';
+import '../providers/knowledge_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/translation_provider.dart';
 import '../services/lumen_translation_client.dart';
@@ -53,6 +56,8 @@ class _MessageBubbleState extends State<MessageBubble> {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
     final isUser = widget.message.role == 'user';
+    final chat = context.watch<ChatProvider>();
+    final focused = chat.focusMessageIndex == widget.messageIndex;
     final screenWidth = MediaQuery.of(context).size.width;
     final isWide = screenWidth > 600;
     final maxBubbleWidth = isWide ? 720.0 : screenWidth * 0.82;
@@ -98,7 +103,9 @@ class _MessageBubbleState extends State<MessageBubble> {
                           ),
                           border: widget.message.isError
                               ? Border.all(color: cs.error.withAlpha(120))
-                              : null,
+                              : (focused
+                                  ? Border.all(color: cs.primary, width: 1.4)
+                                  : null),
                         ),
                   padding: settings.borderlessMode
                       ? const EdgeInsets.symmetric(horizontal: 4, vertical: 8)
@@ -181,6 +188,28 @@ class _MessageBubbleState extends State<MessageBubble> {
                           children: widget.message.citations.map((c) {
                             return _CitationChip(citation: c);
                           }).toList(),
+                        ),
+                      ],
+                      if (!isUser &&
+                          (widget.message.modelId != null ||
+                              widget.message.stats != null)) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          [
+                            if (widget.message.modelId != null &&
+                                widget.message.modelId!.isNotEmpty)
+                              widget.message.modelId!,
+                            if (widget.message.stats?.totalTokens != null)
+                              'tokens ${widget.message.stats!.totalTokens}',
+                            if (widget.message.stats?.completionMs != null)
+                              '${widget.message.stats!.completionMs}ms',
+                            if (widget.message.stats?.timeToFirstTokenMs != null)
+                              'ttft ${widget.message.stats!.timeToFirstTokenMs}ms',
+                          ].join(' · '),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: cs.outline,
+                          ),
                         ),
                       ],
                       const SizedBox(height: 6),
@@ -271,6 +300,18 @@ class _MessageFooter extends StatelessWidget {
             Icons.translate_rounded,
             '翻译消息',
             () => _translateMessage(context),
+            cs,
+          ),
+          _footerIcon(
+            Icons.volume_up_rounded,
+            '朗读',
+            () => _speakMessage(context),
+            cs,
+          ),
+          _footerIcon(
+            Icons.autorenew_rounded,
+            '重新生成',
+            () => _regenerate(context),
             cs,
           ),
         ],
@@ -660,7 +701,7 @@ class _MessageFooter extends StatelessWidget {
 
   void _configureTools(BuildContext context, ChatProvider chat, SettingsProvider settings) {
     final toolsEnabled = settings.chatToolsEnabled && settings.apiMode == 'OpenAI';
-    final tools = toolsEnabled
+    var tools = toolsEnabled
         ? ChatToolCatalog.enabledFromFlags(
             webSearchEnabled: settings.toolWebSearchEnabled,
             notesEnabled: settings.toolNotesEnabled,
@@ -668,8 +709,11 @@ class _MessageFooter extends StatelessWidget {
             artifactsEnabled: settings.toolArtifactsEnabled,
             fetchUrlEnabled: settings.toolFetchUrlEnabled,
             createNoteEnabled: settings.toolCreateNoteEnabled,
+            knowledgeEnabled: settings.toolKnowledgeEnabled,
           )
-        : const <ChatToolDefinition>[];
+        : <ChatToolDefinition>[];
+    final existingMcp = chat.enabledTools.where((t) => ChatToolCatalog.isMcpTool(t.name));
+    tools = [...tools, ...existingMcp];
     chat.configureTools(
       tools: tools,
       runtimeContext: tools.isEmpty
@@ -678,6 +722,10 @@ class _MessageFooter extends StatelessWidget {
               notesProvider: context.read<NotesProvider>(),
               imageGenerationProvider: context.read<ImageGenerationProvider>(),
               artifactsProvider: context.read<ArtifactsProvider>(),
+              knowledgeProvider: context.read<KnowledgeProvider>(),
+              mcpServers: settings.remoteMcpEnabled
+                  ? settings.mcpServers.where((s) => s.enabled).toList()
+                  : const <McpServerConfig>[],
               baseUrl: settings.baseUrl,
               apiKey: settings.apiKey,
               selectedModel: settings.selectedModel,

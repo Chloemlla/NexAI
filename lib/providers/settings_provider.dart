@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/chat_knowledge.dart';
 import '../utils/local_data_presence.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -137,8 +139,11 @@ class SettingsProvider extends ChangeNotifier {
   bool _toolArtifactsEnabled = true;
   bool _toolFetchUrlEnabled = true;
   bool _toolCreateNoteEnabled = true;
+  bool _toolKnowledgeEnabled = true;
+  bool _remoteMcpEnabled = false;
   int _maxToolRounds = 6;
   String _imageToolModel = '';
+  List<McpServerConfig> _mcpServers = [];
 
   bool get chatToolsEnabled => _chatToolsEnabled;
   bool get toolWebSearchEnabled => _toolWebSearchEnabled;
@@ -147,8 +152,11 @@ class SettingsProvider extends ChangeNotifier {
   bool get toolArtifactsEnabled => _toolArtifactsEnabled;
   bool get toolFetchUrlEnabled => _toolFetchUrlEnabled;
   bool get toolCreateNoteEnabled => _toolCreateNoteEnabled;
+  bool get toolKnowledgeEnabled => _toolKnowledgeEnabled;
+  bool get remoteMcpEnabled => _remoteMcpEnabled;
   int get maxToolRounds => _maxToolRounds;
   String get imageToolModel => _imageToolModel;
+  List<McpServerConfig> get mcpServers => List.unmodifiable(_mcpServers);
 
   bool _loaded = false;
   bool get loaded => _loaded;
@@ -271,8 +279,25 @@ class SettingsProvider extends ChangeNotifier {
           prefs.getBool('toolFetchUrlEnabled') ?? _toolFetchUrlEnabled;
       _toolCreateNoteEnabled =
           prefs.getBool('toolCreateNoteEnabled') ?? _toolCreateNoteEnabled;
+      _toolKnowledgeEnabled =
+          prefs.getBool('toolKnowledgeEnabled') ?? _toolKnowledgeEnabled;
+      _remoteMcpEnabled = prefs.getBool('remoteMcpEnabled') ?? _remoteMcpEnabled;
       _maxToolRounds = prefs.getInt('maxToolRounds') ?? _maxToolRounds;
       _imageToolModel = prefs.getString('imageToolModel') ?? _imageToolModel;
+      final mcpRaw = prefs.getString('mcpServersJson');
+      if (mcpRaw != null && mcpRaw.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(mcpRaw);
+          if (decoded is List) {
+            _mcpServers = decoded
+                .whereType<Map>()
+                .map((e) => McpServerConfig.fromJson(
+                      e.map((k, v) => MapEntry(k.toString(), v)),
+                    ))
+                .toList();
+          }
+        } catch (_) {}
+      }
 
       _fontSize = prefs.getDouble('fontSize') ?? 14.0;
       _fontFamily = _normalizeFontFamily(prefs.getString('fontFamily'));
@@ -464,8 +489,14 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool('toolArtifactsEnabled', _toolArtifactsEnabled);
     await prefs.setBool('toolFetchUrlEnabled', _toolFetchUrlEnabled);
     await prefs.setBool('toolCreateNoteEnabled', _toolCreateNoteEnabled);
+    await prefs.setBool('toolKnowledgeEnabled', _toolKnowledgeEnabled);
+    await prefs.setBool('remoteMcpEnabled', _remoteMcpEnabled);
     await prefs.setInt('maxToolRounds', _maxToolRounds);
     await prefs.setString('imageToolModel', _imageToolModel);
+    await prefs.setString(
+      'mcpServersJson',
+      jsonEncode(_mcpServers.map((e) => e.toJson()).toList()),
+    );
 
     await prefs.setDouble('fontSize', _fontSize);
     await prefs.setString('fontFamily', _fontFamily);
@@ -676,6 +707,43 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setToolCreateNoteEnabled(bool value) async {
     _toolCreateNoteEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolKnowledgeEnabled(bool value) async {
+    _toolKnowledgeEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setRemoteMcpEnabled(bool value) async {
+    _remoteMcpEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setMcpServers(List<McpServerConfig> servers) async {
+    _mcpServers = List<McpServerConfig>.from(servers);
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> upsertMcpServer(McpServerConfig server) async {
+    final idx = _mcpServers.indexWhere((s) => s.id == server.id);
+    if (idx == -1) {
+      _mcpServers = [..._mcpServers, server];
+    } else {
+      final next = List<McpServerConfig>.from(_mcpServers);
+      next[idx] = server;
+      _mcpServers = next;
+    }
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> removeMcpServer(String id) async {
+    _mcpServers = _mcpServers.where((s) => s.id != id).toList();
     notifyListeners();
     await _save();
   }

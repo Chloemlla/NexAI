@@ -8,16 +8,21 @@ import 'package:flutter/foundation.dart';
 
 import '../models/chat_tool.dart';
 import '../models/note.dart';
+import '../models/chat_knowledge.dart';
 import '../providers/artifacts_provider.dart';
 import '../providers/image_generation_provider.dart';
+import '../providers/knowledge_provider.dart';
 import '../providers/notes_provider.dart';
 import 'chat_tool_catalog.dart';
 import 'nexai_artifacts_service.dart';
+import 'remote_mcp_client.dart';
 
 class ChatToolRuntimeContext {
   final NotesProvider notesProvider;
   final ImageGenerationProvider imageGenerationProvider;
   final ArtifactsProvider artifactsProvider;
+  final KnowledgeProvider knowledgeProvider;
+  final List<McpServerConfig> mcpServers;
   final String baseUrl;
   final String apiKey;
   final String selectedModel;
@@ -28,6 +33,8 @@ class ChatToolRuntimeContext {
     required this.notesProvider,
     required this.imageGenerationProvider,
     required this.artifactsProvider,
+    required this.knowledgeProvider,
+    required this.mcpServers,
     required this.baseUrl,
     required this.apiKey,
     required this.selectedModel,
@@ -52,6 +59,7 @@ class ChatToolExecutor {
           );
 
   final Dio _dio;
+  final RemoteMcpClient _mcpClient = RemoteMcpClient();
 
   Future<ToolExecutionResult> execute({
     required String name,
@@ -74,7 +82,14 @@ class ChatToolExecutor {
           return await _fetchUrl(arguments);
         case ChatToolCatalog.createNote:
           return await _createNote(arguments, context);
+        case ChatToolCatalog.knowledgeSearch:
+          return _knowledgeSearch(arguments, context);
+        case ChatToolCatalog.knowledgeRead:
+          return _knowledgeRead(arguments, context);
         default:
+          if (ChatToolCatalog.isMcpTool(name)) {
+            return await _mcpCall(name, arguments, context);
+          }
           return ToolExecutionResult(
             content: jsonEncode({
               'error': 'unknown_tool',

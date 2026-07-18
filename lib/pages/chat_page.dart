@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../main.dart' show isAndroid;
 import '../providers/artifacts_provider.dart';
@@ -10,6 +11,9 @@ import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/image_generation_provider.dart';
 import '../providers/notes_provider.dart';
+import '../models/chat_knowledge.dart';
+import '../services/chat_speech_service.dart';
+import '../providers/knowledge_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/chat_tool_catalog.dart';
 import '../services/chat_tool_executor.dart';
@@ -34,6 +38,9 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final List<ChatAttachment> _pendingAttachments = [];
   final _rng = Random.secure();
+  final _speechService = ChatSpeechService();
+  bool _isListening = false;
+  String _partialSpeech = '';
 
   List<({Message message, int originalIndex})> _visibleEntries(List<Message> messages) {
     final entries = <({Message message, int originalIndex})>[];
@@ -129,6 +136,29 @@ class _ChatPageState extends State<ChatPage> {
     _replaceComposerText(restoredText, collapsePreview: true);
   }
 
+  void _maybeScrollToFocus(ChatProvider chat) {
+    final focus = chat.focusMessageIndex;
+    if (focus == null) return;
+    final visible = _visibleEntries(chat.messages);
+    final target = visible.indexWhere((e) => e.originalIndex == focus);
+    if (target < 0) {
+      chat.clearFocusMessage();
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      // Approximate jump: use item extent estimate.
+      final offset = (target * 140.0).clamp(
+        0.0,
+        _scrollController.position.maxScrollExtent,
+      );
+      _scrollController.jumpTo(offset);
+      Future<void>.delayed(const Duration(seconds: 2), () {
+        if (mounted) chat.clearFocusMessage();
+      });
+    });
+  }
+
   void _syncVisibleConversation(ChatProvider chat) {
     final conversationId = chat.currentConversation?.id;
     final messageCount = chat.messages.length;
@@ -204,7 +234,7 @@ class _ChatPageState extends State<ChatPage> {
 
   void _configureChatTools(ChatProvider chat, SettingsProvider settings) {
     final toolsEnabled = settings.chatToolsEnabled && settings.apiMode == 'OpenAI';
-    final tools = toolsEnabled
+    var tools = toolsEnabled
         ? ChatToolCatalog.enabledFromFlags(
             webSearchEnabled: settings.toolWebSearchEnabled,
             notesEnabled: settings.toolNotesEnabled,
@@ -212,13 +242,29 @@ class _ChatPageState extends State<ChatPage> {
             artifactsEnabled: settings.toolArtifactsEnabled,
             fetchUrlEnabled: settings.toolFetchUrlEnabled,
             createNoteEnabled: settings.toolCreateNoteEnabled,
+            knowledgeEnabled: settings.toolKnowledgeEnabled,
           )
-        : const <ChatToolDefinition>[];
+        : <ChatToolDefinition>[];
+
+    // Remote MCP tools are loaded async; use last known empty here and refresh opportunistically.
+    // Full discovery is triggered by settings page / manual refresh.
+    if (toolsEnabled && settings.remoteMcpEnabled) {
+      // placeholder: MCP tools attached by settings refresh into ChatProvider.enabledTools externally if needed
+    }
 
     final notes = context.read<NotesProvider>();
     final images = context.read<ImageGenerationProvider>();
     final artifacts = context.read<ArtifactsProvider>();
+    final knowledge = context.read<KnowledgeProvider>();
     final auth = context.read<AuthProvider>();
+
+    // Keep any already-loaded MCP tools from chat.enabledTools
+    final existingMcp = chat.enabledTools
+        .where((t) => ChatToolCatalog.isMcpTool(t.name))
+        .toList();
+    if (existingMcp.isNotEmpty) {
+      tools = [...tools, ...existingMcp];
+    }
 
     chat.configureTools(
       tools: tools,
@@ -228,6 +274,10 @@ class _ChatPageState extends State<ChatPage> {
               notesProvider: notes,
               imageGenerationProvider: images,
               artifactsProvider: artifacts,
+              knowledgeProvider: knowledge,
+              mcpServers: settings.remoteMcpEnabled
+                  ? settings.mcpServers.where((s) => s.enabled).toList()
+                  : const <McpServerConfig>[],
               baseUrl: settings.baseUrl,
               apiKey: settings.apiKey,
               selectedModel: settings.selectedModel,
@@ -375,6 +425,155 @@ class _ChatPageState extends State<ChatPage> {
   String _newAttachmentId() {
     final bytes = List<int>.generate(8, (_) => _rng.nextInt(256));
     return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+
+  Future<void> _toggleSpeechInput() async {
+    if (_isListening) {
+      await _speechService.stopListening();
+      setState(() {
+        _isListening = false;
+        if (_partialSpeech.trim().isNotEmpty) {
+          final merged = _controller.text.isEmpty
+              ? _partialSpeech.trim()
+              : '${_controller.text} ${_partialSpeech.trim()}';
+          _replaceComposerText(merged);
+        }
+        _partialSpeech = '';
+      });
+      return;
+    }
+    try {
+      setState(() {
+        _isListening = true;
+        _partialSpeech = '';
+      });
+      await _speechService.startListening(
+        onResult: (text, isFinal) {
+          if (!mounted) return;
+          setState(() {
+            _partialSpeech = text;
+            if (isFinal) {
+              final merged = _controller.text.isEmpty
+                  ? text.trim()
+                  : '${_controller.text} ${text.trim()}';
+              _replaceComposerText(merged);
+              _partialSpeech = '';
+              _isListening = false;
+            }
+          });
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isListening = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('语音输入失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _importKnowledgeDoc() async {
+    final path = await FileAccessHelper.pickFile(
+      allowedExtensions: const ['txt', 'md', 'markdown', 'json', 'csv', 'log'],
+    );
+    if (path == null) return;
+    try {
+      final knowledge = context.read<KnowledgeProvider>();
+      final doc = await knowledge.importFile(path);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(doc == null ? '导入失败' : '已导入知识文档：${doc.title}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导入失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _exportChatJson() async {
+    final chat = context.read<ChatProvider>();
+    final raw = chat.exportConversationsJson(currentOnly: true);
+    await SharePlus.instance.share(ShareParams(text: raw, subject: 'NexAI chat export'));
+  }
+
+  Future<void> _importChatJson() async {
+    final path = await FileAccessHelper.pickFile(allowedExtensions: const ['json']);
+    if (path == null) return;
+    try {
+      final raw = await File(path).readAsString();
+      final count = await context.read<ChatProvider>().importConversationsJson(raw);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入/合并 $count 条会话数据')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('导入失败：$e')),
+      );
+    }
+  }
+
+  Future<void> _editCompareModels(SettingsProvider settings) async {
+    final chat = context.read<ChatProvider>();
+    if (chat.currentConversation == null) {
+      await chat.newConversation();
+    }
+    final selected = <String>{
+      ...?chat.currentConversation?.compareModels,
+    };
+    final models = settings.models;
+    final result = await showModalBottomSheet<Set<String>>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModal) {
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ListTile(
+                    title: Text('多模型对比'),
+                    subtitle: Text('选择 2 个及以上模型，下一条消息将依次生成对比回答'),
+                  ),
+                  ...models.map((model) {
+                    final checked = selected.contains(model);
+                    return CheckboxListTile(
+                      value: checked,
+                      title: Text(model),
+                      onChanged: (v) {
+                        setModal(() {
+                          if (v == true) {
+                            selected.add(model);
+                          } else {
+                            selected.remove(model);
+                          }
+                        });
+                      },
+                    );
+                  }),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: FilledButton(
+                      onPressed: () => Navigator.pop(ctx, selected),
+                      child: const Text('保存'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+    if (result == null) return;
+    await chat.setCompareModels(result.toList());
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _pickChatImage() async {
@@ -569,6 +768,7 @@ class _ChatPageState extends State<ChatPage> {
         LumenTokens.horizontalPaddingForWidth(screenWidth);
 
     _syncVisibleConversation(chat);
+    _maybeScrollToFocus(chat);
 
     return Column(
       children: [
@@ -637,6 +837,14 @@ class _ChatPageState extends State<ChatPage> {
             padding: EdgeInsets.fromLTRB(contentHorizontalPad, 0, contentHorizontalPad, 8),
             child: _buildPendingAttachments(cs),
           ),
+        if (_isListening && _partialSpeech.trim().isNotEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(contentHorizontalPad, 0, contentHorizontalPad, 6),
+            child: Text(
+              '识别中：$_partialSpeech',
+              style: TextStyle(fontSize: 12, color: cs.primary),
+            ),
+          ),
 
         // ── Input bar ──
         // AnimatedPadding so the bar slides up smoothly with the keyboard
@@ -693,6 +901,66 @@ class _ChatPageState extends State<ChatPage> {
                       icon: Icon(Icons.auto_awesome_outlined, color: cs.primary, size: 22),
                       onPressed: _showPromptTemplates,
                       tooltip: '提示模板',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: IconButton(
+                      icon: Icon(
+                        _isListening ? Icons.mic : Icons.mic_none_rounded,
+                        color: _isListening ? cs.error : cs.primary,
+                        size: 22,
+                      ),
+                      onPressed: _toggleSpeechInput,
+                      tooltip: _isListening ? '停止语音输入' : '语音输入',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: IconButton(
+                      icon: Icon(Icons.menu_book_outlined, color: cs.primary, size: 22),
+                      onPressed: _importKnowledgeDoc,
+                      tooltip: '导入知识文档',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: IconButton(
+                      icon: Icon(Icons.hub_outlined, color: cs.primary, size: 22),
+                      onPressed: () => _editCompareModels(settings),
+                      tooltip: '多模型对比',
+                      style: IconButton.styleFrom(
+                        backgroundColor: cs.surfaceContainerHighest,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2, right: 4),
+                    child: IconButton(
+                      icon: Icon(Icons.ios_share_outlined, color: cs.primary, size: 22),
+                      onPressed: _exportChatJson,
+                      tooltip: '导出会话 JSON',
                       style: IconButton.styleFrom(
                         backgroundColor: cs.surfaceContainerHighest,
                         shape: RoundedRectangleBorder(
@@ -1205,6 +1473,7 @@ class _ChatPageState extends State<ChatPage> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     _syncVisibleConversation(chat);
+    _maybeScrollToFocus(chat);
 
     return Column(
       children: [

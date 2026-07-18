@@ -7,6 +7,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'providers/chat_provider.dart';
 import 'providers/notes_provider.dart';
+import 'providers/knowledge_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/image_generation_provider.dart';
 import 'providers/password_provider.dart';
@@ -86,6 +87,7 @@ Future<void> _runMain() async {
 
   final settingsProvider = SettingsProvider();
   final notesProvider = NotesProvider();
+  final knowledgeProvider = KnowledgeProvider();
   final chatProvider = ChatProvider();
   final passwordProvider = PasswordProvider();
   final translationProvider = TranslationProvider();
@@ -99,6 +101,7 @@ Future<void> _runMain() async {
         ChangeNotifierProvider.value(value: settingsProvider),
         ChangeNotifierProvider.value(value: chatProvider),
         ChangeNotifierProvider.value(value: notesProvider),
+        ChangeNotifierProvider.value(value: knowledgeProvider),
         ChangeNotifierProvider(create: (_) => ImageGenerationProvider()),
         ChangeNotifierProvider.value(value: passwordProvider),
         ChangeNotifierProvider.value(value: authProvider),
@@ -116,6 +119,7 @@ Future<void> _runMain() async {
     _bootstrapAppInBackground(
       settingsProvider: settingsProvider,
       notesProvider: notesProvider,
+      knowledgeProvider: knowledgeProvider,
       chatProvider: chatProvider,
       passwordProvider: passwordProvider,
       translationProvider: translationProvider,
@@ -128,6 +132,7 @@ Future<void> _runMain() async {
 Future<void> _bootstrapAppInBackground({
   required SettingsProvider settingsProvider,
   required NotesProvider notesProvider,
+  required KnowledgeProvider knowledgeProvider,
   required ChatProvider chatProvider,
   required PasswordProvider passwordProvider,
   required TranslationProvider translationProvider,
@@ -140,6 +145,7 @@ Future<void> _bootstrapAppInBackground({
       _runSecurityChecksInBackground(),
       settingsProvider.loadSettings(),
       notesProvider.loadNotes(),
+      knowledgeProvider.load(),
       chatProvider.loadConversations(),
       passwordProvider.loadPasswords(),
       translationProvider.loadHistory(),

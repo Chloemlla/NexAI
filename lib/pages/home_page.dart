@@ -794,6 +794,10 @@ class _HomePageState extends State<HomePage> with WindowListener {
           ),
           onTap: () {
             chat.selectConversation(result.conversationIndex);
+            chat.setFocusMessage(
+              messageIndex: result.messageIndex,
+              query: query,
+            );
             Navigator.of(ctx).pop();
           },
         );

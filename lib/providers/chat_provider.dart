@@ -36,6 +36,9 @@ class ChatProvider extends ChangeNotifier {
   CancelToken? _cancelToken;
   int _runSerial = 0;
   final List<_QueuedChatTurn> _followUpQueue = [];
+  int? _focusMessageIndex;
+  String? _focusQuery;
+  int _siblingGroupSeq = 1;
 
   ToolApprovalHandler? approvalHandler;
   ChatToolRuntimeContext? toolRuntimeContext;
@@ -58,6 +61,8 @@ class ChatProvider extends ChangeNotifier {
   List<String> get followUpQueue =>
       _followUpQueue.map((item) => item.content).toList(growable: false);
   int get followUpQueueLength => _followUpQueue.length;
+  int? get focusMessageIndex => _focusMessageIndex;
+  String? get focusQuery => _focusQuery;
   Conversation? get currentConversation =>
       _currentIndex >= 0 && _currentIndex < _conversations.length
       ? _conversations[_currentIndex]
@@ -85,6 +90,53 @@ class ChatProvider extends ChangeNotifier {
     if (_followUpQueue.isEmpty) return;
     _followUpQueue.clear();
     notifyListeners();
+  }
+
+  void setFocusMessage({required int messageIndex, String? query}) {
+    _focusMessageIndex = messageIndex;
+    _focusQuery = query;
+    notifyListeners();
+  }
+
+  void clearFocusMessage() {
+    if (_focusMessageIndex == null && _focusQuery == null) return;
+    _focusMessageIndex = null;
+    _focusQuery = null;
+    notifyListeners();
+  }
+
+  Future<void> setCompareModels(List<String> models) async {
+    final conversation = currentConversation;
+    if (conversation == null) return;
+    conversation.compareModels = models
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toSet()
+        .toList();
+    notifyListeners();
+    await _save();
+  }
+
+  String exportConversationsJson({bool currentOnly = false}) {
+    if (currentOnly) {
+      final c = currentConversation;
+      if (c == null) return '[]';
+      return jsonEncode([c.toJson()]);
+    }
+    return Conversation.encodeList(_conversations);
+  }
+
+  Future<int> importConversationsJson(String raw, {bool merge = true}) async {
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) {
+      throw const FormatException('Expected conversations JSON array');
+    }
+    if (!merge) {
+      await restoreFromList(decoded);
+      return decoded.length;
+    }
+    await mergeItems(decoded);
+    return decoded.length;
   }
 
   Future<void> updateConversationSettings({
@@ -374,6 +426,46 @@ class ChatProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> regenerateLastAssistant({
+    required String apiMode,
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required double temperature,
+    required int maxTokens,
+    required String systemPrompt,
+    required String vertexProjectId,
+    required String vertexLocation,
+  }) async {
+    if (_isLoading) return;
+    final conversation = currentConversation;
+    if (conversation == null || conversation.messages.isEmpty) return;
+    // Find last user message and regenerate from there.
+    var userIndex = -1;
+    for (var i = conversation.messages.length - 1; i >= 0; i--) {
+      if (conversation.messages[i].role == 'user') {
+        userIndex = i;
+        break;
+      }
+    }
+    if (userIndex < 0) return;
+    // Keep history including user; strip trailing assistants/tools after it for a clean regenerate path.
+    conversation.messages.removeRange(userIndex + 1, conversation.messages.length);
+    notifyListeners();
+    await _performApiCall(
+      conversation: conversation,
+      apiMode: apiMode,
+      baseUrl: baseUrl,
+      apiKey: apiKey,
+      model: resolveModel(model),
+      temperature: temperature,
+      maxTokens: maxTokens,
+      systemPrompt: resolveSystemPrompt(systemPrompt),
+      vertexProjectId: vertexProjectId,
+      vertexLocation: vertexLocation,
+    );
+  }
+
   Future<void> editAndResendMessage({
     required int messageIndex,
     required String newContent,
@@ -514,6 +606,20 @@ class ChatProvider extends ChangeNotifier {
           ? '${titleSource.substring(0, 30)}...'
           : titleSource;
     }
+
+    final compare = conversation.compareModels
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (turn.apiMode == 'OpenAI' && compare.length >= 2) {
+      await _performMultiModelCompare(
+        conversation: conversation,
+        turn: turn,
+        models: compare,
+      );
+      return;
+    }
+
     await _performApiCall(
       conversation: conversation,
       apiMode: turn.apiMode,
@@ -526,6 +632,57 @@ class ChatProvider extends ChangeNotifier {
       vertexProjectId: turn.vertexProjectId,
       vertexLocation: turn.vertexLocation,
     );
+  }
+
+  Future<void> _performMultiModelCompare({
+    required Conversation conversation,
+    required _QueuedChatTurn turn,
+    required List<String> models,
+  }) async {
+    final runId = ++_runSerial;
+    _isLoading = true;
+    _activeToolName = null;
+    _cancelToken = CancelToken();
+    notifyListeners();
+    final groupId = _siblingGroupSeq++;
+    try {
+      // Sequential compare keeps tool approval UX simple and avoids races on shared conversation.
+      for (var i = 0; i < models.length; i++) {
+        if (_cancelToken?.isCancelled == true) break;
+        final model = models[i];
+        _activeToolName = 'compare:$model';
+        notifyListeners();
+        await _performOpenAiToolLoop(
+          conversation: conversation,
+          baseUrl: turn.baseUrl,
+          apiKey: turn.apiKey,
+          model: model,
+          temperature: turn.temperature,
+          maxTokens: turn.maxTokens,
+          systemPrompt: turn.systemPrompt,
+          modelTag: model,
+          siblingGroupId: groupId,
+          markActive: i == 0,
+        );
+      }
+    } catch (e) {
+      conversation.messages.add(
+        Message(
+          role: 'assistant',
+          content: '多模型对比失败：${e.toString()}',
+          timestamp: DateTime.now(),
+          isError: true,
+        ),
+      );
+    }
+    if (runId == _runSerial) {
+      _isLoading = false;
+      _activeToolName = null;
+      _cancelToken = null;
+      notifyListeners();
+      await _save();
+      await _drainFollowUpQueue(conversation);
+    }
   }
 
   Future<void> _drainFollowUpQueue(Conversation conversation) async {
@@ -547,6 +704,9 @@ class ChatProvider extends ChangeNotifier {
     required double temperature,
     required int maxTokens,
     required String systemPrompt,
+    String? modelTag,
+    int? siblingGroupId,
+    bool markActive = true,
   }) async {
     final tools = enabledTools;
     final useTools = tools.isNotEmpty && toolRuntimeContext != null;
@@ -570,6 +730,9 @@ class ChatProvider extends ChangeNotifier {
         maxTokens: maxTokens,
         systemPrompt: systemPrompt,
         tools: useTools ? tools : const [],
+        modelTag: modelTag,
+        siblingGroupId: siblingGroupId,
+        markActive: markActive,
       );
       if (turn.toolCalls.isEmpty) return;
 
@@ -608,6 +771,9 @@ class ChatProvider extends ChangeNotifier {
     required int maxTokens,
     required String systemPrompt,
     required List<ChatToolDefinition> tools,
+    String? modelTag,
+    int? siblingGroupId,
+    bool markActive = true,
   }) async {
     final messagesPayload = <Map<String, dynamic>>[];
     if (systemPrompt.isNotEmpty) {
@@ -655,7 +821,16 @@ class ChatProvider extends ChangeNotifier {
       return _OpenAiTurnResult(assistantMessage: errorMessage, toolCalls: const []);
     }
 
-    final assistantMessage = Message(role: 'assistant', content: '', timestamp: DateTime.now());
+    final startedAt = DateTime.now();
+    int? ttftMs;
+    final assistantMessage = Message(
+      role: 'assistant',
+      content: '',
+      timestamp: DateTime.now(),
+      modelId: modelTag ?? model,
+      siblingGroupId: siblingGroupId,
+      isActiveBranch: markActive,
+    );
     conversation.messages.add(assistantMessage);
     notifyListeners();
 
@@ -663,6 +838,7 @@ class ChatProvider extends ChangeNotifier {
     final toolBuffers = <int, _ToolCallBuffer>{};
     String lineBuf = '';
     var done = false;
+    MessageStats? usageStats;
 
     await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
       if (done) break;
@@ -687,6 +863,7 @@ class ChatProvider extends ChangeNotifier {
           final deltaMap = delta.map((k, v) => MapEntry(k.toString(), v));
           final content = deltaMap['content'];
           if (content is String && content.isNotEmpty) {
+            ttftMs ??= DateTime.now().difference(startedAt).inMilliseconds;
             buffer.write(content);
             assistantMessage.updateContent(buffer.toString());
             notifyListeners();
@@ -698,6 +875,13 @@ class ChatProvider extends ChangeNotifier {
           if (reasoningDelta is String && reasoningDelta.isNotEmpty) {
             assistantMessage.appendReasoning(reasoningDelta);
             notifyListeners();
+          }
+
+          final usage = json['usage'];
+          if (usage is Map) {
+            usageStats = MessageStats.fromJson(
+              usage.map((k, v) => MapEntry(k.toString(), v)),
+            );
           }
           final toolCalls = deltaMap['tool_calls'];
           if (toolCalls is List) {
@@ -732,6 +916,14 @@ class ChatProvider extends ChangeNotifier {
         argumentsJson: bucket.arguments.toString().isEmpty ? '{}' : bucket.arguments.toString(),
       ));
     }
+
+    final completionMs = DateTime.now().difference(startedAt).inMilliseconds;
+    assistantMessage.stats = (usageStats ?? const MessageStats()).merge(
+      MessageStats(
+        timeToFirstTokenMs: ttftMs,
+        completionMs: completionMs,
+      ),
+    );
 
     if (toolCalls.isNotEmpty) {
       assistantMessage.toolCalls

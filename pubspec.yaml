@@ -45,6 +45,11 @@ dependencies:
   flutter_secure_storage: ^9.2.4
   # Google 快速登录
   google_sign_in: ^6.2.2
+  # Chat phase2: STT / TTS / share helpers
+  speech_to_text: ^7.3.0
+  flutter_tts: ^4.2.3
+  share_plus: ^11.0.0
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:

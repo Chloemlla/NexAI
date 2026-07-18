@@ -581,6 +581,33 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: Text('create_note', style: tt.bodyMedium),
                         subtitle: Text('创建本地笔记（需审批）', style: tt.bodySmall),
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolKnowledgeEnabled,
+                        onChanged: settings.setToolKnowledgeEnabled,
+                        title: Text('knowledge_search / knowledge_read', style: tt.bodyMedium),
+                        subtitle: Text('检索导入的本地文档知识库', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.remoteMcpEnabled,
+                        onChanged: settings.setRemoteMcpEnabled,
+                        title: Text('远程 MCP', style: tt.bodyMedium),
+                        subtitle: Text('启用 HTTP/SSE MCP 工具（需配置服务器）', style: tt.bodySmall),
+                      ),
+                      if (settings.remoteMcpEnabled)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text('MCP 服务器', style: tt.bodyMedium),
+                          subtitle: Text(
+                            settings.mcpServers.isEmpty
+                                ? '尚未配置'
+                                : '已配置 ${settings.mcpServers.length} 个',
+                            style: tt.bodySmall,
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => _editMcpServers(context, settings),
+                        ),
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text('最大工具轮次', style: tt.bodyMedium),

@@ -298,7 +298,7 @@ public sealed partial class PasswordToolPage : Page
 
     private async Task<string?> PromptPassphraseAsync(string title, bool confirm)
     {
-        var passBox = new PasswordBox { Header = "Passphrase (min 8 chars)" };
+        var passBox = new PasswordBox { Header = $"Passphrase (min {ToolInputLimits.MinBackupPassphraseChars} chars)" };
         var confirmBox = new PasswordBox { Header = "Confirm passphrase", Margin = new Thickness(0, 12, 0, 0) };
         var panel = new StackPanel();
         panel.Children.Add(passBox);
@@ -316,9 +316,12 @@ public sealed partial class PasswordToolPage : Page
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
 
         var passphrase = passBox.Password?.Trim() ?? string.Empty;
-        if (passphrase.Length < 8)
+        // Creating backups requires the stronger policy; restore keeps a lower floor so older
+        // 8-character backups remain recoverable.
+        var minChars = confirm ? ToolInputLimits.MinBackupPassphraseChars : 8;
+        if (passphrase.Length < minChars)
         {
-            await ShowMessageAsync("Passphrase must be at least 8 characters.");
+            await ShowMessageAsync($"Passphrase must be at least {minChars} characters.");
             return null;
         }
 

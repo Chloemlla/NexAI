@@ -1,7 +1,9 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using NexAI.Core;
 using NexAI.Core.Tools;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Storage;
 
@@ -35,12 +37,18 @@ public sealed class JsonTranslationHistoryStore : ITranslationHistoryStore
             return;
         }
 
-        await using var stream = File.OpenRead(AppPaths.TranslationHistoryFilePath);
-        var loaded = await JsonSerializer.DeserializeAsync<List<TranslationRecord>>(stream, Options, cancellationToken)
-            .ConfigureAwait(false);
+        var loaded = await ReadProtectedListAsync<TranslationRecord>(
+            AppPaths.TranslationHistoryFilePath,
+            cancellationToken).ConfigureAwait(false);
         lock (_gate)
         {
-            _history = (loaded ?? []).Select(x => x.Clone()).OrderByDescending(x => x.CreatedAt).Take(MaxItems).ToList();
+            _history = loaded.Select(x => x.Clone()).OrderByDescending(x => x.CreatedAt).Take(MaxItems).ToList();
+        }
+
+        // Re-persist if we loaded legacy plaintext so the file is upgraded at rest.
+        if (loaded.Count > 0 && !await IsProtectedFileAsync(AppPaths.TranslationHistoryFilePath, cancellationToken).ConfigureAwait(false))
+        {
+            await PersistAsync(cancellationToken).ConfigureAwait(false);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -80,14 +88,46 @@ public sealed class JsonTranslationHistoryStore : ITranslationHistoryStore
     {
         List<TranslationRecord> snapshot;
         lock (_gate) { snapshot = _history.Select(x => x.Clone()).ToList(); }
-        AppPaths.EnsureRoot();
-        var temp = AppPaths.TranslationHistoryFilePath + ".tmp";
-        await using (var stream = File.Create(temp))
+        await WriteProtectedListAsync(AppPaths.TranslationHistoryFilePath, snapshot, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    internal static async Task<List<T>> ReadProtectedListAsync<T>(string path, CancellationToken cancellationToken)
+    {
+        var raw = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(raw))
         {
-            await JsonSerializer.SerializeAsync(stream, snapshot, Options, cancellationToken).ConfigureAwait(false);
+            return [];
         }
 
-        File.Copy(temp, AppPaths.TranslationHistoryFilePath, true);
+        string json;
+        if (SecretProtector.IsProtected(raw.Trim()))
+        {
+            json = SecretProtector.Unprotect(raw.Trim());
+        }
+        else
+        {
+            // Backward compatible legacy plaintext JSON array.
+            json = raw;
+        }
+
+        return JsonSerializer.Deserialize<List<T>>(json, Options) ?? [];
+    }
+
+    internal static async Task WriteProtectedListAsync<T>(string path, List<T> snapshot, CancellationToken cancellationToken)
+    {
+        AppPaths.EnsureRoot();
+        var json = JsonSerializer.Serialize(snapshot, Options);
+        var protectedPayload = SecretProtector.Protect(json);
+        var temp = path + ".tmp";
+        await File.WriteAllTextAsync(temp, protectedPayload, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+        File.Copy(temp, path, true);
         File.Delete(temp);
+    }
+
+    private static async Task<bool> IsProtectedFileAsync(string path, CancellationToken cancellationToken)
+    {
+        var raw = (await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false)).Trim();
+        return SecretProtector.IsProtected(raw);
     }
 }

@@ -37,10 +37,10 @@ public sealed class VertexTranslationClient : ITranslationClient
 
         var sourceLabel = TranslationLanguages.All.TryGetValue(sourceLanguage, out var s) ? s : sourceLanguage;
         var targetLabel = TranslationLanguages.All.TryGetValue(targetLanguage, out var t) ? t : targetLanguage;
+        var key = vertexApiKey.Trim();
 
-        // Keep key out of the request URL to reduce proxy/log leakage.
-        // Google AI Platform accepts ?key=; we still avoid embedding it in logs by not
-        // constructing a loggable absolute URI with secrets elsewhere.
+        // Prefer header-based API key transport so the secret is not present in the request URI
+        // (proxy access logs, browser history style dumps, and exception ToString paths).
         var endpoint =
             $"https://aiplatform.googleapis.com/v1/publishers/google/models/{ModelId}:generateContent";
 
@@ -70,17 +70,45 @@ public sealed class VertexTranslationClient : ITranslationClient
             },
         };
 
-        // Vertex publisher endpoint currently requires API key as query param for this path.
-        // Build the request URI without ToString() usage in logs and strip key from exceptions.
-        var requestUri = endpoint + "?key=" + Uri.EscapeDataString(vertexApiKey.Trim());
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
+        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {
             Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
         };
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.TryAddWithoutValidation("x-goog-api-key", key);
 
         using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+        // Some Google publisher deployments still only accept query-key auth. Retry once without
+        // putting the key into any exception message or stored URI string beyond the request.
+        if ((int)response.StatusCode is 401 or 403)
+        {
+            using var fallbackRequest = new HttpRequestMessage(HttpMethod.Post, BuildQueryKeyUri(endpoint, key))
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+            };
+            fallbackRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            using var fallbackResponse = await _httpClient.SendAsync(fallbackRequest, cancellationToken).ConfigureAwait(false);
+            var fallbackBody = await fallbackResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            return ParseTranslationResponse(fallbackResponse, fallbackBody);
+        }
+
+        return ParseTranslationResponse(response, body);
+    }
+
+    private static Uri BuildQueryKeyUri(string endpoint, string key)
+    {
+        // UriBuilder keeps the secret out of interpolated strings used for logging elsewhere.
+        var builder = new UriBuilder(endpoint)
+        {
+            Query = "key=" + Uri.EscapeDataString(key),
+        };
+        return builder.Uri;
+    }
+
+    private static string ParseTranslationResponse(HttpResponseMessage response, string body)
+    {
         using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(body) ? "{}" : body);
         if (!response.IsSuccessStatusCode)
         {
@@ -123,7 +151,6 @@ public sealed class VertexTranslationClient : ITranslationClient
             return message;
         }
 
-        // Defensive: never surface query key material in UI exceptions.
         return System.Text.RegularExpressions.Regex.Replace(
             message,
             @"(?i)([?&]key=)[^&\s]+",

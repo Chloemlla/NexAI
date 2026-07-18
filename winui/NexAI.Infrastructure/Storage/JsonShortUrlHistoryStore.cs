@@ -35,12 +35,19 @@ public sealed class JsonShortUrlHistoryStore : IShortUrlHistoryStore
             return;
         }
 
-        await using var stream = File.OpenRead(AppPaths.ShortUrlHistoryFilePath);
-        var loaded = await JsonSerializer.DeserializeAsync<List<ShortUrlRecord>>(stream, Options, cancellationToken)
-            .ConfigureAwait(false);
+        var loaded = await JsonTranslationHistoryStore.ReadProtectedListAsync<ShortUrlRecord>(
+            AppPaths.ShortUrlHistoryFilePath,
+            cancellationToken).ConfigureAwait(false);
         lock (_gate)
         {
-            _history = (loaded ?? []).Select(x => x.Clone()).OrderByDescending(x => x.CreatedAt).Take(MaxItems).ToList();
+            _history = loaded.Select(x => x.Clone()).OrderByDescending(x => x.CreatedAt).Take(MaxItems).ToList();
+        }
+
+        // Upgrade legacy plaintext files on first load.
+        var raw = (await File.ReadAllTextAsync(AppPaths.ShortUrlHistoryFilePath, cancellationToken).ConfigureAwait(false)).Trim();
+        if (loaded.Count > 0 && !NexAI.Infrastructure.Security.SecretProtector.IsProtected(raw))
+        {
+            await PersistAsync(cancellationToken).ConfigureAwait(false);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -80,14 +87,9 @@ public sealed class JsonShortUrlHistoryStore : IShortUrlHistoryStore
     {
         List<ShortUrlRecord> snapshot;
         lock (_gate) { snapshot = _history.Select(x => x.Clone()).ToList(); }
-        AppPaths.EnsureRoot();
-        var temp = AppPaths.ShortUrlHistoryFilePath + ".tmp";
-        await using (var stream = File.Create(temp))
-        {
-            await JsonSerializer.SerializeAsync(stream, snapshot, Options, cancellationToken).ConfigureAwait(false);
-        }
-
-        File.Copy(temp, AppPaths.ShortUrlHistoryFilePath, true);
-        File.Delete(temp);
+        await JsonTranslationHistoryStore.WriteProtectedListAsync(
+            AppPaths.ShortUrlHistoryFilePath,
+            snapshot,
+            cancellationToken).ConfigureAwait(false);
     }
 }

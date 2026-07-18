@@ -27,9 +27,10 @@ public static class PasswordBackupCrypto
     {
         ArgumentNullException.ThrowIfNull(passwords);
         var normalized = (passphrase ?? string.Empty).Trim();
-        if (normalized.Length < 8)
+        if (normalized.Length < ToolInputLimits.MinBackupPassphraseChars)
         {
-            throw new PasswordBackupException("Backup passphrase must be at least 8 characters.");
+            throw new PasswordBackupException(
+                $"Backup passphrase must be at least {ToolInputLimits.MinBackupPassphraseChars} characters.");
         }
 
         iterations = Math.Max(10_000, iterations);
@@ -85,9 +86,9 @@ public static class PasswordBackupCrypto
             string.Equals(version, EncryptedBackupVersion, StringComparison.Ordinal))
         {
             var normalized = (passphrase ?? string.Empty).Trim();
-            if (normalized.Length < 8)
+            if (normalized.Length < 1)
             {
-                throw new PasswordBackupException("Enter the backup passphrase (at least 8 characters).");
+                throw new PasswordBackupException("Enter the backup passphrase.");
             }
 
             return DecryptV2(root, normalized).Select(SavedPassword.FromDictionary).ToList();

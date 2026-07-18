@@ -126,10 +126,15 @@ class SecurityEventReporter {
   Future<void> reportAllIssues() async {
     final security = AppSecurity.instance;
 
-    if (!security.isSignatureValid || !security.isApkHashValid) {
+    // Only report confirmed integrity failures. Pending/unavailable hash checks
+    // must not be treated as tamper events for official GitHub installs.
+    if (!security.isSignatureValid ||
+        security.apkHashStatus == ApkHashStatus.mismatch) {
       await reportIntegrityFailure(
         signatureValid: security.isSignatureValid,
         hashValid: security.isApkHashValid,
+        expectedHash: security.expectedApkHash,
+        actualHash: security.installedApkHash,
       );
     }
 

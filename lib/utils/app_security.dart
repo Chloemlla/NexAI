@@ -27,6 +27,18 @@ const _storage = FlutterSecureStorage(
 const _sigPinKey = 'nexai.apk.signature.v1';
 const _githubApiUrl = 'https://api.github.com/repos/Chloemlla/NexAI/releases';
 
+/// Result of APK content-hash verification against GitHub release metadata.
+///
+/// Only [mismatch] means the installed package is known-bad.
+/// Network / release metadata failures are [unavailable], not tampering.
+enum ApkHashStatus {
+  pending,
+  skipped,
+  verified,
+  mismatch,
+  unavailable,
+}
+
 // ─── AppSecurity singleton ────────────────────────────────────────────────────
 
 class AppSecurity {
@@ -40,8 +52,23 @@ class AppSecurity {
   /// True if APK signature matches the first-run pinned value.
   bool isSignatureValid = true;
 
-  /// True if APK file hash matches GitHub release hash.
-  bool isApkHashValid = true;
+  /// Latest APK content-hash check status.
+  ApkHashStatus apkHashStatus = ApkHashStatus.pending;
+
+  /// True unless the APK content hash was confirmed to mismatch GitHub release.
+  ///
+  /// Official installs must not be treated as invalid when GitHub is unreachable
+  /// or release metadata is incomplete.
+  bool get isApkHashValid => apkHashStatus != ApkHashStatus.mismatch;
+
+  /// True only after a confirmed hash match against release metadata.
+  bool get isApkHashVerified => apkHashStatus == ApkHashStatus.verified;
+
+  /// Human-readable reason for the latest hash status (debug/UX).
+  String? apkHashStatusReason;
+
+  String? expectedApkHash;
+  String? installedApkHash;
 
   /// True if debugger is attached.
   bool isDebuggerAttached = false;
@@ -75,6 +102,7 @@ class AppSecurity {
 
   AndroidSecuritySnapshot? _nativeSnapshot;
   Map<String, dynamic>? _startupSnapshot;
+  Future<void>? _initFuture;
 
   /// Aggregate snapshot collected early by Kotlin Application bootstrap.
   Map<String, dynamic>? get startupSecuritySnapshot => _startupSnapshot;
@@ -90,7 +118,19 @@ class AppSecurity {
 
   /// Initialise security checks. Call once in [main] before [runApp].
   Future<void> init() async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      apkHashStatus = ApkHashStatus.skipped;
+      apkHashStatusReason = 'web platform';
+      return;
+    }
+    _initFuture ??= _initInternal();
+    await _initFuture;
+  }
+
+  /// Await completion of [init] from UI surfaces that need final integrity status.
+  Future<void> ensureInitialized() => init();
+
+  Future<void> _initInternal() async {
     await _loadNativeSnapshot();
     await Future.wait([
       _checkApkSignature(),
@@ -183,27 +223,26 @@ class AppSecurity {
     if (!Platform.isAndroid) return;
     if (kDebugMode) {
       debugPrint('AppSecurity: APK hash check skipped in debug mode');
+      apkHashStatus = ApkHashStatus.skipped;
+      apkHashStatusReason = 'debug mode';
       return;
     }
 
-    isApkHashValid = false;
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      // Extract commit hash from version (e.g., "1.0.7-e19d98d36")
-      final parts = currentVersion.split('-');
-      if (parts.length < 2) {
-        _markApkHashInvalid('version format missing commit hash');
+      // Official Android builds embed short commit hash: "1.0.7-e19d98d36".
+      final versionTag = resolveReleaseTag(currentVersion);
+      if (versionTag == null) {
+        _markApkHashUnavailable('version format missing commit hash');
         return;
       }
-
-      final versionTag = 'v$currentVersion';
 
       // Fetch release data from GitHub
       final releaseData = await _fetchReleaseByTag(versionTag);
       if (releaseData == null) {
-        _markApkHashInvalid('release not found on GitHub: $versionTag');
+        _markApkHashUnavailable('release not found on GitHub: $versionTag');
         return;
       }
 
@@ -212,50 +251,81 @@ class AppSecurity {
       final supportedAbis = androidInfo.supportedAbis;
 
       // Find matching APK asset and expected hash
-      final expectedHash = await _findExpectedHash(releaseData, supportedAbis);
+      final expectedHash = await findExpectedHash(releaseData, supportedAbis);
       if (expectedHash == null) {
-        _markApkHashInvalid('no matching APK hash found in release');
+        _markApkHashUnavailable('no matching APK hash found in release');
         return;
       }
 
       // Get installed APK hash from native code
       final installedHash = _nativeSnapshot?.apkSha256;
       if (installedHash == null || installedHash.isEmpty) {
-        _markApkHashInvalid('failed to calculate APK hash');
+        _markApkHashUnavailable('failed to calculate APK hash');
         return;
       }
 
+      expectedApkHash = expectedHash.toLowerCase();
+      installedApkHash = installedHash.toLowerCase();
+
       // Compare hashes
-      if (installedHash.toLowerCase() != expectedHash.toLowerCase()) {
+      if (installedApkHash != expectedApkHash) {
         debugPrint('AppSecurity: APK HASH MISMATCH');
         debugPrint('  Expected: $expectedHash');
         debugPrint('  Got:      $installedHash');
-        isApkHashValid = false;
+        apkHashStatus = ApkHashStatus.mismatch;
+        apkHashStatusReason = 'content hash mismatch';
         isCompromised = true;
       } else {
         debugPrint('AppSecurity: APK hash verified');
-        isApkHashValid = true;
+        apkHashStatus = ApkHashStatus.verified;
+        apkHashStatusReason = 'matched GitHub release hash';
       }
     } catch (e) {
       debugPrint('AppSecurity: APK hash check error: $e');
-      _markApkHashInvalid('APK hash check error');
+      _markApkHashUnavailable('APK hash check error: $e');
     }
   }
 
-  void _markApkHashInvalid(String reason) {
+  void _markApkHashUnavailable(String reason) {
     debugPrint('AppSecurity: APK HASH NOT VERIFIED ($reason)');
-    isApkHashValid = false;
-    isCompromised = true;
+    // Fail open for user-facing warnings: official GitHub downloads must not be
+    // branded as tampered when metadata/network is incomplete.
+    apkHashStatus = ApkHashStatus.unavailable;
+    apkHashStatusReason = reason;
+  }
+
+  /// Maps installed package version to GitHub release tag.
+  /// Returns null when the build is not a publishable Android release identity.
+  @visibleForTesting
+  static String? resolveReleaseTag(String packageVersion) {
+    final version = packageVersion.trim();
+    if (version.isEmpty) return null;
+    final normalized = version.startsWith('v') ? version.substring(1) : version;
+    final parts = normalized.split('-');
+    if (parts.length < 2 || parts[1].trim().isEmpty) {
+      return null;
+    }
+    return 'v$normalized';
   }
 
   Future<Map<String, dynamic>?> _fetchReleaseByTag(String tag) async {
     try {
       final url = '$_githubApiUrl/tags/$tag';
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(
+        Uri.parse(url),
+        headers: const {
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'NexAI-AppSecurity',
+        },
+      );
 
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
       }
+      debugPrint(
+        'AppSecurity: release fetch HTTP ${response.statusCode} for $tag',
+      );
       return null;
     } catch (e) {
       debugPrint('AppSecurity: failed to fetch release: $e');
@@ -263,7 +333,8 @@ class AppSecurity {
     }
   }
 
-  Future<String?> _findExpectedHash(
+  @visibleForTesting
+  Future<String?> findExpectedHash(
     Map<String, dynamic> releaseData,
     List<String> supportedAbis,
   ) async {
@@ -354,29 +425,38 @@ class AppSecurity {
   }
 
   String? _extractHashFromBody(String body, String assetName) {
-    // Parse format: "sha256:c4ff1d8f8b9f8cd5cb023a81346f389231bddf4843f2fd71845192a01af4518d"
+    return extractHashFromReleaseBody(body, assetName);
+  }
+
+  /// Parses CI release notes such as:
+  /// `- \`NexAI_android_1.0.7-abc_arm64-v8a.apk\`\n  - sha256:...`
+  @visibleForTesting
+  static String? extractHashFromReleaseBody(String body, String assetName) {
+    final escaped = RegExp.escape(assetName);
+    final match = RegExp(
+      '`$escaped`[\\s\\S]{0,200}?sha256:([a-fA-F0-9]{64})',
+      caseSensitive: false,
+    ).firstMatch(body);
+    if (match != null) {
+      return match.group(1)?.toLowerCase();
+    }
+
+    // Fallback: asset name without backticks, then nearby sha256.
     final lines = body.split('\n');
-
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i];
-
-      // Check if this line contains the asset name
-      if (line.toLowerCase().contains(assetName.toLowerCase())) {
-        // Look for sha256 in nearby lines (within 5 lines)
-        for (int j = i; j < i + 5 && j < lines.length; j++) {
-          final hashLine = lines[j];
-          final match = RegExp(
-            r'sha256:([a-f0-9]{64})',
-            caseSensitive: false,
-          ).firstMatch(hashLine);
-
-          if (match != null) {
-            return match.group(1);
-          }
+    for (var i = 0; i < lines.length; i++) {
+      if (!lines[i].toLowerCase().contains(assetName.toLowerCase())) {
+        continue;
+      }
+      for (var j = i; j < i + 5 && j < lines.length; j++) {
+        final nearby = RegExp(
+          r'sha256:([a-fA-F0-9]{64})',
+          caseSensitive: false,
+        ).firstMatch(lines[j]);
+        if (nearby != null) {
+          return nearby.group(1)?.toLowerCase();
         }
       }
     }
-
     return null;
   }
 
@@ -490,7 +570,7 @@ class AppSecurity {
   int get riskScore {
     var score = 0;
     if (!isSignatureValid) score += 50;
-    if (!isApkHashValid) score += 50;
+    if (apkHashStatus == ApkHashStatus.mismatch) score += 50;
     if (isCompromised) score += 30;
     if (isDebuggerAttached) score += 40;
     if (isTracerAttached) score += 35;

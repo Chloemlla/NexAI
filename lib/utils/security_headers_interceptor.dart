@@ -59,7 +59,10 @@ class SecurityHeadersInterceptor extends Interceptor {
       options.headers['X-Device-Emulator'] = security.isEmulator ? '1' : '0';
       options.headers['X-Device-VPN'] = security.isVpnActive ? '1' : '0';
       options.headers['X-Device-Signature-Valid'] = security.isSignatureValid ? '1' : '0';
-      options.headers['X-Device-Hash-Valid'] = security.isApkHashValid ? '1' : '0';
+      // Only confirmed mismatches report as invalid. Unavailable/pending stay
+      // valid so official installs are not soft-penalized by GitHub API blips.
+      options.headers['X-Device-Hash-Valid'] =
+          security.apkHashStatus == ApkHashStatus.mismatch ? '0' : '1';
       options.headers['X-App-Version'] = _cachedVersion;
       options.headers['X-App-Build'] = _cachedBuildNumber;
 

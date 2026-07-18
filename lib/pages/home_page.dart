@@ -86,19 +86,41 @@ class _HomePageState extends State<HomePage> with WindowListener {
   }
 
   void _checkIntegrity() {
-    final security = AppSecurity.instance;
+    if (!isAndroid) return;
 
-    // Show warning if APK integrity check failed
-    if (!security.isApkHashValid && isAndroid) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showIntegrityWarning();
-        }
-      });
-    }
+    // Security checks run in a background bootstrap task. Wait for the final
+    // status so pending/network-unavailable states never look like tampering.
+    Future<void>(() async {
+      await AppSecurity.instance.ensureInitialized();
+      if (!mounted) return;
+
+      final security = AppSecurity.instance;
+      if (security.apkHashStatus == ApkHashStatus.mismatch) {
+        _showIntegrityWarning();
+      } else if (security.apkHashStatus == ApkHashStatus.unavailable) {
+        debugPrint(
+          'HomePage: APK hash unavailable (${security.apkHashStatusReason}); '
+          'not showing tamper warning for official builds',
+        );
+      }
+    });
   }
 
   void _showIntegrityWarning() {
+    final security = AppSecurity.instance;
+    final detail = StringBuffer(
+      '当前安装包的内容哈希与 GitHub 官方 Release 不一致。\n'
+      '这通常意味着安装包被二次打包/替换，而不是普通安装失败。\n\n'
+      '请从 GitHub Releases 重新下载并安装官方版本。',
+    );
+    if (security.expectedApkHash != null && security.installedApkHash != null) {
+      detail
+        ..writeln()
+        ..writeln()
+        ..writeln('期望: ${security.expectedApkHash}')
+        ..writeln('实际: ${security.installedApkHash}');
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -110,10 +132,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
             Text('安全警告'),
           ],
         ),
-        content: const Text(
-          'APK 完整性验证失败。安装的应用可能已被修改。\n\n'
-          '为了您的安全，请从 GitHub 下载官方版本。',
-        ),
+        content: Text(detail.toString()),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

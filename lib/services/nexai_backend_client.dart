@@ -64,7 +64,8 @@ class NexaiBackendClient {
       'X-Device-Emulator': security.isEmulator ? '1' : '0',
       'X-Device-VPN': security.isVpnActive ? '1' : '0',
       'X-Device-Signature-Valid': security.isSignatureValid ? '1' : '0',
-      'X-Device-Hash-Valid': security.isApkHashValid ? '1' : '0',
+      'X-Device-Hash-Valid':
+          security.apkHashStatus == ApkHashStatus.mismatch ? '0' : '1',
     };
     if (security.isCompromised) {
       headers['X-NexAI-Device'] = 'flagged';

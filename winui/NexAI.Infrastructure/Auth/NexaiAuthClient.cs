@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using NexAI.Core.Auth;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Auth;
 
@@ -12,9 +13,14 @@ public sealed class NexaiAuthClient : IAuthClient
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    private readonly HttpClient _httpClient;
+    private readonly INexaiHttp _http;
+    private readonly INexaiSecurityClient _securityClient;
 
-    public NexaiAuthClient(HttpClient httpClient) => _httpClient = httpClient;
+    public NexaiAuthClient(INexaiHttp http, INexaiSecurityClient securityClient)
+    {
+        _http = http;
+        _securityClient = securityClient;
+    }
 
     public async Task<AuthSession> LoginAsync(
         string backendBaseUrl,
@@ -23,29 +29,25 @@ public sealed class NexaiAuthClient : IAuthClient
         CancellationToken cancellationToken = default)
     {
         var url = Combine(backendBaseUrl, "/auth/login");
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(
-                JsonSerializer.Serialize(new { identifier, password }, Options),
-                Encoding.UTF8,
-                "application/json"),
-        };
+        using var doc = await _http.SendJsonAsync(
+                HttpMethod.Post,
+                url,
+                jsonBody: new { identifier, password },
+                requireSignature: true,
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
 
-        using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(body) ? "{}" : body);
-        if (!response.IsSuccessStatusCode ||
-            !doc.RootElement.TryGetProperty("success", out var success) ||
+        if (!doc.RootElement.TryGetProperty("success", out var success) ||
             success.ValueKind != JsonValueKind.True)
         {
             var message = doc.RootElement.TryGetProperty("message", out var msg)
                 ? msg.GetString()
-                : $"HTTP {(int)response.StatusCode}";
+                : doc.RootElement.TryGetProperty("error", out var err) ? err.GetString() : "Login failed.";
             throw new InvalidOperationException(message ?? "Login failed.");
         }
 
         var data = doc.RootElement.GetProperty("data");
-        return new AuthSession
+        var session = new AuthSession
         {
             AccessToken = GetString(data, "accessToken"),
             RefreshToken = GetString(data, "refreshToken"),
@@ -53,6 +55,25 @@ public sealed class NexaiAuthClient : IAuthClient
             Email = GetNestedString(data, "user", "email"),
             DisplayName = GetNestedString(data, "user", "displayName"),
         };
+
+        // Best-effort device track + future short-lived signing key ingestion.
+        if (!string.IsNullOrWhiteSpace(session.AccessToken))
+        {
+            try
+            {
+                await _securityClient.TrackDeviceAndMaybeRefreshSigningKeyAsync(
+                        backendBaseUrl,
+                        session.AccessToken!,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+                // Non-fatal: login succeeded even if track is unavailable.
+            }
+        }
+
+        return session;
     }
 
     public async Task LogoutAsync(
@@ -66,14 +87,16 @@ public sealed class NexaiAuthClient : IAuthClient
         }
 
         var url = Combine(backendBaseUrl, "/auth/logout");
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent("{}", Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         try
         {
-            using var _ = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using var _ = await _http.SendAsync(
+                    HttpMethod.Post,
+                    url,
+                    bearerToken: accessToken,
+                    jsonBody: new { },
+                    requireSignature: true,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
         }
         catch
         {

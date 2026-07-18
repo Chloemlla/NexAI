@@ -8,6 +8,7 @@ using NexAI.Core.Tools;
 using NexAI.Infrastructure.Auth;
 using NexAI.Infrastructure.Chat;
 using NexAI.Infrastructure.Media;
+using NexAI.Infrastructure.Security;
 using NexAI.Infrastructure.Storage;
 using NexAI.Infrastructure.Sync;
 using NexAI.Infrastructure.Tools;
@@ -22,6 +23,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConversationStore, JsonConversationStore>();
         services.AddSingleton<INotesStore, JsonNotesStore>();
         services.AddSingleton<IAuthSessionStore, JsonAuthSessionStore>();
+        services.AddSingleton<INexaiCertPinStore, NexaiCertPinStore>();
+        services.AddSingleton<INexaiSigningKeyStore, NexaiSigningKeyStore>();
+        services.AddSingleton<INexaiHttp, NexaiHttp>();
+        services.AddSingleton<INexaiSecurityClient, NexaiSecurityClient>();
         services.AddSingleton<IAuthClient, NexaiAuthClient>();
         services.AddSingleton<ISyncCrypto, AesGcmSyncCrypto>();
         services.AddSingleton<ISyncService, NexaiSyncService>();

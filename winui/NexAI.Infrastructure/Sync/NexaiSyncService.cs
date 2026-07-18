@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using NexAI.Core.Auth;
@@ -6,6 +5,7 @@ using NexAI.Core.Chat;
 using NexAI.Core.Notes;
 using NexAI.Core.Settings;
 using NexAI.Core.Sync;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Sync;
 
@@ -16,28 +16,28 @@ public sealed class NexaiSyncService : ISyncService
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    private readonly HttpClient _httpClient;
     private readonly ISettingsStore _settingsStore;
     private readonly IAuthSessionStore _authStore;
     private readonly IConversationStore _conversationStore;
     private readonly INotesStore _notesStore;
     private readonly ISyncCrypto _syncCrypto;
+    private readonly INexaiHttp _http;
     private SyncState _state = new();
 
     public NexaiSyncService(
-        HttpClient httpClient,
         ISettingsStore settingsStore,
         IAuthSessionStore authStore,
         IConversationStore conversationStore,
         INotesStore notesStore,
-        ISyncCrypto syncCrypto)
+        ISyncCrypto syncCrypto,
+        INexaiHttp http)
     {
-        _httpClient = httpClient;
         _settingsStore = settingsStore;
         _authStore = authStore;
         _conversationStore = conversationStore;
         _notesStore = notesStore;
         _syncCrypto = syncCrypto;
+        _http = http;
     }
 
     public SyncState State => new()
@@ -96,13 +96,14 @@ public sealed class NexaiSyncService : ISyncService
 
             var snapshot = await BuildSnapshotAsync(cancellationToken).ConfigureAwait(false);
             var url = Combine(settings.BackendBaseUrl, "/sync/v2");
-            using var request = new HttpRequestMessage(HttpMethod.Put, url)
-            {
-                Content = new StringContent(JsonSerializer.Serialize(snapshot, Options), Encoding.UTF8, "application/json"),
-            };
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
-
-            using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using var response = await _http.SendAsync(
+                    HttpMethod.Put,
+                    url,
+                    bearerToken: auth.AccessToken,
+                    jsonBody: snapshot,
+                    requireSignature: true,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode || !IsSuccessBody(body))
             {
@@ -141,9 +142,13 @@ public sealed class NexaiSyncService : ISyncService
             }
 
             var url = Combine(settings.BackendBaseUrl, "/sync/v2");
-            using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
-            using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using var response = await _http.SendAsync(
+                    HttpMethod.Get,
+                    url,
+                    bearerToken: auth.AccessToken,
+                    requireSignature: true,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {

@@ -38,6 +38,8 @@ Implemented:
 Security notes:
 - Settings/auth secrets and vault/sync key material are DPAPI-protected at rest (`dpapi:` prefix)
 - ffmpeg invocations use `ArgumentList` with path validation (no shell string concatenation)
+- NexAI backend calls use `nexai-sig-v2` HMAC signing (short-lived device key → access token → `NEXAI_APP_SIGN_SECRET`)
+- TLS certificate pinning for `tts.chloemlla.com` (TOFU + DPAPI pin store, rotation via system-CA trust)
 
 Local data roots:
 

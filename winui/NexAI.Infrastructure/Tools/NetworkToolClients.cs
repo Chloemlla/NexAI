@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using NexAI.Core.Tools;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Tools;
 
@@ -51,14 +52,9 @@ public sealed class MmpShortUrlClient : IShortUrlClient
 
 public sealed class NexaiArtifactsClient : IArtifactsClient
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    };
+    private readonly INexaiHttp _http;
 
-    private readonly HttpClient _httpClient;
-
-    public NexaiArtifactsClient(HttpClient httpClient) => _httpClient = httpClient;
+    public NexaiArtifactsClient(INexaiHttp http) => _http = http;
 
     public async Task<ArtifactCreateResult> CreateAsync(
         string backendBaseUrl,
@@ -87,13 +83,14 @@ public sealed class NexaiArtifactsClient : IArtifactsClient
             payload["language"] = language;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(payload, Options), Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-        using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        using var response = await _http.SendAsync(
+                HttpMethod.Post,
+                url,
+                bearerToken: accessToken,
+                jsonBody: payload,
+                requireSignature: true,
+                cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(body) ? "{}" : body);
         if ((int)response.StatusCode is not (200 or 201))

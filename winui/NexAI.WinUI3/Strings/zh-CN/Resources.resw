@@ -166,4 +166,6 @@
   <data name="Settings.Sync.WebDAV" xml:space="preserve"><value>WebDAV</value></data>
   <data name="Settings.Sync.UpStash" xml:space="preserve"><value>UpStash</value></data>
 
+  <data name="SoftSig.Title" xml:space="preserve"><value>签名校验提示</value></data>
+  <data name="SoftSig.Generic" xml:space="preserve"><value>服务端 soft 模式已放行请求，但签名校验未通过</value></data>
 </root>

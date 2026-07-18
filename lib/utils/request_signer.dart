@@ -18,6 +18,8 @@
 /// Server error stages (Happy-TTS 5baba9cd):
 ///   server_signature / server_auth / rate_limit
 /// Soft mode may return 2xx with X-NexAI-Sig-Result/Code headers.
+/// Clients should surface soft-fail headers as a throttled toast/InfoBar and
+/// still treat method-aware public GET exemptions as unsigned-safe.
 ///
 /// ## v1 (legacy, soft client-only)
 /// DeviceId-derived key — kept for compatibility; backend may ignore.

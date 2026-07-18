@@ -166,4 +166,6 @@
   <data name="Settings.Sync.WebDAV" xml:space="preserve"><value>WebDAV</value></data>
   <data name="Settings.Sync.UpStash" xml:space="preserve"><value>UpStash</value></data>
 
+  <data name="SoftSig.Title" xml:space="preserve"><value>Signature notice</value></data>
+  <data name="SoftSig.Generic" xml:space="preserve"><value>Server soft mode accepted the request, but signature verification failed</value></data>
 </root>

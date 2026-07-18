@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../utils/app_security.dart';
 import '../utils/nexai_api_error.dart';
 import '../utils/request_signer.dart';
+import '../utils/nexai_soft_sig_notice.dart';
 import 'pinned_http_client.dart';
 
 class NexaiBackendTimeoutException extends NexaiApiError {
@@ -154,7 +155,11 @@ class NexaiBackendClient {
         },
       );
       // Soft mode (NEXAI_REQUEST_SIGNING=soft) may still return 2xx with fail headers.
-      logSoftSignatureHeaders(response);
+      NexaiSoftSigNotice.maybeNotifyFromHeaders(
+        headers: response.headers,
+        path: url.path,
+        method: method,
+      );
       return response;
     } on NexaiApiError {
       rethrow;
@@ -212,16 +217,6 @@ class NexaiBackendClient {
       body: response.body,
       path: response.request?.url.path,
       method: method ?? response.request?.method,
-    );
-  }
-
-  /// Soft-mode backend may attach these even on 2xx responses.
-  static void logSoftSignatureHeaders(http.Response response) {
-    final result = response.headers['x-nexai-sig-result'];
-    final code = response.headers['x-nexai-sig-code'];
-    if (result == null && code == null) return;
-    debugPrint(
-      'NexAI Backend: soft sig header result=${result ?? "-"} code=${code ?? "-"} path=${response.request?.url.path}',
     );
   }
 

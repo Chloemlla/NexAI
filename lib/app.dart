@@ -14,6 +14,7 @@ import 'pages/oss_notice_page.dart';
 import 'theme/lumen_theme.dart';
 import 'theme/lumen_tokens.dart';
 import 'widgets/lumen/lumen.dart';
+import 'utils/navigation_helper.dart';
 
 bool get _isAndroid =>
     !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
@@ -84,6 +85,7 @@ class NexAIApp extends StatelessWidget {
     return MaterialApp(
       title: 'NexAI',
       debugShowCheckedModeBanner: false,
+      navigatorKey: NavigationHelper.navigatorKey,
       themeMode: settings.themeMode,
       theme: _isAndroid
           ? LumenTheme.build(

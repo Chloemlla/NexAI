@@ -53,6 +53,15 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Frame x:Name="ContentFrame" Grid.Row="1" />
+                <InfoBar
+                    x:Name="SoftSigInfoBar"
+                    Grid.Row="1"
+                    VerticalAlignment="Top"
+                    Margin="16,8,16,0"
+                    IsOpen="False"
+                    IsClosable="True"
+                    Severity="Warning"
+                    Title="Signature notice" />
             </Grid>
         </NavigationView>
     </Grid>

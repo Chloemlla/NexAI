@@ -128,7 +128,7 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
         }
 
         var response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        LogSoftSignatureHeaders(response, absoluteUrl);
+        NotifySoftSignatureHeaders(response, absoluteUrl);
 
         // TOFU bootstrap: if no pin yet and host is pinned host, capture peer cert when available.
         // Validation callback already stores pin on first successful system-CA validated handshake.
@@ -346,7 +346,7 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
 
     public void Dispose() => _client.Dispose();
 
-    private static void LogSoftSignatureHeaders(HttpResponseMessage response, string absoluteUrl)
+    private static void NotifySoftSignatureHeaders(HttpResponseMessage response, string absoluteUrl)
     {
         if (!response.Headers.TryGetValues("X-NexAI-Sig-Result", out var results) &&
             !response.Headers.TryGetValues("X-NexAI-Sig-Code", out _))
@@ -366,7 +366,9 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
             code = codeValues.FirstOrDefault();
         }
 
-        System.Diagnostics.Debug.WriteLine(
-            $"NexAI soft sig header result={result ?? "-"} code={code ?? "-"} path={NexaiRequestSigner.NormalizePath(absoluteUrl)}");
+        NexaiSoftSigNotice.MaybeNotify(
+            result,
+            code,
+            NexaiRequestSigner.NormalizePath(absoluteUrl));
     }
 }

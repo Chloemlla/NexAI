@@ -27,8 +27,10 @@ class CertificateErrorHelper {
             icon: Icon(Icons.verified_user_outlined, color: cs.error),
             title: const Text('检测到证书握手失败'),
             content: const Text(
-              'API 请求返回 HandshakeException，可能是服务器证书更新后本地证书缓存仍为旧值。\n\n'
-              '你可以到设置的“证书固定”板块手动清除证书缓存，或现在确认自动清除。清除后请重新发起请求，必要时重启应用。',
+              'API 请求返回 HandshakeException。常见原因：\n'
+              '1) 服务器证书轮换后本地 pin 仍是旧值；\n'
+              '2) 服务器证书链缺少中间证书，系统 CA 无法校验。\n\n'
+              '应用会尝试自动恢复；若仍失败，请清除证书缓存后重试。',
             ),
             actions: [
               TextButton(

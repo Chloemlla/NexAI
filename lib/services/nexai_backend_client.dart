@@ -31,8 +31,12 @@ class NexaiBackendClient {
   static String? overrideSigningKey;
   static String? overrideKeyId;
 
-  static Future<http.Client> _get() async {
+  static Future<http.Client> _get({bool forceRebuild = false}) async {
     try {
+      if (forceRebuild) {
+        _client?.close();
+        _client = null;
+      }
       _client ??= await buildPinnedHttpClient();
       return _client!;
     } catch (e) {
@@ -43,6 +47,14 @@ class NexaiBackendClient {
         cause: e,
       );
     }
+  }
+
+  static Future<void> _recoverTlsClient() async {
+    try {
+      await invalidatePinnedClientState();
+    } catch (_) {}
+    _client?.close();
+    _client = null;
   }
 
   static Map<String, String> _base([Map<String, String>? extra]) {
@@ -148,13 +160,15 @@ class NexaiBackendClient {
       headers: headers,
       body: body,
     );
+    Future<http.Response> runOnce() => send(signed).timeout(
+          requestTimeout,
+          onTimeout: () {
+            throw NexaiBackendTimeoutException(method, url, requestTimeout);
+          },
+        );
+
     try {
-      final response = await send(signed).timeout(
-        requestTimeout,
-        onTimeout: () {
-          throw NexaiBackendTimeoutException(method, url, requestTimeout);
-        },
-      );
+      final response = await runOnce();
       // Soft mode (NEXAI_REQUEST_SIGNING=soft) may still return 2xx with fail headers.
       NexaiSoftSigNotice.maybeNotifyFromHeaders(
         headers: response.headers,
@@ -174,23 +188,50 @@ class NexaiBackendClient {
         cause: e,
       );
     } on HandshakeException catch (e) {
-      throw NexaiApiError(
-        stage: 'tls_pinning',
-        code: 'CLIENT_TLS_PIN',
-        message: 'TLS/证书握手失败: $e',
-        path: url.path,
-        method: method,
-        cause: e,
-      );
+      // Stale pin / incomplete chain: clear pin and retry once with TOFU/bootstrap.
+      await _recoverTlsClient();
+      try {
+        await _get(forceRebuild: true);
+        final response = await runOnce();
+        NexaiSoftSigNotice.maybeNotifyFromHeaders(
+          headers: response.headers,
+          path: url.path,
+          method: method,
+        );
+        return response;
+      } catch (retryError) {
+        throw NexaiApiError(
+          stage: 'tls_pinning',
+          code: 'CLIENT_TLS_PIN',
+          message:
+              'TLS/证书握手失败，已自动清除证书缓存并重试仍失败。请到设置 > 安全 > 证书固定手动清除后重试。原始错误: $e; 重试: $retryError',
+          path: url.path,
+          method: method,
+          cause: e,
+        );
+      }
     } on TlsException catch (e) {
-      throw NexaiApiError(
-        stage: 'tls_pinning',
-        code: 'CLIENT_TLS_PIN',
-        message: 'TLS 错误: $e',
-        path: url.path,
-        method: method,
-        cause: e,
-      );
+      await _recoverTlsClient();
+      try {
+        await _get(forceRebuild: true);
+        final response = await runOnce();
+        NexaiSoftSigNotice.maybeNotifyFromHeaders(
+          headers: response.headers,
+          path: url.path,
+          method: method,
+        );
+        return response;
+      } catch (retryError) {
+        throw NexaiApiError(
+          stage: 'tls_pinning',
+          code: 'CLIENT_TLS_PIN',
+          message:
+              'TLS 错误，已自动清除证书缓存并重试仍失败。请检查网络或清除证书缓存。原始错误: $e; 重试: $retryError',
+          path: url.path,
+          method: method,
+          cause: e,
+        );
+      }
     } on TimeoutException {
       throw NexaiBackendTimeoutException(method, url, requestTimeout);
     } catch (e) {

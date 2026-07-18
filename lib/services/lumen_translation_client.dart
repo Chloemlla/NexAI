@@ -9,6 +9,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
@@ -109,7 +110,11 @@ class LumenTranslationClient {
     return Uri.parse('$root$cleanPath');
   }
 
-  Future<http.Client> _http() async {
+  Future<http.Client> _http({bool forceRebuild = false}) async {
+    if (forceRebuild) {
+      _client?.close();
+      _client = null;
+    }
     if (_client != null) return _client!;
     if (kIsWeb) {
       _client = http.Client();
@@ -117,6 +122,14 @@ class LumenTranslationClient {
     }
     _client = await buildPinnedHttpClient();
     return _client!;
+  }
+
+  Future<void> _recoverFromTlsFailure() async {
+    try {
+      await invalidatePinnedClientState();
+    } catch (_) {}
+    _client?.close();
+    _client = null;
   }
 
   Future<LumenTranslationConfig> fetchConfig() async {
@@ -183,17 +196,68 @@ class LumenTranslationClient {
 
     late http.Response response;
     try {
-      if (method.toUpperCase() == 'GET') {
-        response = await client
-            .get(uri, headers: headers)
-            .timeout(requestTimeout);
-      } else {
-        response = await client
-            .post(uri, headers: headers, body: body)
-            .timeout(requestTimeout);
+      response = await _rawSend(
+        client: client,
+        method: method,
+        uri: uri,
+        headers: headers,
+        body: body,
+      );
+    } on HandshakeException catch (error) {
+      // Stale certificate pin or rotated leaf cert: clear pin and retry once.
+      await _recoverFromTlsFailure();
+      try {
+        final retryClient = await _http(forceRebuild: true);
+        response = await _rawSend(
+          client: retryClient,
+          method: method,
+          uri: uri,
+          headers: headers,
+          body: body,
+        );
+      } catch (retryError) {
+        throw LumenTranslationException(
+          '证书握手失败，已尝试自动恢复仍未成功。请到设置 > 安全 > 证书固定清除缓存后重试。\n详情：$retryError',
+        );
+      }
+    } on TlsException catch (error) {
+      await _recoverFromTlsFailure();
+      try {
+        final retryClient = await _http(forceRebuild: true);
+        response = await _rawSend(
+          client: retryClient,
+          method: method,
+          uri: uri,
+          headers: headers,
+          body: body,
+        );
+      } catch (retryError) {
+        throw LumenTranslationException(
+          'TLS 连接失败，已尝试自动恢复仍未成功。请检查网络/证书或清除证书缓存后重试。\n详情：$retryError',
+        );
       }
     } catch (error) {
-      throw LumenTranslationException('网络错误：$error');
+      final msg = error.toString();
+      if (msg.contains('CERTIFICATE_VERIFY_FAILED') ||
+          msg.toLowerCase().contains('handshake')) {
+        await _recoverFromTlsFailure();
+        try {
+          final retryClient = await _http(forceRebuild: true);
+          response = await _rawSend(
+            client: retryClient,
+            method: method,
+            uri: uri,
+            headers: headers,
+            body: body,
+          );
+        } catch (retryError) {
+          throw LumenTranslationException(
+            '证书校验失败，已尝试自动恢复仍未成功。请到设置清除证书缓存后重试。\n详情：$retryError',
+          );
+        }
+      } else {
+        throw LumenTranslationException('网络错误：$error');
+      }
     }
 
     final raw = response.body;
@@ -214,6 +278,21 @@ class LumenTranslationClient {
       );
     }
     return json;
+  }
+
+  Future<http.Response> _rawSend({
+    required http.Client client,
+    required String method,
+    required Uri uri,
+    required Map<String, String> headers,
+    String? body,
+  }) async {
+    if (method.toUpperCase() == 'GET') {
+      return client.get(uri, headers: headers).timeout(requestTimeout);
+    }
+    return client
+        .post(uri, headers: headers, body: body)
+        .timeout(requestTimeout);
   }
 
   static Map<String, String> _lumenSignHeaders({

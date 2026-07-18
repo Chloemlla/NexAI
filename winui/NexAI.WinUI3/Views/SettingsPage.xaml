@@ -27,6 +27,7 @@
                     <TextBox x:Name="SystemPromptBox" Header="System prompt" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" />
                     <NumberBox x:Name="TemperatureBox" Header="Temperature" Minimum="0" Maximum="2" SmallChange="0.1" SpinButtonPlacementMode="Inline" />
                     <NumberBox x:Name="MaxTokensBox" Header="Max tokens" Minimum="1" Maximum="128000" SmallChange="64" SpinButtonPlacementMode="Inline" />
+                    <PasswordBox x:Name="VertexApiKeyBox" Header="Vertex AI API Key (AI Translation)" />
                 </StackPanel>
             </Border>
 

@@ -5,6 +5,7 @@ using NexAI.Core.Chat;
 using NexAI.Core.Notes;
 using NexAI.Core.Settings;
 using NexAI.Core.Sync;
+using NexAI.Core.Tools;
 using NexAI.Infrastructure;
 using NexAI.WinUI3.Services;
 using NexAI.WinUI3.Views;
@@ -40,7 +41,10 @@ public partial class App : Application
             conversationStore.LoadAsync(),
             notesStore.LoadAsync(),
             authStore.LoadAsync(),
-            syncService.LoadAsync());
+            syncService.LoadAsync(),
+            Services.GetRequiredService<ITranslationHistoryStore>().LoadAsync(),
+            Services.GetRequiredService<IShortUrlHistoryStore>().LoadAsync(),
+            Services.GetRequiredService<IPasswordVaultStore>().LoadAsync());
 
         var localization = Services.GetRequiredService<ILocalizationService>();
         localization.Apply(settingsStore.Current.Language);

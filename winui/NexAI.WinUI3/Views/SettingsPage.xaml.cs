@@ -65,6 +65,7 @@ public sealed partial class SettingsPage : Page
         TemperatureBox.Value = current.Temperature;
         MaxTokensBox.Value = current.MaxTokens;
         BackendBaseUrlBox.Text = current.BackendBaseUrl;
+        VertexApiKeyBox.Password = current.VertexApiKey;
         SyncEnabledToggle.IsOn = current.SyncEnabled;
         AdvancedRenderingToggle.IsOn = current.AdvancedRenderingEnabled;
         WebDavServerBox.Text = current.WebDavServer;
@@ -230,6 +231,7 @@ public sealed partial class SettingsPage : Page
             ThemeMode = ReadThemeMode(),
             Language = ReadLanguage(),
             BackendBaseUrl = BackendBaseUrlBox.Text ?? string.Empty,
+            VertexApiKey = VertexApiKeyBox.Password ?? string.Empty,
             SyncEnabled = SyncEnabledToggle.IsOn,
             SyncMethod = ReadSyncMethod(),
             WebDavServer = WebDavServerBox.Text ?? string.Empty,
@@ -283,6 +285,7 @@ public sealed partial class SettingsPage : Page
         SystemPromptBox.Header = _localization.GetString("Settings.SystemPrompt");
         TemperatureBox.Header = _localization.GetString("Settings.Temperature");
         MaxTokensBox.Header = _localization.GetString("Settings.MaxTokens");
+        VertexApiKeyBox.Header = "Vertex AI API Key (AI Translation)";
 
         AppearanceSectionTitle.Text = _localization.GetString("Settings.Section.Appearance");
         LanguageBox.Header = _localization.GetString("Language.Header");

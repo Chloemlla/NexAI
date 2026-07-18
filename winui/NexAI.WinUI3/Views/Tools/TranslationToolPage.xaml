@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NexAI.WinUI3.Views.Tools.TranslationToolPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+    <ScrollViewer Padding="16">
+        <StackPanel MaxWidth="920" Spacing="16">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Back" Click="BackButton_Click" />
+                <StackPanel Spacing="2">
+                    <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="AI Translation" />
+                    <TextBlock Opacity="0.72" Text="Translate with Vertex AI. Configure the Vertex API key in Settings." TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Paste source" Click="PasteButton_Click" />
+                <Button Content="Swap languages" Click="SwapButton_Click" />
+                <Button Content="Copy result" Click="CopyButton_Click" />
+            </StackPanel>
+
+            <InfoBar x:Name="KeyWarningBar" IsOpen="False" IsClosable="False" Severity="Warning"
+                     Title="Vertex API key missing"
+                     Message="Open Settings and fill Vertex AI API Key before translating." />
+
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <Grid ColumnSpacing="12" RowSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox x:Name="SourceLanguageBox" Header="Source language" MinWidth="180" />
+                    <Button Grid.Column="1" VerticalAlignment="Bottom" Content="⇄" Click="SwapButton_Click" />
+                    <ComboBox x:Name="TargetLanguageBox" Grid.Column="2" Header="Target language" MinWidth="180" />
+                </Grid>
+            </Border>
+
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel Spacing="12">
+                    <TextBox x:Name="SourceBox" Header="Source text" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" />
+                    <Button x:Name="TranslateButton" Content="Translate" Style="{StaticResource AccentButtonStyle}" Click="TranslateButton_Click" />
+                    <TextBox x:Name="ResultBox" Header="Translation" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" IsReadOnly="True" />
+                    <TextBlock x:Name="StatusText" Opacity="0.8" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel Spacing="8">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="History" />
+                    <ListView x:Name="HistoryList" MaxHeight="260" SelectionMode="None">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Padding="4,8" Spacing="2">
+                                    <TextBlock Text="{Binding SourceText}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding TranslatedText}" Opacity="0.75" TextWrapping="WrapWholeWords" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    <Button Content="Clear history" Click="ClearHistory_Click" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -31,6 +31,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IArtifactsClient, NexaiArtifactsClient>();
         services.AddSingleton<IImageGenerationClient, OpenAiImageGenerationClient>();
         services.AddSingleton<IMediaToolService, FfmpegMediaToolService>();
+        services.AddSingleton<ITranslationClient, VertexTranslationClient>();
+        services.AddSingleton<ITranslationHistoryStore, JsonTranslationHistoryStore>();
+        services.AddSingleton<IShortUrlHistoryStore, JsonShortUrlHistoryStore>();
+        services.AddSingleton<IPasswordVaultStore, ProtectedPasswordVaultStore>();
         return services;
     }
 }

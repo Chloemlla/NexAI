@@ -33,6 +33,7 @@ public sealed class AppSettings
     public AppLanguage Language { get; set; } = AppLanguage.System;
 
     public string BackendBaseUrl { get; set; } = "https://tts.chloemlla.com/api/nexai";
+    public string VertexApiKey { get; set; } = string.Empty;
     public bool SyncEnabled { get; set; }
     public SyncBackendKind SyncMethod { get; set; } = SyncBackendKind.NexAI;
     public string WebDavServer { get; set; } = string.Empty;
@@ -54,6 +55,7 @@ public sealed class AppSettings
         ThemeMode = ThemeMode,
         Language = Language,
         BackendBaseUrl = BackendBaseUrl,
+        VertexApiKey = VertexApiKey,
         SyncEnabled = SyncEnabled,
         SyncMethod = SyncMethod,
         WebDavServer = WebDavServer,
@@ -127,6 +129,7 @@ public static class AppSettingsValidator
         normalized.SelectedModel = (normalized.SelectedModel ?? string.Empty).Trim();
         normalized.SystemPrompt = (normalized.SystemPrompt ?? string.Empty).Trim();
         normalized.BackendBaseUrl = (normalized.BackendBaseUrl ?? string.Empty).Trim().TrimEnd('/');
+        normalized.VertexApiKey = (normalized.VertexApiKey ?? string.Empty).Trim();
         normalized.WebDavServer = (normalized.WebDavServer ?? string.Empty).Trim();
         normalized.WebDavUser = (normalized.WebDavUser ?? string.Empty).Trim();
         normalized.WebDavPassword = normalized.WebDavPassword ?? string.Empty;

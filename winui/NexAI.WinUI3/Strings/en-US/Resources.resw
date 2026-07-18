@@ -76,13 +76,13 @@
   <data name="Tool.DateTime.Title" xml:space="preserve"><value>Date / Time Converter</value></data>
   <data name="Tool.DateTime.Description" xml:space="preserve"><value>Convert timestamps and common date formats</value></data>
   <data name="Tool.Base64.Title" xml:space="preserve"><value>Base64 Encoder</value></data>
-  <data name="Tool.Base64.Description" xml:space="preserve"><value>Encode and decode Base64 strings</value></data>
+  <data name="Tool.Base64.Description" xml:space="preserve"><value>Encode and decode Base64 strings with URL-safe mode</value></data>
   <data name="Tool.Password.Title" xml:space="preserve"><value>Password Generator</value></data>
-  <data name="Tool.Password.Description" xml:space="preserve"><value>Generate strong random passwords</value></data>
+  <data name="Tool.Password.Description" xml:space="preserve"><value>Generate random, memorable, or PIN passwords with vault backup</value></data>
   <data name="Tool.ShortUrl.Title" xml:space="preserve"><value>Short URL</value></data>
-  <data name="Tool.ShortUrl.Description" xml:space="preserve"><value>Create short links via NexAI backend</value></data>
+  <data name="Tool.ShortUrl.Description" xml:space="preserve"><value>Create short links via api.mmp.cc</value></data>
   <data name="Tool.Translation.Title" xml:space="preserve"><value>AI Translation</value></data>
-  <data name="Tool.Translation.Description" xml:space="preserve"><value>Translate text using the configured chat API</value></data>
+  <data name="Tool.Translation.Description" xml:space="preserve"><value>Translate text using Vertex AI</value></data>
   <data name="Tool.ImageGeneration.Title" xml:space="preserve"><value>AI Image Generation</value></data>
   <data name="Tool.ImageGeneration.Description" xml:space="preserve"><value>Generate images through compatible image endpoints</value></data>
   <data name="Tool.Artifacts.Title" xml:space="preserve"><value>Artifacts Share</value></data>

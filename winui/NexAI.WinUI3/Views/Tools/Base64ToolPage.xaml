@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="NexAI.WinUI3.Views.Tools.Base64ToolPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="Transparent">
+    <ScrollViewer Padding="16">
+        <StackPanel MaxWidth="920" Spacing="16">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Back" Click="BackButton_Click" />
+                <StackPanel Spacing="2">
+                    <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Base64 Encoder / Decoder" />
+                    <TextBlock Opacity="0.72" Text="Encode text to Base64 or decode Base64 back to text. URL-safe mode supported." TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Paste to encode" Click="PasteEncode_Click" />
+                <Button Content="Paste to decode" Click="PasteDecode_Click" />
+                <Button Content="Clear all" Click="ClearAll_Click" />
+            </StackPanel>
+
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Text → Base64" />
+                    <TextBox x:Name="EncodeInputBox" Header="Input text" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" TextChanged="EncodeInputBox_TextChanged" />
+                    <ToggleSwitch x:Name="EncodeUrlSafeToggle" Header="URL Safe output" Toggled="EncodeOptions_Changed" />
+                    <TextBox x:Name="EncodeOutputBox" Header="Base64 output" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" IsReadOnly="True" />
+                    <Button Content="Copy encoded" Click="CopyEncode_Click" />
+                    <TextBlock x:Name="EncodeErrorText" Foreground="#C42B1C" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
+                <StackPanel Spacing="10">
+                    <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Base64 → Text" />
+                    <TextBox x:Name="DecodeInputBox" Header="Base64 input" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" TextChanged="DecodeInputBox_TextChanged" />
+                    <ToggleSwitch x:Name="DecodeUrlSafeToggle" Header="URL Safe input" Toggled="DecodeOptions_Changed" />
+                    <TextBox x:Name="DecodeOutputBox" Header="Decoded text" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" IsReadOnly="True" />
+                    <Button Content="Copy decoded" Click="CopyDecode_Click" />
+                    <TextBlock x:Name="DecodeErrorText" Foreground="#C42B1C" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

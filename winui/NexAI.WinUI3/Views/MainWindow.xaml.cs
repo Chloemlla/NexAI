@@ -1,10 +1,10 @@
 using System.Diagnostics;
-using Microsoft.UI.Composition.SystemBackdrops;
+using System.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using NexAI.Core.Navigation;
 using Microsoft.Extensions.DependencyInjection;
+using NexAI.Core;
 using NexAI.WinUI3.Services;
 using NexAI.Infrastructure.Security;
 using Windows.Graphics;
@@ -14,14 +14,36 @@ namespace NexAI.WinUI3.Views;
 
 public sealed partial class MainWindow : Window
 {
-    private const int SwRestore = 9;
-
     private readonly ILocalizationService? _localization;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _softSigHideTimer;
 
     public MainWindow()
     {
-        InitializeComponent();
+        // Keep constructor extremely thin. Previous builds died after DI ready
+        // and before "MainWindow constructed", which points at XAML/chrome setup.
+        Log("ctor begin");
+        try
+        {
+            InitializeComponent();
+            Log("InitializeComponent ok");
+        }
+        catch (Exception ex)
+        {
+            Log("InitializeComponent failed: " + ex);
+            throw;
+        }
+
+        Title = "NexAI";
+
+        try
+        {
+            AppWindow.Resize(new SizeInt32(1180, 780));
+            Log("AppWindow.Resize ok");
+        }
+        catch (Exception ex)
+        {
+            Log("AppWindow.Resize failed: " + ex);
+        }
 
         try
         {
@@ -30,68 +52,24 @@ public sealed partial class MainWindow : Window
             {
                 _localization.LanguageChanged += (_, _) => ApplyLocalization();
             }
+            Log("localization wired");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("[NexAI] MainWindow localization resolve failed: " + ex);
+            Log("localization resolve failed: " + ex);
         }
 
         try
         {
             NexaiSoftSigNotice.Raised += OnSoftSigNoticeRaised;
+            Log("soft-sig wired");
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("[NexAI] soft-sig subscribe failed: " + ex);
+            Log("soft-sig subscribe failed: " + ex);
         }
 
-        try
-        {
-            ExtendsContentIntoTitleBar = true;
-            SetTitleBar(AppTitleBar);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[NexAI] title bar setup failed: " + ex);
-        }
-
-        try
-        {
-            AppWindow.Resize(new SizeInt32(1280, 840));
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[NexAI] AppWindow.Resize failed: " + ex);
-        }
-
-        try
-        {
-            AppWindow.SetIcon("Assets/icon.ico");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[NexAI] set icon failed: " + ex);
-        }
-
-        try
-        {
-            // Optional: unpackaged / remote desktop environments can reject Mica.
-            SystemBackdrop = new MicaBackdrop { Kind = MicaKind.Base };
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[NexAI] Mica backdrop failed: " + ex);
-        }
-
-        try
-        {
-            ApplyLocalization();
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[NexAI] ApplyLocalization in ctor failed: " + ex);
-            Title = "NexAI";
-        }
+        Log("ctor complete");
     }
 
     public void BringToForeground()
@@ -124,8 +102,8 @@ public sealed partial class MainWindow : Window
 
             // Restore if minimized and force Z-order for unpackaged launches where
             // Activate alone can leave a live process without a visible frame.
-            ShowWindow(hwnd, SwRestore);
-            SetForegroundWindow(hwnd);
+            NativeMethods.ShowWindow(hwnd, NativeMethods.SwRestore);
+            NativeMethods.SetForegroundWindow(hwnd);
         }
         catch (Exception ex)
         {
@@ -138,15 +116,35 @@ public sealed partial class MainWindow : Window
         try
         {
             ApplyLocalization();
-            NavigateTo(AppPage.Chat);
-            if (RootNavigation.MenuItems.FirstOrDefault() is NavigationViewItem first)
+            // Defer first navigation one tick so the shell finishes first layout.
+            DispatcherQueue.TryEnqueue(() =>
             {
-                RootNavigation.SelectedItem = first;
-            }
+                try
+                {
+                    NavigateTo(AppPage.Chat);
+                    if (RootNavigation.MenuItems.FirstOrDefault() is NavigationViewItem first)
+                    {
+                        RootNavigation.SelectedItem = first;
+                    }
+                }
+                catch (Exception navEx)
+                {
+                    Log("deferred first navigation failed: " + navEx);
+                    if (ContentFrame.Content is null)
+                    {
+                        ContentFrame.Content = new TextBlock
+                        {
+                            Margin = new Thickness(24),
+                            TextWrapping = TextWrapping.WrapWholeWords,
+                            Text = "NexAI shell loaded, but navigation failed:\n" + navEx.Message,
+                        };
+                    }
+                }
+            });
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("[NexAI] RootNavigation_Loaded failed: " + ex);
+            Log("RootNavigation_Loaded failed: " + ex);
             // Last resort content so the shell is never empty.
             if (ContentFrame.Content is null)
             {
@@ -217,23 +215,43 @@ public sealed partial class MainWindow : Window
 
     private void NavigateTo(AppPage page)
     {
-        var targetType = page switch
+        try
         {
-            AppPage.Notes => typeof(NotesPage),
-            AppPage.Tools => typeof(ToolsPage),
-            AppPage.Settings => typeof(SettingsPage),
-            _ => typeof(ChatPage),
-        };
+            var targetType = page switch
+            {
+                AppPage.Notes => typeof(NotesPage),
+                AppPage.Tools => typeof(ToolsPage),
+                AppPage.Settings => typeof(SettingsPage),
+                _ => typeof(ChatPage),
+            };
 
-        if (ContentFrame.CurrentSourcePageType == targetType) return;
-        ContentFrame.Navigate(targetType);
+            if (ContentFrame.CurrentSourcePageType == targetType) return;
+            ContentFrame.Navigate(targetType);
+        }
+        catch (Exception ex)
+        {
+            Log("NavigateTo(" + page + ") failed: " + ex);
+            ContentFrame.Content = new TextBlock
+            {
+                Margin = new Thickness(24),
+                TextWrapping = TextWrapping.WrapWholeWords,
+                Text = "Failed to open page " + page + ":\n" + ex.Message,
+            };
+        }
     }
 
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool SetForegroundWindow(IntPtr hWnd);
+    private static void Log(string message)
+    {
+        try
+        {
+            AppPaths.EnsureRoot();
+            var line = DateTimeOffset.Now.ToString("O") + " [MainWindow] " + message + Environment.NewLine;
+            File.AppendAllText(Path.Combine(AppPaths.RootDirectory, "startup.log"), line, Encoding.UTF8);
+            Debug.WriteLine("[NexAI][MainWindow] " + message);
+        }
+        catch
+        {
+            // ignore
+        }
+    }
 }

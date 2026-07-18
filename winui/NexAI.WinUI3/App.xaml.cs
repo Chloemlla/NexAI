@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using NexAI.Core;
 using NexAI.Core.Auth;
 using NexAI.Core.Chat;
@@ -12,6 +13,7 @@ using NexAI.Core.Tools;
 using NexAI.Infrastructure;
 using NexAI.WinUI3.Services;
 using NexAI.WinUI3.Views;
+using WinRT.Interop;
 
 namespace NexAI.WinUI3;
 
@@ -21,6 +23,15 @@ public partial class App : Application
 
     public App()
     {
+        // Capture hard failures that bypass XAML UnhandledException.
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            LogStartup("AppDomain.UnhandledException " + e.ExceptionObject);
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            LogStartup("TaskScheduler.UnobservedTaskException " + e.Exception);
+            e.SetObserved();
+        };
+
         InitializeComponent();
         UnhandledException += OnUnhandledException;
         LogStartup("App ctor complete");
@@ -37,46 +48,94 @@ public partial class App : Application
         try
         {
             LogStartup("OnLaunched begin");
+
+            // Always surface a window before any heavy init. Startup log shows the
+            // previous build reached "DI ready" then vanished, so first paint must
+            // not depend on MainWindow XAML succeeding.
+            _window = CreateBootstrapWindow("NexAI is starting…");
+            ShowAndActivate(_window);
+            LogStartup("bootstrap window activated");
+
             Services = BuildServices();
             LogStartup("DI ready");
 
-            var themeService = Services.GetRequiredService<ThemeService>();
-
-            // Create the shell outside DI resolve so a transient service fault
-            // cannot leave a live process with no window.
-            var mainWindow = CreateMainWindow();
-            _window = mainWindow;
-            LogStartup("MainWindow constructed");
-
-            if (mainWindow.Content is FrameworkElement root)
-            {
-                try
-                {
-                    themeService.Attach(root);
-                }
-                catch (Exception ex)
-                {
-                    LogStartup("theme attach failed: " + ex);
-                }
-            }
-
-            // Safe defaults until stores finish loading.
+            ThemeService themeService;
             try
             {
+                themeService = Services.GetRequiredService<ThemeService>();
+                LogStartup("ThemeService resolved");
+            }
+            catch (Exception ex)
+            {
+                LogStartup("ThemeService resolve failed: " + ex);
+                ShowFatal(_window, "Theme service failed:\n" + ex.Message);
+                return;
+            }
+
+            try
+            {
+                if (_window.Content is FrameworkElement bootstrapRoot)
+                {
+                    themeService.Attach(bootstrapRoot);
+                }
+
                 themeService.Apply(AppThemeMode.System);
+                LogStartup("theme default applied");
             }
             catch (Exception ex)
             {
                 LogStartup("theme default apply failed: " + ex);
             }
 
-            ShowAndActivate(mainWindow);
-            LogStartup("MainWindow activated");
+            MainWindow? mainWindow = null;
+            try
+            {
+                LogStartup("MainWindow ctor begin");
+                mainWindow = new MainWindow();
+                LogStartup("MainWindow constructed");
+            }
+            catch (Exception ex)
+            {
+                LogStartup("MainWindow ctor failed: " + ex);
+                ShowFatal(_window, "Main window failed to create:\n" + ex.Message);
+                return;
+            }
+
+            // Prefer activating the real shell as its own top-level window. Keep the
+            // bootstrap window only as a fallback surface if that fails.
+            try
+            {
+                if (mainWindow.Content is FrameworkElement shellRoot)
+                {
+                    themeService.Attach(shellRoot);
+                }
+
+                ShowAndActivate(mainWindow);
+                LogStartup("MainWindow activated");
+
+                var bootstrap = _window;
+                _window = mainWindow;
+                try
+                {
+                    bootstrap?.Close();
+                    LogStartup("bootstrap window closed");
+                }
+                catch (Exception closeEx)
+                {
+                    LogStartup("bootstrap close failed: " + closeEx);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogStartup("MainWindow activate failed: " + ex);
+                ShowFatal(_window!, "Main window failed to activate:\n" + ex.Message);
+                return;
+            }
 
             // Load local state after the first frame is visible.
             // Fire-and-forget on the UI dispatcher so a hung store load cannot
             // stall the visible shell indefinitely.
-            var dispatcher = mainWindow.DispatcherQueue;
+            var dispatcher = _window.DispatcherQueue;
             _ = dispatcher.TryEnqueue(async () =>
             {
                 try
@@ -95,45 +154,79 @@ public partial class App : Application
         catch (Exception ex)
         {
             LogStartup("OnLaunched fatal: " + ex);
-            // Last-chance visible window so users are not left with a headless process.
             try
             {
                 if (_window is null)
                 {
-                    _window = new Window
-                    {
-                        Title = "NexAI",
-                        Content = new Microsoft.UI.Xaml.Controls.TextBlock
-                        {
-                            Text = "NexAI failed to start:\n" + ex.Message,
-                            Margin = new Thickness(24),
-                            TextWrapping = TextWrapping.WrapWholeWords,
-                        },
-                    };
+                    _window = CreateBootstrapWindow("NexAI failed to start:\n" + ex.Message);
                     ShowAndActivate(_window);
                 }
                 else
                 {
-                    ShowAndActivate(_window);
+                    ShowFatal(_window, "NexAI failed to start:\n" + ex.Message);
                 }
             }
             catch (Exception fallbackEx)
             {
                 LogStartup("fallback window failed: " + fallbackEx);
+                try
+                {
+                    NativeMethods.MessageBox(
+                        IntPtr.Zero,
+                        "NexAI failed to start:\n" + ex.Message,
+                        "NexAI",
+                        NativeMethods.MbOk | NativeMethods.MbIconError);
+                }
+                catch
+                {
+                    // ignore
+                }
             }
         }
     }
 
-    private MainWindow CreateMainWindow()
+    private static Window CreateBootstrapWindow(string message)
+    {
+        return new Window
+        {
+            Title = "NexAI",
+            Content = new TextBlock
+            {
+                Text = message,
+                Margin = new Thickness(24),
+                TextWrapping = TextWrapping.WrapWholeWords,
+            },
+        };
+    }
+
+    private static void ShowFatal(Window window, string message)
     {
         try
         {
-            return new MainWindow();
+            window.Title = "NexAI";
+            window.Content = new TextBlock
+            {
+                Text = message,
+                Margin = new Thickness(24),
+                TextWrapping = TextWrapping.WrapWholeWords,
+            };
+            ShowAndActivate(window);
         }
         catch (Exception ex)
         {
-            LogStartup("MainWindow ctor failed: " + ex);
-            throw;
+            LogStartup("ShowFatal failed: " + ex);
+            try
+            {
+                NativeMethods.MessageBox(
+                    IntPtr.Zero,
+                    message,
+                    "NexAI",
+                    NativeMethods.MbOk | NativeMethods.MbIconError);
+            }
+            catch
+            {
+                // ignore
+            }
         }
     }
 
@@ -157,16 +250,18 @@ public partial class App : Application
             LogStartup("Window.Activate failed: " + ex);
         }
 
-        if (window is MainWindow mainWindow)
+        try
         {
-            try
+            var hwnd = WindowNative.GetWindowHandle(window);
+            if (hwnd != IntPtr.Zero)
             {
-                mainWindow.BringToForeground();
+                NativeMethods.ShowWindow(hwnd, NativeMethods.SwRestore);
+                NativeMethods.SetForegroundWindow(hwnd);
             }
-            catch (Exception ex)
-            {
-                LogStartup("BringToForeground failed: " + ex);
-            }
+        }
+        catch (Exception ex)
+        {
+            LogStartup("BringToForeground failed: " + ex);
         }
     }
 

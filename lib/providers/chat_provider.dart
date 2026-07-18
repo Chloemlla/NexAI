@@ -105,14 +105,18 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  static const int maxCompareModels = 3;
+
   Future<void> setCompareModels(List<String> models) async {
     final conversation = currentConversation;
     if (conversation == null) return;
-    conversation.compareModels = models
+    final unique = models
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toSet()
         .toList();
+    // Hard product cap to control cost/latency.
+    conversation.compareModels = unique.take(maxCompareModels).toList();
     notifyListeners();
     await _save();
   }
@@ -610,6 +614,8 @@ class ChatProvider extends ChangeNotifier {
     final compare = conversation.compareModels
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
+        .toList()
+        .take(maxCompareModels)
         .toList();
     if (turn.apiMode == 'OpenAI' && compare.length >= 2) {
       await _performMultiModelCompare(

@@ -56,11 +56,11 @@ class ChatSpeechService {
       onResult: (result) {
         onResult(result.recognizedWords, result.finalResult);
       },
+      localeId: localeId,
       listenOptions: stt.SpeechListenOptions(
         listenMode: stt.ListenMode.dictation,
         partialResults: true,
         cancelOnError: true,
-        localeId: localeId,
       ),
     );
   }

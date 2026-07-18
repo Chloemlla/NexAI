@@ -262,3 +262,16 @@ Android 最值得补的不是桌面 Agent 全家桶，而是：
 
 依赖新增（pubspec）：`speech_to_text`、`flutter_tts`、`share_plus`、`uuid`
 
+## 13. Product rollout defaults (2026-07-18)
+
+为可灰度上线，产品默认改为保守策略：
+
+- 对话工具总开关默认 **关闭**
+- 推荐工具：`notes_search` / `notes_read` / `create_note`（一键启用）
+- 高级工具默认关闭：`web_search`、`fetch_url`、`generate_image`、`report_artifacts`、`knowledge_*`、远程 MCP
+- 最大工具轮次默认 4，上限 8
+- 多模型对比最多 3 个模型
+- 移除未使用依赖 `uuid`
+
+首发建议：内部包验证后，用“一键启用推荐工具”引导，不默认打开联网/MCP/多模型。
+

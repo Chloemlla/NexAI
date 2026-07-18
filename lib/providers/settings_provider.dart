@@ -132,16 +132,18 @@ class SettingsProvider extends ChangeNotifier {
   bool get aiTitleGeneration => _aiTitleGeneration;
 
   // Chat tool-calling toggles (OpenAI mode)
-  bool _chatToolsEnabled = true;
-  bool _toolWebSearchEnabled = true;
+  // Product defaults are conservative for first rollout.
+  bool _chatToolsEnabled = false;
+  bool _toolWebSearchEnabled = false;
   bool _toolNotesEnabled = true;
-  bool _toolImageEnabled = true;
-  bool _toolArtifactsEnabled = true;
-  bool _toolFetchUrlEnabled = true;
+  bool _toolImageEnabled = false;
+  bool _toolArtifactsEnabled = false;
+  bool _toolFetchUrlEnabled = false;
   bool _toolCreateNoteEnabled = true;
-  bool _toolKnowledgeEnabled = true;
+  bool _toolKnowledgeEnabled = false;
   bool _remoteMcpEnabled = false;
-  int _maxToolRounds = 6;
+  int _maxToolRounds = 4;
+  static const int maxCompareModels = 3;
   String _imageToolModel = '';
   List<McpServerConfig> _mcpServers = [];
 
@@ -155,6 +157,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get toolKnowledgeEnabled => _toolKnowledgeEnabled;
   bool get remoteMcpEnabled => _remoteMcpEnabled;
   int get maxToolRounds => _maxToolRounds;
+  int get compareModelLimit => maxCompareModels;
   String get imageToolModel => _imageToolModel;
   List<McpServerConfig> get mcpServers => List.unmodifiable(_mcpServers);
 
@@ -723,6 +726,30 @@ class SettingsProvider extends ChangeNotifier {
     await _save();
   }
 
+  /// Recommended safe preset for first-time tool chat.
+  /// Notes only (read/search + create). Network/write-heavy tools stay off.
+  Future<void> enableRecommendedChatTools() async {
+    _chatToolsEnabled = true;
+    _toolNotesEnabled = true;
+    _toolCreateNoteEnabled = true;
+    _toolWebSearchEnabled = false;
+    _toolImageEnabled = false;
+    _toolArtifactsEnabled = false;
+    _toolFetchUrlEnabled = false;
+    _toolKnowledgeEnabled = false;
+    _remoteMcpEnabled = false;
+    _maxToolRounds = 4;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> disableAllChatTools() async {
+    _chatToolsEnabled = false;
+    notifyListeners();
+    await _save();
+  }
+
+
   Future<void> setMcpServers(List<McpServerConfig> servers) async {
     _mcpServers = List<McpServerConfig>.from(servers);
     notifyListeners();
@@ -749,7 +776,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setMaxToolRounds(int value) async {
-    _maxToolRounds = value.clamp(1, 12);
+    _maxToolRounds = value.clamp(1, 8);
     notifyListeners();
     await _save();
   }

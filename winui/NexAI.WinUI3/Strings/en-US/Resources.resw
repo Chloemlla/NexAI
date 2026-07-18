@@ -43,10 +43,10 @@
   <data name="Settings.SystemPrompt" xml:space="preserve"><value>System prompt</value></data>
   <data name="Settings.Temperature" xml:space="preserve"><value>Temperature</value></data>
   <data name="Settings.MaxTokens" xml:space="preserve"><value>Max tokens</value></data>
-  <data name="Settings.Theme" xml:space="preserve"><value>Theme</value></data>
-  <data name="Settings.Theme.System" xml:space="preserve"><value>System</value></data>
-  <data name="Settings.Theme.Light" xml:space="preserve"><value>Light</value></data>
-  <data name="Settings.Theme.Dark" xml:space="preserve"><value>Dark</value></data>
+  <data name="Settings.ThemeHeader" xml:space="preserve"><value>Theme</value></data>
+  <data name="Settings.ThemeMode.System" xml:space="preserve"><value>System</value></data>
+  <data name="Settings.ThemeMode.Light" xml:space="preserve"><value>Light</value></data>
+  <data name="Settings.ThemeMode.Dark" xml:space="preserve"><value>Dark</value></data>
   <data name="Settings.AdvancedRendering" xml:space="preserve"><value>Advanced rendering (LaTeX / Mermaid source cards)</value></data>
   <data name="Settings.BackendBaseUrl" xml:space="preserve"><value>NexAI backend base URL</value></data>
   <data name="Settings.EmailUsername" xml:space="preserve"><value>Email / username</value></data>

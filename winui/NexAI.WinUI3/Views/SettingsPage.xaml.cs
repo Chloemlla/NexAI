@@ -289,16 +289,16 @@ public sealed partial class SettingsPage : Page
 
         AppearanceSectionTitle.Text = _localization.GetString("Settings.Section.Appearance");
         LanguageBox.Header = _localization.GetString("Language.Header");
-        ThemeBox.Header = _localization.GetString("Settings.Theme");
+        ThemeBox.Header = _localization.GetString("Settings.ThemeHeader");
         AdvancedRenderingToggle.Header = _localization.GetString("Settings.AdvancedRendering");
 
         if (LanguageBox.Items[0] is ComboBoxItem langSystem) langSystem.Content = _localization.GetString("Language.System");
         if (LanguageBox.Items[1] is ComboBoxItem langEn) langEn.Content = _localization.GetString("Language.English");
         if (LanguageBox.Items[2] is ComboBoxItem langZh) langZh.Content = _localization.GetString("Language.ChineseSimplified");
 
-        if (ThemeBox.Items[0] is ComboBoxItem themeSystem) themeSystem.Content = _localization.GetString("Settings.Theme.System");
-        if (ThemeBox.Items[1] is ComboBoxItem themeLight) themeLight.Content = _localization.GetString("Settings.Theme.Light");
-        if (ThemeBox.Items[2] is ComboBoxItem themeDark) themeDark.Content = _localization.GetString("Settings.Theme.Dark");
+        if (ThemeBox.Items[0] is ComboBoxItem themeSystem) themeSystem.Content = _localization.GetString("Settings.ThemeMode.System");
+        if (ThemeBox.Items[1] is ComboBoxItem themeLight) themeLight.Content = _localization.GetString("Settings.ThemeMode.Light");
+        if (ThemeBox.Items[2] is ComboBoxItem themeDark) themeDark.Content = _localization.GetString("Settings.ThemeMode.Dark");
 
         AccountSectionTitle.Text = _localization.GetString("Settings.Section.Account");
         BackendBaseUrlBox.Header = _localization.GetString("Settings.BackendBaseUrl");

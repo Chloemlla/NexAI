@@ -43,10 +43,10 @@
   <data name="Settings.SystemPrompt" xml:space="preserve"><value>系统提示词</value></data>
   <data name="Settings.Temperature" xml:space="preserve"><value>温度</value></data>
   <data name="Settings.MaxTokens" xml:space="preserve"><value>最大令牌数</value></data>
-  <data name="Settings.Theme" xml:space="preserve"><value>主题</value></data>
-  <data name="Settings.Theme.System" xml:space="preserve"><value>跟随系统</value></data>
-  <data name="Settings.Theme.Light" xml:space="preserve"><value>浅色</value></data>
-  <data name="Settings.Theme.Dark" xml:space="preserve"><value>深色</value></data>
+  <data name="Settings.ThemeHeader" xml:space="preserve"><value>主题</value></data>
+  <data name="Settings.ThemeMode.System" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="Settings.ThemeMode.Light" xml:space="preserve"><value>浅色</value></data>
+  <data name="Settings.ThemeMode.Dark" xml:space="preserve"><value>深色</value></data>
   <data name="Settings.AdvancedRendering" xml:space="preserve"><value>高级渲染（LaTeX / Mermaid 源码卡片）</value></data>
   <data name="Settings.BackendBaseUrl" xml:space="preserve"><value>NexAI 后端 Base URL</value></data>
   <data name="Settings.EmailUsername" xml:space="preserve"><value>邮箱 / 用户名</value></data>

@@ -1,16 +1,21 @@
 using System.Diagnostics;
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using NexAI.Core.Navigation;
 using Microsoft.Extensions.DependencyInjection;
 using NexAI.WinUI3.Services;
 using NexAI.Infrastructure.Security;
 using Windows.Graphics;
+using WinRT.Interop;
 
 namespace NexAI.WinUI3.Views;
 
 public sealed partial class MainWindow : Window
 {
+    private const int SwRestore = 9;
+
     private readonly ILocalizationService? _localization;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _softSigHideTimer;
 
@@ -40,9 +45,25 @@ public sealed partial class MainWindow : Window
             Debug.WriteLine("[NexAI] soft-sig subscribe failed: " + ex);
         }
 
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
-        AppWindow.Resize(new SizeInt32(1280, 840));
+        try
+        {
+            ExtendsContentIntoTitleBar = true;
+            SetTitleBar(AppTitleBar);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] title bar setup failed: " + ex);
+        }
+
+        try
+        {
+            AppWindow.Resize(new SizeInt32(1280, 840));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] AppWindow.Resize failed: " + ex);
+        }
+
         try
         {
             AppWindow.SetIcon("Assets/icon.ico");
@@ -52,7 +73,64 @@ public sealed partial class MainWindow : Window
             Debug.WriteLine("[NexAI] set icon failed: " + ex);
         }
 
-        ApplyLocalization();
+        try
+        {
+            // Optional: unpackaged / remote desktop environments can reject Mica.
+            SystemBackdrop = new MicaBackdrop { Kind = MicaKind.Base };
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] Mica backdrop failed: " + ex);
+        }
+
+        try
+        {
+            ApplyLocalization();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] ApplyLocalization in ctor failed: " + ex);
+            Title = "NexAI";
+        }
+    }
+
+    public void BringToForeground()
+    {
+        try
+        {
+            AppWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] AppWindow.Show failed: " + ex);
+        }
+
+        try
+        {
+            Activate();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] Activate failed: " + ex);
+        }
+
+        try
+        {
+            var hwnd = WindowNative.GetWindowHandle(this);
+            if (hwnd == IntPtr.Zero)
+            {
+                return;
+            }
+
+            // Restore if minimized and force Z-order for unpackaged launches where
+            // Activate alone can leave a live process without a visible frame.
+            ShowWindow(hwnd, SwRestore);
+            SetForegroundWindow(hwnd);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] BringToForeground Win32 failed: " + ex);
+        }
     }
 
     private void RootNavigation_Loaded(object sender, RoutedEventArgs e)
@@ -150,4 +228,12 @@ public sealed partial class MainWindow : Window
         if (ContentFrame.CurrentSourcePageType == targetType) return;
         ContentFrame.Navigate(targetType);
     }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool SetForegroundWindow(IntPtr hWnd);
 }

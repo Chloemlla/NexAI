@@ -23,13 +23,14 @@ public partial class App : Application
     {
         InitializeComponent();
         UnhandledException += OnUnhandledException;
+        LogStartup("App ctor complete");
     }
 
     public static new App Current => (App)Application.Current;
     public IServiceProvider Services { get; private set; } = null!;
     public Window MainWindow => _window ?? throw new InvalidOperationException("Main window is not ready.");
 
-    protected override async void OnLaunched(LaunchActivatedEventArgs args)
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
         // Critical: show the window first. Awaiting storage loads before Activate()
         // can leave a live process with no UI if any startup I/O hangs or throws.
@@ -39,14 +40,24 @@ public partial class App : Application
             Services = BuildServices();
             LogStartup("DI ready");
 
-            var settingsStore = Services.GetRequiredService<ISettingsStore>();
             var themeService = Services.GetRequiredService<ThemeService>();
-            var localization = Services.GetRequiredService<ILocalizationService>();
 
-            _window = Services.GetRequiredService<MainWindow>();
-            if (_window.Content is FrameworkElement root)
+            // Create the shell outside DI resolve so a transient service fault
+            // cannot leave a live process with no window.
+            var mainWindow = CreateMainWindow();
+            _window = mainWindow;
+            LogStartup("MainWindow constructed");
+
+            if (mainWindow.Content is FrameworkElement root)
             {
-                themeService.Attach(root);
+                try
+                {
+                    themeService.Attach(root);
+                }
+                catch (Exception ex)
+                {
+                    LogStartup("theme attach failed: " + ex);
+                }
             }
 
             // Safe defaults until stores finish loading.
@@ -59,12 +70,27 @@ public partial class App : Application
                 LogStartup("theme default apply failed: " + ex);
             }
 
-            _window.Activate();
+            ShowAndActivate(mainWindow);
             LogStartup("MainWindow activated");
 
             // Load local state after the first frame is visible.
-            await LoadStartupStateAsync(settingsStore, themeService, localization).ConfigureAwait(true);
-            LogStartup("startup load complete");
+            // Fire-and-forget on the UI dispatcher so a hung store load cannot
+            // stall the visible shell indefinitely.
+            var dispatcher = mainWindow.DispatcherQueue;
+            _ = dispatcher.TryEnqueue(async () =>
+            {
+                try
+                {
+                    var settingsStore = Services.GetRequiredService<ISettingsStore>();
+                    var localization = Services.GetRequiredService<ILocalizationService>();
+                    await LoadStartupStateAsync(settingsStore, themeService, localization).ConfigureAwait(true);
+                    LogStartup("startup load complete");
+                }
+                catch (Exception ex)
+                {
+                    LogStartup("deferred startup load failed: " + ex);
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -84,12 +110,62 @@ public partial class App : Application
                             TextWrapping = TextWrapping.WrapWholeWords,
                         },
                     };
-                    _window.Activate();
+                    ShowAndActivate(_window);
+                }
+                else
+                {
+                    ShowAndActivate(_window);
                 }
             }
             catch (Exception fallbackEx)
             {
                 LogStartup("fallback window failed: " + fallbackEx);
+            }
+        }
+    }
+
+    private MainWindow CreateMainWindow()
+    {
+        try
+        {
+            return new MainWindow();
+        }
+        catch (Exception ex)
+        {
+            LogStartup("MainWindow ctor failed: " + ex);
+            throw;
+        }
+    }
+
+    private static void ShowAndActivate(Window window)
+    {
+        try
+        {
+            window.AppWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            LogStartup("AppWindow.Show failed: " + ex);
+        }
+
+        try
+        {
+            window.Activate();
+        }
+        catch (Exception ex)
+        {
+            LogStartup("Window.Activate failed: " + ex);
+        }
+
+        if (window is MainWindow mainWindow)
+        {
+            try
+            {
+                mainWindow.BringToForeground();
+            }
+            catch (Exception ex)
+            {
+                LogStartup("BringToForeground failed: " + ex);
             }
         }
     }
@@ -168,7 +244,6 @@ public partial class App : Application
         services.AddSingleton<ThemeService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<ChatSessionService>();
-        services.AddSingleton<MainWindow>();
         return services.BuildServiceProvider();
     }
 

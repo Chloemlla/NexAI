@@ -10,7 +10,13 @@ import 'package:provider/provider.dart';
 
 import '../main.dart' show isAndroid, isDesktop;
 import '../models/message.dart';
+import '../models/chat_tool.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/chat_provider.dart';
+import '../services/chat_tool_executor.dart';
+import '../services/chat_tool_catalog.dart';
+import '../providers/image_generation_provider.dart';
+import '../providers/artifacts_provider.dart';
 import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
@@ -102,6 +108,14 @@ class _MessageBubbleState extends State<MessageBubble> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (!isUser && widget.message.toolRuns.isNotEmpty) ...[
+                        ...widget.message.toolRuns.map((run) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _ToolRunChip(run: run),
+                          );
+                        }),
+                      ],
                       if (isUser)
                         RepaintBoundary(
                           child: SelectableText(
@@ -122,6 +136,16 @@ class _MessageBubbleState extends State<MessageBubble> {
                             content: widget.message.content,
                           ),
                         ),
+                      if (!isUser && widget.message.citations.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: widget.message.citations.map((c) {
+                            return _CitationChip(citation: c);
+                          }).toList(),
+                        ),
+                      ],
                       const SizedBox(height: 6),
                       _MessageFooter(
                         message: widget.message,
@@ -590,10 +614,45 @@ class _MessageFooter extends StatelessWidget {
     );
   }
 
+
+  void _configureTools(BuildContext context, ChatProvider chat, SettingsProvider settings) {
+    final toolsEnabled = settings.chatToolsEnabled && settings.apiMode == 'OpenAI';
+    final tools = toolsEnabled
+        ? ChatToolCatalog.enabledFromFlags(
+            webSearchEnabled: settings.toolWebSearchEnabled,
+            notesEnabled: settings.toolNotesEnabled,
+            imageEnabled: settings.toolImageEnabled,
+            artifactsEnabled: settings.toolArtifactsEnabled,
+            fetchUrlEnabled: settings.toolFetchUrlEnabled,
+            createNoteEnabled: settings.toolCreateNoteEnabled,
+          )
+        : const <ChatToolDefinition>[];
+    chat.configureTools(
+      tools: tools,
+      runtimeContext: tools.isEmpty
+          ? null
+          : ChatToolRuntimeContext(
+              notesProvider: context.read<NotesProvider>(),
+              imageGenerationProvider: context.read<ImageGenerationProvider>(),
+              artifactsProvider: context.read<ArtifactsProvider>(),
+              baseUrl: settings.baseUrl,
+              apiKey: settings.apiKey,
+              selectedModel: settings.selectedModel,
+              accessToken: context.read<AuthProvider>().accessToken,
+              imageModel: settings.imageToolModel.isEmpty
+                  ? settings.selectedModel
+                  : settings.imageToolModel,
+            ),
+      onApprove: chat.approvalHandler,
+      maxRounds: settings.maxToolRounds,
+    );
+  }
+
   void _resendMessage(BuildContext context) async {
     final chatProvider = context.read<ChatProvider>();
     final settings = context.read<SettingsProvider>();
 
+    _configureTools(context, chatProvider, settings);
     await chatProvider.resendMessage(
       messageIndex: messageIndex,
       apiMode: settings.apiMode,
@@ -612,6 +671,7 @@ class _MessageFooter extends StatelessWidget {
     final chatProvider = context.read<ChatProvider>();
     final settings = context.read<SettingsProvider>();
 
+    _configureTools(context, chatProvider, settings);
     await chatProvider.editAndResendMessage(
       messageIndex: messageIndex,
       newContent: newContent,
@@ -814,6 +874,78 @@ class _MessageFooter extends StatelessWidget {
             ],
           ),
         );
+      },
+    );
+  }
+}
+
+
+class _ToolRunChip extends StatelessWidget {
+  final ToolRunRecord run;
+  const _ToolRunChip({required this.run});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = switch (run.status) {
+      ChatToolRunStatus.success => cs.primary,
+      ChatToolRunStatus.error => cs.error,
+      ChatToolRunStatus.denied => cs.tertiary,
+      ChatToolRunStatus.running => cs.secondary,
+      ChatToolRunStatus.pending => cs.outline,
+      ChatToolRunStatus.cancelled => cs.outline,
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withAlpha(18),
+        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+        border: Border.all(color: color.withAlpha(70)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${run.name} · ${run.status.name}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          if (run.resultPreview.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              run.resultPreview,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CitationChip extends StatelessWidget {
+  final Citation citation;
+  const _CitationChip({required this.citation});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ActionChip(
+      avatar: Icon(Icons.link_rounded, size: 16, color: cs.primary),
+      label: Text(
+        citation.title.isEmpty ? citation.url : citation.title,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onPressed: () async {
+        final uri = Uri.tryParse(citation.url);
+        if (uri == null) return;
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
       },
     );
   }

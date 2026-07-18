@@ -523,6 +523,87 @@ class _SettingsPageState extends State<SettingsPage> {
                         helperText: '设置 AI 的行为和角色',
                       ),
                     ),
+                    const Divider(height: 24),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: settings.chatToolsEnabled,
+                      onChanged: settings.apiMode == 'OpenAI'
+                          ? (v) => settings.setChatToolsEnabled(v)
+                          : null,
+                      title: Text('启用对话工具', style: tt.bodyMedium),
+                      subtitle: Text(
+                        settings.apiMode == 'OpenAI'
+                            ? '允许模型在 OpenAI 兼容模式下调用内置工具'
+                            : 'Vertex 模式暂不支持 tool-calling',
+                        style: tt.bodySmall,
+                      ),
+                    ),
+                    if (settings.chatToolsEnabled && settings.apiMode == 'OpenAI') ...[
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolWebSearchEnabled,
+                        onChanged: settings.setToolWebSearchEnabled,
+                        title: Text('web_search', style: tt.bodyMedium),
+                        subtitle: Text('联网搜索', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolNotesEnabled,
+                        onChanged: settings.setToolNotesEnabled,
+                        title: Text('notes_search / notes_read', style: tt.bodyMedium),
+                        subtitle: Text('检索与读取本地笔记', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolImageEnabled,
+                        onChanged: settings.setToolImageEnabled,
+                        title: Text('generate_image', style: tt.bodyMedium),
+                        subtitle: Text('对话内绘图（需审批）', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolArtifactsEnabled,
+                        onChanged: settings.setToolArtifactsEnabled,
+                        title: Text('report_artifacts', style: tt.bodyMedium),
+                        subtitle: Text('发布分享链接（需登录与审批）', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolFetchUrlEnabled,
+                        onChanged: settings.setToolFetchUrlEnabled,
+                        title: Text('fetch_url', style: tt.bodyMedium),
+                        subtitle: Text('抓取网页正文（需审批）', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolCreateNoteEnabled,
+                        onChanged: settings.setToolCreateNoteEnabled,
+                        title: Text('create_note', style: tt.bodyMedium),
+                        subtitle: Text('创建本地笔记（需审批）', style: tt.bodySmall),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('最大工具轮次', style: tt.bodyMedium),
+                        subtitle: Text('${settings.maxToolRounds}', style: tt.bodySmall),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              onPressed: settings.maxToolRounds > 1
+                                  ? () => settings.setMaxToolRounds(settings.maxToolRounds - 1)
+                                  : null,
+                              icon: const Icon(Icons.remove_circle_outline),
+                            ),
+                            IconButton(
+                              onPressed: settings.maxToolRounds < 12
+                                  ? () => settings.setMaxToolRounds(settings.maxToolRounds + 1)
+                                  : null,
+                              icon: const Icon(Icons.add_circle_outline),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 20),

@@ -210,3 +210,25 @@ Android 最值得补的不是桌面 Agent 全家桶，而是：
 - `.trellis/tasks/07-18-android-ai-tools-gap-vs-cherry/research/nexai-android-chat-baseline.md`
 - `.trellis/tasks/07-18-android-ai-tools-gap-vs-cherry/research/cherry-studio-ai-tools-inventory.md`
 - `.trellis/tasks/07-18-android-ai-tools-gap-vs-cherry/research/android-feasibility.md`
+
+## 10. Implementation snapshot (2026-07-18)
+
+已落地第一批对话内工具（OpenAI 兼容模式）：
+
+- `web_search`
+- `notes_search` / `notes_read`
+- `generate_image`
+- `report_artifacts`
+- `fetch_url`
+- `create_note`
+
+配套能力：
+
+- tool-calling 循环与最大轮次护栏
+- 工具审批 bottom sheet（prompt 策略工具）
+- 停止生成
+- 消息内 tool run 卡片与 citation chips
+- 设置页工具开关
+
+说明：Vertex 模式仍为纯文本流式，不走 tools。
+

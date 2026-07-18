@@ -3,8 +3,16 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../main.dart' show isAndroid;
+import '../providers/artifacts_provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
+import '../providers/image_generation_provider.dart';
+import '../providers/notes_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/chat_tool_catalog.dart';
+import '../services/chat_tool_executor.dart';
+import '../models/chat_tool.dart';
+import '../models/message.dart';
 import '../utils/navigation_helper.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/rich_content_view.dart';
@@ -20,6 +28,16 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  List<({Message message, int originalIndex})> _visibleEntries(List<Message> messages) {
+    final entries = <({Message message, int originalIndex})>[];
+    for (var i = 0; i < messages.length; i++) {
+      final msg = messages[i];
+      if (msg.role == 'tool') continue;
+      entries.add((message: msg, originalIndex: i));
+    }
+    return entries;
+  }
+
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
@@ -177,6 +195,98 @@ class _ChatPageState extends State<ChatPage> {
     _scrollToBottom(ignoreScrollPosition: true);
   }
 
+  void _configureChatTools(ChatProvider chat, SettingsProvider settings) {
+    final toolsEnabled = settings.chatToolsEnabled && settings.apiMode == 'OpenAI';
+    final tools = toolsEnabled
+        ? ChatToolCatalog.enabledFromFlags(
+            webSearchEnabled: settings.toolWebSearchEnabled,
+            notesEnabled: settings.toolNotesEnabled,
+            imageEnabled: settings.toolImageEnabled,
+            artifactsEnabled: settings.toolArtifactsEnabled,
+            fetchUrlEnabled: settings.toolFetchUrlEnabled,
+            createNoteEnabled: settings.toolCreateNoteEnabled,
+          )
+        : const <ChatToolDefinition>[];
+
+    final notes = context.read<NotesProvider>();
+    final images = context.read<ImageGenerationProvider>();
+    final artifacts = context.read<ArtifactsProvider>();
+    final auth = context.read<AuthProvider>();
+
+    chat.configureTools(
+      tools: tools,
+      runtimeContext: tools.isEmpty
+          ? null
+          : ChatToolRuntimeContext(
+              notesProvider: notes,
+              imageGenerationProvider: images,
+              artifactsProvider: artifacts,
+              baseUrl: settings.baseUrl,
+              apiKey: settings.apiKey,
+              selectedModel: settings.selectedModel,
+              accessToken: auth.accessToken,
+              imageModel: settings.imageToolModel.isEmpty
+                  ? settings.selectedModel
+                  : settings.imageToolModel,
+            ),
+      onApprove: _approveToolCall,
+      maxRounds: settings.maxToolRounds,
+    );
+  }
+
+  Future<bool> _approveToolCall(ToolApprovalRequest request) async {
+    if (!mounted) return false;
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('工具调用确认', style: Theme.of(ctx).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(request.name, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Text(request.summary),
+                const SizedBox(height: 12),
+                Text(
+                  request.arguments.entries
+                      .map((e) => '${e.key}: ${e.value}')
+                      .join('\n'),
+                  style: Theme.of(ctx).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('拒绝'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('允许'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return result == true;
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
@@ -215,6 +325,7 @@ class _ChatPageState extends State<ChatPage> {
       setState(() => _showComposerPreview = false);
     }
     final chat = context.read<ChatProvider>();
+    _configureChatTools(chat, settings);
 
     _forceScroll = true;
 
@@ -268,6 +379,7 @@ class _ChatPageState extends State<ChatPage> {
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
     final messages = chat.messages;
+    final visibleEntries = _visibleEntries(messages);
     final mq = MediaQuery.of(context);
     final keyboardVisible = mq.viewInsets.bottom > 0;
     // Responsive horizontal padding: wider on tablets
@@ -289,7 +401,7 @@ class _ChatPageState extends State<ChatPage> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: messages.isEmpty
+                child: visibleEntries.isEmpty
                     ? const WelcomeView()
                     : GestureDetector(
                         onTap: () => _focusNode.unfocus(),
@@ -308,18 +420,18 @@ class _ChatPageState extends State<ChatPage> {
                               10,
                             ),
                             itemCount:
-                                messages.length + (chat.isLoading ? 1 : 0),
+                                visibleEntries.length + (chat.isLoading ? 1 : 0),
                             itemBuilder: (context, index) {
-                              if (index == messages.length && chat.isLoading) {
-                                return _buildThinkingIndicator(cs);
+                              if (index == visibleEntries.length && chat.isLoading) {
+                                return _buildThinkingIndicator(cs, chat);
                               }
                               return RepaintBoundary(
                                 key: ValueKey(
-                                  'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
+                                  'msg_${visibleEntries[index].message.timestamp.millisecondsSinceEpoch}_$index',
                                 ),
                                 child: MessageBubble(
-                                  message: messages[index],
-                                  messageIndex: index,
+                                  message: visibleEntries[index].message,
+                                  messageIndex: visibleEntries[index].originalIndex,
                                 ),
                               );
                             },
@@ -772,27 +884,27 @@ class _ChatPageState extends State<ChatPage> {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        color: canSend ? cs.primary : cs.surfaceContainerHighest,
+        color: isLoading
+            ? cs.error
+            : (canSend ? cs.primary : cs.surfaceContainerHighest),
         borderRadius: BorderRadius.circular(23),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(23),
-          onTap: canSend ? _send : null,
+          onTap: isLoading
+              ? () => context.read<ChatProvider>().cancelGeneration()
+              : (canSend ? _send : null),
           child: Center(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: isLoading
-                  ? SizedBox(
-                      key: const ValueKey('loading'),
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: cs.onSurfaceVariant,
-                        strokeCap: StrokeCap.round,
-                      ),
+                  ? Icon(
+                      Icons.stop_rounded,
+                      key: const ValueKey('stop'),
+                      size: 22,
+                      color: cs.onError,
                     )
                   : Icon(
                       Icons.arrow_upward_rounded,
@@ -809,7 +921,7 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildThinkingIndicator(ColorScheme cs) {
+  Widget _buildThinkingIndicator(ColorScheme cs, ChatProvider chat) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -835,7 +947,9 @@ class _ChatPageState extends State<ChatPage> {
                   _ThinkingDots(color: cs.primary),
                   const SizedBox(width: 12),
                   Text(
-                    '思考中...',
+                    chat.activeToolName == null
+                        ? '思考中...'
+                        : '工具执行中：${chat.activeToolName}',
                     style: TextStyle(
                       fontSize: 13,
                       color: cs.onSurfaceVariant,
@@ -857,6 +971,7 @@ class _ChatPageState extends State<ChatPage> {
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
     final messages = chat.messages;
+    final visibleEntries = _visibleEntries(messages);
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     _syncVisibleConversation(chat);
@@ -867,7 +982,7 @@ class _ChatPageState extends State<ChatPage> {
           child: Stack(
             children: [
               Positioned.fill(
-                child: messages.isEmpty
+                child: visibleEntries.isEmpty
                     ? const WelcomeView()
                     : ListView.builder(
                         controller: _scrollController,
@@ -876,9 +991,9 @@ class _ChatPageState extends State<ChatPage> {
                           vertical: 16,
                         ),
                         addAutomaticKeepAlives: true,
-                        itemCount: messages.length + (chat.isLoading ? 1 : 0),
+                        itemCount: visibleEntries.length + (chat.isLoading ? 1 : 0),
                         itemBuilder: (context, index) {
-                          if (index == messages.length && chat.isLoading) {
+                          if (index == visibleEntries.length && chat.isLoading) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Row(
@@ -894,7 +1009,9 @@ class _ChatPageState extends State<ChatPage> {
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
-                                    '思考中...',
+                                    chat.activeToolName == null
+                                      ? '思考中...'
+                                      : '工具执行中：${chat.activeToolName}',
                                     style: TextStyle(
                                       color: cs.onSurfaceVariant,
                                     ),
@@ -905,11 +1022,11 @@ class _ChatPageState extends State<ChatPage> {
                           }
                           return RepaintBoundary(
                             key: ValueKey(
-                              'msg_${messages[index].timestamp.millisecondsSinceEpoch}_$index',
+                              'msg_${visibleEntries[index].message.timestamp.millisecondsSinceEpoch}_$index',
                             ),
                             child: MessageBubble(
-                              message: messages[index],
-                              messageIndex: index,
+                              message: visibleEntries[index].message,
+                              messageIndex: visibleEntries[index].originalIndex,
                             ),
                           );
                         },
@@ -1060,7 +1177,9 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   const SizedBox(width: 10),
                   FilledButton.icon(
-                    onPressed: chat.isLoading || !_hasText ? null : _send,
+                    onPressed: chat.isLoading
+                        ? () => chat.cancelGeneration()
+                        : (!_hasText ? null : _send),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 18,
@@ -1070,17 +1189,11 @@ class _ChatPageState extends State<ChatPage> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    icon: chat.isLoading
-                        ? SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: cs.onPrimary,
-                            ),
-                          )
-                        : const Icon(Icons.send_rounded, size: 18),
-                    label: Text(chat.isLoading ? '发送中' : '发送'),
+                    icon: Icon(
+                      chat.isLoading ? Icons.stop_rounded : Icons.send_rounded,
+                      size: 18,
+                    ),
+                    label: Text(chat.isLoading ? '停止' : '发送'),
                   ),
                 ],
               ),

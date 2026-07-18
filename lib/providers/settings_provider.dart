@@ -128,6 +128,28 @@ class SettingsProvider extends ChangeNotifier {
   // AI title generation setting
   bool _aiTitleGeneration = true;
   bool get aiTitleGeneration => _aiTitleGeneration;
+
+  // Chat tool-calling toggles (OpenAI mode)
+  bool _chatToolsEnabled = true;
+  bool _toolWebSearchEnabled = true;
+  bool _toolNotesEnabled = true;
+  bool _toolImageEnabled = true;
+  bool _toolArtifactsEnabled = true;
+  bool _toolFetchUrlEnabled = true;
+  bool _toolCreateNoteEnabled = true;
+  int _maxToolRounds = 6;
+  String _imageToolModel = '';
+
+  bool get chatToolsEnabled => _chatToolsEnabled;
+  bool get toolWebSearchEnabled => _toolWebSearchEnabled;
+  bool get toolNotesEnabled => _toolNotesEnabled;
+  bool get toolImageEnabled => _toolImageEnabled;
+  bool get toolArtifactsEnabled => _toolArtifactsEnabled;
+  bool get toolFetchUrlEnabled => _toolFetchUrlEnabled;
+  bool get toolCreateNoteEnabled => _toolCreateNoteEnabled;
+  int get maxToolRounds => _maxToolRounds;
+  String get imageToolModel => _imageToolModel;
+
   bool _loaded = false;
   bool get loaded => _loaded;
 
@@ -156,6 +178,15 @@ class SettingsProvider extends ChangeNotifier {
     'upstashUrl',
     'notesAutoSave',
     'aiTitleGeneration',
+    'chatToolsEnabled',
+    'toolWebSearchEnabled',
+    'toolNotesEnabled',
+    'toolImageEnabled',
+    'toolArtifactsEnabled',
+    'toolFetchUrlEnabled',
+    'toolCreateNoteEnabled',
+    'maxToolRounds',
+    'imageToolModel',
     'developerDebugModeUnlocked',
     'passkeyGoogleOnly',
     'vertexProjectId',
@@ -229,6 +260,19 @@ class SettingsProvider extends ChangeNotifier {
       _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
       _aiTitleGeneration =
           prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
+      _chatToolsEnabled = prefs.getBool('chatToolsEnabled') ?? _chatToolsEnabled;
+      _toolWebSearchEnabled =
+          prefs.getBool('toolWebSearchEnabled') ?? _toolWebSearchEnabled;
+      _toolNotesEnabled = prefs.getBool('toolNotesEnabled') ?? _toolNotesEnabled;
+      _toolImageEnabled = prefs.getBool('toolImageEnabled') ?? _toolImageEnabled;
+      _toolArtifactsEnabled =
+          prefs.getBool('toolArtifactsEnabled') ?? _toolArtifactsEnabled;
+      _toolFetchUrlEnabled =
+          prefs.getBool('toolFetchUrlEnabled') ?? _toolFetchUrlEnabled;
+      _toolCreateNoteEnabled =
+          prefs.getBool('toolCreateNoteEnabled') ?? _toolCreateNoteEnabled;
+      _maxToolRounds = prefs.getInt('maxToolRounds') ?? _maxToolRounds;
+      _imageToolModel = prefs.getString('imageToolModel') ?? _imageToolModel;
 
       _fontSize = prefs.getDouble('fontSize') ?? 14.0;
       _fontFamily = _normalizeFontFamily(prefs.getString('fontFamily'));
@@ -413,6 +457,15 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setString('systemPrompt', _systemPrompt);
     await prefs.setBool('notesAutoSave', _notesAutoSave);
     await prefs.setBool('aiTitleGeneration', _aiTitleGeneration);
+    await prefs.setBool('chatToolsEnabled', _chatToolsEnabled);
+    await prefs.setBool('toolWebSearchEnabled', _toolWebSearchEnabled);
+    await prefs.setBool('toolNotesEnabled', _toolNotesEnabled);
+    await prefs.setBool('toolImageEnabled', _toolImageEnabled);
+    await prefs.setBool('toolArtifactsEnabled', _toolArtifactsEnabled);
+    await prefs.setBool('toolFetchUrlEnabled', _toolFetchUrlEnabled);
+    await prefs.setBool('toolCreateNoteEnabled', _toolCreateNoteEnabled);
+    await prefs.setInt('maxToolRounds', _maxToolRounds);
+    await prefs.setString('imageToolModel', _imageToolModel);
 
     await prefs.setDouble('fontSize', _fontSize);
     await prefs.setString('fontFamily', _fontFamily);
@@ -580,6 +633,61 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setAiTitleGeneration(bool value) async {
     _aiTitleGeneration = value;
+    notifyListeners();
+    await _save();
+  }
+
+  
+  Future<void> setChatToolsEnabled(bool value) async {
+    _chatToolsEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolWebSearchEnabled(bool value) async {
+    _toolWebSearchEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolNotesEnabled(bool value) async {
+    _toolNotesEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolImageEnabled(bool value) async {
+    _toolImageEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolArtifactsEnabled(bool value) async {
+    _toolArtifactsEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolFetchUrlEnabled(bool value) async {
+    _toolFetchUrlEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setToolCreateNoteEnabled(bool value) async {
+    _toolCreateNoteEnabled = value;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setMaxToolRounds(int value) async {
+    _maxToolRounds = value.clamp(1, 12);
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setImageToolModel(String value) async {
+    _imageToolModel = value.trim();
     notifyListeners();
     await _save();
   }

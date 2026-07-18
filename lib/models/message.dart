@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'chat_tool.dart';
+
 Map<String, dynamic> asStringMap(Object? value, String label) {
   if (value is Map<String, dynamic>) return value;
   if (value is Map) {
@@ -26,17 +28,30 @@ class Message {
   String _content;
   final DateTime timestamp;
   bool _isError;
+  final String? toolCallId;
+  final List<ToolCallRecord> toolCalls;
+  final List<ToolRunRecord> toolRuns;
+  final List<Citation> citations;
 
   Message({
     required this.role,
     required String content,
     required this.timestamp,
     bool isError = false,
+    this.toolCallId,
+    List<ToolCallRecord>? toolCalls,
+    List<ToolRunRecord>? toolRuns,
+    List<Citation>? citations,
   }) : _content = content,
-       _isError = isError;
+       _isError = isError,
+       toolCalls = toolCalls ?? <ToolCallRecord>[],
+       toolRuns = toolRuns ?? <ToolRunRecord>[],
+       citations = citations ?? <Citation>[];
 
   String get content => _content;
   bool get isError => _isError;
+  bool get hasToolCalls => toolCalls.isNotEmpty;
+  bool get isToolResult => role == 'tool';
 
   void updateContent(String newContent) {
     _content = newContent;
@@ -46,19 +61,79 @@ class Message {
     _isError = true;
   }
 
+  void upsertToolRun(ToolRunRecord run) {
+    final idx = toolRuns.indexWhere((item) => item.callId == run.callId);
+    if (idx == -1) {
+      toolRuns.add(run);
+    } else {
+      toolRuns[idx] = run;
+    }
+  }
+
+  void addCitations(Iterable<Citation> items) {
+    for (final item in items) {
+      final exists = citations.any(
+        (c) => c.url == item.url && c.title == item.title,
+      );
+      if (!exists) citations.add(item);
+    }
+  }
+
   Map<String, dynamic> toJson() => {
     'role': role,
     'content': _content,
     'timestamp': timestamp.toIso8601String(),
     'isError': _isError,
+    if (toolCallId != null) 'toolCallId': toolCallId,
+    if (toolCalls.isNotEmpty)
+      'toolCalls': toolCalls.map((c) => c.toJson()).toList(),
+    if (toolRuns.isNotEmpty)
+      'toolRuns': toolRuns.map((r) => r.toJson()).toList(),
+    if (citations.isNotEmpty)
+      'citations': citations.map((c) => c.toJson()).toList(),
   };
 
-  factory Message.fromJson(Map<String, dynamic> json) => Message(
-    role: _stringValue(json, 'role'),
-    content: _stringValue(json, 'content'),
-    timestamp: _dateTimeValue(json, 'timestamp'),
-    isError: json['isError'] as bool? ?? false,
-  );
+  factory Message.fromJson(Map<String, dynamic> json) {
+    final toolCallsRaw = json['toolCalls'] ?? json['tool_calls'];
+    final toolRunsRaw = json['toolRuns'];
+    final citationsRaw = json['citations'];
+    return Message(
+      role: _stringValue(json, 'role'),
+      content: (json['content'] ?? '').toString(),
+      timestamp: json.containsKey('timestamp')
+          ? _dateTimeValue(json, 'timestamp')
+          : DateTime.now(),
+      isError: json['isError'] as bool? ?? false,
+      toolCallId: (json['toolCallId'] ?? json['tool_call_id'])?.toString(),
+      toolCalls: _parseToolCalls(toolCallsRaw),
+      toolRuns: _parseToolRuns(toolRunsRaw),
+      citations: _parseCitations(citationsRaw),
+    );
+  }
+}
+
+List<ToolCallRecord> _parseToolCalls(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Object>()
+      .map((item) => ToolCallRecord.fromJson(asStringMap(item, 'toolCall')))
+      .toList();
+}
+
+List<ToolRunRecord> _parseToolRuns(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Object>()
+      .map((item) => ToolRunRecord.fromJson(asStringMap(item, 'toolRun')))
+      .toList();
+}
+
+List<Citation> _parseCitations(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Object>()
+      .map((item) => Citation.fromJson(asStringMap(item, 'citation')))
+      .toList();
 }
 
 class Conversation {

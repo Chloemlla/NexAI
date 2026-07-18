@@ -7,12 +7,16 @@ import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/chat_tool.dart';
 import '../models/message.dart';
 import '../models/search_result.dart';
+import '../services/chat_tool_catalog.dart';
+import '../services/chat_tool_executor.dart';
 import '../utils/atomic_file_writer.dart';
 import '../utils/certificate_error_helper.dart';
 
-/// Generates a random UUID v4 without external dependencies.
+typedef ToolApprovalHandler = Future<bool> Function(ToolApprovalRequest request);
+
 String _newId() {
   final rng = Random.secure();
   final b = List<int>.generate(16, (_) => rng.nextInt(256));
@@ -27,8 +31,16 @@ class ChatProvider extends ChangeNotifier {
   final List<Conversation> _conversations = [];
   int _currentIndex = -1;
   bool _isLoading = false;
+  String? _activeToolName;
+  CancelToken? _cancelToken;
+  int _runSerial = 0;
 
-  // Reuse Dio instance for connection pooling
+  ToolApprovalHandler? approvalHandler;
+  ChatToolRuntimeContext? toolRuntimeContext;
+  List<ChatToolDefinition> enabledTools = const [];
+  int maxToolRounds = 6;
+
+  final ChatToolExecutor _toolExecutor = ChatToolExecutor();
   final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 30),
@@ -40,13 +52,29 @@ class ChatProvider extends ChangeNotifier {
   List<Conversation> get conversations => _conversations;
   int get currentIndex => _currentIndex;
   bool get isLoading => _isLoading;
-
+  String? get activeToolName => _activeToolName;
   Conversation? get currentConversation =>
       _currentIndex >= 0 && _currentIndex < _conversations.length
       ? _conversations[_currentIndex]
       : null;
-
   List<Message> get messages => currentConversation?.messages ?? [];
+
+  void configureTools({
+    required List<ChatToolDefinition> tools,
+    required ChatToolRuntimeContext? runtimeContext,
+    ToolApprovalHandler? onApprove,
+    int? maxRounds,
+  }) {
+    enabledTools = List<ChatToolDefinition>.unmodifiable(tools);
+    toolRuntimeContext = runtimeContext;
+    approvalHandler = onApprove;
+    if (maxRounds != null && maxRounds > 0) maxToolRounds = maxRounds;
+  }
+
+  void cancelGeneration() {
+    final token = _cancelToken;
+    if (token != null && !token.isCancelled) token.cancel('user_cancelled');
+  }
 
   static bool _isSensitiveKey(String key) {
     final lower = key.toLowerCase();
@@ -72,14 +100,8 @@ class ChatProvider extends ChangeNotifier {
       ),
       (match) => '${match.group(1)}<redacted>',
     );
-    redacted = redacted.replaceAll(
-      RegExp(r'sk-[A-Za-z0-9_-]{12,}'),
-      'sk-<redacted>',
-    );
-    redacted = redacted.replaceAll(
-      RegExp(r'AIza[0-9A-Za-z_-]{20,}'),
-      'AIza<redacted>',
-    );
+    redacted = redacted.replaceAll(RegExp(r'sk-[A-Za-z0-9_-]{12,}'), 'sk-<redacted>');
+    redacted = redacted.replaceAll(RegExp(r'AIza[0-9A-Za-z_-]{20,}'), 'AIza<redacted>');
     return redacted;
   }
 
@@ -89,18 +111,12 @@ class ChatProvider extends ChangeNotifier {
         final keyString = key.toString();
         return MapEntry(
           keyString,
-          _isSensitiveKey(keyString)
-              ? '<redacted>'
-              : _redactSensitive(mapValue),
+          _isSensitiveKey(keyString) ? '<redacted>' : _redactSensitive(mapValue),
         );
       });
     }
-    if (value is Iterable) {
-      return value.map(_redactSensitive).toList();
-    }
-    if (value is String) {
-      return _redactString(value);
-    }
+    if (value is Iterable) return value.map(_redactSensitive).toList();
+    if (value is String) return _redactString(value);
     return value;
   }
 
@@ -114,14 +130,9 @@ class ChatProvider extends ChangeNotifier {
 
   static String _redactedUri(Uri uri) {
     if (uri.queryParameters.isEmpty) return _redactString(uri.toString());
-
     final queryParameters = uri.queryParameters.map((key, value) {
-      return MapEntry(
-        key,
-        _isSensitiveKey(key) ? '<redacted>' : _redactString(value),
-      );
+      return MapEntry(key, _isSensitiveKey(key) ? '<redacted>' : _redactString(value));
     });
-
     return uri.replace(queryParameters: queryParameters).toString();
   }
 
@@ -131,26 +142,13 @@ class ChatProvider extends ChangeNotifier {
       'method': options.method,
       'headers': _redactSensitive(options.headers),
     };
-
-    return '''
-**Request Summary:**
-```json
-${_encodeDiagnostic(details)}
-```''';
+    return '**Request Summary:**\n```json\n${_encodeDiagnostic(details)}\n```';
   }
 
   static String _buildResponseDiagnostics(dynamic data) {
     if (data == null) return '';
-
-    return '''
-
-**Response Data:**
-```json
-${_encodeDiagnostic(data)}
-```''';
+    return '\n\n**Response Data:**\n```json\n${_encodeDiagnostic(data)}\n```';
   }
-
-  // ─── Persistence ───
 
   Future<File> _getFile() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -183,26 +181,21 @@ ${_encodeDiagnostic(data)}
     }
   }
 
-  // ─── Conversation management ───
-
   List<SearchResult> searchMessages(String query) {
     if (query.isEmpty) return [];
     final results = <SearchResult>[];
     final q = query.toLowerCase();
-
     for (int i = 0; i < _conversations.length; i++) {
       final conv = _conversations[i];
       for (int j = 0; j < conv.messages.length; j++) {
         final msg = conv.messages[j];
         if (msg.content.toLowerCase().contains(q)) {
-          results.add(
-            SearchResult(
-              conversationIndex: i,
-              conversation: conv,
-              message: msg,
-              messageIndex: j,
-            ),
-          );
+          results.add(SearchResult(
+            conversationIndex: i,
+            conversation: conv,
+            message: msg,
+            messageIndex: j,
+          ));
         }
       }
     }
@@ -217,12 +210,7 @@ ${_encodeDiagnostic(data)}
   Future<void> newConversation() async {
     _conversations.insert(
       0,
-      Conversation(
-        id: _newId(),
-        title: '新对话',
-        messages: [],
-        createdAt: DateTime.now(),
-      ),
+      Conversation(id: _newId(), title: '新对话', messages: [], createdAt: DateTime.now()),
     );
     _currentIndex = 0;
     notifyListeners();
@@ -239,7 +227,6 @@ ${_encodeDiagnostic(data)}
   Future<void> deleteConversation(int index) async {
     if (index < 0 || index >= _conversations.length) return;
     if (_isLoading && index == _currentIndex) return;
-
     _conversations.removeAt(index);
     if (_conversations.isEmpty) {
       _currentIndex = -1;
@@ -265,26 +252,12 @@ ${_encodeDiagnostic(data)}
     required String vertexLocation,
   }) async {
     if (_isLoading) return;
-
-    if (currentConversation == null) {
-      newConversation();
-    }
-
+    if (currentConversation == null) await newConversation();
     final conversation = currentConversation!;
-
-    final userMessage = Message(
-      role: 'user',
-      content: content,
-      timestamp: DateTime.now(),
-    );
-    conversation.messages.add(userMessage);
-
+    conversation.messages.add(Message(role: 'user', content: content, timestamp: DateTime.now()));
     if (conversation.messages.where((m) => m.role == 'user').length == 1) {
-      conversation.title = content.length > 30
-          ? '${content.substring(0, 30)}...'
-          : content;
+      conversation.title = content.length > 30 ? '${content.substring(0, 30)}...' : content;
     }
-
     await _performApiCall(
       conversation: conversation,
       apiMode: apiMode,
@@ -299,7 +272,6 @@ ${_encodeDiagnostic(data)}
     );
   }
 
-  /// Resend a message (for failed messages)
   Future<void> resendMessage({
     required int messageIndex,
     required String apiMode,
@@ -314,21 +286,11 @@ ${_encodeDiagnostic(data)}
   }) async {
     if (_isLoading) return;
     final conversation = currentConversation;
-    if (conversation == null ||
-        messageIndex < 0 ||
-        messageIndex >= conversation.messages.length) {
-      return;
-    }
-
+    if (conversation == null || messageIndex < 0 || messageIndex >= conversation.messages.length) return;
     final message = conversation.messages[messageIndex];
     if (message.role != 'user') return;
-
-    conversation.messages.removeRange(
-      messageIndex + 1,
-      conversation.messages.length,
-    );
+    conversation.messages.removeRange(messageIndex + 1, conversation.messages.length);
     notifyListeners();
-
     await _performApiCall(
       conversation: conversation,
       apiMode: apiMode,
@@ -343,7 +305,6 @@ ${_encodeDiagnostic(data)}
     );
   }
 
-  /// Edit and resend a message
   Future<void> editAndResendMessage({
     required int messageIndex,
     required String newContent,
@@ -359,22 +320,12 @@ ${_encodeDiagnostic(data)}
   }) async {
     if (_isLoading) return;
     final conversation = currentConversation;
-    if (conversation == null ||
-        messageIndex < 0 ||
-        messageIndex >= conversation.messages.length) {
-      return;
-    }
-
+    if (conversation == null || messageIndex < 0 || messageIndex >= conversation.messages.length) return;
     final message = conversation.messages[messageIndex];
     if (message.role != 'user') return;
-
     message.updateContent(newContent);
-    conversation.messages.removeRange(
-      messageIndex + 1,
-      conversation.messages.length,
-    );
+    conversation.messages.removeRange(messageIndex + 1, conversation.messages.length);
     notifyListeners();
-
     await _performApiCall(
       conversation: conversation,
       apiMode: apiMode,
@@ -389,7 +340,6 @@ ${_encodeDiagnostic(data)}
     );
   }
 
-  /// Core API call logic (extracted for reuse)
   Future<void> _performApiCall({
     required Conversation conversation,
     required String apiMode,
@@ -402,117 +352,173 @@ ${_encodeDiagnostic(data)}
     required String vertexProjectId,
     required String vertexLocation,
   }) async {
+    final runId = ++_runSerial;
     _isLoading = true;
+    _activeToolName = null;
+    _cancelToken = CancelToken();
     notifyListeners();
-
     try {
       if (apiMode == 'Vertex') {
         await _performVertexCall(
-          conversation,
-          apiKey,
-          model,
-          temperature,
-          maxTokens,
-          systemPrompt,
-          vertexProjectId,
-          vertexLocation,
+          conversation, apiKey, model, temperature, maxTokens, systemPrompt, vertexProjectId, vertexLocation,
         );
       } else {
-        await _performOpenAiCall(
-          conversation,
-          baseUrl,
-          apiKey,
-          model,
-          temperature,
-          maxTokens,
-          systemPrompt,
+        await _performOpenAiToolLoop(
+          conversation: conversation,
+          baseUrl: baseUrl,
+          apiKey: apiKey,
+          model: model,
+          temperature: temperature,
+          maxTokens: maxTokens,
+          systemPrompt: systemPrompt,
         );
       }
     } on DioException catch (e) {
-      final isHandshakeError =
-          CertificateErrorHelper.isHandshakeCertificateError(e);
-      if (isHandshakeError) {
-        unawaited(CertificateErrorHelper.maybePromptToClearCertificateCache(e));
-      }
-      String errorMsg;
-      String requestDetails = '';
-
-      if (e.response != null) {
-        try {
-          final errorData = e.response!.data;
-          if (errorData is Map) {
-            final message = errorData['error']?['message']?.toString();
-            errorMsg = message != null && message.isNotEmpty
-                ? _redactString(message)
-                : 'HTTP ${e.response!.statusCode}';
-          } else {
+      if (CancelToken.isCancel(e) || e.type == DioExceptionType.cancel) {
+        conversation.messages.add(Message(role: 'assistant', content: '已停止生成。', timestamp: DateTime.now()));
+      } else {
+        final isHandshakeError = CertificateErrorHelper.isHandshakeCertificateError(e);
+        if (isHandshakeError) {
+          unawaited(CertificateErrorHelper.maybePromptToClearCertificateCache(e));
+        }
+        String errorMsg;
+        String requestDetails = '';
+        if (e.response != null) {
+          try {
+            final errorData = e.response!.data;
+            if (errorData is Map) {
+              final message = errorData['error']?['message']?.toString();
+              errorMsg = message != null && message.isNotEmpty ? _redactString(message) : 'HTTP ${e.response!.statusCode}';
+            } else {
+              errorMsg = 'HTTP ${e.response!.statusCode}';
+            }
+          } catch (_) {
             errorMsg = 'HTTP ${e.response!.statusCode}';
           }
-        } catch (_) {
-          errorMsg = 'HTTP ${e.response!.statusCode}';
+          requestDetails = '\n${_buildRequestDiagnostics(e.requestOptions)}${_buildResponseDiagnostics(e.response!.data)}';
+        } else {
+          errorMsg = _redactString(e.message ?? 'Connection error');
+          requestDetails = '\n${_buildRequestDiagnostics(e.requestOptions)}';
         }
-
-        requestDetails =
-            '\n${_buildRequestDiagnostics(e.requestOptions)}'
-            '${_buildResponseDiagnostics(e.response!.data)}';
-      } else {
-        errorMsg = _redactString(e.message ?? 'Connection error');
-        requestDetails = '\n${_buildRequestDiagnostics(e.requestOptions)}';
+        conversation.messages.add(Message(
+          role: 'assistant',
+          content: 'Error: $errorMsg${isHandshakeError ? '\n\n${CertificateErrorHelper.handshakeUserMessage()}' : ''}$requestDetails',
+          timestamp: DateTime.now(),
+          isError: true,
+        ));
       }
-      conversation.messages.add(
-        Message(
-          role: 'assistant',
-          content:
-              'Error: $errorMsg'
-              '${isHandshakeError ? '\n\n${CertificateErrorHelper.handshakeUserMessage()}' : ''}'
-              '$requestDetails',
-          timestamp: DateTime.now(),
-          isError: true,
-        ),
-      );
     } catch (e) {
-      conversation.messages.add(
-        Message(
-          role: 'assistant',
-          content: 'Connection error: ${_redactString(e.toString())}',
-          timestamp: DateTime.now(),
-          isError: true,
-        ),
-      );
+      conversation.messages.add(Message(
+        role: 'assistant',
+        content: 'Connection error: ${_redactString(e.toString())}',
+        timestamp: DateTime.now(),
+        isError: true,
+      ));
     }
-
-    _isLoading = false;
-    notifyListeners();
-    await _save();
+    if (runId == _runSerial) {
+      _isLoading = false;
+      _activeToolName = null;
+      _cancelToken = null;
+      notifyListeners();
+      await _save();
+    }
   }
 
-  Future<void> _performOpenAiCall(
-    Conversation conversation,
-    String baseUrl,
-    String apiKey,
-    String model,
-    double temperature,
-    int maxTokens,
-    String systemPrompt,
-  ) async {
-    final messagesPayload = <Map<String, String>>[];
+  Future<void> _performOpenAiToolLoop({
+    required Conversation conversation,
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required double temperature,
+    required int maxTokens,
+    required String systemPrompt,
+  }) async {
+    final tools = enabledTools;
+    final useTools = tools.isNotEmpty && toolRuntimeContext != null;
+
+    for (var round = 0; round < maxToolRounds; round++) {
+      final token = _cancelToken;
+      if (token != null && token.isCancelled) {
+        throw DioException(
+          requestOptions: RequestOptions(path: baseUrl),
+          type: DioExceptionType.cancel,
+          error: 'user_cancelled',
+        );
+      }
+
+      final turn = await _performOpenAiCall(
+        conversation: conversation,
+        baseUrl: baseUrl,
+        apiKey: apiKey,
+        model: model,
+        temperature: temperature,
+        maxTokens: maxTokens,
+        systemPrompt: systemPrompt,
+        tools: useTools ? tools : const [],
+      );
+      if (turn.toolCalls.isEmpty) return;
+
+      if (!useTools) {
+        turn.assistantMessage.updateContent(
+          turn.assistantMessage.content.isEmpty
+              ? '模型请求了工具调用，但当前客户端未启用工具。'
+              : turn.assistantMessage.content,
+        );
+        turn.assistantMessage.markAsError();
+        return;
+      }
+
+      final executed = await _executeToolCalls(
+        conversation: conversation,
+        assistantMessage: turn.assistantMessage,
+        toolCalls: turn.toolCalls,
+      );
+      if (!executed) return;
+    }
+
+    conversation.messages.add(Message(
+      role: 'assistant',
+      content: '已达到最大工具调用轮次（$maxToolRounds），已停止继续调用。',
+      timestamp: DateTime.now(),
+      isError: true,
+    ));
+  }
+
+  Future<_OpenAiTurnResult> _performOpenAiCall({
+    required Conversation conversation,
+    required String baseUrl,
+    required String apiKey,
+    required String model,
+    required double temperature,
+    required int maxTokens,
+    required String systemPrompt,
+    required List<ChatToolDefinition> tools,
+  }) async {
+    final messagesPayload = <Map<String, dynamic>>[];
     if (systemPrompt.isNotEmpty) {
       messagesPayload.add({'role': 'system', 'content': systemPrompt});
     }
     for (final msg in conversation.messages) {
       if (msg.isError) continue;
-      messagesPayload.add({'role': msg.role, 'content': msg.content});
+      messagesPayload.add(_toOpenAiMessage(msg));
+    }
+
+    final body = <String, dynamic>{
+      'model': model,
+      'messages': messagesPayload,
+      'temperature': temperature,
+      'max_tokens': maxTokens,
+      'stream': true,
+    };
+    if (tools.isNotEmpty) {
+      body['tools'] = tools.map((tool) => tool.toOpenAiTool()).toList();
+      body['tool_choice'] = 'auto';
     }
 
     final response = await _dio.post<ResponseBody>(
       '$baseUrl/chat/completions',
-      data: {
-        'model': model,
-        'messages': messagesPayload,
-        'temperature': temperature,
-        'max_tokens': maxTokens,
-        'stream': true,
-      },
+      data: body,
+      cancelToken: _cancelToken,
       options: Options(
         headers: {
           if (apiKey.isNotEmpty) 'Authorization': 'Bearer $apiKey',
@@ -522,62 +528,258 @@ ${_encodeDiagnostic(data)}
       ),
     );
 
-    if (response.statusCode == 200) {
-      final assistantMessage = Message(
+    if (response.statusCode != 200) {
+      final errorMessage = Message(
         role: 'assistant',
-        content: '',
+        content: 'Error: HTTP ${response.statusCode}',
         timestamp: DateTime.now(),
+        isError: true,
       );
-      conversation.messages.add(assistantMessage);
+      conversation.messages.add(errorMessage);
+      notifyListeners();
+      return _OpenAiTurnResult(assistantMessage: errorMessage, toolCalls: const []);
+    }
+
+    final assistantMessage = Message(role: 'assistant', content: '', timestamp: DateTime.now());
+    conversation.messages.add(assistantMessage);
+    notifyListeners();
+
+    final buffer = StringBuffer();
+    final toolBuffers = <int, _ToolCallBuffer>{};
+    String lineBuf = '';
+    var done = false;
+
+    await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
+      if (done) break;
+      lineBuf += chunk;
+      final lines = lineBuf.split('\n');
+      lineBuf = lines.removeLast();
+      for (final line in lines) {
+        final trimmed = line.trim();
+        if (trimmed.isEmpty || !trimmed.startsWith('data: ')) continue;
+        final data = trimmed.substring(6);
+        if (data == '[DONE]') {
+          done = true;
+          break;
+        }
+        try {
+          final json = jsonDecode(data) as Map<String, dynamic>;
+          final choices = json['choices'];
+          if (choices is! List || choices.isEmpty || choices.first is! Map) continue;
+          final choice = (choices.first as Map).map((k, v) => MapEntry(k.toString(), v));
+          final delta = choice['delta'];
+          if (delta is! Map) continue;
+          final deltaMap = delta.map((k, v) => MapEntry(k.toString(), v));
+          final content = deltaMap['content'];
+          if (content is String && content.isNotEmpty) {
+            buffer.write(content);
+            assistantMessage.updateContent(buffer.toString());
+            notifyListeners();
+          }
+          final toolCalls = deltaMap['tool_calls'];
+          if (toolCalls is List) {
+            for (final item in toolCalls) {
+              if (item is! Map) continue;
+              final map = item.map((k, v) => MapEntry(k.toString(), v));
+              final index = map['index'] is int
+                  ? map['index'] as int
+                  : int.tryParse(map['index']?.toString() ?? '') ?? 0;
+              final bucket = toolBuffers.putIfAbsent(index, _ToolCallBuffer.new);
+              if (map['id'] != null) bucket.id = map['id'].toString();
+              final function = map['function'];
+              if (function is Map) {
+                final fn = function.map((k, v) => MapEntry(k.toString(), v));
+                if (fn['name'] != null) bucket.name = fn['name'].toString();
+                if (fn['arguments'] != null) bucket.arguments.write(fn['arguments'].toString());
+              }
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    final toolCalls = <ToolCallRecord>[];
+    final sortedKeys = toolBuffers.keys.toList()..sort();
+    for (final key in sortedKeys) {
+      final bucket = toolBuffers[key]!;
+      if (bucket.name.trim().isEmpty) continue;
+      toolCalls.add(ToolCallRecord(
+        id: bucket.id.isEmpty ? 'call_${_newId()}' : bucket.id,
+        name: bucket.name,
+        argumentsJson: bucket.arguments.toString().isEmpty ? '{}' : bucket.arguments.toString(),
+      ));
+    }
+
+    if (toolCalls.isNotEmpty) {
+      assistantMessage.toolCalls
+        ..clear()
+        ..addAll(toolCalls);
+      for (final call in toolCalls) {
+        assistantMessage.upsertToolRun(ToolRunRecord(
+          callId: call.id,
+          name: call.name,
+          argumentsJson: call.argumentsJson,
+          status: ChatToolRunStatus.pending,
+          updatedAt: DateTime.now(),
+        ));
+      }
+      if (assistantMessage.content.trim().isEmpty) {
+        assistantMessage.updateContent('正在调用工具…');
+      }
+      notifyListeners();
+    } else if (assistantMessage.content.isEmpty) {
+      assistantMessage.updateContent('Error: Empty response from API');
+      assistantMessage.markAsError();
+      notifyListeners();
+    }
+
+    return _OpenAiTurnResult(assistantMessage: assistantMessage, toolCalls: toolCalls);
+  }
+
+  Future<bool> _executeToolCalls({
+    required Conversation conversation,
+    required Message assistantMessage,
+    required List<ToolCallRecord> toolCalls,
+  }) async {
+    final runtime = toolRuntimeContext;
+    if (runtime == null) return false;
+
+    for (final call in toolCalls) {
+      final token = _cancelToken;
+      if (token != null && token.isCancelled) return false;
+
+      final definition = ChatToolCatalog.byName(call.name);
+      final args = call.decodeArguments();
+      final summary = _toolSummary(call.name, args);
+
+      assistantMessage.upsertToolRun(ToolRunRecord(
+        callId: call.id,
+        name: call.name,
+        argumentsJson: call.argumentsJson,
+        status: ChatToolRunStatus.pending,
+        resultPreview: summary,
+        updatedAt: DateTime.now(),
+      ));
+      _activeToolName = call.name;
       notifyListeners();
 
-      final buffer = StringBuffer();
-      String lineBuf = '';
-      bool done = false;
-
-      await for (final chunk
-          in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
-        if (done) break;
-        lineBuf += chunk;
-        final lines = lineBuf.split('\n');
-        lineBuf = lines.removeLast();
-
-        for (final line in lines) {
-          final trimmed = line.trim();
-          if (trimmed.isEmpty || !trimmed.startsWith('data: ')) continue;
-          final data = trimmed.substring(6);
-          if (data == '[DONE]') {
-            done = true;
-            break;
-          }
-
-          try {
-            final json = jsonDecode(data) as Map<String, dynamic>;
-            final delta = json['choices']?[0]?['delta'];
-            if (delta != null && delta['content'] != null) {
-              buffer.write(delta['content'] as String);
-              assistantMessage.updateContent(buffer.toString());
-              notifyListeners();
-            }
-          } catch (_) {
-            // Skip malformed SSE chunks
-          }
-        }
+      var approved = true;
+      final needsPrompt = definition?.approval == ChatToolApprovalPolicy.prompt || definition == null;
+      if (needsPrompt) {
+        final handler = approvalHandler;
+        approved = handler == null
+            ? false
+            : await handler(ToolApprovalRequest(
+                callId: call.id,
+                name: call.name,
+                arguments: args,
+                summary: summary,
+              ));
       }
 
-      if (assistantMessage.content.isEmpty) {
-        assistantMessage.updateContent('Error: Empty response from API');
-        assistantMessage.markAsError();
-      }
-    } else {
-      conversation.messages.add(
-        Message(
-          role: 'assistant',
-          content: 'Error: HTTP ${response.statusCode}',
+      if (!approved) {
+        final deniedContent = '{"error":"denied_by_user","tool":"${call.name}","message":"User denied this tool call."}';
+        assistantMessage.upsertToolRun(ToolRunRecord(
+          callId: call.id,
+          name: call.name,
+          argumentsJson: call.argumentsJson,
+          status: ChatToolRunStatus.denied,
+          resultPreview: '用户拒绝执行',
+          updatedAt: DateTime.now(),
+        ));
+        conversation.messages.add(Message(
+          role: 'tool',
+          content: deniedContent,
           timestamp: DateTime.now(),
-          isError: true,
-        ),
+          toolCallId: call.id,
+        ));
+        notifyListeners();
+        continue;
+      }
+
+      assistantMessage.upsertToolRun(ToolRunRecord(
+        callId: call.id,
+        name: call.name,
+        argumentsJson: call.argumentsJson,
+        status: ChatToolRunStatus.running,
+        resultPreview: summary,
+        updatedAt: DateTime.now(),
+      ));
+      notifyListeners();
+
+      final result = await _toolExecutor.execute(
+        name: call.name,
+        arguments: args,
+        context: runtime,
       );
+
+      final preview = result.content.length > 240
+          ? '${result.content.substring(0, 240)}...'
+          : result.content;
+      assistantMessage.upsertToolRun(ToolRunRecord(
+        callId: call.id,
+        name: call.name,
+        argumentsJson: call.argumentsJson,
+        status: result.isError ? ChatToolRunStatus.error : ChatToolRunStatus.success,
+        resultPreview: preview,
+        citations: result.citations,
+        updatedAt: DateTime.now(),
+      ));
+      if (result.citations.isNotEmpty) {
+        assistantMessage.addCitations(result.citations);
+      }
+      conversation.messages.add(Message(
+        role: 'tool',
+        content: result.content,
+        timestamp: DateTime.now(),
+        toolCallId: call.id,
+        citations: result.citations,
+        isError: result.isError,
+      ));
+      notifyListeners();
+    }
+
+    _activeToolName = null;
+    notifyListeners();
+    return true;
+  }
+
+  Map<String, dynamic> _toOpenAiMessage(Message msg) {
+    if (msg.role == 'tool') {
+      return {
+        'role': 'tool',
+        'tool_call_id': msg.toolCallId ?? '',
+        'content': msg.content,
+      };
+    }
+    if (msg.role == 'assistant' && msg.toolCalls.isNotEmpty) {
+      return {
+        'role': 'assistant',
+        'content': msg.content,
+        'tool_calls': msg.toolCalls.map((c) => c.toOpenAiToolCall()).toList(),
+      };
+    }
+    return {'role': msg.role, 'content': msg.content};
+  }
+
+  String _toolSummary(String name, Map<String, dynamic> args) {
+    switch (name) {
+      case ChatToolCatalog.webSearch:
+        return '搜索：${args['query'] ?? ''}';
+      case ChatToolCatalog.notesSearch:
+        return '笔记搜索：${args['query'] ?? ''}';
+      case ChatToolCatalog.notesRead:
+        return '读取笔记：${args['title'] ?? args['note_id'] ?? args['noteId'] ?? ''}';
+      case ChatToolCatalog.generateImage:
+        return '绘图：${args['prompt'] ?? ''}';
+      case ChatToolCatalog.reportArtifacts:
+        return '发布 Artifact：${args['title'] ?? ''}';
+      case ChatToolCatalog.fetchUrl:
+        return '抓取：${args['url'] ?? ''}';
+      case ChatToolCatalog.createNote:
+        return '创建笔记：${args['title'] ?? 'Untitled'}';
+      default:
+        return '调用 $name';
     }
   }
 
@@ -593,8 +795,7 @@ ${_encodeDiagnostic(data)}
   ) async {
     final contentsPayload = <Map<String, dynamic>>[];
     for (final msg in conversation.messages) {
-      if (msg.isError) continue;
-      // Vertex roles are user and model
+      if (msg.isError || msg.role == 'tool') continue;
       final role = msg.role == 'assistant' ? 'model' : 'user';
       contentsPayload.add({
         'role': role,
@@ -611,7 +812,6 @@ ${_encodeDiagnostic(data)}
         'maxOutputTokens': maxTokens,
       },
     };
-
     if (systemPrompt.isNotEmpty) {
       payload['systemInstruction'] = {
         'parts': [
@@ -620,56 +820,43 @@ ${_encodeDiagnostic(data)}
       };
     }
 
-    String url;
-    Map<String, String> headers = {'Content-Type': 'application/json'};
-
-    // If project ID is empty, use Express Mode (API Key in query)
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    final String url;
     if (vertexProjectId.isEmpty) {
       url =
           'https://aiplatform.googleapis.com/v1/publishers/google/models/$model:streamGenerateContent?key=$apiKey&alt=sse';
     } else {
-      // Standard Mode (Bearer Token)
       url =
           'https://aiplatform.googleapis.com/v1/projects/$vertexProjectId/locations/$vertexLocation/publishers/google/models/$model:streamGenerateContent?alt=sse';
-      // In Standard mode, the "apiKey" field from settings actually acts as the access token.
       headers['Authorization'] = 'Bearer $apiKey';
     }
 
     final response = await _dio.post<ResponseBody>(
       url,
       data: payload,
+      cancelToken: _cancelToken,
       options: Options(headers: headers, responseType: ResponseType.stream),
     );
 
     if (response.statusCode == 200) {
-      final assistantMessage = Message(
-        role: 'assistant',
-        content: '',
-        timestamp: DateTime.now(),
-      );
+      final assistantMessage = Message(role: 'assistant', content: '', timestamp: DateTime.now());
       conversation.messages.add(assistantMessage);
       notifyListeners();
-
       final buffer = StringBuffer();
       String lineBuf = '';
-
-      await for (final chunk
-          in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
+      await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
         lineBuf += chunk;
         final lines = lineBuf.split('\n');
         lineBuf = lines.removeLast();
-
         for (final line in lines) {
           final trimmed = line.trim();
           if (trimmed.isEmpty || !trimmed.startsWith('data: ')) continue;
           final data = trimmed.substring(6);
-
           try {
             final json = jsonDecode(data) as Map<String, dynamic>;
             final candidates = json['candidates'] as List<dynamic>?;
             if (candidates != null && candidates.isNotEmpty) {
-              final parts =
-                  candidates[0]['content']?['parts'] as List<dynamic>?;
+              final parts = candidates[0]['content']?['parts'] as List<dynamic>?;
               if (parts != null && parts.isNotEmpty) {
                 final text = parts[0]['text'] as String?;
                 if (text != null) {
@@ -679,29 +866,23 @@ ${_encodeDiagnostic(data)}
                 }
               }
             }
-          } catch (_) {
-            // Ignore malformed JSON or other SSE events
-          }
+          } catch (_) {}
         }
       }
-
       if (assistantMessage.content.isEmpty) {
         assistantMessage.updateContent('Error: Empty response from API');
         assistantMessage.markAsError();
       }
     } else {
-      conversation.messages.add(
-        Message(
-          role: 'assistant',
-          content: 'Error: HTTP ${response.statusCode}',
-          timestamp: DateTime.now(),
-          isError: true,
-        ),
-      );
+      conversation.messages.add(Message(
+        role: 'assistant',
+        content: 'Error: HTTP ${response.statusCode}',
+        timestamp: DateTime.now(),
+        isError: true,
+      ));
     }
   }
 
-  /// 从 JSON 列表恢复对话（云同步用）
   Future<void> restoreFromList(List<dynamic> list) async {
     final restored = list
         .map((e) => Conversation.fromJson(asStringMap(e, 'conversation')))
@@ -709,16 +890,11 @@ ${_encodeDiagnostic(data)}
     _conversations
       ..clear()
       ..addAll(restored);
-    if (_conversations.isNotEmpty) {
-      _currentIndex = 0;
-    } else {
-      _currentIndex = -1;
-    }
+    _currentIndex = _conversations.isNotEmpty ? 0 : -1;
     notifyListeners();
     await _save();
   }
 
-  /// 增量合并：按 id upsert 对话
   Future<void> mergeItems(List<dynamic> list) async {
     for (final item in list) {
       final json = asStringMap(item, 'conversation');
@@ -727,15 +903,13 @@ ${_encodeDiagnostic(data)}
       if (idx == -1) {
         _conversations.insert(0, incoming);
       } else {
-        // 用最后消息时间判断哪个更新
         final existingLast = _conversations[idx].messages.isNotEmpty
             ? _conversations[idx].messages.last.timestamp
             : _conversations[idx].createdAt;
         final incomingLast = incoming.messages.isNotEmpty
             ? incoming.messages.last.timestamp
             : incoming.createdAt;
-        if (incomingLast.isAfter(existingLast) ||
-            incomingLast == existingLast) {
+        if (!incomingLast.isBefore(existingLast)) {
           _conversations[idx] = incoming;
         }
       }
@@ -746,7 +920,20 @@ ${_encodeDiagnostic(data)}
 
   @override
   void dispose() {
+    _cancelToken?.cancel('disposed');
     _dio.close();
     super.dispose();
   }
+}
+
+class _OpenAiTurnResult {
+  final Message assistantMessage;
+  final List<ToolCallRecord> toolCalls;
+  const _OpenAiTurnResult({required this.assistantMessage, required this.toolCalls});
+}
+
+class _ToolCallBuffer {
+  String id = '';
+  String name = '';
+  final StringBuffer arguments = StringBuffer();
 }

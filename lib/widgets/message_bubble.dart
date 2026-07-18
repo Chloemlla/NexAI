@@ -15,10 +15,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/chat_provider.dart';
 import '../services/chat_tool_executor.dart';
 import '../services/chat_tool_catalog.dart';
+import '../services/chat_speech_service.dart';
 import '../providers/image_generation_provider.dart';
 import '../providers/artifacts_provider.dart';
 import '../providers/notes_provider.dart';
-import '../services/chat_speech_service.dart';
 import '../models/chat_knowledge.dart';
 import '../providers/knowledge_provider.dart';
 import '../providers/settings_provider.dart';
@@ -142,7 +142,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                                   width: 140,
                                   height: 140,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
+                                  errorBuilder: (context, error, stackTrace) => Container(
                                     width: 140,
                                     height: 140,
                                     color: cs.surfaceContainerHighest,
@@ -778,6 +778,44 @@ class _MessageFooter extends StatelessWidget {
     );
   }
 
+
+
+  Future<void> _speakMessage(BuildContext context) async {
+    final content = message.content.trim();
+    if (content.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final speech = ChatSpeechService();
+      await speech.speak(content);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('正在朗读'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text('朗读失败：$e')));
+    }
+  }
+
+  Future<void> _regenerate(BuildContext context) async {
+    final chatProvider = context.read<ChatProvider>();
+    final settings = context.read<SettingsProvider>();
+    _configureTools(context, chatProvider, settings);
+    await chatProvider.regenerateLastAssistant(
+      apiMode: settings.apiMode,
+      baseUrl: settings.baseUrl,
+      apiKey: settings.apiKey,
+      model: settings.selectedModel,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      systemPrompt: settings.systemPrompt,
+      vertexProjectId: settings.vertexProjectId,
+      vertexLocation: settings.vertexLocation,
+    );
+  }
 
   Future<void> _translateMessage(BuildContext context) async {
     final content = message.content.trim();

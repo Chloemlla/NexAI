@@ -56,10 +56,12 @@ class ChatSpeechService {
       onResult: (result) {
         onResult(result.recognizedWords, result.finalResult);
       },
-      localeId: localeId,
-      listenMode: stt.ListenMode.dictation,
-      partialResults: true,
-      cancelOnError: true,
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.dictation,
+        partialResults: true,
+        cancelOnError: true,
+        localeId: localeId,
+      ),
     );
   }
 

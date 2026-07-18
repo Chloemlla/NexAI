@@ -499,6 +499,8 @@ class _ChatPageState extends State<ChatPage> {
     await SharePlus.instance.share(ShareParams(text: raw, subject: 'NexAI chat export'));
   }
 
+  // Kept for future chat backup UX entrypoint.
+  // ignore: unused_element
   Future<void> _importChatJson() async {
     final path = await FileAccessHelper.pickFile(allowedExtensions: const ['json']);
     if (path == null) return;
@@ -536,9 +538,11 @@ class _ChatPageState extends State<ChatPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const ListTile(
-                    title: Text('多模型对比'),
-                    subtitle: Text('选择 2 个及以上模型，下一条消息将依次生成对比回答'),
+                  ListTile(
+                    title: const Text('多模型对比'),
+                    subtitle: Text(
+                      '选择 2–${ChatProvider.maxCompareModels} 个模型；下一条消息将依次生成对比回答',
+                    ),
                   ),
                   ...models.map((model) {
                     final checked = selected.contains(model);
@@ -548,6 +552,17 @@ class _ChatPageState extends State<ChatPage> {
                       onChanged: (v) {
                         setModal(() {
                           if (v == true) {
+                            if (selected.length >= ChatProvider.maxCompareModels &&
+                                !selected.contains(model)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '最多选择 ${ChatProvider.maxCompareModels} 个模型',
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
                             selected.add(model);
                           } else {
                             selected.remove(model);
@@ -571,6 +586,12 @@ class _ChatPageState extends State<ChatPage> {
       },
     );
     if (result == null) return;
+    if (result.length == 1) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请至少选择 2 个模型，或清空以关闭对比')),
+      );
+    }
     await chat.setCompareModels(result.toList());
     if (!mounted) return;
     setState(() {});
@@ -618,12 +639,16 @@ class _ChatPageState extends State<ChatPage> {
             children: [
               const ListTile(title: Text('选择助手人设')),
               ...ChatAssistantCatalog.presets.map((assistant) {
-                return RadioListTile<String>(
-                  value: assistant.id,
-                  groupValue: selectedId,
+                return ListTile(
+                  leading: Icon(
+                    selectedId == assistant.id
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                  ),
                   title: Text('${assistant.emoji} ${assistant.name}'),
                   subtitle: Text(assistant.description),
-                  onChanged: (value) => Navigator.pop(ctx, value),
+                  selected: selectedId == assistant.id,
+                  onTap: () => Navigator.pop(ctx, assistant.id),
                 );
               }),
             ],
@@ -675,7 +700,7 @@ class _ChatPageState extends State<ChatPage> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _pendingAttachments.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final item = _pendingAttachments[index];
           return Stack(

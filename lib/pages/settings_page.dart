@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../models/chat_knowledge.dart';
 import '../providers/settings_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
@@ -533,67 +534,110 @@ class _SettingsPageState extends State<SettingsPage> {
                       title: Text('启用对话工具', style: tt.bodyMedium),
                       subtitle: Text(
                         settings.apiMode == 'OpenAI'
-                            ? '允许模型在 OpenAI 兼容模式下调用内置工具'
+                            ? '默认关闭。开启后模型可调用内置工具（建议先用推荐组合）'
                             : 'Vertex 模式暂不支持 tool-calling',
                         style: tt.bodySmall,
                       ),
                     ),
+                    if (settings.apiMode == 'OpenAI') ...[
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          FilledButton.tonal(
+                            onPressed: () async {
+                              await settings.enableRecommendedChatTools();
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('已启用推荐工具：笔记检索/创建'),
+                                ),
+                              );
+                            },
+                            child: const Text('一键启用推荐工具'),
+                          ),
+                          OutlinedButton(
+                            onPressed: settings.chatToolsEnabled
+                                ? () async {
+                                    await settings.disableAllChatTools();
+                                  }
+                                : null,
+                            child: const Text('关闭工具'),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (settings.chatToolsEnabled && settings.apiMode == 'OpenAI') ...[
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: settings.toolWebSearchEnabled,
-                        onChanged: settings.setToolWebSearchEnabled,
-                        title: Text('web_search', style: tt.bodyMedium),
-                        subtitle: Text('联网搜索', style: tt.bodySmall),
+                      const SizedBox(height: 12),
+                      Text('推荐工具', style: tt.titleSmall),
+                      const SizedBox(height: 4),
+                      Text(
+                        '低风险、本地优先，适合默认体验',
+                        style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: settings.toolNotesEnabled,
                         onChanged: settings.setToolNotesEnabled,
-                        title: Text('notes_search / notes_read', style: tt.bodyMedium),
+                        title: Text('笔记检索 notes_search / notes_read', style: tt.bodyMedium),
                         subtitle: Text('检索与读取本地笔记', style: tt.bodySmall),
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: settings.toolImageEnabled,
-                        onChanged: settings.setToolImageEnabled,
-                        title: Text('generate_image', style: tt.bodyMedium),
-                        subtitle: Text('对话内绘图（需审批）', style: tt.bodySmall),
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: settings.toolArtifactsEnabled,
-                        onChanged: settings.setToolArtifactsEnabled,
-                        title: Text('report_artifacts', style: tt.bodyMedium),
-                        subtitle: Text('发布分享链接（需登录与审批）', style: tt.bodySmall),
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        value: settings.toolFetchUrlEnabled,
-                        onChanged: settings.setToolFetchUrlEnabled,
-                        title: Text('fetch_url', style: tt.bodyMedium),
-                        subtitle: Text('抓取网页正文（需审批）', style: tt.bodySmall),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: settings.toolCreateNoteEnabled,
                         onChanged: settings.setToolCreateNoteEnabled,
-                        title: Text('create_note', style: tt.bodyMedium),
-                        subtitle: Text('创建本地笔记（需审批）', style: tt.bodySmall),
+                        title: Text('创建笔记 create_note', style: tt.bodyMedium),
+                        subtitle: Text('写入本地笔记（需审批）', style: tt.bodySmall),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('高级工具', style: tt.titleSmall),
+                      const SizedBox(height: 4),
+                      Text(
+                        '联网、生成、分享、知识库与 MCP。费用/隐私影响更大，默认关闭',
+                        style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolWebSearchEnabled,
+                        onChanged: settings.setToolWebSearchEnabled,
+                        title: Text('联网搜索 web_search', style: tt.bodyMedium),
+                        subtitle: Text('调用搜索服务，结果质量取决于上游', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolFetchUrlEnabled,
+                        onChanged: settings.setToolFetchUrlEnabled,
+                        title: Text('抓取网页 fetch_url', style: tt.bodyMedium),
+                        subtitle: Text('抓取任意 URL 正文（需审批）', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolImageEnabled,
+                        onChanged: settings.setToolImageEnabled,
+                        title: Text('对话绘图 generate_image', style: tt.bodyMedium),
+                        subtitle: Text('费用较高，需审批', style: tt.bodySmall),
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: settings.toolArtifactsEnabled,
+                        onChanged: settings.setToolArtifactsEnabled,
+                        title: Text('分享链接 report_artifacts', style: tt.bodyMedium),
+                        subtitle: Text('需登录，且会发布内容（需审批）', style: tt.bodySmall),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: settings.toolKnowledgeEnabled,
                         onChanged: settings.setToolKnowledgeEnabled,
-                        title: Text('knowledge_search / knowledge_read', style: tt.bodyMedium),
-                        subtitle: Text('检索导入的本地文档知识库', style: tt.bodySmall),
+                        title: Text('知识库 knowledge_*', style: tt.bodyMedium),
+                        subtitle: Text('仅支持文本文件导入（txt/md/json/csv/log）', style: tt.bodySmall),
                       ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: settings.remoteMcpEnabled,
                         onChanged: settings.setRemoteMcpEnabled,
                         title: Text('远程 MCP', style: tt.bodyMedium),
-                        subtitle: Text('启用 HTTP/SSE MCP 工具（需配置服务器）', style: tt.bodySmall),
+                        subtitle: Text('仅 HTTP/SSE；本地 stdio 不支持', style: tt.bodySmall),
                       ),
                       if (settings.remoteMcpEnabled)
                         ListTile(
@@ -611,7 +655,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text('最大工具轮次', style: tt.bodyMedium),
-                        subtitle: Text('${settings.maxToolRounds}', style: tt.bodySmall),
+                        subtitle: Text(
+                          '${settings.maxToolRounds}（建议 3–6，默认 4）',
+                          style: tt.bodySmall,
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -622,13 +669,17 @@ class _SettingsPageState extends State<SettingsPage> {
                               icon: const Icon(Icons.remove_circle_outline),
                             ),
                             IconButton(
-                              onPressed: settings.maxToolRounds < 12
+                              onPressed: settings.maxToolRounds < 8
                                   ? () => settings.setMaxToolRounds(settings.maxToolRounds + 1)
                                   : null,
                               icon: const Icon(Icons.add_circle_outline),
                             ),
                           ],
                         ),
+                      ),
+                      Text(
+                        '多模型对比最多 3 个模型；语音输入会请求麦克风权限。',
+                        style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                       ),
                     ],
                   ],
@@ -2464,4 +2515,142 @@ class _SliderRow extends StatelessWidget {
       ],
     );
   }
+
+  Future<void> _editMcpServers(
+    BuildContext context,
+    SettingsProvider settings,
+  ) async {
+    final servers = List<McpServerConfig>.from(settings.mcpServers);
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModal) {
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const ListTile(
+                      title: Text('MCP 服务器'),
+                      subtitle: Text('配置远程 HTTP/SSE MCP（tools/list + tools/call）'),
+                    ),
+                    if (servers.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text('尚未配置服务器'),
+                      ),
+                    ...servers.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final server = entry.value;
+                      return ListTile(
+                        title: Text(server.name),
+                        subtitle: Text(server.url),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Switch(
+                              value: server.enabled,
+                              onChanged: (value) {
+                                setModal(() {
+                                  servers[index] = McpServerConfig(
+                                    id: server.id,
+                                    name: server.name,
+                                    url: server.url,
+                                    enabled: value,
+                                    bearerToken: server.bearerToken,
+                                  );
+                                });
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () {
+                                setModal(() => servers.removeAt(index));
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                    FilledButton.tonalIcon(
+                      onPressed: () async {
+                        final created = await _promptMcpServer(ctx);
+                        if (created == null) return;
+                        setModal(() => servers.add(created));
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('添加服务器'),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: () async {
+                        await settings.setMcpServers(servers);
+                        if (ctx.mounted) Navigator.pop(ctx);
+                      },
+                      child: const Text('保存'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<McpServerConfig?> _promptMcpServer(BuildContext context) async {
+    final nameCtrl = TextEditingController(text: 'MCP');
+    final urlCtrl = TextEditingController(text: 'https://');
+    final tokenCtrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('添加 MCP 服务器'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: '名称'),
+            ),
+            TextField(
+              controller: urlCtrl,
+              decoration: const InputDecoration(labelText: 'URL'),
+            ),
+            TextField(
+              controller: tokenCtrl,
+              decoration: const InputDecoration(labelText: 'Bearer Token（可选）'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('添加')),
+        ],
+      ),
+    );
+    if (ok != true) return null;
+    final url = urlCtrl.text.trim();
+    if (url.isEmpty) return null;
+    return McpServerConfig(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: nameCtrl.text.trim().isEmpty ? 'MCP' : nameCtrl.text.trim(),
+      url: url,
+      enabled: true,
+      bearerToken: tokenCtrl.text.trim().isEmpty ? null : tokenCtrl.text.trim(),
+    );
+  }
+
+
 }

@@ -283,6 +283,15 @@ List<Citation> _parseCitations(Object? value) {
       .toList();
 }
 
+
+List<ChatAttachment> _parseAttachments(Object? value) {
+  if (value is! List) return const [];
+  return value
+      .whereType<Object>()
+      .map((item) => ChatAttachment.fromJson(asStringMap(item, 'attachment')))
+      .toList();
+}
+
 class Conversation {
   final String id;
   String title;

@@ -14,7 +14,6 @@ import '../providers/image_generation_provider.dart';
 import '../providers/knowledge_provider.dart';
 import '../providers/notes_provider.dart';
 import 'chat_tool_catalog.dart';
-import 'nexai_artifacts_service.dart';
 import 'remote_mcp_client.dart';
 
 class ChatToolRuntimeContext {
@@ -555,6 +554,118 @@ class ChatToolExecutor {
         'createdAt': note.createdAt.toIso8601String(),
         'message': 'Note created.',
       }),
+    );
+  }
+
+
+  ToolExecutionResult _knowledgeSearch(
+    Map<String, dynamic> args,
+    ChatToolRuntimeContext context,
+  ) {
+    final query = (args['query'] ?? '').toString().trim();
+    if (query.isEmpty) {
+      return const ToolExecutionResult(
+        content: '{"error":"query_required"}',
+        isError: true,
+      );
+    }
+    final limit = _clampInt(args['limit'], fallback: 8, min: 1, max: 20);
+    final hits = context.knowledgeProvider.search(query, limit: limit);
+    return ToolExecutionResult(
+      content: jsonEncode({
+        'query': query,
+        'count': hits.length,
+        'docs': hits
+            .map(
+              (hit) => {
+                'id': hit.doc.id,
+                'title': hit.doc.title,
+                'sourceType': hit.doc.sourceType,
+                'score': hit.score,
+                'snippet': hit.snippet,
+                'tags': hit.doc.tags,
+              },
+            )
+            .toList(),
+      }),
+    );
+  }
+
+  ToolExecutionResult _knowledgeRead(
+    Map<String, dynamic> args,
+    ChatToolRuntimeContext context,
+  ) {
+    final docId = (args['doc_id'] ?? args['docId'] ?? '').toString().trim();
+    if (docId.isEmpty) {
+      return const ToolExecutionResult(
+        content: '{"error":"doc_id_required"}',
+        isError: true,
+      );
+    }
+    final maxChars = _clampInt(args['max_chars'], fallback: 5000, min: 200, max: 20000);
+    final doc = context.knowledgeProvider.byId(docId);
+    if (doc == null) {
+      return ToolExecutionResult(
+        content: jsonEncode({
+          'error': 'doc_not_found',
+          'doc_id': docId,
+        }),
+        isError: true,
+      );
+    }
+    final body = doc.content;
+    final clipped = body.length > maxChars ? body.substring(0, maxChars) : body;
+    return ToolExecutionResult(
+      content: jsonEncode({
+        'id': doc.id,
+        'title': doc.title,
+        'sourceType': doc.sourceType,
+        'sourcePath': doc.sourcePath,
+        'tags': doc.tags,
+        'content': clipped,
+        'truncated': body.length > maxChars,
+        'totalChars': body.length,
+      }),
+    );
+  }
+
+  Future<ToolExecutionResult> _mcpCall(
+    String qualifiedName,
+    Map<String, dynamic> args,
+    ChatToolRuntimeContext context,
+  ) async {
+    final serverId = ChatToolCatalog.mcpServerId(qualifiedName);
+    final toolName = ChatToolCatalog.mcpToolName(qualifiedName);
+    if (serverId == null || toolName == null || toolName.isEmpty) {
+      return ToolExecutionResult(
+        content: jsonEncode({
+          'error': 'invalid_mcp_tool',
+          'tool': qualifiedName,
+        }),
+        isError: true,
+      );
+    }
+    McpServerConfig? server;
+    for (final item in context.mcpServers) {
+      if (item.id == serverId && item.enabled) {
+        server = item;
+        break;
+      }
+    }
+    if (server == null) {
+      return ToolExecutionResult(
+        content: jsonEncode({
+          'error': 'mcp_server_not_found',
+          'serverId': serverId,
+          'tool': toolName,
+        }),
+        isError: true,
+      );
+    }
+    return _mcpClient.callTool(
+      server: server,
+      toolName: toolName,
+      arguments: args,
     );
   }
 

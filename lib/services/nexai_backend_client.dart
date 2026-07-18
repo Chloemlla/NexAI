@@ -147,12 +147,15 @@ class NexaiBackendClient {
       body: body,
     );
     try {
-      return await send(signed).timeout(
+      final response = await send(signed).timeout(
         requestTimeout,
         onTimeout: () {
           throw NexaiBackendTimeoutException(method, url, requestTimeout);
         },
       );
+      // Soft mode (NEXAI_REQUEST_SIGNING=soft) may still return 2xx with fail headers.
+      logSoftSignatureHeaders(response);
+      return response;
     } on NexaiApiError {
       rethrow;
     } on SocketException catch (e) {
@@ -209,6 +212,16 @@ class NexaiBackendClient {
       body: response.body,
       path: response.request?.url.path,
       method: method ?? response.request?.method,
+    );
+  }
+
+  /// Soft-mode backend may attach these even on 2xx responses.
+  static void logSoftSignatureHeaders(http.Response response) {
+    final result = response.headers['x-nexai-sig-result'];
+    final code = response.headers['x-nexai-sig-code'];
+    if (result == null && code == null) return;
+    debugPrint(
+      'NexAI Backend: soft sig header result=${result ?? "-"} code=${code ?? "-"} path=${response.request?.url.path}',
     );
   }
 

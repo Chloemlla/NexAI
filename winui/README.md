@@ -40,6 +40,8 @@ Security notes:
 - ffmpeg invocations use `ArgumentList` with path validation (no shell string concatenation)
 - NexAI backend calls use `nexai-sig-v2` HMAC signing (short-lived device key → access token → `NEXAI_APP_SIGN_SECRET`)
 - TLS certificate pinning for `tts.chloemlla.com` (TOFU + DPAPI pin store, rotation via system-CA trust)
+  - Method-aware public exemptions (GET/HEAD only): oauth-config, github callback, release manifest, artifact shortId
+  - Soft-mode `X-NexAI-Sig-Result/Code` headers are logged; enforce-mode staged errors surface via API clients
 
 Local data roots:
 

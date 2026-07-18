@@ -98,7 +98,7 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
         }
 
-        if (requireSignature)
+        if (requireSignature && !IsSignatureExempt(method, absoluteUrl))
         {
             var (key, keyId) = await ResolveSigningKeyAsync(
                     bearerToken,
@@ -128,6 +128,7 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
         }
 
         var response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        LogSoftSignatureHeaders(response, absoluteUrl);
 
         // TOFU bootstrap: if no pin yet and host is pinned host, capture peer cert when available.
         // Validation callback already stores pin on first successful system-CA validated handshake.
@@ -322,5 +323,50 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
             "/api/nexai/security/status";
     }
 
+    /// <summary>
+    /// Method-aware public exemptions aligned with Happy-TTS 5baba9cd:
+    /// GET/HEAD only for oauth-config, github callback, release manifest, artifact shortId.
+    /// Mutating artifact methods are NOT exempt.
+    /// </summary>
+    public static bool IsSignatureExempt(HttpMethod method, string absoluteUrl)
+    {
+        var m = method.Method.ToUpperInvariant();
+        if (m is not ("GET" or "HEAD"))
+        {
+            return false;
+        }
+
+        var path = NexaiRequestSigner.NormalizePath(absoluteUrl);
+        if (path == "/api/nexai/auth/oauth-config") return true;
+        if (path == "/api/nexai/auth/github/callback") return true;
+        if (System.Text.RegularExpressions.Regex.IsMatch(path, @"^/api/nexai/releases/[^/]+/manifest$")) return true;
+        if (System.Text.RegularExpressions.Regex.IsMatch(path, @"^/api/nexai/artifacts/[^/]+$")) return true;
+        return false;
+    }
+
     public void Dispose() => _client.Dispose();
+
+    private static void LogSoftSignatureHeaders(HttpResponseMessage response, string absoluteUrl)
+    {
+        if (!response.Headers.TryGetValues("X-NexAI-Sig-Result", out var results) &&
+            !response.Headers.TryGetValues("X-NexAI-Sig-Code", out _))
+        {
+            return;
+        }
+
+        string? result = null;
+        string? code = null;
+        if (response.Headers.TryGetValues("X-NexAI-Sig-Result", out var resultValues))
+        {
+            result = resultValues.FirstOrDefault();
+        }
+
+        if (response.Headers.TryGetValues("X-NexAI-Sig-Code", out var codeValues))
+        {
+            code = codeValues.FirstOrDefault();
+        }
+
+        System.Diagnostics.Debug.WriteLine(
+            $"NexAI soft sig header result={result ?? "-"} code={code ?? "-"} path={NexaiRequestSigner.NormalizePath(absoluteUrl)}");
+    }
 }

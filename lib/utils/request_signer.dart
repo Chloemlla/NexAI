@@ -15,6 +15,10 @@
 ///   1) accessToken / explicit signingKey  → Token-bound (B)
 ///   2) NEXAI_APP_SIGN_SECRET dart-define → App secret (C)
 ///
+/// Server error stages (Happy-TTS 5baba9cd):
+///   server_signature / server_auth / rate_limit
+/// Soft mode may return 2xx with X-NexAI-Sig-Result/Code headers.
+///
 /// ## v1 (legacy, soft client-only)
 /// DeviceId-derived key — kept for compatibility; backend may ignore.
 library;

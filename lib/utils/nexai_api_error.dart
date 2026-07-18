@@ -107,8 +107,17 @@ NexaiApiError nexaiErrorFromResponse({
             (map['code'] ?? map['errorCode'] ?? 'HTTP_$statusCode').toString();
         final stage =
             (map['stage'] ?? _stageFromStatus(statusCode, code)).toString();
-        final message =
-            (map['error'] ?? map['message'] ?? '请求失败').toString();
+        // Happy-TTS sig-v2 envelopes may include both `error` and optional
+        // human-readable `message` (auth/rate-limit compatibility).
+        final errorText = map['error']?.toString();
+        final messageText = map['message']?.toString();
+        final message = (messageText != null && messageText.trim().isNotEmpty)
+            ? (errorText != null &&
+                      errorText.trim().isNotEmpty &&
+                      errorText != messageText
+                  ? '$errorText（$messageText）'
+                  : messageText)
+            : (errorText ?? '请求失败');
         return NexaiApiError(
           stage: stage,
           code: code,
@@ -132,7 +141,16 @@ NexaiApiError nexaiErrorFromResponse({
 }
 
 String _stageFromStatus(int statusCode, String? code) {
-  if (code != null && code.startsWith('NEXAI_SIG_')) return 'server_signature';
+  if (code != null) {
+    if (code.startsWith('NEXAI_SIG_')) return 'server_signature';
+    if (code == 'NEXAI_RATE_LIMIT') return 'rate_limit';
+    if (code.startsWith('NEXAI_AUTH_') ||
+        code.startsWith('NEXAI_TOKEN_') ||
+        code == 'NEXAI_ADMIN_REQUIRED' ||
+        code == 'NEXAI_USER_NOT_FOUND') {
+      return 'server_auth';
+    }
+  }
   if (statusCode == 429) return 'rate_limit';
   if (statusCode == 401 || statusCode == 403) return 'server_auth';
   if (statusCode >= 500) return 'server_internal';

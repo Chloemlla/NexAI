@@ -11,9 +11,7 @@
   <data name="Nav.Notes" xml:space="preserve"><value>笔记</value></data>
   <data name="Nav.Tools" xml:space="preserve"><value>工具</value></data>
   <data name="Nav.Settings" xml:space="preserve"><value>设置</value></data>
-
-  <data name="Common.Save" xml:space="preserve"><value>保存</value></data>
-  <data name="Common.Run" xml:space="preserve"><value>运行</value></data>
+<data name="Common.Run" xml:space="preserve"><value>运行</value></data>
   <data name="Common.Copy" xml:space="preserve"><value>复制输出</value></data>
   <data name="Common.Search" xml:space="preserve"><value>搜索</value></data>
   <data name="Common.Input" xml:space="preserve"><value>输入</value></data>
@@ -100,5 +98,72 @@
   <data name="Tool.Category.Media" xml:space="preserve"><value>媒体</value></data>
 
   <data name="Chat.Title" xml:space="preserve"><value>聊天</value></data>
+
+  <data name="Common.New" xml:space="preserve"><value>新建</value></data>
+  <data name="Common.Delete" xml:space="preserve"><value>删除</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Common.OK" xml:space="preserve"><value>确定</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>保存</value></data>
+  <data name="Common.Star" xml:space="preserve"><value>加星</value></data>
+  <data name="Common.Unstar" xml:space="preserve"><value>取消加星</value></data>
+  <data name="Common.Title" xml:space="preserve"><value>标题</value></data>
+  <data name="Common.Send" xml:space="preserve"><value>发送</value></data>
+  <data name="Common.Stop" xml:space="preserve"><value>停止</value></data>
+
+  <data name="Chat.Conversations" xml:space="preserve"><value>会话</value></data>
+  <data name="Chat.Count" xml:space="preserve"><value>{0} 个会话</value></data>
+  <data name="Chat.CountPlural" xml:space="preserve"><value>{0} 个会话</value></data>
+  <data name="Chat.SearchPlaceholder" xml:space="preserve"><value>搜索会话</value></data>
+  <data name="Chat.EmptyTitle" xml:space="preserve"><value>暂无会话</value></data>
+  <data name="Chat.EmptySubtitle" xml:space="preserve"><value>创建一个会话开始聊天。</value></data>
+  <data name="Chat.TitleFallback" xml:space="preserve"><value>聊天</value></data>
+  <data name="Chat.SelectOrCreate" xml:space="preserve"><value>选择或创建一个会话。</value></data>
+  <data name="Chat.MetaStreaming" xml:space="preserve"><value>{0} 条消息 · 流式输出中</value></data>
+  <data name="Chat.MetaLocal" xml:space="preserve"><value>{0} 条消息 · 本地存储</value></data>
+  <data name="Chat.MetaLocalPlural" xml:space="preserve"><value>{0} 条消息 · 本地存储</value></data>
+  <data name="Chat.NoMessagesTitle" xml:space="preserve"><value>还没有消息</value></data>
+  <data name="Chat.NoMessagesSubtitle" xml:space="preserve"><value>发送一条消息，开始使用已配置的 API 流式对话。</value></data>
+  <data name="Chat.ComposerPlaceholder" xml:space="preserve"><value>给 NexAI 发消息...</value></data>
+  <data name="Chat.DeleteConversationTooltip" xml:space="preserve"><value>删除会话</value></data>
+  <data name="Chat.DeleteDialogTitle" xml:space="preserve"><value>删除会话</value></data>
+  <data name="Chat.DeleteDialogBody" xml:space="preserve"><value>这将永久删除本地会话。</value></data>
+  <data name="Chat.CreateFailedTitle" xml:space="preserve"><value>无法创建会话</value></data>
+  <data name="Chat.OpenFailedTitle" xml:space="preserve"><value>无法打开会话</value></data>
+  <data name="Chat.DeleteFailedTitle" xml:space="preserve"><value>无法删除会话</value></data>
+  <data name="Chat.StreamingTitle" xml:space="preserve"><value>正在流式输出</value></data>
+  <data name="Chat.StreamingSwitchBody" xml:space="preserve"><value>切换会话前请先停止当前回复。</value></data>
+  <data name="Chat.StreamingDeleteBody" xml:space="preserve"><value>删除会话前请先停止当前回复。</value></data>
+  <data name="Chat.SendFailedTitle" xml:space="preserve"><value>无法发送消息</value></data>
+  <data name="Chat.HintStreaming" xml:space="preserve"><value>流式输出中...</value></data>
+  <data name="Chat.HintPressSend" xml:space="preserve"><value>点击发送</value></data>
+  <data name="Chat.HintReady" xml:space="preserve"><value>就绪</value></data>
+
   <data name="Notes.Title" xml:space="preserve"><value>笔记</value></data>
+  <data name="Notes.Count" xml:space="preserve"><value>{0} 条笔记</value></data>
+  <data name="Notes.CountPlural" xml:space="preserve"><value>{0} 条笔记</value></data>
+  <data name="Notes.SearchPlaceholder" xml:space="preserve"><value>搜索笔记</value></data>
+  <data name="Notes.Untitled" xml:space="preserve"><value>未命名笔记</value></data>
+  <data name="Notes.EditorPlaceholder" xml:space="preserve"><value>用 Markdown 写笔记，支持 #标签 与 [[双向链接]]...</value></data>
+  <data name="Notes.CreateToStart" xml:space="preserve"><value>创建一条笔记开始记录。</value></data>
+  <data name="Notes.Created" xml:space="preserve"><value>笔记已创建。</value></data>
+  <data name="Notes.Saved" xml:space="preserve"><value>笔记已保存。</value></data>
+  <data name="Notes.DeleteTitle" xml:space="preserve"><value>删除笔记</value></data>
+  <data name="Notes.DeleteBody" xml:space="preserve"><value>确定永久删除这条笔记吗？</value></data>
+  <data name="Notes.Updated" xml:space="preserve"><value>更新于 {0}</value></data>
+  <data name="Notes.TagsUpdated" xml:space="preserve"><value>标签：{0} · 更新于 {1}</value></data>
+
+  <data name="Settings.SignedInAs" xml:space="preserve"><value>已登录：{0}。</value></data>
+  <data name="Settings.NotSignedIn" xml:space="preserve"><value>未登录。</value></data>
+  <data name="Settings.Sync.Uploading" xml:space="preserve"><value>正在上传加密快照…</value></data>
+  <data name="Settings.Sync.Downloading" xml:space="preserve"><value>正在下载加密快照…</value></data>
+  <data name="Settings.Sync.Success" xml:space="preserve"><value>上次同步成功：{0}。密钥 {1}</value></data>
+  <data name="Settings.Sync.Error" xml:space="preserve"><value>同步错误</value></data>
+  <data name="Settings.Sync.Idle" xml:space="preserve"><value>空闲。密钥 {0}</value></data>
+  <data name="Settings.Sync.KeyNone" xml:space="preserve"><value>（无）</value></data>
+  <data name="Settings.Sync.KeyExported" xml:space="preserve"><value>恢复密钥已导出到上方输入框。</value></data>
+  <data name="Settings.Sync.KeyImported" xml:space="preserve"><value>恢复密钥已导入。</value></data>
+  <data name="Settings.Sync.NexAI" xml:space="preserve"><value>NexAI /sync/v2</value></data>
+  <data name="Settings.Sync.WebDAV" xml:space="preserve"><value>WebDAV</value></data>
+  <data name="Settings.Sync.UpStash" xml:space="preserve"><value>UpStash</value></data>
+
 </root>

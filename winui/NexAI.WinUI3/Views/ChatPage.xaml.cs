@@ -11,6 +11,7 @@ public sealed partial class ChatPage : Page
 {
     private readonly IConversationStore _conversationStore;
     private readonly ChatSessionService _chatSession;
+    private readonly ILocalizationService _localization;
     private string _searchQuery = string.Empty;
     private bool _isBusy;
 
@@ -19,6 +20,8 @@ public sealed partial class ChatPage : Page
         InitializeComponent();
         _conversationStore = App.Current.Services.GetRequiredService<IConversationStore>();
         _chatSession = App.Current.Services.GetRequiredService<ChatSessionService>();
+        _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
+        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(RefreshUi);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -26,6 +29,7 @@ public sealed partial class ChatPage : Page
         base.OnNavigatedTo(e);
         _conversationStore.Changed += OnConversationStoreChanged;
         _chatSession.StateChanged += OnChatSessionStateChanged;
+        ApplyStaticLocalization();
         RefreshUi();
     }
 
@@ -63,7 +67,7 @@ public sealed partial class ChatPage : Page
         }
         catch (Exception ex)
         {
-            await ShowInfoAsync("Could not create conversation", ex.Message);
+            await ShowInfoAsync(_localization.GetString("Chat.CreateFailedTitle"), ex.Message);
         }
         finally
         {
@@ -77,7 +81,7 @@ public sealed partial class ChatPage : Page
     {
         if (_chatSession.IsStreaming)
         {
-            await ShowInfoAsync("Streaming in progress", "Stop the current response before switching chats.");
+            await ShowInfoAsync(_localization.GetString("Chat.StreamingTitle"), _localization.GetString("Chat.StreamingSwitchBody"));
             return;
         }
 
@@ -92,7 +96,7 @@ public sealed partial class ChatPage : Page
         }
         catch (Exception ex)
         {
-            await ShowInfoAsync("Could not open conversation", ex.Message);
+            await ShowInfoAsync(_localization.GetString("Chat.OpenFailedTitle"), ex.Message);
         }
     }
 
@@ -122,16 +126,16 @@ public sealed partial class ChatPage : Page
         if (_chatSession.IsStreaming &&
             string.Equals(conversationId, _conversationStore.CurrentConversationId, StringComparison.Ordinal))
         {
-            await ShowInfoAsync("Streaming in progress", "Stop the current response before deleting this chat.");
+            await ShowInfoAsync(_localization.GetString("Chat.StreamingTitle"), _localization.GetString("Chat.StreamingDeleteBody"));
             return;
         }
 
         var dialog = new ContentDialog
         {
-            Title = "Delete conversation",
-            Content = "This removes the local conversation permanently.",
-            PrimaryButtonText = "Delete",
-            CloseButtonText = "Cancel",
+            Title = _localization.GetString("Chat.DeleteDialogTitle"),
+            Content = _localization.GetString("Chat.DeleteDialogBody"),
+            PrimaryButtonText = _localization.GetString("Common.Delete"),
+            CloseButtonText = _localization.GetString("Common.Cancel"),
             DefaultButton = ContentDialogButton.Close,
             XamlRoot = XamlRoot,
         };
@@ -148,7 +152,7 @@ public sealed partial class ChatPage : Page
         }
         catch (Exception ex)
         {
-            await ShowInfoAsync("Could not delete conversation", ex.Message);
+            await ShowInfoAsync(_localization.GetString("Chat.DeleteFailedTitle"), ex.Message);
         }
     }
 
@@ -185,7 +189,7 @@ public sealed partial class ChatPage : Page
         }
         catch (Exception ex)
         {
-            await ShowInfoAsync("Could not send message", ex.Message);
+            await ShowInfoAsync(_localization.GetString("Chat.SendFailedTitle"), ex.Message);
         }
         finally
         {
@@ -201,12 +205,15 @@ public sealed partial class ChatPage : Page
 
     private void RefreshUi()
     {
+        ApplyStaticLocalization();
         var all = _conversationStore.Conversations;
         var filtered = FilterConversations(all).ToList();
         var current = _conversationStore.CurrentConversation;
 
         ConversationList.ItemsSource = filtered;
-        ConversationCountText.Text = $"{all.Count} chat{(all.Count == 1 ? string.Empty : "s")}";
+        ConversationCountText.Text = all.Count == 1
+            ? _localization.GetString("Chat.Count", all.Count)
+            : _localization.GetString("Chat.CountPlural", all.Count);
         ConversationEmptyState.Visibility =
             filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
@@ -220,12 +227,14 @@ public sealed partial class ChatPage : Page
             ConversationList.SelectedItem = null;
         }
 
-        CurrentTitleText.Text = current?.Title ?? "Chat";
+        CurrentTitleText.Text = current?.Title ?? _localization.GetString("Chat.TitleFallback");
         CurrentMetaText.Text = current is null
-            ? "Select or create a conversation."
+            ? _localization.GetString("Chat.SelectOrCreate")
             : _chatSession.IsStreaming
-                ? $"{current.Messages.Count} messages · streaming"
-                : $"{current.Messages.Count} message{(current.Messages.Count == 1 ? string.Empty : "s")} · local store";
+                ? _localization.GetString("Chat.MetaStreaming", current.Messages.Count)
+                : current.Messages.Count == 1
+                    ? _localization.GetString("Chat.MetaLocal", current.Messages.Count)
+                    : _localization.GetString("Chat.MetaLocalPlural", current.Messages.Count);
         DeleteCurrentButton.IsEnabled = current is not null && !_chatSession.IsStreaming;
 
         var messages = current?.Messages ?? [];
@@ -254,10 +263,10 @@ public sealed partial class ChatPage : Page
         NewChatButton.IsEnabled = !streaming && !_isBusy;
 
         ComposerHintText.Text = streaming
-            ? "Streaming..."
+            ? _localization.GetString("Chat.HintStreaming")
             : hasText
-                ? "Press Send"
-                : "Ready";
+                ? _localization.GetString("Chat.HintPressSend")
+                : _localization.GetString("Chat.HintReady");
     }
 
     private IEnumerable<Conversation> FilterConversations(IReadOnlyList<Conversation> source)
@@ -280,7 +289,7 @@ public sealed partial class ChatPage : Page
         {
             Title = title,
             Content = message,
-            CloseButtonText = "OK",
+            CloseButtonText = _localization.GetString("Common.OK"),
             XamlRoot = XamlRoot,
         };
         await dialog.ShowAsync();

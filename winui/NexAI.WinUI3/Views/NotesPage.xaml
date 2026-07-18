@@ -29,7 +29,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="2">
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Notes" />
+                        <TextBlock x:Name="NotesTitleText" Style="{StaticResource SubtitleTextBlockStyle}" Text="Notes" />
                         <TextBlock x:Name="NotesCountText" Opacity="0.72" Style="{StaticResource CaptionTextBlockStyle}" Text="0 notes" />
                     </StackPanel>
                     <Button x:Name="NewNoteButton" Grid.Column="1" Content="New" Style="{StaticResource AccentButtonStyle}" Click="NewNoteButton_Click" />

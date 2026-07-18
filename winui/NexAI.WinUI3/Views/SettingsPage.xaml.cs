@@ -182,7 +182,7 @@ public sealed partial class SettingsPage : Page
         try
         {
             RecoveryKeyBox.Text = await _syncService.ExportRecoveryKeyAsync();
-            SyncStatusText.Text = "Recovery key exported into the field above.";
+            SyncStatusText.Text = _localization.GetString("Settings.Sync.KeyExported");
         }
         catch (Exception ex)
         {
@@ -195,7 +195,7 @@ public sealed partial class SettingsPage : Page
         try
         {
             await _syncService.ImportRecoveryKeyAsync(RecoveryKeyBox.Text ?? string.Empty);
-            SyncStatusText.Text = "Recovery key imported.";
+            SyncStatusText.Text = _localization.GetString("Settings.Sync.KeyImported");
             RefreshSync();
         }
         catch (Exception ex)
@@ -317,6 +317,9 @@ public sealed partial class SettingsPage : Page
         RecoveryKeyBox.Header = _localization.GetString("Settings.ImportRecoveryKeyBox");
         UploadSyncButton.Content = _localization.GetString("Common.Upload");
         DownloadSyncButton.Content = _localization.GetString("Common.Download");
+        if (SyncMethodBox.Items[0] is ComboBoxItem syncNexai) syncNexai.Content = _localization.GetString("Settings.Sync.NexAI");
+        if (SyncMethodBox.Items[1] is ComboBoxItem syncWebdav) syncWebdav.Content = _localization.GetString("Settings.Sync.WebDAV");
+        if (SyncMethodBox.Items[2] is ComboBoxItem syncUpstash) syncUpstash.Content = _localization.GetString("Settings.Sync.UpStash");
     }
 
     private SyncBackendKind ReadSyncMethod()
@@ -333,8 +336,8 @@ public sealed partial class SettingsPage : Page
     {
         var session = _authStore.Current;
         AccountStatusText.Text = session.IsAuthenticated
-            ? $"Signed in as {session.DisplayName ?? session.Username ?? session.Email ?? "user"}."
-            : "Not signed in.";
+            ? _localization.GetString("Settings.SignedInAs", session.DisplayName ?? session.Username ?? session.Email ?? "user")
+            : _localization.GetString("Settings.NotSignedIn");
     }
 
     private void RefreshSync()
@@ -342,11 +345,16 @@ public sealed partial class SettingsPage : Page
         var state = _syncService.State;
         SyncStatusText.Text = state.Status switch
         {
-            SyncStatus.Uploading => "Uploading encrypted snapshot…",
-            SyncStatus.Downloading => "Downloading encrypted snapshot…",
-            SyncStatus.Success => $"Last sync success at {state.LastSyncedAt?.ToLocalTime():g}. Key {state.RecoveryKeyHint}",
-            SyncStatus.Error => state.ErrorMessage ?? "Sync error",
-            _ => $"Idle. Key {state.RecoveryKeyHint ?? "(none)"}",
+            SyncStatus.Uploading => _localization.GetString("Settings.Sync.Uploading"),
+            SyncStatus.Downloading => _localization.GetString("Settings.Sync.Downloading"),
+            SyncStatus.Success => _localization.GetString(
+                "Settings.Sync.Success",
+                state.LastSyncedAt?.ToLocalTime().ToString("g") ?? "-",
+                state.RecoveryKeyHint ?? _localization.GetString("Settings.Sync.KeyNone")),
+            SyncStatus.Error => state.ErrorMessage ?? _localization.GetString("Settings.Sync.Error"),
+            _ => _localization.GetString(
+                "Settings.Sync.Idle",
+                state.RecoveryKeyHint ?? _localization.GetString("Settings.Sync.KeyNone")),
         };
     }
 

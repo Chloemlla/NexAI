@@ -36,7 +36,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Spacing="2">
-                        <TextBlock Style="{StaticResource SubtitleTextBlockStyle}" Text="Conversations" />
+                        <TextBlock x:Name="ConversationsTitleText" Style="{StaticResource SubtitleTextBlockStyle}" Text="Conversations" />
                         <TextBlock
                             x:Name="ConversationCountText"
                             Opacity="0.72"
@@ -102,7 +102,7 @@
                                         BorderThickness="0"
                                         Tag="{x:Bind Id}"
                                         Click="DeleteConversationButton_Click"
-                                        ToolTipService.ToolTip="Delete conversation">
+                                        x:Name="DeleteConversationTooltipHost" ToolTipService.ToolTip="Delete conversation">
                                         <FontIcon Glyph="&#xE74D;" FontSize="12" />
                                     </Button>
                                 </Grid>
@@ -117,11 +117,11 @@
                         Spacing="8"
                         Visibility="Collapsed">
                         <FontIcon Glyph="&#xE8BD;" FontSize="24" />
-                        <TextBlock Text="No conversations" HorizontalAlignment="Center" />
+                        <TextBlock x:Name="ConversationEmptyTitleText" Text="No conversations" HorizontalAlignment="Center" />
                         <TextBlock
                             Opacity="0.72"
                             HorizontalAlignment="Center"
-                            Text="Create a chat to get started." />
+                            x:Name="ConversationEmptySubtitleText" Text="Create a chat to get started." />
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -202,11 +202,11 @@
                         <TextBlock
                             Style="{StaticResource SubtitleTextBlockStyle}"
                             HorizontalAlignment="Center"
-                            Text="No messages yet" />
+                            x:Name="MessageEmptyTitleText" Text="No messages yet" />
                         <TextBlock
                             Opacity="0.72"
                             HorizontalAlignment="Center"
-                            Text="Send a message to start streaming from your configured API." />
+                            x:Name="MessageEmptySubtitleText" Text="Send a message to start streaming from your configured API." />
                     </StackPanel>
                 </Grid>
             </Border>

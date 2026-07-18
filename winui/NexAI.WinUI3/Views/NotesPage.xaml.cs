@@ -3,12 +3,14 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using NexAI.Core.Notes;
+using NexAI.WinUI3.Services;
 
 namespace NexAI.WinUI3.Views;
 
 public sealed partial class NotesPage : Page
 {
     private readonly INotesStore _notesStore;
+    private readonly ILocalizationService _localization;
     private string? _selectedId;
     private string _query = string.Empty;
 
@@ -16,12 +18,15 @@ public sealed partial class NotesPage : Page
     {
         InitializeComponent();
         _notesStore = App.Current.Services.GetRequiredService<INotesStore>();
+        _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
+        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(RefreshList);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         _notesStore.Changed += OnChanged;
+        ApplyStaticLocalization();
         RefreshList();
     }
 
@@ -42,14 +47,16 @@ public sealed partial class NotesPage : Page
                 n.Content.Contains(_query, StringComparison.OrdinalIgnoreCase))
             .ToList();
         NotesList.ItemsSource = notes;
-        NotesCountText.Text = $"{_notesStore.Notes.Count} note{(_notesStore.Notes.Count == 1 ? string.Empty : "s")}";
+        NotesCountText.Text = _notesStore.Notes.Count == 1
+            ? _localization.GetString("Notes.Count", _notesStore.Notes.Count)
+            : _localization.GetString("Notes.CountPlural", _notesStore.Notes.Count);
         var selected = notes.FirstOrDefault(n => n.Id == _selectedId) ?? notes.FirstOrDefault();
         if (selected is null)
         {
             _selectedId = null;
             TitleBox.Text = string.Empty;
             ContentBox.Text = string.Empty;
-            StatusText.Text = "Create a note to get started.";
+            StatusText.Text = _localization.GetString("Notes.CreateToStart");
             return;
         }
 
@@ -57,11 +64,11 @@ public sealed partial class NotesPage : Page
         NotesList.SelectedItem = selected;
         TitleBox.Text = selected.Title;
         ContentBox.Text = selected.Content;
-        StarButton.Content = selected.IsStarred ? "Unstar" : "Star";
+        StarButton.Content = selected.IsStarred ? _localization.GetString("Common.Unstar") : _localization.GetString("Common.Star");
         var tags = selected.Tags;
         StatusText.Text = tags.Count == 0
-            ? $"Updated {selected.UpdatedAt.ToLocalTime():g}"
-            : $"Tags: {string.Join(", ", tags)} · Updated {selected.UpdatedAt.ToLocalTime():g}";
+            ? _localization.GetString("Notes.Updated", selected.UpdatedAt.ToLocalTime().ToString("g"))
+            : _localization.GetString("Notes.TagsUpdated", string.Join(", ", tags), selected.UpdatedAt.ToLocalTime().ToString("g"));
     }
 
     private async void NewNoteButton_Click(object sender, RoutedEventArgs e)
@@ -92,16 +99,16 @@ public sealed partial class NotesPage : Page
         {
             var created = await _notesStore.CreateAsync(TitleBox.Text, ContentBox.Text);
             _selectedId = created.Id;
-            StatusText.Text = "Note created.";
+            StatusText.Text = _localization.GetString("Notes.Created");
             return;
         }
 
         var note = _notesStore.Notes.FirstOrDefault(n => n.Id == _selectedId);
         if (note is null) return;
-        note.Title = string.IsNullOrWhiteSpace(TitleBox.Text) ? "Untitled Note" : TitleBox.Text.Trim();
+        note.Title = string.IsNullOrWhiteSpace(TitleBox.Text) ? _localization.GetString("Notes.Untitled") : TitleBox.Text.Trim();
         note.Content = ContentBox.Text ?? string.Empty;
         await _notesStore.UpdateAsync(note);
-        StatusText.Text = "Note saved.";
+        StatusText.Text = _localization.GetString("Notes.Saved");
     }
 
     private async void DeleteButton_Click(object sender, RoutedEventArgs e)
@@ -109,10 +116,10 @@ public sealed partial class NotesPage : Page
         if (_selectedId is null) return;
         var dialog = new ContentDialog
         {
-            Title = "Delete note",
-            Content = "Delete this note permanently?",
-            PrimaryButtonText = "Delete",
-            CloseButtonText = "Cancel",
+            Title = _localization.GetString("Notes.DeleteTitle"),
+            Content = _localization.GetString("Notes.DeleteBody"),
+            PrimaryButtonText = _localization.GetString("Common.Delete"),
+            CloseButtonText = _localization.GetString("Common.Cancel"),
             XamlRoot = XamlRoot,
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;

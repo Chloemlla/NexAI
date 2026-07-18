@@ -32,6 +32,7 @@ Implemented:
 - Advanced rendering: LaTeX Unicode math preview + Mermaid edge/node preview cards
 - Sync restore uses atomic conversation `ReplaceAll` (id-preserving)
 - i18n foundation: `Strings/en-US` + `Strings/zh-CN`, runtime language apply, localized nav/tools/settings shell text
+  - Full-page bilingual coverage for Chat / Notes / Tools / Settings (static + dynamic UI strings)
 - CI/release Windows packaging builds this WinUI3 client only
 
 Local data roots:

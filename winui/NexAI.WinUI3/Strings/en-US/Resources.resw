@@ -11,9 +11,7 @@
   <data name="Nav.Notes" xml:space="preserve"><value>Notes</value></data>
   <data name="Nav.Tools" xml:space="preserve"><value>Tools</value></data>
   <data name="Nav.Settings" xml:space="preserve"><value>Settings</value></data>
-
-  <data name="Common.Save" xml:space="preserve"><value>Save</value></data>
-  <data name="Common.Run" xml:space="preserve"><value>Run</value></data>
+<data name="Common.Run" xml:space="preserve"><value>Run</value></data>
   <data name="Common.Copy" xml:space="preserve"><value>Copy output</value></data>
   <data name="Common.Search" xml:space="preserve"><value>Search</value></data>
   <data name="Common.Input" xml:space="preserve"><value>Input</value></data>
@@ -100,5 +98,72 @@
   <data name="Tool.Category.Media" xml:space="preserve"><value>Media</value></data>
 
   <data name="Chat.Title" xml:space="preserve"><value>Chat</value></data>
+
+  <data name="Common.New" xml:space="preserve"><value>New</value></data>
+  <data name="Common.Delete" xml:space="preserve"><value>Delete</value></data>
+  <data name="Common.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="Common.OK" xml:space="preserve"><value>OK</value></data>
+  <data name="Common.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common.Star" xml:space="preserve"><value>Star</value></data>
+  <data name="Common.Unstar" xml:space="preserve"><value>Unstar</value></data>
+  <data name="Common.Title" xml:space="preserve"><value>Title</value></data>
+  <data name="Common.Send" xml:space="preserve"><value>Send</value></data>
+  <data name="Common.Stop" xml:space="preserve"><value>Stop</value></data>
+
+  <data name="Chat.Conversations" xml:space="preserve"><value>Conversations</value></data>
+  <data name="Chat.Count" xml:space="preserve"><value>{0} chat</value></data>
+  <data name="Chat.CountPlural" xml:space="preserve"><value>{0} chats</value></data>
+  <data name="Chat.SearchPlaceholder" xml:space="preserve"><value>Search conversations</value></data>
+  <data name="Chat.EmptyTitle" xml:space="preserve"><value>No conversations</value></data>
+  <data name="Chat.EmptySubtitle" xml:space="preserve"><value>Create a chat to get started.</value></data>
+  <data name="Chat.TitleFallback" xml:space="preserve"><value>Chat</value></data>
+  <data name="Chat.SelectOrCreate" xml:space="preserve"><value>Select or create a conversation.</value></data>
+  <data name="Chat.MetaStreaming" xml:space="preserve"><value>{0} messages · streaming</value></data>
+  <data name="Chat.MetaLocal" xml:space="preserve"><value>{0} message · local store</value></data>
+  <data name="Chat.MetaLocalPlural" xml:space="preserve"><value>{0} messages · local store</value></data>
+  <data name="Chat.NoMessagesTitle" xml:space="preserve"><value>No messages yet</value></data>
+  <data name="Chat.NoMessagesSubtitle" xml:space="preserve"><value>Send a message to start streaming from your configured API.</value></data>
+  <data name="Chat.ComposerPlaceholder" xml:space="preserve"><value>Message NexAI...</value></data>
+  <data name="Chat.DeleteConversationTooltip" xml:space="preserve"><value>Delete conversation</value></data>
+  <data name="Chat.DeleteDialogTitle" xml:space="preserve"><value>Delete conversation</value></data>
+  <data name="Chat.DeleteDialogBody" xml:space="preserve"><value>This removes the local conversation permanently.</value></data>
+  <data name="Chat.CreateFailedTitle" xml:space="preserve"><value>Could not create conversation</value></data>
+  <data name="Chat.OpenFailedTitle" xml:space="preserve"><value>Could not open conversation</value></data>
+  <data name="Chat.DeleteFailedTitle" xml:space="preserve"><value>Could not delete conversation</value></data>
+  <data name="Chat.StreamingTitle" xml:space="preserve"><value>Streaming in progress</value></data>
+  <data name="Chat.StreamingSwitchBody" xml:space="preserve"><value>Stop the current response before switching chats.</value></data>
+  <data name="Chat.StreamingDeleteBody" xml:space="preserve"><value>Stop the current response before deleting this chat.</value></data>
+  <data name="Chat.SendFailedTitle" xml:space="preserve"><value>Could not send message</value></data>
+  <data name="Chat.HintStreaming" xml:space="preserve"><value>Streaming...</value></data>
+  <data name="Chat.HintPressSend" xml:space="preserve"><value>Press Send</value></data>
+  <data name="Chat.HintReady" xml:space="preserve"><value>Ready</value></data>
+
   <data name="Notes.Title" xml:space="preserve"><value>Notes</value></data>
+  <data name="Notes.Count" xml:space="preserve"><value>{0} note</value></data>
+  <data name="Notes.CountPlural" xml:space="preserve"><value>{0} notes</value></data>
+  <data name="Notes.SearchPlaceholder" xml:space="preserve"><value>Search notes</value></data>
+  <data name="Notes.Untitled" xml:space="preserve"><value>Untitled Note</value></data>
+  <data name="Notes.EditorPlaceholder" xml:space="preserve"><value>Write markdown notes with #tags and [[wiki-links]]...</value></data>
+  <data name="Notes.CreateToStart" xml:space="preserve"><value>Create a note to get started.</value></data>
+  <data name="Notes.Created" xml:space="preserve"><value>Note created.</value></data>
+  <data name="Notes.Saved" xml:space="preserve"><value>Note saved.</value></data>
+  <data name="Notes.DeleteTitle" xml:space="preserve"><value>Delete note</value></data>
+  <data name="Notes.DeleteBody" xml:space="preserve"><value>Delete this note permanently?</value></data>
+  <data name="Notes.Updated" xml:space="preserve"><value>Updated {0}</value></data>
+  <data name="Notes.TagsUpdated" xml:space="preserve"><value>Tags: {0} · Updated {1}</value></data>
+
+  <data name="Settings.SignedInAs" xml:space="preserve"><value>Signed in as {0}.</value></data>
+  <data name="Settings.NotSignedIn" xml:space="preserve"><value>Not signed in.</value></data>
+  <data name="Settings.Sync.Uploading" xml:space="preserve"><value>Uploading encrypted snapshot…</value></data>
+  <data name="Settings.Sync.Downloading" xml:space="preserve"><value>Downloading encrypted snapshot…</value></data>
+  <data name="Settings.Sync.Success" xml:space="preserve"><value>Last sync success at {0}. Key {1}</value></data>
+  <data name="Settings.Sync.Error" xml:space="preserve"><value>Sync error</value></data>
+  <data name="Settings.Sync.Idle" xml:space="preserve"><value>Idle. Key {0}</value></data>
+  <data name="Settings.Sync.KeyNone" xml:space="preserve"><value>(none)</value></data>
+  <data name="Settings.Sync.KeyExported" xml:space="preserve"><value>Recovery key exported into the field above.</value></data>
+  <data name="Settings.Sync.KeyImported" xml:space="preserve"><value>Recovery key imported.</value></data>
+  <data name="Settings.Sync.NexAI" xml:space="preserve"><value>NexAI /sync/v2</value></data>
+  <data name="Settings.Sync.WebDAV" xml:space="preserve"><value>WebDAV</value></data>
+  <data name="Settings.Sync.UpStash" xml:space="preserve"><value>UpStash</value></data>
+
 </root>

@@ -2412,109 +2412,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Color _contrastColor(Color color) =>
       color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
-}
-
-// ── Shared M3 helpers ──
-
-class _SectionHeader extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final ColorScheme cs;
-  final TextTheme tt;
-  const _SectionHeader({
-    required this.icon,
-    required this.label,
-    required this.cs,
-    required this.tt,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LumenSectionHeader(icon: icon, title: label);
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  final ColorScheme cs;
-  final List<Widget> children;
-  const _SettingsCard({required this.cs, required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return LumenActionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
-      ),
-    );
-  }
-}
-
-class _SliderRow extends StatelessWidget {
-  final ColorScheme cs;
-  final TextTheme tt;
-  final IconData icon;
-  final String label;
-  final double value;
-  final String displayValue;
-  final double min, max;
-  final int divisions;
-  final ValueChanged<double> onChanged;
-
-  const _SliderRow({
-    required this.cs,
-    required this.tt,
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.displayValue,
-    required this.min,
-    required this.max,
-    required this.divisions,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 18, color: cs.primary),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withAlpha(120),
-                borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
-              ),
-              child: Text(
-                displayValue,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
-                ),
-              ),
-            ),
-          ],
-        ),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          divisions: divisions,
-          onChanged: onChanged,
-        ),
-      ],
-    );
-  }
 
   Future<void> _editMcpServers(
     BuildContext context,
@@ -2651,6 +2548,108 @@ class _SliderRow extends StatelessWidget {
       bearerToken: tokenCtrl.text.trim().isEmpty ? null : tokenCtrl.text.trim(),
     );
   }
-
-
 }
+
+// ── Shared M3 helpers ──
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final ColorScheme cs;
+  final TextTheme tt;
+  const _SectionHeader({
+    required this.icon,
+    required this.label,
+    required this.cs,
+    required this.tt,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LumenSectionHeader(icon: icon, title: label);
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  final ColorScheme cs;
+  final List<Widget> children;
+  const _SettingsCard({required this.cs, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return LumenActionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _SliderRow extends StatelessWidget {
+  final ColorScheme cs;
+  final TextTheme tt;
+  final IconData icon;
+  final String label;
+  final double value;
+  final String displayValue;
+  final double min, max;
+  final int divisions;
+  final ValueChanged<double> onChanged;
+
+  const _SliderRow({
+    required this.cs,
+    required this.tt,
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.displayValue,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 18, color: cs.primary),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer.withAlpha(120),
+                borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
+              ),
+              child: Text(
+                displayValue,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: cs.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
+
+

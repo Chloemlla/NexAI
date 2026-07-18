@@ -474,20 +474,21 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _importKnowledgeDoc() async {
+    final knowledge = context.read<KnowledgeProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     final path = await FileAccessHelper.pickFile(
       allowedExtensions: const ['txt', 'md', 'markdown', 'json', 'csv', 'log'],
     );
     if (path == null) return;
     try {
-      final knowledge = context.read<KnowledgeProvider>();
       final doc = await knowledge.importFile(path);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text(doc == null ? '导入失败' : '已导入知识文档：${doc.title}')),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('导入失败：$e')),
       );
     }
@@ -496,24 +497,28 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _exportChatJson() async {
     final chat = context.read<ChatProvider>();
     final raw = chat.exportConversationsJson(currentOnly: true);
-    await SharePlus.instance.share(ShareParams(text: raw, subject: 'NexAI chat export'));
+    await SharePlus.instance.share(
+      ShareParams(text: raw, subject: 'NexAI chat export'),
+    );
   }
 
   // Kept for future chat backup UX entrypoint.
   // ignore: unused_element
   Future<void> _importChatJson() async {
+    final chat = context.read<ChatProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     final path = await FileAccessHelper.pickFile(allowedExtensions: const ['json']);
     if (path == null) return;
     try {
       final raw = await File(path).readAsString();
-      final count = await context.read<ChatProvider>().importConversationsJson(raw);
+      final count = await chat.importConversationsJson(raw);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('已导入/合并 $count 条会话数据')),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('导入失败：$e')),
       );
     }
@@ -521,9 +526,11 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _editCompareModels(SettingsProvider settings) async {
     final chat = context.read<ChatProvider>();
+    final messenger = ScaffoldMessenger.of(context);
     if (chat.currentConversation == null) {
       await chat.newConversation();
     }
+    if (!mounted) return;
     final selected = <String>{
       ...?chat.currentConversation?.compareModels,
     };
@@ -588,7 +595,7 @@ class _ChatPageState extends State<ChatPage> {
     if (result == null) return;
     if (result.length == 1) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('请至少选择 2 个模型，或清空以关闭对比')),
       );
     }

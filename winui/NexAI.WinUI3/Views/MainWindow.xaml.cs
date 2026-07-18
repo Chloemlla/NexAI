@@ -116,31 +116,18 @@ public sealed partial class MainWindow : Window
         try
         {
             ApplyLocalization();
-            // Defer first navigation one tick so the shell finishes first layout.
-            DispatcherQueue.TryEnqueue(() =>
+            // Do not navigate to Chat here. Startup log shows crash after shell
+            // activation while first page / localization settle; App drives home nav.
+            if (ContentFrame.Content is null)
             {
-                try
+                ContentFrame.Content = new TextBlock
                 {
-                    NavigateTo(AppPage.Chat);
-                    if (RootNavigation.MenuItems.FirstOrDefault() is NavigationViewItem first)
-                    {
-                        RootNavigation.SelectedItem = first;
-                    }
-                }
-                catch (Exception navEx)
-                {
-                    Log("deferred first navigation failed: " + navEx);
-                    if (ContentFrame.Content is null)
-                    {
-                        ContentFrame.Content = new TextBlock
-                        {
-                            Margin = new Thickness(24),
-                            TextWrapping = TextWrapping.WrapWholeWords,
-                            Text = "NexAI shell loaded, but navigation failed:\n" + navEx.Message,
-                        };
-                    }
-                }
-            });
+                    Margin = new Thickness(24),
+                    TextWrapping = TextWrapping.WrapWholeWords,
+                    Text = "Loading NexAI…",
+                };
+            }
+            Log("RootNavigation_Loaded placeholder ready");
         }
         catch (Exception ex)
         {
@@ -155,6 +142,30 @@ public sealed partial class MainWindow : Window
                     Text = "NexAI shell loaded, but navigation failed:\n" + ex.Message,
                 };
             }
+        }
+    }
+
+    public void NavigateHomeSafely()
+    {
+        try
+        {
+            Log("NavigateHomeSafely begin");
+            NavigateTo(AppPage.Chat);
+            if (RootNavigation.MenuItems.FirstOrDefault() is NavigationViewItem first)
+            {
+                RootNavigation.SelectedItem = first;
+            }
+            Log("NavigateHomeSafely complete");
+        }
+        catch (Exception ex)
+        {
+            Log("NavigateHomeSafely failed: " + ex);
+            ContentFrame.Content = new TextBlock
+            {
+                Margin = new Thickness(24),
+                TextWrapping = TextWrapping.WrapWholeWords,
+                Text = "NexAI shell loaded, but opening Chat failed:\n" + ex.Message,
+            };
         }
     }
 

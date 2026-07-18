@@ -13,7 +13,6 @@ using NexAI.Core.Tools;
 using NexAI.Infrastructure;
 using NexAI.WinUI3.Services;
 using NexAI.WinUI3.Views;
-using WinRT.Interop;
 
 namespace NexAI.WinUI3;
 
@@ -49,13 +48,6 @@ public partial class App : Application
         {
             LogStartup("OnLaunched begin");
 
-            // Always surface a window before any heavy init. Startup log shows the
-            // previous build reached "DI ready" then vanished, so first paint must
-            // not depend on MainWindow XAML succeeding.
-            _window = CreateBootstrapWindow("NexAI is starting…");
-            ShowAndActivate(_window);
-            LogStartup("bootstrap window activated");
-
             Services = BuildServices();
             LogStartup("DI ready");
 
@@ -68,23 +60,9 @@ public partial class App : Application
             catch (Exception ex)
             {
                 LogStartup("ThemeService resolve failed: " + ex);
-                ShowFatal(_window, "Theme service failed:\n" + ex.Message);
+                _window = CreateBootstrapWindow("Theme service failed:\n" + ex.Message);
+                ShowAndActivate(_window);
                 return;
-            }
-
-            try
-            {
-                if (_window.Content is FrameworkElement bootstrapRoot)
-                {
-                    themeService.Attach(bootstrapRoot);
-                }
-
-                themeService.Apply(AppThemeMode.System);
-                LogStartup("theme default applied");
-            }
-            catch (Exception ex)
-            {
-                LogStartup("theme default apply failed: " + ex);
             }
 
             MainWindow? mainWindow = null;
@@ -97,12 +75,11 @@ public partial class App : Application
             catch (Exception ex)
             {
                 LogStartup("MainWindow ctor failed: " + ex);
-                ShowFatal(_window, "Main window failed to create:\n" + ex.Message);
+                _window = CreateBootstrapWindow("Main window failed to create:\n" + ex.Message);
+                ShowAndActivate(_window);
                 return;
             }
 
-            // Prefer activating the real shell as its own top-level window. Keep the
-            // bootstrap window only as a fallback surface if that fails.
             try
             {
                 if (mainWindow.Content is FrameworkElement shellRoot)
@@ -110,25 +87,27 @@ public partial class App : Application
                     themeService.Attach(shellRoot);
                 }
 
-                ShowAndActivate(mainWindow);
-                LogStartup("MainWindow activated");
-
-                var bootstrap = _window;
-                _window = mainWindow;
                 try
                 {
-                    bootstrap?.Close();
-                    LogStartup("bootstrap window closed");
+                    themeService.Apply(AppThemeMode.System);
+                    LogStartup("theme default applied");
                 }
-                catch (Exception closeEx)
+                catch (Exception themeEx)
                 {
-                    LogStartup("bootstrap close failed: " + closeEx);
+                    LogStartup("theme default apply failed: " + themeEx);
                 }
+
+                // Single top-level window only. Dual-window bootstrap + Close() was
+                // reaching MainWindow.activated then hard-crashing (0xC0000409).
+                _window = mainWindow;
+                ShowAndActivate(mainWindow);
+                LogStartup("MainWindow activated");
             }
             catch (Exception ex)
             {
                 LogStartup("MainWindow activate failed: " + ex);
-                ShowFatal(_window!, "Main window failed to activate:\n" + ex.Message);
+                _window = CreateBootstrapWindow("Main window failed to activate:\n" + ex.Message);
+                ShowAndActivate(_window);
                 return;
             }
 
@@ -144,6 +123,11 @@ public partial class App : Application
                     var localization = Services.GetRequiredService<ILocalizationService>();
                     await LoadStartupStateAsync(settingsStore, themeService, localization).ConfigureAwait(true);
                     LogStartup("startup load complete");
+
+                    if (_window is MainWindow readyWindow)
+                    {
+                        readyWindow.NavigateHomeSafely();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -249,20 +233,6 @@ public partial class App : Application
         {
             LogStartup("Window.Activate failed: " + ex);
         }
-
-        try
-        {
-            var hwnd = WindowNative.GetWindowHandle(window);
-            if (hwnd != IntPtr.Zero)
-            {
-                NativeMethods.ShowWindow(hwnd, NativeMethods.SwRestore);
-                NativeMethods.SetForegroundWindow(hwnd);
-            }
-        }
-        catch (Exception ex)
-        {
-            LogStartup("BringToForeground failed: " + ex);
-        }
     }
 
     private async Task LoadStartupStateAsync(
@@ -283,10 +253,13 @@ public partial class App : Application
                 SafeLoadAsync("password-vault", () => Services.GetRequiredService<IPasswordVaultStore>().LoadAsync()))
                 .ConfigureAwait(true);
 
+            LogStartup("all stores settled");
             var settings = settingsStore.Current;
+            LogStartup("settings snapshot language=" + settings.Language + " theme=" + settings.ThemeMode);
             try
             {
                 localization.Apply(settings.Language);
+                LogStartup("localization applied");
             }
             catch (Exception ex)
             {
@@ -296,6 +269,7 @@ public partial class App : Application
             try
             {
                 themeService.Apply(settings.ThemeMode);
+                LogStartup("theme applied");
             }
             catch (Exception ex)
             {
@@ -312,6 +286,7 @@ public partial class App : Application
                 try { localization.Apply(settingsStore.Current.Language); }
                 catch (Exception ex) { LogStartup("language changed failed: " + ex); }
             };
+            LogStartup("settings change handlers registered");
         }
         catch (Exception ex)
         {

@@ -25,50 +25,57 @@ public sealed class LocalizationService : ILocalizationService
     public string CurrentLanguageTag { get; private set; } = "en-US";
     public event EventHandler? LanguageChanged;
 
-    public void Apply(AppLanguage language)
+public void Apply(AppLanguage language)
+{
+    Current = language;
+    CurrentLanguageTag = ResolveLanguageTag(language);
+
+    try
     {
-        Current = language;
-        CurrentLanguageTag = ResolveLanguageTag(language);
-
-        try
-        {
-            // PrimaryLanguageOverride drives subsequent resource lookups.
-            ApplicationLanguages.PrimaryLanguageOverride = CurrentLanguageTag;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[NexAI] PrimaryLanguageOverride failed: " + ex.Message);
-        }
-
-        try
-        {
-            var culture = new CultureInfo(CurrentLanguageTag);
-            CultureInfo.CurrentCulture = culture;
-            CultureInfo.CurrentUICulture = culture;
-            CultureInfo.DefaultThreadCurrentCulture = culture;
-            CultureInfo.DefaultThreadCurrentUICulture = culture;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine("[NexAI] culture apply failed: " + ex.Message);
-        }
-
-        // Recreate loader so it picks up the override. Never crash startup if
-        // unpackaged resources are incomplete on a user machine.
-        try
-        {
-            _loader = ResourceLoader.GetForViewIndependentUse();
-            _loaderFailed = false;
-        }
-        catch (Exception ex)
-        {
-            _loader = null;
-            _loaderFailed = true;
-            Debug.WriteLine("[NexAI] ResourceLoader init failed: " + ex.Message);
-        }
-
-        LanguageChanged?.Invoke(this, EventArgs.Empty);
+        // PrimaryLanguageOverride drives subsequent resource lookups.
+        ApplicationLanguages.PrimaryLanguageOverride = CurrentLanguageTag;
     }
+    catch (Exception ex)
+    {
+        Debug.WriteLine("[NexAI] PrimaryLanguageOverride failed: " + ex.Message);
+    }
+
+    try
+    {
+        var culture = new CultureInfo(CurrentLanguageTag);
+        CultureInfo.CurrentCulture = culture;
+        CultureInfo.CurrentUICulture = culture;
+        CultureInfo.DefaultThreadCurrentCulture = culture;
+        CultureInfo.DefaultThreadCurrentUICulture = culture;
+    }
+    catch (Exception ex)
+    {
+        Debug.WriteLine("[NexAI] culture apply failed: " + ex.Message);
+    }
+
+    // Recreate loader so it picks up the override. Never crash startup if
+    // unpackaged resources are incomplete on a user machine.
+    try
+    {
+        _loader = ResourceLoader.GetForViewIndependentUse();
+        _loaderFailed = false;
+    }
+    catch (Exception ex)
+    {
+        _loader = null;
+        _loaderFailed = true;
+        Debug.WriteLine("[NexAI] ResourceLoader init failed: " + ex.Message);
+    }
+
+        try
+        {
+            LanguageChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] LanguageChanged handlers failed: " + ex.Message);
+        }
+}
 
     public string GetString(string key)
     {

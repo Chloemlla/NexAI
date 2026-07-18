@@ -78,11 +78,12 @@ class NetworkSafety {
       ),
       (m) => '${m.group(1)}<redacted>',
     );
-    out = out.replaceAll(
+    out = out.replaceAllMapped(
       RegExp(
-        r'(?i)("?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|password|secret|token)"?\s*[:=]\s*")([^"]+)(")',
+        r'("?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|password|secret|token)"?\s*[:=]\s*")([^"]+)(")',
+        caseSensitive: false,
       ),
-      r'$1<redacted>$3',
+      (m) => '${m.group(1)}<redacted>${m.group(3)}',
     );
     out = out.replaceAll(RegExp(r'sk-[A-Za-z0-9_-]{12,}'), 'sk-<redacted>');
     out = out.replaceAll(RegExp(r'AIza[0-9A-Za-z_-]{20,}'), 'AIza<redacted>');

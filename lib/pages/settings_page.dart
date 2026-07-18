@@ -2668,16 +2668,21 @@ class _SettingsPageState extends State<SettingsPage> {
                     ...providers.asMap().entries.map((entry) {
                       final index = entry.key;
                       final provider = entry.value;
-                      return RadioListTile<String>(
-                        value: provider.id,
-                        groupValue: activeId,
+                      final selected = activeId == provider.id;
+                      return ListTile(
+                        leading: Icon(
+                          selected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: selected ? Theme.of(ctx).colorScheme.primary : null,
+                        ),
                         title: Text(provider.name),
                         subtitle: Text(
                           provider.endpoint.isEmpty
                               ? provider.type
                               : provider.endpoint,
                         ),
-                        secondary: IconButton(
+                        trailing: IconButton(
                           icon: const Icon(Icons.delete_outline),
                           onPressed: () {
                             setModal(() {
@@ -2690,10 +2695,8 @@ class _SettingsPageState extends State<SettingsPage> {
                             });
                           },
                         ),
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setModal(() => activeId = value);
-                        },
+                        onTap: () => setModal(() => activeId = provider.id),
+                        selected: selected,
                       );
                     }),
                     const SizedBox(height: 8),

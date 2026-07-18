@@ -19,7 +19,7 @@ winui/
 Implemented:
 
 - Fluent shell (Mica, custom title bar, NavigationView)
-- Settings: API, theme, backend, sync config, recovery key
+- Settings: API, theme, language (System/English/简体中文), backend, sync config, recovery key
 - Chat: multi-conversation + OpenAI-compatible streaming + basic Markdown
 - Notes: local store, search, create/edit/delete/star, tags/wiki-link extraction
 - Tools:
@@ -31,6 +31,7 @@ Implemented:
 - Sync: AES-256-GCM record crypto + NexAI `/sync/v2` upload/download
 - Advanced rendering: LaTeX Unicode math preview + Mermaid edge/node preview cards
 - Sync restore uses atomic conversation `ReplaceAll` (id-preserving)
+- i18n foundation: `Strings/en-US` + `Strings/zh-CN`, runtime language apply, localized nav/tools/settings shell text
 - CI/release Windows packaging builds this WinUI3 client only
 
 Local data roots:

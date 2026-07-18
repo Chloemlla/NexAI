@@ -8,6 +8,7 @@ using NexAI.Core.Auth;
 using NexAI.Core.Chat;
 using NexAI.Core.Settings;
 using NexAI.Core.Tools;
+using NexAI.WinUI3.Services;
 using Windows.Storage.Pickers;
 using Windows.ApplicationModel.DataTransfer;
 using WinRT.Interop;
@@ -23,6 +24,7 @@ public sealed partial class ToolsPage : Page
     private readonly IImageGenerationClient _imageGenerationClient;
     private readonly IMediaToolService _mediaToolService;
     private readonly IAuthSessionStore _authSessionStore;
+    private readonly ILocalizationService _localization;
     private ToolDefinition? _selected;
     private string _query = string.Empty;
 
@@ -36,17 +38,21 @@ public sealed partial class ToolsPage : Page
         _imageGenerationClient = App.Current.Services.GetRequiredService<IImageGenerationClient>();
         _mediaToolService = App.Current.Services.GetRequiredService<IMediaToolService>();
         _authSessionStore = App.Current.Services.GetRequiredService<IAuthSessionStore>();
+        _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
+        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(ApplyLocalization);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
+        ApplyLocalization();
         RefreshTools();
     }
 
     private void RefreshTools()
     {
         var tools = ToolCatalog.All
+            .Select(LocalizeTool)
             .Where(t =>
                 string.IsNullOrWhiteSpace(_query) ||
                 t.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
@@ -54,11 +60,55 @@ public sealed partial class ToolsPage : Page
                 t.Category.Contains(_query, StringComparison.OrdinalIgnoreCase))
             .ToList();
         ToolsList.ItemsSource = tools;
-        if (_selected is null && tools.Count > 0)
+        if (tools.Count > 0)
         {
-            ToolsList.SelectedItem = tools[0];
+            var keep = _selected is null
+                ? null
+                : tools.FirstOrDefault(t => t.Kind == _selected.Kind);
+            ToolsList.SelectedItem = keep ?? tools[0];
         }
     }
+
+    private void ApplyLocalization()
+    {
+        ToolsTitleText.Text = _localization.GetString("Tools.Title");
+        SearchBox.PlaceholderText = _localization.GetString("Tools.SearchPlaceholder");
+        InputBox.Header = _localization.GetString("Common.Input");
+        OutputBox.Header = _localization.GetString("Common.Output");
+        RunButton.Content = _localization.GetString("Common.Run");
+        CopyButton.Content = _localization.GetString("Common.Copy");
+        if (_selected is null)
+        {
+            ToolTitle.Text = _localization.GetString("Tools.SelectTool");
+            ToolDescription.Text = string.Empty;
+            ToolStatus.Text = _localization.GetString("Common.Ready");
+        }
+        RefreshTools();
+        if (_selected is not null)
+        {
+            // re-bind selected labels
+            var localized = LocalizeTool(ToolCatalog.All.First(t => t.Kind == _selected.Kind));
+            ToolTitle.Text = localized.Title;
+            ToolDescription.Text = $"{localized.Category} · {localized.Description}";
+            ToolStatus.Text = StatusFor(_selected.Kind);
+        }
+    }
+
+    private ToolListItem LocalizeTool(ToolDefinition tool) => new(
+        tool.Kind,
+        _localization.GetString(tool.TitleKey),
+        _localization.GetString(tool.DescriptionKey),
+        _localization.GetString(tool.CategoryKey),
+        tool.Glyph);
+
+    private string StatusFor(ToolKind kind) => kind switch
+    {
+        ToolKind.VideoCompress or ToolKind.VideoToAudio => _localization.GetString("Tools.Hint.Media"),
+        ToolKind.ShortUrl => _localization.GetString("Tools.Hint.ShortUrl"),
+        ToolKind.Artifacts => _localization.GetString("Tools.Hint.Artifacts"),
+        ToolKind.ImageGeneration => _localization.GetString("Tools.Hint.Image"),
+        _ => _localization.GetString("Common.Ready"),
+    };
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -68,22 +118,15 @@ public sealed partial class ToolsPage : Page
 
     private void ToolsList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ToolsList.SelectedItem is not ToolDefinition tool)
+        if (ToolsList.SelectedItem is not ToolListItem tool)
         {
             return;
         }
 
-        _selected = tool;
+        _selected = ToolCatalog.All.First(t => t.Kind == tool.Kind);
         ToolTitle.Text = tool.Title;
         ToolDescription.Text = $"{tool.Category} · {tool.Description}";
-        ToolStatus.Text = tool.Kind switch
-        {
-            ToolKind.VideoCompress or ToolKind.VideoToAudio => "Input a local media path, or leave empty and pick a file on Run. Requires ffmpeg on PATH or NEXAI_FFMPEG.",
-            ToolKind.ShortUrl => "Input a long http(s) URL. Uses api.mmp.cc short-link service.",
-            ToolKind.Artifacts => "Input artifact content. Requires NexAI sign-in in Settings. Title can be first line prefixed with title:.",
-            ToolKind.ImageGeneration => "Input an image prompt. Uses OpenAI-compatible /images/generations with chat fallback.",
-            _ => "Ready.",
-        };
+        ToolStatus.Text = StatusFor(tool.Kind);
     }
 
     private async void RunButton_Click(object sender, RoutedEventArgs e)
@@ -94,9 +137,9 @@ public sealed partial class ToolsPage : Page
         }
 
         var input = InputBox.Text ?? string.Empty;
-        try
-        {
-            ToolStatus.Text = "Running…";
+            try
+            {
+            ToolStatus.Text = _localization.GetString("Common.Running");
             OutputBox.Text = _selected.Kind switch
             {
                 ToolKind.Base64 => RunBase64(input),
@@ -110,7 +153,7 @@ public sealed partial class ToolsPage : Page
                 ToolKind.VideoToAudio => await RunMediaAsync(input, compress: false),
                 _ => input,
             };
-            ToolStatus.Text = "Done.";
+            ToolStatus.Text = _localization.GetString("Common.Done");
         }
         catch (Exception ex)
         {
@@ -123,7 +166,7 @@ public sealed partial class ToolsPage : Page
         var data = new DataPackage();
         data.SetText(OutputBox.Text ?? string.Empty);
         Clipboard.SetContent(data);
-        ToolStatus.Text = "Output copied.";
+        ToolStatus.Text = _localization.GetString("Common.Copied");
     }
 
     private static string RunBase64(string input)
@@ -300,3 +343,10 @@ public sealed partial class ToolsPage : Page
         return file?.Path;
     }
 }
+
+internal sealed record ToolListItem(
+    ToolKind Kind,
+    string Title,
+    string Description,
+    string Category,
+    string Glyph);

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="App.Name" xml:space="preserve"><value>NexAI</value></data>
+
+  <data name="Nav.Chat" xml:space="preserve"><value>聊天</value></data>
+  <data name="Nav.Notes" xml:space="preserve"><value>笔记</value></data>
+  <data name="Nav.Tools" xml:space="preserve"><value>工具</value></data>
+  <data name="Nav.Settings" xml:space="preserve"><value>设置</value></data>
+
+  <data name="Common.Save" xml:space="preserve"><value>保存</value></data>
+  <data name="Common.Run" xml:space="preserve"><value>运行</value></data>
+  <data name="Common.Copy" xml:space="preserve"><value>复制输出</value></data>
+  <data name="Common.Search" xml:space="preserve"><value>搜索</value></data>
+  <data name="Common.Input" xml:space="preserve"><value>输入</value></data>
+  <data name="Common.Output" xml:space="preserve"><value>输出</value></data>
+  <data name="Common.Ready" xml:space="preserve"><value>就绪。</value></data>
+  <data name="Common.Running" xml:space="preserve"><value>运行中…</value></data>
+  <data name="Common.Done" xml:space="preserve"><value>完成。</value></data>
+  <data name="Common.Copied" xml:space="preserve"><value>输出已复制。</value></data>
+  <data name="Common.SignIn" xml:space="preserve"><value>登录</value></data>
+  <data name="Common.SignOut" xml:space="preserve"><value>退出登录</value></data>
+  <data name="Common.Upload" xml:space="preserve"><value>上传</value></data>
+  <data name="Common.Download" xml:space="preserve"><value>下载</value></data>
+
+  <data name="Language.System" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.ChineseSimplified" xml:space="preserve"><value>简体中文</value></data>
+  <data name="Language.Header" xml:space="preserve"><value>语言</value></data>
+  <data name="Language.Changed" xml:space="preserve"><value>已切换语言：{0}。保存后生效持久化。</value></data>
+
+  <data name="Settings.Title" xml:space="preserve"><value>设置</value></data>
+  <data name="Settings.Subtitle" xml:space="preserve"><value>原生 Windows 客户端的 API、账号、同步、语言与渲染偏好。</value></data>
+  <data name="Settings.Section.Api" xml:space="preserve"><value>API</value></data>
+  <data name="Settings.Section.Appearance" xml:space="preserve"><value>外观</value></data>
+  <data name="Settings.Section.Account" xml:space="preserve"><value>账号</value></data>
+  <data name="Settings.Section.Sync" xml:space="preserve"><value>同步</value></data>
+  <data name="Settings.BaseUrl" xml:space="preserve"><value>OpenAI 兼容 Base URL</value></data>
+  <data name="Settings.ApiKey" xml:space="preserve"><value>API 密钥</value></data>
+  <data name="Settings.Model" xml:space="preserve"><value>模型</value></data>
+  <data name="Settings.SystemPrompt" xml:space="preserve"><value>系统提示词</value></data>
+  <data name="Settings.Temperature" xml:space="preserve"><value>温度</value></data>
+  <data name="Settings.MaxTokens" xml:space="preserve"><value>最大令牌数</value></data>
+  <data name="Settings.Theme" xml:space="preserve"><value>主题</value></data>
+  <data name="Settings.Theme.System" xml:space="preserve"><value>跟随系统</value></data>
+  <data name="Settings.Theme.Light" xml:space="preserve"><value>浅色</value></data>
+  <data name="Settings.Theme.Dark" xml:space="preserve"><value>深色</value></data>
+  <data name="Settings.AdvancedRendering" xml:space="preserve"><value>高级渲染（LaTeX / Mermaid 源码卡片）</value></data>
+  <data name="Settings.BackendBaseUrl" xml:space="preserve"><value>NexAI 后端 Base URL</value></data>
+  <data name="Settings.EmailUsername" xml:space="preserve"><value>邮箱 / 用户名</value></data>
+  <data name="Settings.Password" xml:space="preserve"><value>密码</value></data>
+  <data name="Settings.EnableSync" xml:space="preserve"><value>启用同步 UI</value></data>
+  <data name="Settings.SyncMethod" xml:space="preserve"><value>同步方式</value></data>
+  <data name="Settings.WebDavServer" xml:space="preserve"><value>WebDAV 服务器</value></data>
+  <data name="Settings.WebDavUser" xml:space="preserve"><value>WebDAV 用户名</value></data>
+  <data name="Settings.WebDavPassword" xml:space="preserve"><value>WebDAV 密码</value></data>
+  <data name="Settings.UpstashUrl" xml:space="preserve"><value>Upstash URL</value></data>
+  <data name="Settings.UpstashToken" xml:space="preserve"><value>Upstash Token</value></data>
+  <data name="Settings.ExportRecoveryKey" xml:space="preserve"><value>导出恢复密钥</value></data>
+  <data name="Settings.ImportRecoveryKey" xml:space="preserve"><value>导入恢复密钥</value></data>
+  <data name="Settings.ImportRecoveryKeyBox" xml:space="preserve"><value>导入恢复密钥</value></data>
+  <data name="Settings.Loaded" xml:space="preserve"><value>已从本地加载。</value></data>
+  <data name="Settings.Saved" xml:space="preserve"><value>设置已保存。</value></data>
+  <data name="Settings.ThemePreview" xml:space="preserve"><value>主题预览：{0}。保存后持久化。</value></data>
+
+  <data name="Tools.Title" xml:space="preserve"><value>工具</value></data>
+  <data name="Tools.SearchPlaceholder" xml:space="preserve"><value>搜索工具</value></data>
+  <data name="Tools.SelectTool" xml:space="preserve"><value>选择一个工具</value></data>
+  <data name="Tools.Hint.Media" xml:space="preserve"><value>输入本地媒体路径，或留空后在运行时选择文件。需要 PATH 中的 ffmpeg 或 NEXAI_FFMPEG。</value></data>
+  <data name="Tools.Hint.ShortUrl" xml:space="preserve"><value>输入 http(s) 长链接。使用 api.mmp.cc 短链服务。</value></data>
+  <data name="Tools.Hint.Artifacts" xml:space="preserve"><value>输入分享内容。需要先在设置中登录 NexAI。可用 title: 作为首行设置标题。</value></data>
+  <data name="Tools.Hint.Image" xml:space="preserve"><value>输入图片提示词。使用 OpenAI 兼容 /images/generations，并支持聊天回退。</value></data>
+
+  <data name="Tool.DateTime.Title" xml:space="preserve"><value>日期时间转换</value></data>
+  <data name="Tool.DateTime.Description" xml:space="preserve"><value>转换时间戳与常见日期格式</value></data>
+  <data name="Tool.Base64.Title" xml:space="preserve"><value>Base64 编解码</value></data>
+  <data name="Tool.Base64.Description" xml:space="preserve"><value>编码与解码 Base64 字符串</value></data>
+  <data name="Tool.Password.Title" xml:space="preserve"><value>密码生成器</value></data>
+  <data name="Tool.Password.Description" xml:space="preserve"><value>生成高强度随机密码</value></data>
+  <data name="Tool.ShortUrl.Title" xml:space="preserve"><value>短链接</value></data>
+  <data name="Tool.ShortUrl.Description" xml:space="preserve"><value>通过 NexAI 后端创建短链接</value></data>
+  <data name="Tool.Translation.Title" xml:space="preserve"><value>AI 翻译</value></data>
+  <data name="Tool.Translation.Description" xml:space="preserve"><value>使用已配置的聊天 API 翻译文本</value></data>
+  <data name="Tool.ImageGeneration.Title" xml:space="preserve"><value>AI 绘图</value></data>
+  <data name="Tool.ImageGeneration.Description" xml:space="preserve"><value>通过兼容的图像接口生成图片</value></data>
+  <data name="Tool.Artifacts.Title" xml:space="preserve"><value>内容分享</value></data>
+  <data name="Tool.Artifacts.Description" xml:space="preserve"><value>分享文本/代码产物（后端支持）</value></data>
+  <data name="Tool.VideoCompress.Title" xml:space="preserve"><value>视频压缩</value></data>
+  <data name="Tool.VideoCompress.Description" xml:space="preserve"><value>压缩本地视频（Windows 管线）</value></data>
+  <data name="Tool.VideoToAudio.Title" xml:space="preserve"><value>视频转音频</value></data>
+  <data name="Tool.VideoToAudio.Description" xml:space="preserve"><value>从视频中提取音轨</value></data>
+  <data name="Tool.Category.Convert" xml:space="preserve"><value>转换</value></data>
+  <data name="Tool.Category.Security" xml:space="preserve"><value>安全</value></data>
+  <data name="Tool.Category.Network" xml:space="preserve"><value>网络</value></data>
+  <data name="Tool.Category.AI" xml:space="preserve"><value>AI</value></data>
+  <data name="Tool.Category.Media" xml:space="preserve"><value>媒体</value></data>
+
+  <data name="Chat.Title" xml:space="preserve"><value>聊天</value></data>
+  <data name="Notes.Title" xml:space="preserve"><value>笔记</value></data>
+</root>

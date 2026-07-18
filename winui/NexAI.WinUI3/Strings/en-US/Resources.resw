@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="App.Name" xml:space="preserve"><value>NexAI</value></data>
+
+  <data name="Nav.Chat" xml:space="preserve"><value>Chat</value></data>
+  <data name="Nav.Notes" xml:space="preserve"><value>Notes</value></data>
+  <data name="Nav.Tools" xml:space="preserve"><value>Tools</value></data>
+  <data name="Nav.Settings" xml:space="preserve"><value>Settings</value></data>
+
+  <data name="Common.Save" xml:space="preserve"><value>Save</value></data>
+  <data name="Common.Run" xml:space="preserve"><value>Run</value></data>
+  <data name="Common.Copy" xml:space="preserve"><value>Copy output</value></data>
+  <data name="Common.Search" xml:space="preserve"><value>Search</value></data>
+  <data name="Common.Input" xml:space="preserve"><value>Input</value></data>
+  <data name="Common.Output" xml:space="preserve"><value>Output</value></data>
+  <data name="Common.Ready" xml:space="preserve"><value>Ready.</value></data>
+  <data name="Common.Running" xml:space="preserve"><value>Running…</value></data>
+  <data name="Common.Done" xml:space="preserve"><value>Done.</value></data>
+  <data name="Common.Copied" xml:space="preserve"><value>Output copied.</value></data>
+  <data name="Common.SignIn" xml:space="preserve"><value>Sign in</value></data>
+  <data name="Common.SignOut" xml:space="preserve"><value>Sign out</value></data>
+  <data name="Common.Upload" xml:space="preserve"><value>Upload</value></data>
+  <data name="Common.Download" xml:space="preserve"><value>Download</value></data>
+
+  <data name="Language.System" xml:space="preserve"><value>System</value></data>
+  <data name="Language.English" xml:space="preserve"><value>English</value></data>
+  <data name="Language.ChineseSimplified" xml:space="preserve"><value>Simplified Chinese</value></data>
+  <data name="Language.Header" xml:space="preserve"><value>Language</value></data>
+  <data name="Language.Changed" xml:space="preserve"><value>Language applied: {0}. Save to persist.</value></data>
+
+  <data name="Settings.Title" xml:space="preserve"><value>Settings</value></data>
+  <data name="Settings.Subtitle" xml:space="preserve"><value>API, account, sync, language, and rendering preferences for the native Windows client.</value></data>
+  <data name="Settings.Section.Api" xml:space="preserve"><value>API</value></data>
+  <data name="Settings.Section.Appearance" xml:space="preserve"><value>Appearance</value></data>
+  <data name="Settings.Section.Account" xml:space="preserve"><value>Account</value></data>
+  <data name="Settings.Section.Sync" xml:space="preserve"><value>Sync</value></data>
+  <data name="Settings.BaseUrl" xml:space="preserve"><value>OpenAI-compatible Base URL</value></data>
+  <data name="Settings.ApiKey" xml:space="preserve"><value>API Key</value></data>
+  <data name="Settings.Model" xml:space="preserve"><value>Model</value></data>
+  <data name="Settings.SystemPrompt" xml:space="preserve"><value>System prompt</value></data>
+  <data name="Settings.Temperature" xml:space="preserve"><value>Temperature</value></data>
+  <data name="Settings.MaxTokens" xml:space="preserve"><value>Max tokens</value></data>
+  <data name="Settings.Theme" xml:space="preserve"><value>Theme</value></data>
+  <data name="Settings.Theme.System" xml:space="preserve"><value>System</value></data>
+  <data name="Settings.Theme.Light" xml:space="preserve"><value>Light</value></data>
+  <data name="Settings.Theme.Dark" xml:space="preserve"><value>Dark</value></data>
+  <data name="Settings.AdvancedRendering" xml:space="preserve"><value>Advanced rendering (LaTeX / Mermaid source cards)</value></data>
+  <data name="Settings.BackendBaseUrl" xml:space="preserve"><value>NexAI backend base URL</value></data>
+  <data name="Settings.EmailUsername" xml:space="preserve"><value>Email / username</value></data>
+  <data name="Settings.Password" xml:space="preserve"><value>Password</value></data>
+  <data name="Settings.EnableSync" xml:space="preserve"><value>Enable sync UI</value></data>
+  <data name="Settings.SyncMethod" xml:space="preserve"><value>Sync method</value></data>
+  <data name="Settings.WebDavServer" xml:space="preserve"><value>WebDAV server</value></data>
+  <data name="Settings.WebDavUser" xml:space="preserve"><value>WebDAV user</value></data>
+  <data name="Settings.WebDavPassword" xml:space="preserve"><value>WebDAV password</value></data>
+  <data name="Settings.UpstashUrl" xml:space="preserve"><value>Upstash URL</value></data>
+  <data name="Settings.UpstashToken" xml:space="preserve"><value>Upstash token</value></data>
+  <data name="Settings.ExportRecoveryKey" xml:space="preserve"><value>Export recovery key</value></data>
+  <data name="Settings.ImportRecoveryKey" xml:space="preserve"><value>Import recovery key</value></data>
+  <data name="Settings.ImportRecoveryKeyBox" xml:space="preserve"><value>Import recovery key</value></data>
+  <data name="Settings.Loaded" xml:space="preserve"><value>Loaded from local store.</value></data>
+  <data name="Settings.Saved" xml:space="preserve"><value>Settings saved.</value></data>
+  <data name="Settings.ThemePreview" xml:space="preserve"><value>Theme preview: {0}. Save to persist.</value></data>
+
+  <data name="Tools.Title" xml:space="preserve"><value>Tools</value></data>
+  <data name="Tools.SearchPlaceholder" xml:space="preserve"><value>Search tools</value></data>
+  <data name="Tools.SelectTool" xml:space="preserve"><value>Select a tool</value></data>
+  <data name="Tools.Hint.Media" xml:space="preserve"><value>Input a local media path, or leave empty and pick a file on Run. Requires ffmpeg on PATH or NEXAI_FFMPEG.</value></data>
+  <data name="Tools.Hint.ShortUrl" xml:space="preserve"><value>Input a long http(s) URL. Uses api.mmp.cc short-link service.</value></data>
+  <data name="Tools.Hint.Artifacts" xml:space="preserve"><value>Input artifact content. Requires NexAI sign-in in Settings. Title can be first line prefixed with title:.</value></data>
+  <data name="Tools.Hint.Image" xml:space="preserve"><value>Input an image prompt. Uses OpenAI-compatible /images/generations with chat fallback.</value></data>
+
+  <data name="Tool.DateTime.Title" xml:space="preserve"><value>Date / Time Converter</value></data>
+  <data name="Tool.DateTime.Description" xml:space="preserve"><value>Convert timestamps and common date formats</value></data>
+  <data name="Tool.Base64.Title" xml:space="preserve"><value>Base64 Encoder</value></data>
+  <data name="Tool.Base64.Description" xml:space="preserve"><value>Encode and decode Base64 strings</value></data>
+  <data name="Tool.Password.Title" xml:space="preserve"><value>Password Generator</value></data>
+  <data name="Tool.Password.Description" xml:space="preserve"><value>Generate strong random passwords</value></data>
+  <data name="Tool.ShortUrl.Title" xml:space="preserve"><value>Short URL</value></data>
+  <data name="Tool.ShortUrl.Description" xml:space="preserve"><value>Create short links via NexAI backend</value></data>
+  <data name="Tool.Translation.Title" xml:space="preserve"><value>AI Translation</value></data>
+  <data name="Tool.Translation.Description" xml:space="preserve"><value>Translate text using the configured chat API</value></data>
+  <data name="Tool.ImageGeneration.Title" xml:space="preserve"><value>AI Image Generation</value></data>
+  <data name="Tool.ImageGeneration.Description" xml:space="preserve"><value>Generate images through compatible image endpoints</value></data>
+  <data name="Tool.Artifacts.Title" xml:space="preserve"><value>Artifacts Share</value></data>
+  <data name="Tool.Artifacts.Description" xml:space="preserve"><value>Share text/code artifacts (backend-backed)</value></data>
+  <data name="Tool.VideoCompress.Title" xml:space="preserve"><value>Video Compressor</value></data>
+  <data name="Tool.VideoCompress.Description" xml:space="preserve"><value>Compress local videos (Windows pipeline)</value></data>
+  <data name="Tool.VideoToAudio.Title" xml:space="preserve"><value>Video to Audio</value></data>
+  <data name="Tool.VideoToAudio.Description" xml:space="preserve"><value>Extract audio tracks from videos</value></data>
+  <data name="Tool.Category.Convert" xml:space="preserve"><value>Convert</value></data>
+  <data name="Tool.Category.Security" xml:space="preserve"><value>Security</value></data>
+  <data name="Tool.Category.Network" xml:space="preserve"><value>Network</value></data>
+  <data name="Tool.Category.AI" xml:space="preserve"><value>AI</value></data>
+  <data name="Tool.Category.Media" xml:space="preserve"><value>Media</value></data>
+
+  <data name="Chat.Title" xml:space="preserve"><value>Chat</value></data>
+  <data name="Notes.Title" xml:space="preserve"><value>Notes</value></data>
+</root>

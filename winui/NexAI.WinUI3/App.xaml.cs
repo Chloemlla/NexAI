@@ -42,6 +42,9 @@ public partial class App : Application
             authStore.LoadAsync(),
             syncService.LoadAsync());
 
+        var localization = Services.GetRequiredService<ILocalizationService>();
+        localization.Apply(settingsStore.Current.Language);
+
         var themeService = Services.GetRequiredService<ThemeService>();
         _window = Services.GetRequiredService<MainWindow>();
         if (_window.Content is FrameworkElement root)
@@ -50,6 +53,7 @@ public partial class App : Application
         }
         themeService.Apply(settingsStore.Current.ThemeMode);
         settingsStore.Changed += (_, _) => themeService.Apply(settingsStore.Current.ThemeMode);
+        settingsStore.Changed += (_, _) => localization.Apply(settingsStore.Current.Language);
         _window.Activate();
     }
 
@@ -58,6 +62,7 @@ public partial class App : Application
         var services = new ServiceCollection();
         services.AddNexAIInfrastructure();
         services.AddSingleton<ThemeService>();
+        services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<ChatSessionService>();
         services.AddSingleton<MainWindow>();
         return services.BuildServiceProvider();

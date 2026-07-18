@@ -7,6 +7,13 @@ public enum AppThemeMode
     Dark,
 }
 
+public enum AppLanguage
+{
+    System,
+    English,
+    ChineseSimplified,
+}
+
 public enum SyncBackendKind
 {
     NexAI,
@@ -23,6 +30,7 @@ public sealed class AppSettings
     public int MaxTokens { get; set; } = 2048;
     public string SystemPrompt { get; set; } = "You are a helpful assistant.";
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
+    public AppLanguage Language { get; set; } = AppLanguage.System;
 
     public string BackendBaseUrl { get; set; } = "https://tts.chloemlla.com/api/nexai";
     public bool SyncEnabled { get; set; }
@@ -44,6 +52,7 @@ public sealed class AppSettings
         MaxTokens = MaxTokens,
         SystemPrompt = SystemPrompt,
         ThemeMode = ThemeMode,
+        Language = Language,
         BackendBaseUrl = BackendBaseUrl,
         SyncEnabled = SyncEnabled,
         SyncMethod = SyncMethod,

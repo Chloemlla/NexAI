@@ -23,14 +23,14 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
-                <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="Tools" />
+                <TextBlock x:Name="ToolsTitleText" Style="{StaticResource TitleLargeTextBlockStyle}" Text="Tools" />
                 <TextBox x:Name="SearchBox" Grid.Row="1" Margin="0,12,0,12" PlaceholderText="Search tools" TextChanged="SearchBox_TextChanged" />
                 <ListView x:Name="ToolsList" Grid.Row="2" SelectionMode="Single" SelectionChanged="ToolsList_SelectionChanged">
                     <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="tools:ToolDefinition">
+                        <DataTemplate>
                             <StackPanel Padding="4,8" Spacing="2">
-                                <TextBlock Text="{x:Bind Title}" Style="{StaticResource BodyStrongTextBlockStyle}" />
-                                <TextBlock Text="{x:Bind Description}" Opacity="0.72" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
+                                <TextBlock Text="{Binding Title}" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="{Binding Description}" Opacity="0.72" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords" />
                             </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>
@@ -52,7 +52,7 @@
                     <TextBox x:Name="InputBox" Header="Input" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button x:Name="RunButton" Content="Run" Style="{StaticResource AccentButtonStyle}" Click="RunButton_Click" />
-                        <Button Content="Copy output" Click="CopyButton_Click" />
+                        <Button x:Name="CopyButton" Content="Copy output" Click="CopyButton_Click" />
                     </StackPanel>
                     <TextBox x:Name="OutputBox" Header="Output" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" IsReadOnly="True" />
                     <TextBlock x:Name="ToolStatus" Opacity="0.72" TextWrapping="Wrap" />

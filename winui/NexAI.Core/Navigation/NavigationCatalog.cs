@@ -10,7 +10,7 @@ public enum AppPage
 
 public sealed record NavigationItem(
     AppPage Page,
-    string Title,
+    string TitleKey,
     string Glyph,
     string Tag);
 
@@ -18,10 +18,10 @@ public static class NavigationCatalog
 {
     public static IReadOnlyList<NavigationItem> PrimaryItems { get; } =
     [
-        new(AppPage.Chat, "Chat", "\uE8BD", "chat"),
-        new(AppPage.Notes, "Notes", "\uE70B", "notes"),
-        new(AppPage.Tools, "Tools", "\uEC7A", "tools"),
-        new(AppPage.Settings, "Settings", "\uE713", "settings"),
+        new(AppPage.Chat, "Nav.Chat", "\uE8BD", "chat"),
+        new(AppPage.Notes, "Nav.Notes", "\uE70B", "notes"),
+        new(AppPage.Tools, "Nav.Tools", "\uEC7A", "tools"),
+        new(AppPage.Settings, "Nav.Settings", "\uE713", "settings"),
     ];
 
     public static NavigationItem Get(AppPage page) =>

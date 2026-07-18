@@ -18,7 +18,9 @@ public sealed partial class SettingsPage : Page
     private readonly IAuthSessionStore _authStore;
     private readonly IAuthClient _authClient;
     private readonly ISyncService _syncService;
+    private readonly ILocalizationService _localization;
     private bool _suppressThemeEvent;
+    private bool _suppressLanguageEvent;
 
     public SettingsPage()
     {
@@ -28,6 +30,8 @@ public sealed partial class SettingsPage : Page
         _authStore = App.Current.Services.GetRequiredService<IAuthSessionStore>();
         _authClient = App.Current.Services.GetRequiredService<IAuthClient>();
         _syncService = App.Current.Services.GetRequiredService<ISyncService>();
+        _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
+        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(ApplyLocalization);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -35,6 +39,7 @@ public sealed partial class SettingsPage : Page
         base.OnNavigatedTo(e);
         _authStore.Changed += OnAuthChanged;
         _syncService.Changed += OnSyncChanged;
+        ApplyLocalization();
         LoadFromStore();
         RefreshAccount();
         RefreshSync();
@@ -83,7 +88,17 @@ public sealed partial class SettingsPage : Page
             _ => 0,
         };
         _suppressThemeEvent = false;
-        SetStatus("Loaded from local store.", false);
+
+        _suppressLanguageEvent = true;
+        LanguageBox.SelectedIndex = current.Language switch
+        {
+            AppLanguage.English => 1,
+            AppLanguage.ChineseSimplified => 2,
+            _ => 0,
+        };
+        _suppressLanguageEvent = false;
+
+        SetStatus(_localization.GetString("Settings.Loaded"), false);
     }
 
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -93,8 +108,9 @@ public sealed partial class SettingsPage : Page
             var draft = BuildDraft();
             await _settingsStore.SaveAsync(draft);
             _themeService.Apply(draft.ThemeMode);
+            _localization.Apply(draft.Language);
             LoadFromStore();
-            SetStatus("Settings saved.", false);
+            SetStatus(_localization.GetString("Settings.Saved"), false);
         }
         catch (Exception ex)
         {
@@ -106,7 +122,15 @@ public sealed partial class SettingsPage : Page
     {
         if (_suppressThemeEvent) return;
         _themeService.Apply(ReadThemeMode());
-        SetStatus($"Theme preview: {ReadThemeMode()}. Save to persist.", false);
+        SetStatus(_localization.GetString("Settings.ThemePreview", ReadThemeMode()), false);
+    }
+
+    private void LanguageBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_suppressLanguageEvent) return;
+        var language = ReadLanguage();
+        _localization.Apply(language);
+        SetStatus(_localization.GetString("Language.Changed", _localization.GetString(LanguageKey(language))), false);
     }
 
     private async void SignInButton_Click(object sender, RoutedEventArgs e)
@@ -204,6 +228,7 @@ public sealed partial class SettingsPage : Page
             Temperature = double.IsNaN(TemperatureBox.Value) ? 0.7 : TemperatureBox.Value,
             MaxTokens = double.IsNaN(MaxTokensBox.Value) ? 2048 : (int)Math.Clamp(Math.Round(MaxTokensBox.Value), 1, 128_000),
             ThemeMode = ReadThemeMode(),
+            Language = ReadLanguage(),
             BackendBaseUrl = BackendBaseUrlBox.Text ?? string.Empty,
             SyncEnabled = SyncEnabledToggle.IsOn,
             SyncMethod = ReadSyncMethod(),
@@ -225,6 +250,73 @@ public sealed partial class SettingsPage : Page
             return mode;
         }
         return AppThemeMode.System;
+    }
+
+    private AppLanguage ReadLanguage()
+    {
+        if (LanguageBox.SelectedItem is ComboBoxItem item &&
+            Enum.TryParse<AppLanguage>(item.Tag?.ToString(), true, out var language))
+        {
+            return language;
+        }
+
+        return AppLanguage.System;
+    }
+
+    private static string LanguageKey(AppLanguage language) => language switch
+    {
+        AppLanguage.English => "Language.English",
+        AppLanguage.ChineseSimplified => "Language.ChineseSimplified",
+        _ => "Language.System",
+    };
+
+    private void ApplyLocalization()
+    {
+        SettingsTitleText.Text = _localization.GetString("Settings.Title");
+        SettingsSubtitleText.Text = _localization.GetString("Settings.Subtitle");
+        SaveButton.Content = _localization.GetString("Common.Save");
+
+        ApiSectionTitle.Text = _localization.GetString("Settings.Section.Api");
+        BaseUrlBox.Header = _localization.GetString("Settings.BaseUrl");
+        ApiKeyBox.Header = _localization.GetString("Settings.ApiKey");
+        ModelBox.Header = _localization.GetString("Settings.Model");
+        SystemPromptBox.Header = _localization.GetString("Settings.SystemPrompt");
+        TemperatureBox.Header = _localization.GetString("Settings.Temperature");
+        MaxTokensBox.Header = _localization.GetString("Settings.MaxTokens");
+
+        AppearanceSectionTitle.Text = _localization.GetString("Settings.Section.Appearance");
+        LanguageBox.Header = _localization.GetString("Language.Header");
+        ThemeBox.Header = _localization.GetString("Settings.Theme");
+        AdvancedRenderingToggle.Header = _localization.GetString("Settings.AdvancedRendering");
+
+        if (LanguageBox.Items[0] is ComboBoxItem langSystem) langSystem.Content = _localization.GetString("Language.System");
+        if (LanguageBox.Items[1] is ComboBoxItem langEn) langEn.Content = _localization.GetString("Language.English");
+        if (LanguageBox.Items[2] is ComboBoxItem langZh) langZh.Content = _localization.GetString("Language.ChineseSimplified");
+
+        if (ThemeBox.Items[0] is ComboBoxItem themeSystem) themeSystem.Content = _localization.GetString("Settings.Theme.System");
+        if (ThemeBox.Items[1] is ComboBoxItem themeLight) themeLight.Content = _localization.GetString("Settings.Theme.Light");
+        if (ThemeBox.Items[2] is ComboBoxItem themeDark) themeDark.Content = _localization.GetString("Settings.Theme.Dark");
+
+        AccountSectionTitle.Text = _localization.GetString("Settings.Section.Account");
+        BackendBaseUrlBox.Header = _localization.GetString("Settings.BackendBaseUrl");
+        LoginIdentifierBox.Header = _localization.GetString("Settings.EmailUsername");
+        LoginPasswordBox.Header = _localization.GetString("Settings.Password");
+        SignInButton.Content = _localization.GetString("Common.SignIn");
+        SignOutButton.Content = _localization.GetString("Common.SignOut");
+
+        SyncSectionTitle.Text = _localization.GetString("Settings.Section.Sync");
+        SyncEnabledToggle.Header = _localization.GetString("Settings.EnableSync");
+        SyncMethodBox.Header = _localization.GetString("Settings.SyncMethod");
+        WebDavServerBox.Header = _localization.GetString("Settings.WebDavServer");
+        WebDavUserBox.Header = _localization.GetString("Settings.WebDavUser");
+        WebDavPasswordBox.Header = _localization.GetString("Settings.WebDavPassword");
+        UpstashUrlBox.Header = _localization.GetString("Settings.UpstashUrl");
+        UpstashTokenBox.Header = _localization.GetString("Settings.UpstashToken");
+        ExportKeyButton.Content = _localization.GetString("Settings.ExportRecoveryKey");
+        ImportKeyButton.Content = _localization.GetString("Settings.ImportRecoveryKey");
+        RecoveryKeyBox.Header = _localization.GetString("Settings.ImportRecoveryKeyBox");
+        UploadSyncButton.Content = _localization.GetString("Common.Upload");
+        DownloadSyncButton.Content = _localization.GetString("Common.Download");
     }
 
     private SyncBackendKind ReadSyncMethod()

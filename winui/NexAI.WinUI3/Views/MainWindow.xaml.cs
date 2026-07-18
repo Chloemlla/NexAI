@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using NexAI.Core.Navigation;
@@ -10,49 +11,108 @@ namespace NexAI.WinUI3.Views;
 
 public sealed partial class MainWindow : Window
 {
-    private readonly ILocalizationService _localization;
+    private readonly ILocalizationService? _localization;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _softSigHideTimer;
 
     public MainWindow()
     {
         InitializeComponent();
-        _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
-        _localization.LanguageChanged += (_, _) => ApplyLocalization();
-        NexaiSoftSigNotice.Raised += OnSoftSigNoticeRaised;
+
+        try
+        {
+            _localization = App.Current.Services.GetService<ILocalizationService>();
+            if (_localization is not null)
+            {
+                _localization.LanguageChanged += (_, _) => ApplyLocalization();
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] MainWindow localization resolve failed: " + ex);
+        }
+
+        try
+        {
+            NexaiSoftSigNotice.Raised += OnSoftSigNoticeRaised;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] soft-sig subscribe failed: " + ex);
+        }
+
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
         AppWindow.Resize(new SizeInt32(1280, 840));
-        AppWindow.SetIcon("Assets/icon.ico");
+        try
+        {
+            AppWindow.SetIcon("Assets/icon.ico");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] set icon failed: " + ex);
+        }
+
         ApplyLocalization();
     }
 
     private void RootNavigation_Loaded(object sender, RoutedEventArgs e)
     {
-        ApplyLocalization();
-        NavigateTo(AppPage.Chat);
-        if (RootNavigation.MenuItems.FirstOrDefault() is NavigationViewItem first)
+        try
         {
-            RootNavigation.SelectedItem = first;
+            ApplyLocalization();
+            NavigateTo(AppPage.Chat);
+            if (RootNavigation.MenuItems.FirstOrDefault() is NavigationViewItem first)
+            {
+                RootNavigation.SelectedItem = first;
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] RootNavigation_Loaded failed: " + ex);
+            // Last resort content so the shell is never empty.
+            if (ContentFrame.Content is null)
+            {
+                ContentFrame.Content = new TextBlock
+                {
+                    Margin = new Thickness(24),
+                    TextWrapping = TextWrapping.WrapWholeWords,
+                    Text = "NexAI shell loaded, but navigation failed:\n" + ex.Message,
+                };
+            }
         }
     }
 
     private void ApplyLocalization()
     {
-        Title = _localization.GetString("App.Name");
-        foreach (var item in RootNavigation.MenuItems.OfType<NavigationViewItem>())
+        if (_localization is null)
         {
-            var nav = NavigationCatalog.FindByTag(item.Tag?.ToString());
-            if (nav is null) continue;
-            item.Content = _localization.GetString(nav.TitleKey);
+            Title = "NexAI";
+            return;
         }
-        SoftSigInfoBar.Title = _localization.GetString("SoftSig.Title");
+
+        try
+        {
+            Title = _localization.GetString("App.Name");
+            foreach (var item in RootNavigation.MenuItems.OfType<NavigationViewItem>())
+            {
+                var nav = NavigationCatalog.FindByTag(item.Tag?.ToString());
+                if (nav is null) continue;
+                item.Content = _localization.GetString(nav.TitleKey);
+            }
+            SoftSigInfoBar.Title = _localization.GetString("SoftSig.Title");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine("[NexAI] ApplyLocalization failed: " + ex);
+            Title = "NexAI";
+        }
     }
 
     private void OnSoftSigNoticeRaised(object? sender, NexaiSoftSigNoticeEventArgs e)
     {
         DispatcherQueue.TryEnqueue(() =>
         {
-            SoftSigInfoBar.Title = _localization.GetString("SoftSig.Title");
+            SoftSigInfoBar.Title = _localization?.GetString("SoftSig.Title") ?? "Signature notice";
             SoftSigInfoBar.Message = e.Message;
             SoftSigInfoBar.IsOpen = true;
 

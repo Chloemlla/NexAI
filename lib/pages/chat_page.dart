@@ -597,6 +597,102 @@ class _ChatPageState extends State<ChatPage> {
     setState(() {});
   }
 
+
+  bool _shouldShowChatToolsOnboarding(SettingsProvider settings) {
+    if (!settings.loaded) return false;
+    if (settings.chatToolsOnboardingDismissed) return false;
+    // Only guide OpenAI-compatible tool path.
+    if (settings.apiMode != 'OpenAI') return false;
+    // Keep soft: hide once user already enabled tools.
+    if (settings.chatToolsEnabled) return false;
+    return true;
+  }
+
+  Widget _buildChatToolsOnboardingBanner(
+    ColorScheme cs,
+    SettingsProvider settings,
+  ) {
+    return Material(
+      color: cs.primaryContainer.withAlpha(140),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.auto_awesome_outlined, size: 18, color: cs.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '试试对话工具（灰度）',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: cs.onPrimaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '可先启用推荐组合：笔记检索/创建。联网、MCP、多模型仍默认关闭。',
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: cs.onPrimaryContainer.withAlpha(220),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      FilledButton.tonal(
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        onPressed: () async {
+                          await settings.enableRecommendedChatTools();
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('已启用推荐工具：笔记检索/创建'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        child: const Text('一键启用推荐工具'),
+                      ),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                        onPressed: () async {
+                          await settings.dismissChatToolsOnboarding();
+                          if (!mounted) return;
+                          NavigationHelper.goToSettings();
+                        },
+                        child: const Text('去设置'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: '关闭引导',
+              visualDensity: VisualDensity.compact,
+              onPressed: () => settings.dismissChatToolsOnboarding(),
+              icon: Icon(Icons.close_rounded, size: 18, color: cs.onPrimaryContainer),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickChatImage() async {
     final path = await FileAccessHelper.pickImage();
     if (path == null || path.isEmpty) return;
@@ -797,6 +893,8 @@ class _ChatPageState extends State<ChatPage> {
 
     return Column(
       children: [
+        if (_shouldShowChatToolsOnboarding(settings))
+          _buildChatToolsOnboardingBanner(cs, settings),
         // Quick settings bar (only show when not configured or when there are messages)
         if (!settings.isConfigured || messages.isNotEmpty)
           _buildQuickSettingsBar(cs, settings),
@@ -1502,6 +1600,8 @@ class _ChatPageState extends State<ChatPage> {
 
     return Column(
       children: [
+        if (_shouldShowChatToolsOnboarding(settings))
+          _buildChatToolsOnboardingBanner(cs, settings),
         Expanded(
           child: Stack(
             children: [

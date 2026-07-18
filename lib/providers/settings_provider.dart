@@ -169,6 +169,12 @@ class SettingsProvider extends ChangeNotifier {
   bool _ossNoticeAcknowledged = false;
   bool get ossNoticeAcknowledged => _ossNoticeAcknowledged;
 
+  // First-entry chat tools rollout guide (soft banner).
+  static const String _chatToolsOnboardingDismissedKey =
+      'chatToolsOnboardingDismissed';
+  bool _chatToolsOnboardingDismissed = false;
+  bool get chatToolsOnboardingDismissed => _chatToolsOnboardingDismissed;
+
   /// Prefs that prove a real prior install/user configuration.
   /// Do NOT include keys that `loadSettings()` may auto-create on first run.
   static const Set<String> _existingInstallPrefSignals = {
@@ -287,6 +293,9 @@ class SettingsProvider extends ChangeNotifier {
       _remoteMcpEnabled = prefs.getBool('remoteMcpEnabled') ?? _remoteMcpEnabled;
       _maxToolRounds = prefs.getInt('maxToolRounds') ?? _maxToolRounds;
       _imageToolModel = prefs.getString('imageToolModel') ?? _imageToolModel;
+      _chatToolsOnboardingDismissed =
+          prefs.getBool(_chatToolsOnboardingDismissedKey) ??
+              _chatToolsOnboardingDismissed;
       final mcpRaw = prefs.getString('mcpServersJson');
       if (mcpRaw != null && mcpRaw.isNotEmpty) {
         try {
@@ -529,6 +538,10 @@ class SettingsProvider extends ChangeNotifier {
     }
 
     await prefs.setBool(_ossNoticeAcknowledgedKey, _ossNoticeAcknowledged);
+    await prefs.setBool(
+      _chatToolsOnboardingDismissedKey,
+      _chatToolsOnboardingDismissed,
+    );
   }
 
   Future<void> setFontSize(double size) async {
@@ -739,6 +752,14 @@ class SettingsProvider extends ChangeNotifier {
     _toolKnowledgeEnabled = false;
     _remoteMcpEnabled = false;
     _maxToolRounds = 4;
+    _chatToolsOnboardingDismissed = true;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> dismissChatToolsOnboarding() async {
+    if (_chatToolsOnboardingDismissed) return;
+    _chatToolsOnboardingDismissed = true;
     notifyListeners();
     await _save();
   }

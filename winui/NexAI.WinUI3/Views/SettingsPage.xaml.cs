@@ -285,7 +285,7 @@ public sealed partial class SettingsPage : Page
         SystemPromptBox.Header = _localization.GetString("Settings.SystemPrompt");
         TemperatureBox.Header = _localization.GetString("Settings.Temperature");
         MaxTokensBox.Header = _localization.GetString("Settings.MaxTokens");
-        VertexApiKeyBox.Header = "Vertex AI API Key (AI Translation)";
+        VertexApiKeyBox.Header = "Vertex AI API Key (chat)";
 
         AppearanceSectionTitle.Text = _localization.GetString("Settings.Section.Appearance");
         LanguageBox.Header = _localization.GetString("Language.Header");

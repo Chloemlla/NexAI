@@ -82,7 +82,7 @@
   <data name="Tool.ShortUrl.Title" xml:space="preserve"><value>短链接</value></data>
   <data name="Tool.ShortUrl.Description" xml:space="preserve"><value>通过 api.mmp.cc 创建短链接</value></data>
   <data name="Tool.Translation.Title" xml:space="preserve"><value>AI 翻译</value></data>
-  <data name="Tool.Translation.Description" xml:space="preserve"><value>使用 Vertex AI 翻译文本</value></data>
+  <data name="Tool.Translation.Description" xml:space="preserve"><value>DeepLX 公共翻译（Project-Lumen 方式）</value></data>
   <data name="Tool.ImageGeneration.Title" xml:space="preserve"><value>AI 绘图</value></data>
   <data name="Tool.ImageGeneration.Description" xml:space="preserve"><value>通过兼容的图像接口生成图片</value></data>
   <data name="Tool.Artifacts.Title" xml:space="preserve"><value>内容分享</value></data>

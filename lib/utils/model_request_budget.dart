@@ -1,5 +1,5 @@
 class ModelRequestBudget {
-  static const maxTranslationInputChars = 12000;
+  static const maxTranslationInputChars = 5000;
   static const maxImagePromptChars = 4000;
   static const maxImagesPerRequest = 4;
   static const maxImageBytes = 6 * 1024 * 1024;

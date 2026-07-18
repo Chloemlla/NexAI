@@ -83,7 +83,7 @@ class _ToolsPageState extends State<ToolsPage> {
     ),
     _ToolEntry(
       title: 'AI 翻译',
-      description: 'Vertex AI 翻译',
+      description: 'DeepLX 公共翻译',
       keywords: const ['翻译', 'AI', '语言'],
       category: _ToolCategory.ai,
       icon: Icons.translate_rounded,

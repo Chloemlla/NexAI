@@ -1496,7 +1496,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 // ── Gemini AI Translation ──
                 _SectionHeader(
                   icon: Icons.translate_rounded,
-                  label: 'Gemini AI 翻译',
+                  label: 'Gemini / Vertex（聊天用）',
                   cs: cs,
                   tt: tt,
                 ),

@@ -1,14 +1,12 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import '../theme/lumen_tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/settings_provider.dart';
 import '../providers/translation_provider.dart';
-import '../utils/model_request_budget.dart';
-import '../widgets/tool_page_style.dart';
+import '../services/lumen_translation_client.dart';
+import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
+import '../widgets/tool_page_style.dart';
 
 class TranslationPage extends StatefulWidget {
   const TranslationPage({super.key});
@@ -20,23 +18,21 @@ class TranslationPage extends StatefulWidget {
 class _TranslationPageState extends State<TranslationPage> {
   final _sourceController = TextEditingController();
   final _targetController = TextEditingController();
+  final _client = LumenTranslationClient();
 
-  String _sourceLanguage = 'en';
-  String _targetLanguage = 'zh-CN';
+  String _sourceLanguage = 'auto';
+  String _targetLanguage = 'ZH';
   bool _isTranslating = false;
+  bool _loadingConfig = true;
+  bool _serviceEnabled = true;
+  String? _serviceMessage;
+  List<String> _alternatives = const [];
 
-  final _languages = const {
-    'en': 'English',
-    'zh-CN': '简体中文',
-    'zh-TW': '繁體中文',
-    'ja': '日本語',
-    'ko': '한국어',
-    'es': 'Español',
-    'fr': 'Français',
-    'de': 'Deutsch',
-    'ru': 'Русский',
-    'ar': 'العربية',
-  };
+  @override
+  void initState() {
+    super.initState();
+    _refreshConfig();
+  }
 
   @override
   void dispose() {
@@ -45,87 +41,74 @@ class _TranslationPageState extends State<TranslationPage> {
     super.dispose();
   }
 
+  Future<void> _refreshConfig() async {
+    setState(() {
+      _loadingConfig = true;
+      _serviceMessage = null;
+    });
+    try {
+      final config = await _client.fetchConfig();
+      if (!mounted) return;
+      setState(() {
+        _serviceEnabled = config.enabled;
+        _serviceMessage = config.enabled ? '服务可用' : '翻译服务未开启';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _serviceEnabled = false;
+        _serviceMessage = '服务检查失败：$error';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _loadingConfig = false);
+      }
+    }
+  }
+
   Future<void> _translate() async {
     final text = _sourceController.text.trim();
-    if (text.isEmpty) return;
-    final budgetError = ModelRequestBudget.validateTranslationInput(text);
-    if (budgetError != null) {
-      _showMessage(budgetError);
+    if (text.isEmpty) {
+      _showMessage('请输入要翻译的文本');
+      return;
+    }
+    if (text.runes.length > LumenTranslationClient.maxInputChars) {
+      _showMessage('文本过长，请控制在 ${LumenTranslationClient.maxInputChars} 个字符以内');
+      return;
+    }
+    if (!_serviceEnabled) {
+      _showMessage(_serviceMessage ?? '翻译服务不可用');
       return;
     }
 
-    final settings = context.read<SettingsProvider>();
-    if (settings.vertexApiKey.isEmpty) {
-      _showMessage('请先在设置中配置 Vertex AI API Key');
-      return;
-    }
-
-    setState(() => _isTranslating = true);
+    setState(() {
+      _isTranslating = true;
+      _alternatives = const [];
+    });
 
     try {
-      final dio = Dio();
-      final modelId = 'gemini-2.0-flash-001';
-      final endpoint =
-          'https://aiplatform.googleapis.com/v1/publishers/google/models/$modelId:generateContent';
-
-      final sourceLang = _languages[_sourceLanguage] ?? _sourceLanguage;
-      final targetLang = _languages[_targetLanguage] ?? _targetLanguage;
-
-      final response = await dio.post(
-        '$endpoint?key=${settings.vertexApiKey}',
-        options: Options(headers: {'Content-Type': 'application/json'}),
-        data: {
-          'contents': [
-            {
-              'role': 'user',
-              'parts': [
-                {
-                  'text':
-                      'Translate the following text from $sourceLang to $targetLang. '
-                      'Only return the translated text without any explanation or additional content.\n\n'
-                      'Text to translate:\n$text',
-                },
-              ],
-            },
-          ],
-          'generationConfig': {'temperature': 0.3, 'maxOutputTokens': 2048},
-        },
+      final result = await _client.translate(
+        text: text,
+        sourceLang: _sourceLanguage,
+        targetLang: _targetLanguage,
       );
-
-      if (response.statusCode == 200) {
-        final candidates = response.data['candidates'] as List?;
-        if (candidates != null && candidates.isNotEmpty) {
-          final content = candidates.first['content'];
-          final parts = content['parts'] as List?;
-          if (parts != null && parts.isNotEmpty) {
-            final translatedText = parts.first['text'] as String?;
-            if (translatedText != null) {
-              if (mounted) {
-                setState(() => _targetController.text = translatedText.trim());
-              }
-              if (mounted) {
-                await context.read<TranslationProvider>().addRecord(
-                  TranslationRecord(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    sourceLanguage: _sourceLanguage,
-                    targetLanguage: _targetLanguage,
-                    sourceText: text,
-                    translatedText: translatedText.trim(),
-                    createdAt: DateTime.now(),
-                  ),
-                );
-              }
-              return;
-            }
-          }
-        }
-
-        _showMessage('翻译失败：无法解析响应');
-      } else {
-        _showMessage('翻译失败：${response.statusMessage}');
-      }
+      if (!mounted) return;
+      setState(() {
+        _targetController.text = result.translatedText;
+        _alternatives = result.alternatives;
+      });
+      await context.read<TranslationProvider>().addRecord(
+            TranslationRecord(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              sourceLanguage: result.sourceLang,
+              targetLanguage: result.targetLang,
+              sourceText: text,
+              translatedText: result.translatedText,
+              createdAt: DateTime.now(),
+            ),
+          );
     } catch (error) {
-      _showMessage('翻译错误：$error');
+      _showMessage(error.toString());
     } finally {
       if (mounted) {
         setState(() => _isTranslating = false);
@@ -140,7 +123,7 @@ class _TranslationPageState extends State<TranslationPage> {
       _showMessage('剪贴板为空');
       return;
     }
-    setState(() => _sourceController.text = text);
+    setState(() => _sourceController.text = text.take(LumenTranslationClient.maxInputChars));
   }
 
   void _copyTarget() {
@@ -151,13 +134,15 @@ class _TranslationPageState extends State<TranslationPage> {
 
   void _swapLanguages() {
     setState(() {
-      final tempLanguage = _sourceLanguage;
-      _sourceLanguage = _targetLanguage;
-      _targetLanguage = tempLanguage;
+      final nextSource = _targetLanguage;
+      final nextTarget = _sourceLanguage == 'auto' ? 'EN' : _sourceLanguage;
+      _sourceLanguage = nextSource == 'auto' ? 'EN' : nextSource;
+      _targetLanguage = nextTarget;
 
       final tempText = _sourceController.text;
       _sourceController.text = _targetController.text;
       _targetController.text = tempText;
+      _alternatives = const [];
     });
   }
 
@@ -168,7 +153,9 @@ class _TranslationPageState extends State<TranslationPage> {
       SnackBar(
         content: Text(message),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+        ),
       ),
     );
   }
@@ -178,8 +165,10 @@ class _TranslationPageState extends State<TranslationPage> {
     final cs = Theme.of(context).colorScheme;
     final mq = MediaQuery.of(context);
     final isNarrow = mq.size.width < 600;
-    final settings = context.watch<SettingsProvider>();
-    final hasApiKey = settings.vertexApiKey.isNotEmpty;
+    final sourceLabel =
+        LumenTranslationLanguages.source[_sourceLanguage] ?? _sourceLanguage;
+    final targetLabel =
+        LumenTranslationLanguages.target[_targetLanguage] ?? _targetLanguage;
 
     return LumenSecondaryScaffold(
       title: 'AI 翻译',
@@ -187,10 +176,12 @@ class _TranslationPageState extends State<TranslationPage> {
         LumenPageIntro(
           icon: Icons.translate_rounded,
           title: 'AI 翻译',
-          description: '选择源语言和目标语言，输入文本后进行 AI 翻译并复制结果。',
+          description: '按 Project-Lumen 方式调用 DeepLX 公共翻译接口，支持自动检测与备选结果。',
           chips: [
-            '${_languages[_sourceLanguage]} → ${_languages[_targetLanguage]}',
-            hasApiKey ? 'API Key 已配置' : '缺少 API Key',
+            '$sourceLabel → $targetLabel',
+            _loadingConfig
+                ? '检查服务中'
+                : (_serviceEnabled ? '服务可用' : '服务不可用'),
             '自动记录',
           ],
         ),
@@ -217,20 +208,32 @@ class _TranslationPageState extends State<TranslationPage> {
               iconColor: cs.onTertiaryContainer,
               onTap: _copyTarget,
             ),
+            ToolQuickActionData(
+              icon: Icons.sync_rounded,
+              label: '刷新服务',
+              backgroundColor: cs.surfaceContainerHighest,
+              iconColor: cs.onSurfaceVariant,
+              onTap: _loadingConfig ? null : _refreshConfig,
+            ),
           ],
         ),
-        if (!hasApiKey)
+        if (!_serviceEnabled || _loadingConfig)
           ToolPanel(
             color: cs.errorContainer.withAlpha(90),
             borderSide: BorderSide(color: cs.error.withAlpha(40)),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.key_off_rounded, color: cs.onErrorContainer),
+                Icon(
+                  _loadingConfig ? Icons.sync_rounded : Icons.cloud_off_rounded,
+                  color: cs.onErrorContainer,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    '当前未配置 Vertex AI API Key。可以先在设置页补齐密钥，再返回这里直接翻译。',
+                    _loadingConfig
+                        ? '正在检查翻译服务…'
+                        : (_serviceMessage ?? '翻译服务不可用'),
                     style: TextStyle(color: cs.onErrorContainer, height: 1.5),
                   ),
                 ),
@@ -248,8 +251,9 @@ class _TranslationPageState extends State<TranslationPage> {
                         _LanguageField(
                           label: '源语言',
                           value: _sourceLanguage,
-                          languages: _languages,
-                          onChanged: (value) => setState(() => _sourceLanguage = value!),
+                          languages: LumenTranslationLanguages.source,
+                          onChanged: (value) =>
+                              setState(() => _sourceLanguage = value!),
                         ),
                         const SizedBox(height: 12),
                         FilledButton.tonalIcon(
@@ -261,8 +265,9 @@ class _TranslationPageState extends State<TranslationPage> {
                         _LanguageField(
                           label: '目标语言',
                           value: _targetLanguage,
-                          languages: _languages,
-                          onChanged: (value) => setState(() => _targetLanguage = value!),
+                          languages: LumenTranslationLanguages.target,
+                          onChanged: (value) =>
+                              setState(() => _targetLanguage = value!),
                         ),
                       ],
                     )
@@ -272,15 +277,18 @@ class _TranslationPageState extends State<TranslationPage> {
                           child: _LanguageField(
                             label: '源语言',
                             value: _sourceLanguage,
-                            languages: _languages,
-                            onChanged: (value) => setState(() => _sourceLanguage = value!),
+                            languages: LumenTranslationLanguages.source,
+                            onChanged: (value) =>
+                                setState(() => _sourceLanguage = value!),
                           ),
                         ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: FilledButton.tonal(
                             onPressed: _swapLanguages,
-                            style: FilledButton.styleFrom(padding: const EdgeInsets.all(16)),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.all(16),
+                            ),
                             child: const Icon(Icons.swap_horiz_rounded),
                           ),
                         ),
@@ -288,8 +296,9 @@ class _TranslationPageState extends State<TranslationPage> {
                           child: _LanguageField(
                             label: '目标语言',
                             value: _targetLanguage,
-                            languages: _languages,
-                            onChanged: (value) => setState(() => _targetLanguage = value!),
+                            languages: LumenTranslationLanguages.target,
+                            onChanged: (value) =>
+                                setState(() => _targetLanguage = value!),
                           ),
                         ),
                       ],
@@ -308,8 +317,20 @@ class _TranslationPageState extends State<TranslationPage> {
                     controller: _sourceController,
                     minLines: 6,
                     maxLines: 10,
+                    maxLength: LumenTranslationClient.maxInputChars,
+                    onChanged: (value) {
+                      if (value.runes.length > LumenTranslationClient.maxInputChars) {
+                        final clipped = value.take(LumenTranslationClient.maxInputChars);
+                        _sourceController.value = TextEditingValue(
+                          text: clipped,
+                          selection: TextSelection.collapsed(offset: clipped.length),
+                        );
+                      }
+                    },
                     decoration: InputDecoration(
                       hintText: '输入或粘贴需要翻译的文本',
+                      counterText:
+                          '${_sourceController.text.runes.length}/${LumenTranslationClient.maxInputChars}',
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(bottom: 88),
                         child: Icon(Icons.notes_rounded),
@@ -317,11 +338,14 @@ class _TranslationPageState extends State<TranslationPage> {
                       suffixIcon: _sourceController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear_rounded),
-                              onPressed: () => setState(() => _sourceController.clear()),
+                              onPressed: () => setState(() {
+                                _sourceController.clear();
+                              }),
                             )
                           : null,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                        borderRadius:
+                            BorderRadius.circular(LumenTokens.radiusSm),
                       ),
                     ),
                   ),
@@ -329,19 +353,25 @@ class _TranslationPageState extends State<TranslationPage> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: _isTranslating || !hasApiKey ? null : _translate,
+                      onPressed: _isTranslating || !_serviceEnabled
+                          ? null
+                          : _translate,
                       icon: _isTranslating
                           ? SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: cs.onPrimary,
+                              ),
                             )
-                          : const Icon(Icons.auto_awesome_rounded),
+                          : const Icon(Icons.translate_rounded),
                       label: Text(_isTranslating ? '翻译中...' : '开始翻译'),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
+                          borderRadius:
+                              BorderRadius.circular(LumenTokens.radiusMd),
                         ),
                       ),
                     ),
@@ -356,36 +386,70 @@ class _TranslationPageState extends State<TranslationPage> {
           title: '翻译结果',
           children: [
             ToolPanel(
-              child: TextField(
-                controller: _targetController,
-                minLines: 6,
-                maxLines: 10,
-                readOnly: true,
-                decoration: InputDecoration(
-                  hintText: '翻译结果会显示在这里',
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.only(bottom: 88),
-                    child: Icon(Icons.translate_rounded),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _targetController,
+                    minLines: 6,
+                    maxLines: 10,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      hintText: '翻译结果会显示在这里',
+                      prefixIcon: const Padding(
+                        padding: EdgeInsets.only(bottom: 88),
+                        child: Icon(Icons.translate_rounded),
+                      ),
+                      suffixIcon: _targetController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.copy_rounded),
+                              onPressed: _copyTarget,
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(LumenTokens.radiusSm),
+                      ),
+                    ),
                   ),
-                  suffixIcon: _targetController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.copy_rounded),
-                          onPressed: _copyTarget,
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                  ),
-                ),
+                  if (_alternatives.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      '备选结果',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ..._alternatives.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          item,
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
         ),
-        
       ],
     );
   }
+}
 
+extension on String {
+  String take(int maxChars) {
+    if (runes.length <= maxChars) return this;
+    return String.fromCharCodes(runes.take(maxChars));
+  }
 }
 
 class _LanguageField extends StatelessWidget {
@@ -412,12 +476,16 @@ class _LanguageField extends StatelessWidget {
         prefixIcon: const Icon(Icons.language_rounded),
         filled: true,
         fillColor: cs.surfaceContainerHighest.withAlpha(90),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(LumenTokens.radiusSm)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+        ),
       ),
       items: languages.entries
           .map(
-            (entry) =>
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+            (entry) => DropdownMenuItem(
+              value: entry.key,
+              child: Text(entry.value),
+            ),
           )
           .toList(),
       onChanged: onChanged,

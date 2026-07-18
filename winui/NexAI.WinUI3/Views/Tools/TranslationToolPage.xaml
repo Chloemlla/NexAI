@@ -10,7 +10,7 @@
                 <Button Content="Back" Click="BackButton_Click" />
                 <StackPanel Spacing="2">
                     <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="AI Translation" />
-                    <TextBlock Opacity="0.72" Text="Translate with Vertex AI. Configure the Vertex API key in Settings." TextWrapping="Wrap" />
+                    <TextBlock Opacity="0.72" Text="DeepLX public translation (Project-Lumen method) via tts.chloemlla.com." TextWrapping="Wrap" />
                 </StackPanel>
             </StackPanel>
 
@@ -18,11 +18,12 @@
                 <Button Content="Paste source" Click="PasteButton_Click" />
                 <Button Content="Swap languages" Click="SwapButton_Click" />
                 <Button Content="Copy result" Click="CopyButton_Click" />
+                <Button Content="Refresh service" Click="RefreshService_Click" />
             </StackPanel>
 
-            <InfoBar x:Name="KeyWarningBar" IsOpen="False" IsClosable="False" Severity="Warning"
-                     Title="Vertex API key missing"
-                     Message="Open Settings and fill Vertex AI API Key before translating." />
+            <InfoBar x:Name="ServiceWarningBar" IsOpen="False" IsClosable="False" Severity="Warning"
+                     Title="Checking service"
+                     Message="Validating DeepLX public translation availability." />
 
             <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
                 <Grid ColumnSpacing="12" RowSpacing="12">
@@ -39,9 +40,10 @@
 
             <Border Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8">
                 <StackPanel Spacing="12">
-                    <TextBox x:Name="SourceBox" Header="Source text" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" />
+                    <TextBox x:Name="SourceBox" Header="Source text" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" MaxLength="5000" />
                     <Button x:Name="TranslateButton" Content="Translate" Style="{StaticResource AccentButtonStyle}" Click="TranslateButton_Click" />
                     <TextBox x:Name="ResultBox" Header="Translation" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" IsReadOnly="True" />
+                    <TextBox x:Name="AlternativesBox" Header="Alternatives" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72" IsReadOnly="True" />
                     <TextBlock x:Name="StatusText" Opacity="0.8" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>

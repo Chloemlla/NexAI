@@ -143,29 +143,53 @@ public interface IPasswordVaultStore
     Task RestoreBackupAsync(string backupJson, string? passphrase = null, CancellationToken cancellationToken = default);
 }
 
+public sealed class TranslationServiceConfig
+{
+    public bool Enabled { get; init; } = true;
+    public bool RequiresApiKey { get; init; }
+    public string BaseUrl { get; init; } = string.Empty;
+    public string EndpointPath { get; init; } = string.Empty;
+}
+
+public sealed class TranslationResult
+{
+    public required string TranslatedText { get; init; }
+    public string SourceLang { get; init; } = "auto";
+    public string TargetLang { get; init; } = "ZH";
+    public IReadOnlyList<string> Alternatives { get; init; } = Array.Empty<string>();
+}
+
 public interface ITranslationClient
 {
-    Task<string> TranslateAsync(
-        string vertexApiKey,
+    Task<TranslationServiceConfig> GetConfigAsync(CancellationToken cancellationToken = default);
+
+    Task<TranslationResult> TranslateAsync(
         string sourceLanguage,
         string targetLanguage,
         string text,
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>Lumen DeepLX language sets.</summary>
 public static class TranslationLanguages
 {
-    public static IReadOnlyDictionary<string, string> All { get; } = new Dictionary<string, string>
+    public static IReadOnlyDictionary<string, string> Source { get; } = new Dictionary<string, string>
     {
-        ["en"] = "English",
-        ["zh-CN"] = "简体中文",
-        ["zh-TW"] = "繁體中文",
-        ["ja"] = "日本語",
-        ["ko"] = "한국어",
-        ["es"] = "Español",
-        ["fr"] = "Français",
-        ["de"] = "Deutsch",
-        ["ru"] = "Русский",
-        ["ar"] = "العربية",
+        ["auto"] = "Auto detect",
+        ["ZH"] = "Chinese",
+        ["EN"] = "English",
+        ["JA"] = "Japanese",
+        ["KO"] = "Korean",
     };
+
+    public static IReadOnlyDictionary<string, string> Target { get; } = new Dictionary<string, string>
+    {
+        ["ZH"] = "Chinese",
+        ["EN"] = "English",
+        ["JA"] = "Japanese",
+        ["KO"] = "Korean",
+    };
+
+    // Backward-compatible alias used by older UI bindings.
+    public static IReadOnlyDictionary<string, string> All => Source;
 }

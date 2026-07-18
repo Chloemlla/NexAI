@@ -4,7 +4,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using NexAI.Core.Auth;
-using NexAI.Core.Chat;
 using NexAI.Core.Settings;
 using NexAI.Core.Tools;
 using NexAI.WinUI3.Services;
@@ -18,12 +17,12 @@ namespace NexAI.WinUI3.Views.Tools;
 public sealed partial class GenericToolHostPage : Page
 {
     private readonly ISettingsStore _settingsStore;
-    private readonly IChatStreamingClient _chatClient;
     private readonly IShortUrlClient _shortUrlClient;
     private readonly IArtifactsClient _artifactsClient;
     private readonly IImageGenerationClient _imageGenerationClient;
     private readonly IMediaToolService _mediaToolService;
     private readonly IAuthSessionStore _authSessionStore;
+    private readonly ITranslationClient _translationClient;
     private readonly ILocalizationService _localization;
     private ToolDefinition? _selected;
 
@@ -31,12 +30,12 @@ public sealed partial class GenericToolHostPage : Page
     {
         InitializeComponent();
         _settingsStore = App.Current.Services.GetRequiredService<ISettingsStore>();
-        _chatClient = App.Current.Services.GetRequiredService<IChatStreamingClient>();
         _shortUrlClient = App.Current.Services.GetRequiredService<IShortUrlClient>();
         _artifactsClient = App.Current.Services.GetRequiredService<IArtifactsClient>();
         _imageGenerationClient = App.Current.Services.GetRequiredService<IImageGenerationClient>();
         _mediaToolService = App.Current.Services.GetRequiredService<IMediaToolService>();
         _authSessionStore = App.Current.Services.GetRequiredService<IAuthSessionStore>();
+        _translationClient = App.Current.Services.GetRequiredService<ITranslationClient>();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
     }
 
@@ -164,28 +163,15 @@ public sealed partial class GenericToolHostPage : Page
             return string.Empty;
         }
 
-        var settings = _settingsStore.Current;
-        var request = new ChatCompletionRequest
+        var result = await _translationClient.TranslateAsync("auto", "ZH", input);
+        if (result.Alternatives.Count == 0)
         {
-            BaseUrl = settings.BaseUrl,
-            ApiKey = settings.ApiKey,
-            Model = settings.SelectedModel,
-            Temperature = 0.2,
-            MaxTokens = Math.Min(settings.MaxTokens, 2048),
-            SystemPrompt = "Translate the user text to Chinese. Return only the translation.",
-            Messages =
-            [
-                new ChatMessage { Role = ChatRoles.User, Content = input, Timestamp = DateTime.UtcNow },
-            ],
-        };
-
-        var sb = new StringBuilder();
-        await foreach (var delta in _chatClient.StreamAsync(request))
-        {
-            sb.Append(delta);
+            return result.TranslatedText;
         }
 
-        return sb.ToString();
+        return result.TranslatedText + Environment.NewLine + Environment.NewLine +
+               "Alternatives:" + Environment.NewLine +
+               string.Join(Environment.NewLine, result.Alternatives);
     }
 
     private async Task<string> RunShortUrlAsync(string input)

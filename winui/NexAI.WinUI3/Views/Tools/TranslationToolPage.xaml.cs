@@ -1,8 +1,9 @@
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using NexAI.Core.Settings;
+using NexAI.Core.Chat;
 using NexAI.Core.Tools;
 using Windows.ApplicationModel.DataTransfer;
 using NexAI.WinUI3;
@@ -11,33 +12,36 @@ namespace NexAI.WinUI3.Views.Tools;
 
 public sealed partial class TranslationToolPage : Page
 {
-    private readonly ISettingsStore _settingsStore;
     private readonly ITranslationClient _translationClient;
     private readonly ITranslationHistoryStore _historyStore;
+    private TranslationServiceConfig? _config;
+    private bool _busy;
 
     public TranslationToolPage()
     {
         InitializeComponent();
-        _settingsStore = App.Current.Services.GetRequiredService<ISettingsStore>();
         _translationClient = App.Current.Services.GetRequiredService<ITranslationClient>();
         _historyStore = App.Current.Services.GetRequiredService<ITranslationHistoryStore>();
 
-        foreach (var pair in TranslationLanguages.All)
+        foreach (var pair in TranslationLanguages.Source)
         {
             SourceLanguageBox.Items.Add(new ComboBoxItem { Content = pair.Value, Tag = pair.Key });
+        }
+        foreach (var pair in TranslationLanguages.Target)
+        {
             TargetLanguageBox.Items.Add(new ComboBoxItem { Content = pair.Value, Tag = pair.Key });
         }
 
-        SourceLanguageBox.SelectedIndex = 0;
-        TargetLanguageBox.SelectedIndex = 1;
+        SourceLanguageBox.SelectedIndex = 0; // auto
+        TargetLanguageBox.SelectedIndex = 0; // ZH
     }
 
-    protected override void OnNavigatedTo(NavigationEventArgs e)
+    protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         _historyStore.Changed += OnHistoryChanged;
-        RefreshKeyState();
         RefreshHistory();
+        await RefreshConfigAsync();
     }
 
     protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -50,11 +54,30 @@ public sealed partial class TranslationToolPage : Page
 
     private void RefreshHistory() => HistoryList.ItemsSource = _historyStore.History;
 
-    private void RefreshKeyState()
+    private async Task RefreshConfigAsync()
     {
-        var hasKey = !string.IsNullOrWhiteSpace(_settingsStore.Current.VertexApiKey);
-        KeyWarningBar.IsOpen = !hasKey;
-        TranslateButton.IsEnabled = hasKey;
+        StatusText.Text = "Checking translation service…";
+        try
+        {
+            _config = await _translationClient.GetConfigAsync();
+            var enabled = _config.Enabled;
+            ServiceWarningBar.IsOpen = !enabled;
+            ServiceWarningBar.Title = enabled ? "Service ready" : "Service unavailable";
+            ServiceWarningBar.Message = enabled
+                ? "DeepLX public translation is available."
+                : "Translation service is disabled or not configured.";
+            TranslateButton.IsEnabled = enabled && !_busy;
+            StatusText.Text = enabled ? "Service ready." : "Service unavailable.";
+        }
+        catch (Exception ex)
+        {
+            _config = null;
+            ServiceWarningBar.IsOpen = true;
+            ServiceWarningBar.Title = "Service check failed";
+            ServiceWarningBar.Message = ex.Message;
+            TranslateButton.IsEnabled = false;
+            StatusText.Text = ex.Message;
+        }
     }
 
     private void BackButton_Click(object sender, RoutedEventArgs e)
@@ -77,27 +100,33 @@ public sealed partial class TranslationToolPage : Page
             return;
         }
 
-        var source = ReadLanguage(SourceLanguageBox) ?? "en";
-        var target = ReadLanguage(TargetLanguageBox) ?? "zh-CN";
+        if (_config?.Enabled == false)
+        {
+            StatusText.Text = "Translation service is unavailable.";
+            return;
+        }
+
+        var source = ReadLanguage(SourceLanguageBox) ?? "auto";
+        var target = ReadLanguage(TargetLanguageBox) ?? "ZH";
+        _busy = true;
         TranslateButton.IsEnabled = false;
         StatusText.Text = "Translating…";
         try
         {
-            var result = await _translationClient.TranslateAsync(
-                _settingsStore.Current.VertexApiKey,
-                source,
-                target,
-                text);
-            ResultBox.Text = result;
+            var result = await _translationClient.TranslateAsync(source, target, text);
+            ResultBox.Text = result.TranslatedText;
+            AlternativesBox.Text = result.Alternatives.Count == 0
+                ? string.Empty
+                : string.Join(Environment.NewLine, result.Alternatives.Select((a, i) => $"{i + 1}. {a}"));
             await _historyStore.AddAsync(new TranslationRecord
             {
-                SourceLanguage = source,
-                TargetLanguage = target,
+                SourceLanguage = result.SourceLang,
+                TargetLanguage = result.TargetLang,
                 SourceText = text,
-                TranslatedText = result,
+                TranslatedText = result.TranslatedText,
                 CreatedAt = DateTime.UtcNow,
             });
-            StatusText.Text = "Done.";
+            StatusText.Text = $"{result.SourceLang} → {result.TargetLang}";
         }
         catch (Exception ex)
         {
@@ -105,7 +134,8 @@ public sealed partial class TranslationToolPage : Page
         }
         finally
         {
-            RefreshKeyState();
+            _busy = false;
+            TranslateButton.IsEnabled = _config?.Enabled != false;
         }
     }
 
@@ -123,9 +153,11 @@ public sealed partial class TranslationToolPage : Page
 
     private void SwapButton_Click(object sender, RoutedEventArgs e)
     {
-        var sourceIndex = SourceLanguageBox.SelectedIndex;
-        SourceLanguageBox.SelectedIndex = TargetLanguageBox.SelectedIndex;
-        TargetLanguageBox.SelectedIndex = sourceIndex;
+        // Lumen target set does not include auto; map auto -> EN when swapping into target.
+        var sourceCode = ReadLanguage(SourceLanguageBox) ?? "auto";
+        var targetCode = ReadLanguage(TargetLanguageBox) ?? "ZH";
+        SelectByTag(SourceLanguageBox, targetCode == "auto" ? "EN" : targetCode);
+        SelectByTag(TargetLanguageBox, sourceCode == "auto" ? "EN" : sourceCode);
 
         var sourceText = SourceBox.Text;
         SourceBox.Text = ResultBox.Text;
@@ -141,6 +173,9 @@ public sealed partial class TranslationToolPage : Page
         StatusText.Text = "Translation copied.";
     }
 
+    private async void RefreshService_Click(object sender, RoutedEventArgs e)
+        => await RefreshConfigAsync();
+
     private async void ClearHistory_Click(object sender, RoutedEventArgs e)
     {
         await _historyStore.ClearAsync();
@@ -149,4 +184,17 @@ public sealed partial class TranslationToolPage : Page
 
     private static string? ReadLanguage(ComboBox box)
         => (box.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+
+    private static void SelectByTag(ComboBox box, string tag)
+    {
+        for (var i = 0; i < box.Items.Count; i++)
+        {
+            if (box.Items[i] is ComboBoxItem item &&
+                string.Equals(item.Tag?.ToString(), tag, StringComparison.OrdinalIgnoreCase))
+            {
+                box.SelectedIndex = i;
+                return;
+            }
+        }
+    }
 }

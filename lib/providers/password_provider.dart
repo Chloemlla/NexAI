@@ -117,6 +117,20 @@ class PasswordProvider extends ChangeNotifier {
     }
   }
 
+  /// 全量恢复（云同步覆盖本地密码库）
+  Future<void> restoreFromList(List<dynamic> list) async {
+    _passwords
+      ..clear()
+      ..addAll(
+        list.map((item) {
+          if (item is SavedPassword) return item;
+          return SavedPassword.fromJson(Map<String, dynamic>.from(item as Map));
+        }),
+      );
+    notifyListeners();
+    await _saveToStorage();
+  }
+
   /// 增量合并：按 id upsert
   Future<void> mergeItems(List<dynamic> list) async {
     for (final item in list) {

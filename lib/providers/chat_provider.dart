@@ -132,6 +132,7 @@ class ChatProvider extends ChangeNotifier {
         modelId: m.modelId,
         siblingGroupId: m.siblingGroupId,
         isActiveBranch: i == siblingAbsoluteIndex,
+        isPinned: m.isPinned,
       );
     }
     notifyListeners();
@@ -143,24 +144,10 @@ class ChatProvider extends ChangeNotifier {
     if (conversation == null) return;
     if (messageIndex < 0 || messageIndex >= conversation.messages.length) return;
     final m = conversation.messages[messageIndex];
-    // store pin in toolRuns metadata-less: encode into modelId prefix? better use citations source marker no.
-    // Use stats null-safe: put marker in modelId is bad. Add runtime only focus for pin via conversation tags.
-    final tags = conversation.messages; // no-op keep compile
-    tags;
-    // Represent pin via isActiveBranch-independent list on conversation compareModels no.
-    // Attach soft pin as citation special.
-    if (pinned) {
-      m.addCitations([
-        Citation(
-          title: 'pinned',
-          url: 'nexai://pin/$messageIndex',
-          snippet: 'pinned-message',
-          source: 'pin',
-        ),
-      ]);
-    } else {
-      m.citations.removeWhere((c) => c.source == 'pin');
-    }
+    if (m.isPinned == pinned) return;
+    m.isPinned = pinned;
+    // Drop any legacy pin-as-citation markers from older builds.
+    m.citations.removeWhere((c) => c.source == 'pin');
     notifyListeners();
     await _save();
   }
@@ -207,6 +194,30 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void editFollowUpAt(int index, String content) {
+    if (index < 0 || index >= _followUpQueue.length) return;
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) {
+      removeFollowUpAt(index);
+      return;
+    }
+    final prev = _followUpQueue[index];
+    _followUpQueue[index] = _QueuedChatTurn(
+      content: trimmed,
+      attachments: prev.attachments,
+      apiMode: prev.apiMode,
+      baseUrl: prev.baseUrl,
+      apiKey: prev.apiKey,
+      model: prev.model,
+      temperature: prev.temperature,
+      maxTokens: prev.maxTokens,
+      systemPrompt: prev.systemPrompt,
+      vertexProjectId: prev.vertexProjectId,
+      vertexLocation: prev.vertexLocation,
+    );
+    notifyListeners();
+  }
+
   Future<void> branchFromMessage(int messageIndex) async {
     final conversation = currentConversation;
     if (conversation == null) return;
@@ -233,6 +244,7 @@ class ChatProvider extends ChangeNotifier {
               modelId: m.modelId,
               siblingGroupId: m.siblingGroupId,
               isActiveBranch: true,
+              isPinned: m.isPinned,
             ),
           )
           .toList(),

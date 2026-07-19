@@ -81,6 +81,7 @@ class SyncProvider extends ChangeNotifier {
         settingsProvider: settingsProvider,
         chatProvider: chatProvider,
         notesProvider: notesProvider,
+        passwordProvider: passwordProvider,
         translationProvider: translationProvider,
         shortUrlProvider: shortUrlProvider,
       );
@@ -185,9 +186,14 @@ class SyncProvider extends ChangeNotifier {
     required String category,
     required dynamic data,
   }) async {
-    debugPrint(
-      'NexAI Sync: uploadCategory [$category] skipped; legacy plaintext sync is disabled',
-    );
+    // Legacy plaintext category PATCH is disabled; v2 uses full encrypted snapshots.
+    _errorMessage = NexaiApiError(
+      stage: 'client_validation',
+      code: 'SYNC_CATEGORY_DISABLED',
+      message: '分类同步已停用，请使用 NexAI 云同步的全量加密上传',
+    ).toDialogBody();
+    _status = SyncStatus.error;
+    notifyListeners();
     return false;
   }
 
@@ -276,7 +282,7 @@ class SyncProvider extends ChangeNotifier {
 
   // ── 增量同步 ──
 
-  /// 增量同步暂不回落到旧版明文接口，先使用 v2 加密全量上传。
+  /// 客户端暂以全量 v2 加密快照对齐；服务端已提供 POST /sync/v2/incremental。
   Future<bool> incrementalSync({
     required AuthProvider authProvider,
     required SettingsProvider settingsProvider,
@@ -332,6 +338,7 @@ class SyncProvider extends ChangeNotifier {
     required SettingsProvider settingsProvider,
     required ChatProvider chatProvider,
     required NotesProvider notesProvider,
+    required PasswordProvider passwordProvider,
     required TranslationProvider translationProvider,
     required ShortUrlProvider shortUrlProvider,
   }) async {
@@ -400,6 +407,17 @@ class SyncProvider extends ChangeNotifier {
       );
     }
 
+    // savedPasswords: client-side E2E encrypted; server only stores ciphertext.
+    // Aligns with Happy-TTS SUPPORTED_CATEGORIES savedPasswords.
+    for (final item in passwordProvider.passwords) {
+      await addRecord(
+        id: item.id,
+        category: 'savedPasswords',
+        updatedAt: item.createdAt.toUtc().toIso8601String(),
+        payload: item.toJson(),
+      );
+    }
+
     return {
       'schemaVersion': 2,
       'deviceId': await _getOrCreateDeviceId(),
@@ -427,6 +445,7 @@ class SyncProvider extends ChangeNotifier {
     final conversations = <Map<String, dynamic>>[];
     final translations = <Map<String, dynamic>>[];
     final shortUrls = <Map<String, dynamic>>[];
+    final savedPasswords = <Map<String, dynamic>>[];
 
     for (final item in records) {
       if (item is! Map) {
@@ -460,6 +479,9 @@ class SyncProvider extends ChangeNotifier {
           case 'shortUrls':
             shortUrls.add(payload);
             break;
+          case 'savedPasswords':
+            savedPasswords.add(payload);
+            break;
           default:
             throw SyncRestoreException('未知同步数据类别: ${record['category']}');
         }
@@ -476,6 +498,7 @@ class SyncProvider extends ChangeNotifier {
       'conversations': conversations,
       'translationHistory': translations,
       'shortUrls': shortUrls,
+      'savedPasswords': savedPasswords,
     };
   }
 
@@ -595,7 +618,15 @@ class SyncProvider extends ChangeNotifier {
       translations.map((item) => item.toJson()).toList(),
     );
 
-    // 旧版云同步不再恢复服务端保存的明文密码。
+    // 恢复端到端加密密码库（仅 v2 ciphertext 解密后的本地明文存储）
+    final savedPasswords = _validatedList(
+      data['savedPasswords'],
+      'savedPasswords',
+      (json) => json,
+    );
+    if (savedPasswords.isNotEmpty) {
+      await passwordProvider.restoreFromList(savedPasswords);
+    }
 
     // 恢复短链接
     await shortUrlProvider.restoreFromList(

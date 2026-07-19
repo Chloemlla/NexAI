@@ -400,7 +400,7 @@ class _MessageFooter extends StatelessWidget {
             const Divider(height: 1),
             _shareTile(
               Icons.share_outlined,
-              '分享到 ShareGPT',
+              '系统分享',
               () => _shareToShareGPT(context),
             ),
             _shareTile(
@@ -435,7 +435,7 @@ class _MessageFooter extends StatelessWidget {
         items: [
           const PopupMenuItem(value: 'markdown', child: Text('导出为 Markdown')),
           const PopupMenuItem(value: 'image', child: Text('导出为图片 (PNG)')),
-          const PopupMenuItem(value: 'sharegpt', child: Text('分享到 ShareGPT')),
+          const PopupMenuItem(value: 'sharegpt', child: Text('系统分享')),
           const PopupMenuItem(value: 'artifact', child: Text('生成独立分享页面')),
         ],
       );
@@ -601,6 +601,7 @@ class _MessageFooter extends StatelessWidget {
       return;
     }
     try {
+      // System share sheet (not ShareGPT web upload).
       await SharePlus.instance.share(
         ShareParams(text: text, subject: 'NexAI 消息分享'),
       );
@@ -836,7 +837,7 @@ class _MessageFooter extends StatelessWidget {
 
   Future<void> _togglePin(BuildContext context) async {
     final chat = context.read<ChatProvider>();
-    final pinned = message.citations.any((c) => c.source == 'pin');
+    final pinned = message.isPinned;
     await chat.pinMessage(messageIndex, pinned: !pinned);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -874,6 +875,26 @@ class _MessageFooter extends StatelessWidget {
   }
 
   Future<void> _regenerate(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('重新生成'),
+        content: const Text(
+          '将删除该问题之后的全部回复与工具结果，并用当前设置重新生成。确定继续？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('重新生成'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
     final chatProvider = context.read<ChatProvider>();
     final settings = context.read<SettingsProvider>();
     _configureTools(context, chatProvider, settings);

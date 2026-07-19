@@ -72,7 +72,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Cloud Sync
   bool _syncEnabled = false;
-  String _syncMethod = 'WebDAV'; // 'WebDAV' or 'UpStash'
+  String _syncMethod = 'NexAI'; // NexAI only; WebDAV/UpStash reserved
   String _webdavServer = '';
   String _webdavUser = '';
   String _webdavPassword = '';
@@ -365,7 +365,7 @@ class SettingsProvider extends ChangeNotifier {
       _passkeyGoogleOnly = prefs.getBool('passkeyGoogleOnly') ?? true;
 
       _syncEnabled = prefs.getBool('syncEnabled') ?? false;
-      _syncMethod = prefs.getString('syncMethod') ?? 'WebDAV';
+      _syncMethod = prefs.getString('syncMethod') ?? 'NexAI';
       _webdavServer = prefs.getString('webdavServer') ?? '';
       _webdavUser = prefs.getString('webdavUser') ?? '';
       _upstashUrl = prefs.getString('upstashUrl') ?? '';

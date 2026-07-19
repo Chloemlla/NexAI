@@ -161,11 +161,11 @@ class _ChatPageState extends State<ChatPage> {
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollController.hasClients) return;
-      // Approximate jump: use item extent estimate.
-      final offset = (target * 140.0).clamp(
-        0.0,
-        _scrollController.position.maxScrollExtent,
-      );
+      // Prefer layout-based extent when available; fall back to fraction of list.
+      final pos = _scrollController.position;
+      final max = pos.maxScrollExtent;
+      final ratio = visible.isEmpty ? 0.0 : target / visible.length;
+      final offset = (max * ratio).clamp(0.0, max);
       _scrollController.jumpTo(offset);
       Future<void>.delayed(const Duration(seconds: 2), () {
         if (mounted) chat.clearFocusMessage();
@@ -1006,7 +1006,39 @@ class _ChatPageState extends State<ChatPage> {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12),
               ),
+              onTap: () async {
+                final controller = TextEditingController(text: items[i]);
+                final edited = await showDialog<String>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('编辑排队消息'),
+                    content: TextField(
+                      controller: controller,
+                      maxLines: 4,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        hintText: '修改后点击保存',
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('取消'),
+                      ),
+                      FilledButton(
+                        onPressed: () =>
+                            Navigator.of(ctx).pop(controller.text),
+                        child: const Text('保存'),
+                      ),
+                    ],
+                  ),
+                );
+                controller.dispose();
+                if (edited == null || !mounted) return;
+                chat.editFollowUpAt(i, edited);
+              },
               trailing: IconButton(
+                tooltip: '移除',
                 icon: const Icon(Icons.close, size: 16),
                 onPressed: () => chat.removeFollowUpAt(i),
               ),

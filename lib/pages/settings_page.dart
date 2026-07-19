@@ -42,11 +42,6 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _apiKeyController;
   late TextEditingController _modelsController;
   late TextEditingController _systemPromptController;
-  late TextEditingController _webdavServerController;
-  late TextEditingController _webdavUserController;
-  late TextEditingController _webdavPasswordController;
-  late TextEditingController _upstashUrlController;
-  late TextEditingController _upstashTokenController;
   late TextEditingController _vertexApiKeyController;
 
   // New API Mode Controllers
@@ -77,17 +72,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _modelsController = TextEditingController(text: settings.models.join(', '));
     _systemPromptController = TextEditingController(
       text: settings.systemPrompt,
-    );
-    _webdavServerController = TextEditingController(
-      text: settings.webdavServer,
-    );
-    _webdavUserController = TextEditingController(text: settings.webdavUser);
-    _webdavPasswordController = TextEditingController(
-      text: settings.webdavPassword,
-    );
-    _upstashUrlController = TextEditingController(text: settings.upstashUrl);
-    _upstashTokenController = TextEditingController(
-      text: settings.upstashToken,
     );
     _vertexApiKeyController = TextEditingController(
       text: settings.vertexApiKey,
@@ -135,11 +119,6 @@ class _SettingsPageState extends State<SettingsPage> {
       _apiKeyController.text = settings.apiKey;
       _modelsController.text = settings.models.join(', ');
       _systemPromptController.text = settings.systemPrompt;
-      _webdavServerController.text = settings.webdavServer;
-      _webdavUserController.text = settings.webdavUser;
-      _webdavPasswordController.text = settings.webdavPassword;
-      _upstashUrlController.text = settings.upstashUrl;
-      _upstashTokenController.text = settings.upstashToken;
       _vertexApiKeyController.text = settings.vertexApiKey;
       _vertexProjectIdController.text = settings.vertexProjectId;
       _vertexLocationController.text = settings.vertexLocation;
@@ -169,11 +148,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _apiKeyController.dispose();
     _modelsController.dispose();
     _systemPromptController.dispose();
-    _webdavServerController.dispose();
-    _webdavUserController.dispose();
-    _webdavPasswordController.dispose();
-    _upstashUrlController.dispose();
-    _upstashTokenController.dispose();
     _vertexApiKeyController.dispose();
     _vertexProjectIdController.dispose();
     _vertexLocationController.dispose();
@@ -935,92 +909,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 20),
 
-                // ── Cloud Sync ──
-                _SectionHeader(
-                  icon: Icons.cloud_sync_rounded,
-                  label: '云同步',
-                  cs: cs,
-                  tt: tt,
-                ),
-                const SizedBox(height: 10),
-                _SettingsCard(
-                  cs: cs,
-                  children: [
-                    SwitchListTile(
-                      value: settings.syncEnabled,
-                      onChanged: (v) => settings.setSyncEnabled(v),
-                      title: const Text('启用云同步'),
-                      subtitle: const Text('同步聊天记录和笔记'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    if (settings.syncEnabled) ...[
-                      const Divider(height: 24),
-                      SegmentedButton<String>(
-                        segments: const [
-                          ButtonSegment(
-                            value: 'WebDAV',
-                            label: Text('WebDAV'),
-                            icon: Icon(Icons.storage_rounded, size: 16),
-                          ),
-                          ButtonSegment(
-                            value: 'UpStash',
-                            label: Text('UpStash'),
-                            icon: Icon(Icons.bolt_rounded, size: 16),
-                          ),
-                        ],
-                        selected: {settings.syncMethod},
-                        onSelectionChanged: (s) =>
-                            settings.setSyncMethod(s.first),
-                      ),
-                      const SizedBox(height: 16),
-                      if (settings.syncMethod == 'WebDAV') ...[
-                        TextField(
-                          controller: _webdavServerController,
-                          decoration: const InputDecoration(
-                            labelText: '服务器地址',
-                            hintText: 'https://dav.example.com',
-                          ),
-                          onChanged: (v) => settings.setWebdavServer(v),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _webdavUserController,
-                          decoration: const InputDecoration(labelText: '用户名'),
-                          onChanged: (v) => settings.setWebdavUser(v),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _webdavPasswordController,
-                          decoration: const InputDecoration(
-                            labelText: '密码 / 令牌',
-                          ),
-                          obscureText: true,
-                          onChanged: (v) => settings.setWebdavPassword(v),
-                        ),
-                      ] else ...[
-                        TextField(
-                          controller: _upstashUrlController,
-                          decoration: const InputDecoration(
-                            labelText: 'REST URL',
-                          ),
-                          onChanged: (v) => settings.setUpstashUrl(v),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _upstashTokenController,
-                          decoration: const InputDecoration(
-                            labelText: 'REST Token',
-                          ),
-                          obscureText: true,
-                          onChanged: (v) => settings.setUpstashToken(v),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ── NexAI Cloud Sync ──
+                // ── NexAI Cloud Sync (only implemented backend) ──
                 _SectionHeader(
                   icon: Icons.cloud_upload_rounded,
                   label: 'NexAI 云同步',
@@ -1037,6 +926,34 @@ class _SettingsPageState extends State<SettingsPage> {
                     return _SettingsCard(
                       cs: cs,
                       children: [
+                        SwitchListTile(
+                          value: settings.syncEnabled,
+                          onChanged: (v) => settings.setSyncEnabled(v),
+                          title: const Text('启用云同步偏好'),
+                          subtitle: const Text(
+                            '仅支持 NexAI 账号端到端加密同步。WebDAV / UpStash 尚未实现。',
+                          ),
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: cs.secondaryContainer.withAlpha(90),
+                            borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                          ),
+                          child: Text(
+                            '同步范围：设置、对话、笔记、翻译历史、短链接、密码库。\n'
+                            '密码以端到端密文上传，服务端不可读。\n'
+                            '当前为全量加密快照上传；服务端增量接口已就绪。',
+                            style: tt.bodySmall?.copyWith(
+                              color: cs.onSecondaryContainer,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         if (!isLoggedIn)
                           Container(
                             padding: const EdgeInsets.all(14),
@@ -1138,7 +1055,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                                     children: const [
                                                       Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                                                       SizedBox(width: 8),
-                                                      Text('数据已上传到云端'),
+                                                      Text('全量加密快照已上传'),
                                                     ],
                                                   ),
                                                   behavior: SnackBarBehavior.floating,
@@ -1336,7 +1253,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                               children: const [
                                                 Icon(Icons.check_circle_rounded, size: 16, color: Colors.white),
                                                 SizedBox(width: 8),
-                                                Text('完整同步完成'),
+                                                Text('全量加密快照上传完成'),
                                               ],
                                             ),
                                             behavior: SnackBarBehavior.floating,

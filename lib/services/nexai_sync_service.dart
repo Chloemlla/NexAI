@@ -111,4 +111,28 @@ class NexaiSyncApi {
     }
     return null;
   }
+
+  /// POST /sync/v2/incremental — 端到端加密增量同步（服务端已支持）
+  static Future<Map<String, dynamic>?> postIncrementalSyncV2({
+    required String accessToken,
+    required Map<String, dynamic> body,
+  }) async {
+    final response = await NexaiBackendClient.post(
+      Uri.parse('$_baseUrl/sync/v2/incremental'),
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+
+    if (_isSuccess(response.statusCode)) {
+      final decoded = _tryDecode(response.body);
+      if (decoded?['success'] == true) {
+        return decoded?['data'] as Map<String, dynamic>? ?? {};
+      }
+    }
+    return null;
+  }
+
 }

@@ -49,9 +49,11 @@ public sealed partial class NotesPage : Page
             {
                 await SaveCurrentAsync(showStatus: false);
             }
-            catch
+            catch (Exception ex)
             {
-                // Leaving page; store error surfaces next visit.
+                // Best-effort surface; page is leaving so status may not be visible.
+                StatusText.Text = ex.Message;
+                System.Diagnostics.Debug.WriteLine("[NexAI Notes] auto-save on leave failed: " + ex);
             }
         }
 

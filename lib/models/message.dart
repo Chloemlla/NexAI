@@ -143,6 +143,7 @@ class Message {
   final String? modelId;
   final int? siblingGroupId;
   final bool isActiveBranch;
+  bool isPinned;
 
   Message({
     required this.role,
@@ -159,6 +160,7 @@ class Message {
     this.modelId,
     this.siblingGroupId,
     this.isActiveBranch = true,
+    this.isPinned = false,
   }) : _content = content,
        _reasoning = reasoning,
        _isError = isError,
@@ -269,12 +271,17 @@ class Message {
     if (modelId != null && modelId!.isNotEmpty) 'modelId': modelId,
     if (siblingGroupId != null) 'siblingGroupId': siblingGroupId,
     'isActiveBranch': isActiveBranch,
+    if (isPinned) 'isPinned': true,
   };
 
   factory Message.fromJson(Map<String, dynamic> json) {
     final toolCallsRaw = json['toolCalls'] ?? json['tool_calls'];
     final toolRunsRaw = json['toolRuns'];
     final citationsRaw = json['citations'];
+    final citations = _parseCitations(citationsRaw);
+    // Migrate legacy pin-as-citation hack.
+    final legacyPinned = citations.any((c) => c.source == 'pin');
+    citations.removeWhere((c) => c.source == 'pin');
     return Message(
       role: _stringValue(json, 'role'),
       content: (json['content'] ?? '').toString(),
@@ -285,7 +292,7 @@ class Message {
       toolCallId: (json['toolCallId'] ?? json['tool_call_id'])?.toString(),
       toolCalls: _parseToolCalls(toolCallsRaw),
       toolRuns: _parseToolRuns(toolRunsRaw),
-      citations: _parseCitations(citationsRaw),
+      citations: citations,
       attachments: _parseAttachments(json['attachments']),
       reasoning: (json['reasoning'] ?? '').toString(),
       stats: json['stats'] is Map
@@ -296,6 +303,7 @@ class Message {
           ? json['siblingGroupId'] as int
           : int.tryParse(json['siblingGroupId']?.toString() ?? ''),
       isActiveBranch: json['isActiveBranch'] as bool? ?? true,
+      isPinned: json['isPinned'] as bool? ?? legacyPinned,
     );
   }
 }

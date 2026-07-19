@@ -136,6 +136,7 @@
   <data name="Chat.SendFailedTitle" xml:space="preserve"><value>Could not send message</value></data>
   <data name="Chat.HintStreaming" xml:space="preserve"><value>Streaming...</value></data>
   <data name="Chat.HintPressSend" xml:space="preserve"><value>Press Send</value></data>
+  <data name="Chat.HintEnterToSend" xml:space="preserve"><value>Enter to send · Shift+Enter newline</value></data>
   <data name="Chat.HintReady" xml:space="preserve"><value>Ready</value></data>
 
   <data name="Notes.Title" xml:space="preserve"><value>Notes</value></data>
@@ -151,6 +152,9 @@
   <data name="Notes.DeleteBody" xml:space="preserve"><value>Delete this note permanently?</value></data>
   <data name="Notes.Updated" xml:space="preserve"><value>Updated {0}</value></data>
   <data name="Notes.TagsUpdated" xml:space="preserve"><value>Tags: {0} · Updated {1}</value></data>
+  <data name="Notes.UnsavedTitle" xml:space="preserve"><value>Unsaved changes</value></data>
+  <data name="Notes.UnsavedBody" xml:space="preserve"><value>Save changes to this note before continuing?</value></data>
+  <data name="Notes.Discard" xml:space="preserve"><value>Discard</value></data>
 
   <data name="Settings.SignedInAs" xml:space="preserve"><value>Signed in as {0}.</value></data>
   <data name="Settings.NotSignedIn" xml:space="preserve"><value>Not signed in.</value></data>
@@ -165,6 +169,10 @@
   <data name="Settings.Sync.NexAI" xml:space="preserve"><value>NexAI /sync/v2</value></data>
   <data name="Settings.Sync.WebDAV" xml:space="preserve"><value>WebDAV</value></data>
   <data name="Settings.Sync.UpStash" xml:space="preserve"><value>UpStash</value></data>
+  <data name="Settings.Sync.Unimplemented" xml:space="preserve"><value>not implemented</value></data>
+  <data name="Settings.Sync.NotImplemented" xml:space="preserve"><value>{0} sync is not implemented in the Windows client. Use NexAI /sync/v2.</value></data>
+  <data name="Settings.Sync.DownloadConfirmTitle" xml:space="preserve"><value>Replace local data?</value></data>
+  <data name="Settings.Sync.DownloadConfirmBody" xml:space="preserve"><value>Download will replace local chats and notes with the cloud snapshot. This cannot be undone from this client.</value></data>
 
   <data name="SoftSig.Title" xml:space="preserve"><value>Signature notice</value></data>
   <data name="SoftSig.Generic" xml:space="preserve"><value>Server soft mode accepted the request, but signature verification failed</value></data>

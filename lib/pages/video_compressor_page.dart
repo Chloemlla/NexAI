@@ -373,6 +373,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           // Duration is no longer available in VVideoInfo
         }
       });
+      if (info != null) {
+        await _initializePreview(videoPath);
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingInfo = false);
@@ -430,6 +433,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             ),
             backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
+        );
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('压缩未完成或已取消')),
         );
       }
     } catch (e) {

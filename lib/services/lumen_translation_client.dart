@@ -203,7 +203,7 @@ class LumenTranslationClient {
         headers: headers,
         body: body,
       );
-    } on HandshakeException catch (error) {
+    } on HandshakeException {
       // Stale certificate pin or rotated leaf cert: clear pin and retry once.
       await _recoverFromTlsFailure();
       try {
@@ -220,7 +220,7 @@ class LumenTranslationClient {
           '证书握手失败，已尝试自动恢复仍未成功。请到设置 > 安全 > 证书固定清除缓存后重试。\n详情：$retryError',
         );
       }
-    } on TlsException catch (error) {
+    } on TlsException {
       await _recoverFromTlsFailure();
       try {
         final retryClient = await _http(forceRebuild: true);

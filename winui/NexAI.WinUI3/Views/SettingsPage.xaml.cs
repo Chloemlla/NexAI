@@ -76,8 +76,9 @@ public sealed partial class SettingsPage : Page
 
         SyncMethodBox.SelectedIndex = current.SyncMethod switch
         {
-            SyncBackendKind.WebDAV => 1,
-            SyncBackendKind.UpStash => 2,
+            // WebDAV / UpStash are not implemented in WinUI — keep UI honest.
+            SyncBackendKind.WebDAV => 0,
+            SyncBackendKind.UpStash => 0,
             _ => 0,
         };
 
@@ -166,6 +167,11 @@ public sealed partial class SettingsPage : Page
 
     private async void UploadSyncButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!EnsureSyncBackendImplemented())
+        {
+            return;
+        }
+
         await SaveSilentAsync();
         await _syncService.UploadAsync();
         RefreshSync();
@@ -173,9 +179,40 @@ public sealed partial class SettingsPage : Page
 
     private async void DownloadSyncButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!EnsureSyncBackendImplemented())
+        {
+            return;
+        }
+
+        var confirm = new ContentDialog
+        {
+            Title = _localization.GetString("Settings.Sync.DownloadConfirmTitle"),
+            Content = _localization.GetString("Settings.Sync.DownloadConfirmBody"),
+            PrimaryButtonText = _localization.GetString("Common.Download"),
+            CloseButtonText = _localization.GetString("Common.Cancel"),
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = XamlRoot,
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary)
+        {
+            return;
+        }
+
         await SaveSilentAsync();
         await _syncService.DownloadAsync();
         RefreshSync();
+    }
+
+    private bool EnsureSyncBackendImplemented()
+    {
+        var method = ReadSyncMethod();
+        if (method == SyncBackendKind.NexAI)
+        {
+            return true;
+        }
+
+        SyncStatusText.Text = _localization.GetString("Settings.Sync.NotImplemented", method.ToString());
+        return false;
     }
 
     private async void ExportKeyButton_Click(object sender, RoutedEventArgs e)
@@ -240,7 +277,7 @@ public sealed partial class SettingsPage : Page
             UpstashUrl = UpstashUrlBox.Text ?? string.Empty,
             UpstashToken = UpstashTokenBox.Password ?? string.Empty,
             AdvancedRenderingEnabled = AdvancedRenderingToggle.IsOn,
-            NotesAutoSave = true,
+            NotesAutoSave = _settingsStore.Current.NotesAutoSave,
         };
     }
 
@@ -321,8 +358,23 @@ public sealed partial class SettingsPage : Page
         UploadSyncButton.Content = _localization.GetString("Common.Upload");
         DownloadSyncButton.Content = _localization.GetString("Common.Download");
         if (SyncMethodBox.Items[0] is ComboBoxItem syncNexai) syncNexai.Content = _localization.GetString("Settings.Sync.NexAI");
-        if (SyncMethodBox.Items[1] is ComboBoxItem syncWebdav) syncWebdav.Content = _localization.GetString("Settings.Sync.WebDAV");
-        if (SyncMethodBox.Items[2] is ComboBoxItem syncUpstash) syncUpstash.Content = _localization.GetString("Settings.Sync.UpStash");
+        if (SyncMethodBox.Items[1] is ComboBoxItem syncWebdav)
+        {
+            syncWebdav.Content = _localization.GetString("Settings.Sync.WebDAV") + " (" + _localization.GetString("Settings.Sync.Unimplemented") + ")";
+            syncWebdav.IsEnabled = false;
+        }
+
+        if (SyncMethodBox.Items[2] is ComboBoxItem syncUpstash)
+        {
+            syncUpstash.Content = _localization.GetString("Settings.Sync.UpStash") + " (" + _localization.GetString("Settings.Sync.Unimplemented") + ")";
+            syncUpstash.IsEnabled = false;
+        }
+
+        // Coerce selection to the only implemented backend when a disabled item was previously saved.
+        if (SyncMethodBox.SelectedItem is ComboBoxItem selected && !selected.IsEnabled)
+        {
+            SyncMethodBox.SelectedIndex = 0;
+        }
     }
 
     private SyncBackendKind ReadSyncMethod()

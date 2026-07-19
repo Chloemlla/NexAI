@@ -331,6 +331,33 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
 
   Future<void> _exportSavedPasswords() async {
     final provider = context.read<PasswordProvider>();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          icon: Icon(Icons.warning_amber_rounded, color: cs.error),
+          title: const Text('明文导出风险'),
+          content: const Text(
+            'CSV 导出会以明文写入密码。请仅导出到受信任的本地路径，并避免同步到云盘。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: cs.error),
+              child: const Text('仍要导出明文'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
     final csv = provider.exportToCsv();
 
     try {
@@ -352,7 +379,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('导出成功: $path'),
+            content: Text('明文 CSV 已导出: $path'),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Theme.of(context).colorScheme.tertiary,
           ),
@@ -1672,8 +1699,40 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                                     ),
                                     const SizedBox(width: 12),
                                     FilledButton.icon(
-                                      onPressed: () =>
-                                          provider.deletePassword(password.id),
+                                      onPressed: () async {
+                                        final ok = await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) {
+                                            final cs = Theme.of(ctx).colorScheme;
+                                            return AlertDialog(
+                                              title: const Text('删除密码'),
+                                              content: Text(
+                                                '删除该密码条目？此操作无法撤销。',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, false),
+                                                  child: const Text('取消'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(ctx, true),
+                                                  style: FilledButton.styleFrom(
+                                                    backgroundColor: cs.error,
+                                                  ),
+                                                  child: const Text('删除'),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+                                        if (ok == true) {
+                                          await provider.deletePassword(
+                                            password.id,
+                                          );
+                                        }
+                                      },
                                       icon: const Icon(
                                         Icons.delete_outline_rounded,
                                         size: 18,

@@ -493,7 +493,24 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
                 onSelected: _isProcessing
                     ? null
                     : (v) {
-                        if (v) setState(() => _selectedFormat = fmt);
+                        if (!v) return;
+                        setState(() {
+                          _selectedFormat = fmt;
+                          // Keep pending task extensions in sync with format.
+                          for (final task in _tasks) {
+                            if (task.status == TaskStatus.pending ||
+                                task.status == TaskStatus.failed) {
+                              final baseName = p.basenameWithoutExtension(
+                                task.fileName,
+                              );
+                              final dir = p.dirname(task.outputPath);
+                              task.outputPath = p.join(
+                                dir,
+                                '$baseName.${fmt.extension}',
+                              );
+                            }
+                          }
+                        });
                       },
               );
             }).toList(),

@@ -601,20 +601,34 @@ class ChatProvider extends ChangeNotifier {
     required String systemPrompt,
     required String vertexProjectId,
     required String vertexLocation,
+    int? assistantMessageIndex,
   }) async {
     if (_isLoading) return;
     final conversation = currentConversation;
     if (conversation == null || conversation.messages.isEmpty) return;
-    // Find last user message and regenerate from there.
+
+    // Prefer regenerating from the user turn that owns [assistantMessageIndex].
     var userIndex = -1;
-    for (var i = conversation.messages.length - 1; i >= 0; i--) {
-      if (conversation.messages[i].role == 'user') {
-        userIndex = i;
-        break;
+    if (assistantMessageIndex != null &&
+        assistantMessageIndex >= 0 &&
+        assistantMessageIndex < conversation.messages.length) {
+      for (var i = assistantMessageIndex; i >= 0; i--) {
+        if (conversation.messages[i].role == 'user') {
+          userIndex = i;
+          break;
+        }
+      }
+    }
+    if (userIndex < 0) {
+      for (var i = conversation.messages.length - 1; i >= 0; i--) {
+        if (conversation.messages[i].role == 'user') {
+          userIndex = i;
+          break;
+        }
       }
     }
     if (userIndex < 0) return;
-    // Keep history including user; strip trailing assistants/tools after it for a clean regenerate path.
+    // Keep history including user; strip trailing assistants/tools after it.
     conversation.messages.removeRange(userIndex + 1, conversation.messages.length);
     notifyListeners();
     await _performApiCall(
@@ -723,12 +737,12 @@ class ChatProvider extends ChangeNotifier {
           }
           requestDetails = '\n${_buildRequestDiagnostics(e.requestOptions)}${_buildResponseDiagnostics(e.response!.data)}';
         } else {
-          errorMsg = _redactString(e.message ?? 'Connection error');
+          errorMsg = _redactString(e.message ?? '连接失败');
           requestDetails = '\n${_buildRequestDiagnostics(e.requestOptions)}';
         }
         conversation.messages.add(Message(
           role: 'assistant',
-          content: 'Error: $errorMsg${isHandshakeError ? '\n\n${CertificateErrorHelper.handshakeUserMessage()}' : ''}$requestDetails',
+          content: '请求失败：$errorMsg${isHandshakeError ? '\n\n${CertificateErrorHelper.handshakeUserMessage()}' : ''}$requestDetails',
           timestamp: DateTime.now(),
           isError: true,
         ));
@@ -736,7 +750,7 @@ class ChatProvider extends ChangeNotifier {
     } catch (e) {
       conversation.messages.add(Message(
         role: 'assistant',
-        content: 'Connection error: ${_redactString(e.toString())}',
+        content: '连接失败：${_redactString(e.toString())}',
         timestamp: DateTime.now(),
         isError: true,
       ));
@@ -981,7 +995,7 @@ class ChatProvider extends ChangeNotifier {
     if (response.statusCode != 200) {
       final errorMessage = Message(
         role: 'assistant',
-        content: 'Error: HTTP ${response.statusCode}',
+        content: '请求失败：HTTP ${response.statusCode}',
         timestamp: DateTime.now(),
         isError: true,
       );
@@ -1112,7 +1126,7 @@ class ChatProvider extends ChangeNotifier {
       }
       notifyListeners();
     } else if (assistantMessage.content.isEmpty) {
-      assistantMessage.updateContent('Error: Empty response from API');
+      assistantMessage.updateContent('接口返回为空');
       assistantMessage.markAsError();
       notifyListeners();
     }
@@ -1408,13 +1422,13 @@ class ChatProvider extends ChangeNotifier {
         }
       }
       if (assistantMessage.content.isEmpty) {
-        assistantMessage.updateContent('Error: Empty response from API');
+        assistantMessage.updateContent('接口返回为空');
         assistantMessage.markAsError();
       }
     } else {
       conversation.messages.add(Message(
         role: 'assistant',
-        content: 'Error: HTTP ${response.statusCode}',
+        content: '请求失败：HTTP ${response.statusCode}',
         timestamp: DateTime.now(),
         isError: true,
       ));

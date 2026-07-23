@@ -23,6 +23,7 @@ import 'utils/security_event_reporter.dart';
 import 'services/crash_breadcrumbs.dart';
 import 'services/crash_reporter.dart';
 import 'services/nexai_security_service.dart';
+import 'services/clash_compat.dart';
 import 'package:dio/dio.dart';
 
 bool get isDesktop =>
@@ -152,6 +153,9 @@ Future<void> _bootstrapAppInBackground({
       shortUrlProvider.loadHistory(),
       authProvider.init(),
     ]);
+    if (isAndroid) {
+      await ClashCompat.ensureStarted();
+    }
     CrashBreadcrumbs.record('Background bootstrap completed');
   } catch (e, stackTrace) {
     CrashReporter.recordError(e, stackTrace, event: 'Startup bootstrap failed');

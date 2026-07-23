@@ -14,6 +14,7 @@ class NativeChannelRegistry(
     private val flutterEngine: FlutterEngine,
 ) {
     private lateinit var permissionChannel: PermissionChannel
+    private var clashCompatChannel: ClashCompatChannel? = null
 
     fun register() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
@@ -47,6 +48,12 @@ class NativeChannelRegistry(
             PasskeyChannel(activity),
         )
         EventChannel(messenger, "com.chloemlla.nexai/native_task_events").setStreamHandler(taskEvents)
+        clashCompatChannel = ClashCompatChannel(activity.applicationContext, messenger)
+    }
+
+    fun dispose() {
+        clashCompatChannel?.dispose()
+        clashCompatChannel = null
     }
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean =

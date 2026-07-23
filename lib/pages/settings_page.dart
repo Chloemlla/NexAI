@@ -9,6 +9,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../models/chat_knowledge.dart';
 import '../providers/settings_provider.dart';
+import '../services/clash_compat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/notes_provider.dart';
@@ -884,6 +885,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                     ),
                     const Divider(height: 24),
+                    SwitchListTile(
+                      value: settings.clashAutoAdapt,
+                      onChanged: (v) => settings.setClashAutoAdapt(v),
+                      title: const Text('Clash VPN 自动适配'),
+                      subtitle: Text(
+                        ClashCompat.statusLabel(
+                          autoAdaptEnabled: settings.clashAutoAdapt,
+                        ),
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                     SwitchListTile(
                       value: settings.borderlessMode,
                       onChanged: (v) => settings.setBorderlessMode(v),

@@ -125,7 +125,9 @@ class SettingsProvider extends ChangeNotifier {
   String get apiMode => _apiMode;
 
   // Notes auto-save setting
+  bool _clashAutoAdapt = true;
   bool _notesAutoSave = true;
+  bool get clashAutoAdapt => _clashAutoAdapt;
   bool get notesAutoSave => _notesAutoSave;
 
   // AI title generation setting
@@ -295,6 +297,7 @@ class SettingsProvider extends ChangeNotifier {
       _temperature = prefs.getDouble('temperature') ?? _temperature;
       _maxTokens = prefs.getInt('maxTokens') ?? _maxTokens;
       _systemPrompt = prefs.getString('systemPrompt') ?? _systemPrompt;
+      _clashAutoAdapt = prefs.getBool('clashAutoAdapt') ?? _clashAutoAdapt;
       _notesAutoSave = prefs.getBool('notesAutoSave') ?? _notesAutoSave;
       _aiTitleGeneration =
           prefs.getBool('aiTitleGeneration') ?? _aiTitleGeneration;
@@ -625,6 +628,7 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setDouble('temperature', _temperature);
     await prefs.setInt('maxTokens', _maxTokens);
     await prefs.setString('systemPrompt', _systemPrompt);
+    await prefs.setBool('clashAutoAdapt', _clashAutoAdapt);
     await prefs.setBool('notesAutoSave', _notesAutoSave);
     await prefs.setBool('aiTitleGeneration', _aiTitleGeneration);
     await prefs.setBool('chatToolsEnabled', _chatToolsEnabled);
@@ -811,6 +815,13 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setAccentColor(int? colorValue) async {
     _accentColorValue = colorValue;
+    notifyListeners();
+    await _save();
+  }
+
+  Future<void> setClashAutoAdapt(bool value) async {
+    if (_clashAutoAdapt == value) return;
+    _clashAutoAdapt = value;
     notifyListeners();
     await _save();
   }

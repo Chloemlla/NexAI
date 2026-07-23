@@ -10,6 +10,12 @@
     <!-- Required when pinning Credential Manager providers via allowedProviders. -->
     <uses-permission android:name="android.permission.CREDENTIAL_MANAGER_SET_ALLOWED_PROVIDERS" />
 
+    <queries>
+        <package android:name="com.github.metacubex.clash" />
+        <package android:name="com.github.metacubex.clash.meta" />
+        <package android:name="com.github.metacubex.clash.alpha" />
+    </queries>
+
     <application
         android:label="NexAI"
         android:name=".NexAIApplication"

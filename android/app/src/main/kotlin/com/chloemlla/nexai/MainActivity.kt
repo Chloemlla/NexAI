@@ -37,6 +37,12 @@ class MainActivity : FlutterActivity() {
         runCatching { LumenCrash.recordBreadcrumb("MainActivity.configureFlutterEngine") }
     }
 
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        nativeChannelRegistry?.dispose()
+        nativeChannelRegistry = null
+        super.cleanUpFlutterEngine(flutterEngine)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (nativeChannelRegistry?.onActivityResult(requestCode, resultCode, data) == true) {
             return

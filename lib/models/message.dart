@@ -281,7 +281,9 @@ class Message {
     final citations = _parseCitations(citationsRaw);
     // Migrate legacy pin-as-citation hack.
     final legacyPinned = citations.any((c) => c.source == 'pin');
-    citations.removeWhere((c) => c.source == 'pin');
+    // Avoid mutating the parse result: empty citations is `const []`.
+    final cleanedCitations =
+        citations.where((c) => c.source != 'pin').toList();
     return Message(
       role: _stringValue(json, 'role'),
       content: (json['content'] ?? '').toString(),
@@ -292,7 +294,7 @@ class Message {
       toolCallId: (json['toolCallId'] ?? json['tool_call_id'])?.toString(),
       toolCalls: _parseToolCalls(toolCallsRaw),
       toolRuns: _parseToolRuns(toolRunsRaw),
-      citations: citations,
+      citations: cleanedCitations,
       attachments: _parseAttachments(json['attachments']),
       reasoning: (json['reasoning'] ?? '').toString(),
       stats: json['stats'] is Map
@@ -309,7 +311,7 @@ class Message {
 }
 
 List<ToolCallRecord> _parseToolCalls(Object? value) {
-  if (value is! List) return const [];
+  if (value is! List) return <ToolCallRecord>[];
   return value
       .whereType<Object>()
       .map((item) => ToolCallRecord.fromJson(asStringMap(item, 'toolCall')))
@@ -317,7 +319,7 @@ List<ToolCallRecord> _parseToolCalls(Object? value) {
 }
 
 List<ToolRunRecord> _parseToolRuns(Object? value) {
-  if (value is! List) return const [];
+  if (value is! List) return <ToolRunRecord>[];
   return value
       .whereType<Object>()
       .map((item) => ToolRunRecord.fromJson(asStringMap(item, 'toolRun')))
@@ -325,7 +327,7 @@ List<ToolRunRecord> _parseToolRuns(Object? value) {
 }
 
 List<Citation> _parseCitations(Object? value) {
-  if (value is! List) return const [];
+  if (value is! List) return <Citation>[];
   return value
       .whereType<Object>()
       .map((item) => Citation.fromJson(asStringMap(item, 'citation')))
@@ -333,7 +335,7 @@ List<Citation> _parseCitations(Object? value) {
 }
 
 List<ChatAttachment> _parseAttachments(Object? value) {
-  if (value is! List) return const [];
+  if (value is! List) return <ChatAttachment>[];
   return value
       .whereType<Object>()
       .map((item) => ChatAttachment.fromJson(asStringMap(item, 'attachment')))

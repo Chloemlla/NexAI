@@ -155,6 +155,8 @@ Future<void> _bootstrapAppInBackground({
     ]);
     if (isAndroid) {
       await ClashCompat.ensureStarted();
+      // Push persisted user preference into native SharedPreferences + binding.
+      await ClashCompat.setAutoAdaptEnabled(settingsProvider.clashAutoAdapt);
     }
     CrashBreadcrumbs.record('Background bootstrap completed');
   } catch (e, stackTrace) {

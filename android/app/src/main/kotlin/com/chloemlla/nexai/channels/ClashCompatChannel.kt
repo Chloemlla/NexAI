@@ -1,6 +1,7 @@
 package com.chloemlla.nexai.channels
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
@@ -10,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.core.content.edit
 import androidx.core.content.getSystemService
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
@@ -18,6 +20,10 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * Detect ClashMeta install/VPN state for zero-config traffic adaptation.
+ *
+ * When auto-adapt is enabled and Clash is routing, binds this process to the
+ * active VPN network so traffic cannot escape the tunnel via app-level proxy
+ * stacks or allowBypass paths.
  */
 internal class ClashCompatChannel(
     private val context: Context,
@@ -29,6 +35,8 @@ internal class ClashCompatChannel(
     private var eventSink: EventChannel.EventSink? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var lastVpnActive: Boolean? = null
+    private var lastVpnNetwork: Network? = null
+    private var boundVpnNetwork: Network? = null
 
     init {
         methodChannel.setMethodCallHandler(this)
@@ -37,15 +45,29 @@ internal class ClashCompatChannel(
 
     fun dispose() {
         stopNetworkWatch()
+        clearProcessNetworkBinding()
         methodChannel.setMethodCallHandler(null)
         eventChannel.setStreamHandler(null)
         eventSink = null
+        lastVpnActive = null
+        lastVpnNetwork = null
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         try {
             when (call.method) {
-                "getStatus" -> result.success(buildStatus())
+                "getStatus" -> {
+                    startNetworkWatch()
+                    result.success(buildStatus())
+                }
+                "setAutoAdaptEnabled" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    setAutoAdaptEnabled(enabled)
+                    // Ensure network watch is active so handle replace rebinds
+                    // even if Flutter events were not yet subscribed.
+                    startNetworkWatch()
+                    result.success(buildStatus())
+                }
                 else -> result.notImplemented()
             }
         } catch (e: Exception) {
@@ -60,7 +82,8 @@ internal class ClashCompatChannel(
     }
 
     override fun onCancel(arguments: Any?) {
-        stopNetworkWatch()
+        // Keep network watch + process binding alive even if Flutter cancels
+        // the event stream; only dispose() tears them down.
         eventSink = null
     }
 
@@ -68,23 +91,44 @@ internal class ClashCompatChannel(
         val clashInstalled = isClashInstalled()
         val vpnActive = isVpnActive()
         val partner = queryPartnerStatus()
-        val clashVpnRunning = partner?.get("vpnRunning") as? Boolean
-            ?: (clashInstalled && vpnActive)
+        val partnerStatusAvailable = partner != null
+        val clashVpnRunning =
+            if (partnerStatusAvailable) {
+                partner?.get("vpnRunning") as? Boolean ?: false
+            } else {
+                clashInstalled && vpnActive
+            }
+        val partnerAppAutoAdapt = partner?.get("partnerAppAutoAdapt") as? Boolean
+            ?: partner?.get("piliPlusAutoAdapt") as? Boolean
+            ?: true
+        val autoAdaptEnabled = isAutoAdaptEnabled()
+        val isClashVpnRouting =
+            if (partnerStatusAvailable) {
+                clashVpnRunning
+            } else {
+                clashInstalled && vpnActive
+            }
+
+        applyVpnProcessBinding(autoAdaptEnabled = autoAdaptEnabled, routing = isClashVpnRouting)
+
         return mapOf(
             "clashInstalled" to clashInstalled,
             "vpnActive" to vpnActive,
             "clashVpnRunning" to clashVpnRunning,
-            "partnerAppAutoAdapt" to (partner?.get("partnerAppAutoAdapt") as? Boolean
-                ?: partner?.get("piliPlusAutoAdapt") as? Boolean
-                ?: true),
-            "clashPackage" to partner?.get("package"),
+            "partnerAppAutoAdapt" to partnerAppAutoAdapt,
+            "partnerStatusAvailable" to partnerStatusAvailable,
             "profileName" to partner?.get("name"),
+            "clashPackage" to partner?.get("package"),
+            "processBound" to (boundVpnNetwork != null),
+            "autoAdaptEnabled" to autoAdaptEnabled,
         )
     }
 
     private fun emitStatus() {
-        val sink = eventSink ?: return
+        // Always recompute so process binding tracks VPN handle replacement
+        // even when no Flutter listener is attached yet.
         val status = buildStatus()
+        val sink = eventSink ?: return
         mainHandler.post { sink.success(status) }
     }
 
@@ -122,9 +166,14 @@ internal class ClashCompatChannel(
     }
 
     private fun onNetworkMaybeChanged() {
+        val cm = context.getSystemService<ConnectivityManager>()
         val vpnActive = isVpnActive()
-        if (lastVpnActive == vpnActive) return
+        val vpnNetwork = cm?.let { findVpnNetwork(it) }
+        // Re-evaluate when VPN goes up/down *or* the Network handle is replaced
+        // (Clash restart / re-establish) so process binding follows.
+        if (lastVpnActive == vpnActive && lastVpnNetwork == vpnNetwork) return
         lastVpnActive = vpnActive
+        lastVpnNetwork = vpnNetwork
         emitStatus()
     }
 
@@ -171,10 +220,69 @@ internal class ClashCompatChannel(
         return null
     }
 
+    private fun prefs(): SharedPreferences =
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    private fun isAutoAdaptEnabled(): Boolean =
+        prefs().getBoolean(KEY_AUTO_ADAPT, true)
+
+    private fun setAutoAdaptEnabled(enabled: Boolean) {
+        prefs().edit { putBoolean(KEY_AUTO_ADAPT, enabled) }
+    }
+
+    /**
+     * Bind (or unbind) this process to the active VPN network while Clash is
+     * routing. Without this, [NetworkCapabilities.NET_CAPABILITY_NOT_VPN]
+     * requests and VpnService.allowBypass can let Dart/HttpClient leave the
+     * tunnel even though Clash is "on".
+     */
+    private fun applyVpnProcessBinding(autoAdaptEnabled: Boolean, routing: Boolean) {
+        val cm = context.getSystemService<ConnectivityManager>() ?: return
+        if (!autoAdaptEnabled || !routing) {
+            clearProcessNetworkBinding(cm)
+            return
+        }
+        val vpn = findVpnNetwork(cm)
+        if (vpn == null) {
+            // Status says routing but no VPN Network is visible yet — drop any
+            // stale binding so we do not stick to a dead Network handle.
+            clearProcessNetworkBinding(cm)
+            return
+        }
+        if (boundVpnNetwork == vpn) return
+        runCatching {
+            cm.bindProcessToNetwork(vpn)
+            boundVpnNetwork = vpn
+        }.onFailure {
+            boundVpnNetwork = null
+        }
+    }
+
+    private fun clearProcessNetworkBinding(cm: ConnectivityManager? = null) {
+        val connectivity = cm ?: context.getSystemService<ConnectivityManager>() ?: return
+        if (boundVpnNetwork == null && connectivity.boundNetworkForProcess == null) return
+        runCatching { connectivity.bindProcessToNetwork(null) }
+        boundVpnNetwork = null
+    }
+
+    private fun findVpnNetwork(cm: ConnectivityManager): Network? {
+        for (network in cm.allNetworks) {
+            val caps = cm.getNetworkCapabilities(network) ?: continue
+            if (caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) {
+                return network
+            }
+        }
+        return null
+    }
+
     companion object {
         const val METHOD_CHANNEL = "com.chloemlla.nexai/clash_compat"
         const val EVENT_CHANNEL = "com.chloemlla.nexai/clash_compat_events"
         private const val METHOD_PARTNER_STATUS = "partnerStatus"
+        private const val PREFS = "clash_partner_compat"
+        private const val KEY_AUTO_ADAPT = "clash_auto_adapt"
+
+        /** Official MetaCubeX packages only. */
         private val CLASH_PACKAGES = listOf(
             "com.github.metacubex.clash",
             "com.github.metacubex.clash.meta",

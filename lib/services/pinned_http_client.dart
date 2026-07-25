@@ -24,6 +24,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 
+import 'clash_compat.dart';
+
 const String _pinnedHost = 'tts.chloemlla.com';
 
 /// Storage keys
@@ -55,13 +57,26 @@ const _storage = FlutterSecureStorage(
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+/// Creates a [HttpClient], forcing DIRECT proxy when Clash VPN auto-adapt is
+/// routing so env/system proxies do not stack on the tunnel.
+HttpClient _createHttpClient({SecurityContext? context}) {
+  final client =
+      context == null ? HttpClient() : HttpClient(context: context);
+  // Evaluate live so cached/long-lived clients follow VPN status changes.
+  client.findProxy = (uri) {
+    if (ClashCompat.shouldBypassAppProxy) return 'DIRECT';
+    return HttpClient.findProxyFromEnvironment(uri);
+  };
+  return client;
+}
+
 /// Returns a certificate-pinned [http.Client] for [_pinnedHost].
 Future<http.Client> buildPinnedHttpClient({bool enablePinning = true}) async {
   if (kIsWeb) return http.Client();
 
   if (!enablePinning) {
     debugPrint('NexAI Pinning: DISABLED (development mode)');
-    return http.Client();
+    return IOClient(_createHttpClient());
   }
 
   final stored = await _storage.read(key: _pinKey);
@@ -124,7 +139,7 @@ Future<void> invalidatePinnedClientState() async {
 
 class _ToFuClient extends http.BaseClient {
   final IOClient _systemClient = IOClient(
-    HttpClient()..badCertificateCallback = (_, _, _) => false,
+    _createHttpClient()..badCertificateCallback = (_, _, _) => false,
   );
   http.Client? _bootstrapClient;
   bool _probeStarted = false;
@@ -175,7 +190,7 @@ class _PinnedClient extends http.BaseClient {
   _PinnedClient(this._expectedFp) {
     final ctx = SecurityContext(withTrustedRoots: false);
     _inner = IOClient(
-      HttpClient(context: ctx)
+      _createHttpClient(context: ctx)
         ..badCertificateCallback = (X509Certificate cert, String host, int _) {
           if (host != _pinnedHost) return false;
           final actual = _sha256Hex(cert.der);

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -50,6 +51,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _vertexProjectIdController;
   late TextEditingController _vertexLocationController;
 
+  StreamSubscription<void>? _clashStatusSub;
+
   bool _showApiKey = false;
   bool _isDirty = false;
   bool _isSyncingControllers = false;
@@ -97,6 +100,10 @@ class _SettingsPageState extends State<SettingsPage> {
       c.addListener(_markDirty);
     }
     _settingsProvider.addListener(_handleSettingsChanged);
+    _clashStatusSub = ClashCompat.onStatusChanged.listen((_) {
+      if (mounted) setState(() {});
+    });
+    unawaited(ClashCompat.refresh());
     _loadVersion();
   }
 
@@ -144,6 +151,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
+    _clashStatusSub?.cancel();
     _settingsProvider.removeListener(_handleSettingsChanged);
     _baseUrlController.dispose();
     _apiKeyController.dispose();
@@ -887,7 +895,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     const Divider(height: 24),
                     SwitchListTile(
                       value: settings.clashAutoAdapt,
-                      onChanged: (v) => settings.setClashAutoAdapt(v),
+                      onChanged: (v) async {
+                        await settings.setClashAutoAdapt(v);
+                        if (mounted) setState(() {});
+                      },
                       title: const Text('Clash VPN 自动适配'),
                       subtitle: Text(
                         ClashCompat.statusLabel(

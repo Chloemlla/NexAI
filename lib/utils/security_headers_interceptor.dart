@@ -13,9 +13,13 @@
 /// - X-App-Build: Build number
 library;
 
+import 'dart:io' show HttpClient;
+
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import '../services/clash_compat.dart';
 import '../utils/app_security.dart';
 import '../utils/device_fingerprint.dart';
 
@@ -77,9 +81,25 @@ class SecurityHeadersInterceptor extends Interceptor {
   }
 }
 
-/// Helper to create Dio instance with security headers
+/// Helper to create Dio instance with security headers.
+///
+/// When Clash Meta VPN auto-adapt is routing, force [HttpClient.findProxy] to
+/// DIRECT so env/system HTTP proxies do not stack on top of the VPN tunnel.
 Dio createSecureDio({BaseOptions? options}) {
   final dio = Dio(options);
   dio.interceptors.add(SecurityHeadersInterceptor());
+  if (!kIsWeb) {
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient();
+        // Evaluate live so long-lived Dio instances follow VPN status changes.
+        client.findProxy = (uri) {
+          if (ClashCompat.shouldBypassAppProxy) return 'DIRECT';
+          return HttpClient.findProxyFromEnvironment(uri);
+        };
+        return client;
+      },
+    );
+  }
   return dio;
 }

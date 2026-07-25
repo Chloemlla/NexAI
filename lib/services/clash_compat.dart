@@ -16,11 +16,25 @@ abstract final class ClashCompat {
   static bool vpnActive = false;
   static bool clashVpnRunning = false;
   static bool partnerAppAutoAdapt = true;
+  static bool partnerStatusAvailable = false;
+  static bool processBound = false;
+  static bool autoAdaptEnabled = true;
   static String? profileName;
   static String? clashPackage;
 
-  static bool get isClashVpnRouting =>
-      Platform.isAndroid && (clashVpnRunning || (clashInstalled && vpnActive));
+  /// True when Clash VPN path should own traffic (skip manual HTTP proxy).
+  ///
+  /// Prefer the StatusProvider result when available so a non-Clash VPN is not
+  /// treated as "Clash routing".
+  static bool get isClashVpnRouting {
+    if (!Platform.isAndroid) return false;
+    if (partnerStatusAvailable) return clashVpnRunning;
+    return clashInstalled && vpnActive;
+  }
+
+  /// When true, force app HTTP stacks to DIRECT and rely on VPN process binding.
+  static bool get shouldBypassAppProxy =>
+      Platform.isAndroid && autoAdaptEnabled && isClashVpnRouting;
 
   static final StreamController<void> _statusChanged =
       StreamController<void>.broadcast();
@@ -28,13 +42,14 @@ abstract final class ClashCompat {
 
   static Future<void> ensureStarted() async {
     if (!Platform.isAndroid) return;
-    await refresh();
+    // Subscribe first so native network watch + binding stay live, then snapshot.
     _sub ??= _events.receiveBroadcastStream().listen(
       _onEvent,
       onError: (Object e) {
         if (kDebugMode) debugPrint('ClashCompat event error: $e');
       },
     );
+    await refresh();
   }
 
   static Future<void> refresh() async {
@@ -46,6 +61,31 @@ abstract final class ClashCompat {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('ClashCompat.refresh: $e');
+    }
+  }
+
+  /// Push the user toggle to native SharedPreferences and re-apply binding.
+  static Future<void> setAutoAdaptEnabled(bool enabled) async {
+    if (!Platform.isAndroid) {
+      autoAdaptEnabled = enabled;
+      return;
+    }
+    try {
+      final raw = await _method.invokeMethod<dynamic>(
+        'setAutoAdaptEnabled',
+        <String, dynamic>{'enabled': enabled},
+      );
+      if (raw is Map) {
+        _applyMap(Map<Object?, Object?>.from(raw));
+      } else {
+        autoAdaptEnabled = enabled;
+      }
+      if (!_statusChanged.isClosed) {
+        _statusChanged.add(null);
+      }
+    } catch (e) {
+      autoAdaptEnabled = enabled;
+      if (kDebugMode) debugPrint('ClashCompat.setAutoAdaptEnabled: $e');
     }
   }
 
@@ -63,6 +103,9 @@ abstract final class ClashCompat {
     vpnActive = map['vpnActive'] == true;
     clashVpnRunning = map['clashVpnRunning'] == true;
     partnerAppAutoAdapt = map['partnerAppAutoAdapt'] != false;
+    partnerStatusAvailable = map['partnerStatusAvailable'] == true;
+    processBound = map['processBound'] == true;
+    autoAdaptEnabled = map['autoAdaptEnabled'] != false;
     profileName = map['profileName'] as String?;
     clashPackage = map['clashPackage'] as String?;
   }
@@ -71,7 +114,7 @@ abstract final class ClashCompat {
     if (!Platform.isAndroid) return '仅 Android 支持';
     if (!autoAdaptEnabled) return '已关闭自动适配';
     if (!clashInstalled) return '未检测到 Clash Meta';
-    if (clashVpnRunning || vpnActive) {
+    if (isClashVpnRouting) {
       final profile = profileName;
       if (profile != null && profile.isNotEmpty) {
         return 'VPN 已连接 · $profile';

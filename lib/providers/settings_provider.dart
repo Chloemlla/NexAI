@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/chat_knowledge.dart';
+import '../services/clash_compat.dart';
 import '../utils/local_data_presence.dart';
 
 class SettingsProvider extends ChangeNotifier {
@@ -824,6 +825,7 @@ class SettingsProvider extends ChangeNotifier {
     _clashAutoAdapt = value;
     notifyListeners();
     await _save();
+    await ClashCompat.setAutoAdaptEnabled(value);
   }
 
   Future<void> setNotesAutoSave(bool value) async {

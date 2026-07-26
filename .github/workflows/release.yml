@@ -128,12 +128,20 @@ jobs:
         run: pwsh scripts/build.ps1 -Arg android
 
       - name: Build Android APK
+        env:
+          NEXAI_APP_SIGN_SECRET: ${{ secrets.NEXAI_APP_SIGN_SECRET }}
         run: |
+          # NEXAI_APP_SIGN_SECRET (GitHub Actions secret) signs anonymous/gated
+          # NexAI requests (e.g. /api/nexai/security/status) before login.
+          # Optional: if unset, client falls back to unsigned soft-skip (see
+          # lib/utils/request_signer.dart). Never add this define to Web builds
+          # — dart-define values are inspectable in the compiled web bundle.
           flutter build apk --release --split-per-abi \
             --obfuscate \
             --tree-shake-icons \
             --split-debug-info=debug_symbols/android \
             --dart-define-from-file=nexai_release.json \
+            --dart-define=NEXAI_APP_SIGN_SECRET="$NEXAI_APP_SIGN_SECRET" \
             --build-number=${{ env.VERSION_CODE }}
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

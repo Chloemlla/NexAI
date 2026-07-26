@@ -26,10 +26,17 @@ class NexaiSoftSigNotice {
   };
 
   /// Call for every backend response. No-op unless soft-fail headers present.
+  ///
+  /// [clientSkippedSigning] should be true when *this* client deliberately
+  /// sent the request unsigned (e.g. unauthenticated bootstrap with no app
+  /// secret configured). In that case a `NEXAI_SIG_MISSING` response is an
+  /// expected consequence of our own choice, not a surprising failure, so we
+  /// log it instead of alarming the user with a toast.
   static void maybeNotifyFromHeaders({
     required Map<String, String> headers,
     String? path,
     String? method,
+    bool clientSkippedSigning = false,
   }) {
     final result = _header(headers, 'x-nexai-sig-result');
     final code = _header(headers, 'x-nexai-sig-code');
@@ -37,7 +44,8 @@ class NexaiSoftSigNotice {
 
     debugPrint(
       'NexAI Backend: soft sig header result=${result ?? "-"} '
-      'code=${code ?? "-"} path=${path ?? "-"} method=${method ?? "-"}',
+      'code=${code ?? "-"} path=${path ?? "-"} method=${method ?? "-"} '
+      'clientSkippedSigning=$clientSkippedSigning',
     );
 
     final normalized = (result ?? '').toLowerCase();
@@ -45,6 +53,10 @@ class NexaiSoftSigNotice {
         normalized == 'false' ||
         (code != null && code.startsWith('NEXAI_SIG_'));
     if (!isFail) return;
+
+    // Expected: we chose to skip signing ourselves and the server's
+    // NEXAI_SIG_MISSING merely confirms it. Don't surface a user toast.
+    if (clientSkippedSigning && code == 'NEXAI_SIG_MISSING') return;
 
     final now = DateTime.now();
     if (_lastShownAt != null &&

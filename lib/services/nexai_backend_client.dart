@@ -167,6 +167,11 @@ class NexaiBackendClient {
           },
         );
 
+    // We deliberately sent this request unsigned (no key available while
+    // unauthenticated); a resulting soft-fail header is expected, not a
+    // surprise, so don't alarm the user for it — see NexaiSoftSigNotice.
+    final selfSkippedSigning = signed.containsKey('X-NexAI-Sig-Skipped');
+
     try {
       final response = await runOnce();
       // Soft mode (NEXAI_REQUEST_SIGNING=soft) may still return 2xx with fail headers.
@@ -174,6 +179,7 @@ class NexaiBackendClient {
         headers: response.headers,
         path: url.path,
         method: method,
+        clientSkippedSigning: selfSkippedSigning,
       );
       return response;
     } on NexaiApiError {
@@ -197,6 +203,7 @@ class NexaiBackendClient {
           headers: response.headers,
           path: url.path,
           method: method,
+          clientSkippedSigning: selfSkippedSigning,
         );
         return response;
       } catch (retryError) {
@@ -219,6 +226,7 @@ class NexaiBackendClient {
           headers: response.headers,
           path: url.path,
           method: method,
+          clientSkippedSigning: selfSkippedSigning,
         );
         return response;
       } catch (retryError) {

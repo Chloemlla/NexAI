@@ -10,6 +10,7 @@ import '../utils/file_access_helper.dart';
 import '../widgets/tool_page_style.dart';
 import '../widgets/lumen/lumen.dart';
 import '../theme/lumen_tokens.dart';
+import '../utils/app_security.dart';
 
 enum PasswordType { random, memorable, pin }
 
@@ -70,12 +71,14 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
   @override
   void initState() {
     super.initState();
+    AppSecurity.instance.setSecureScreen(enable: true);
     _tabController = TabController(length: 3, vsync: this);
     _generatePassword();
   }
 
   @override
   void dispose() {
+    AppSecurity.instance.setSecureScreen(enable: false);
     _tabController.dispose();
     super.dispose();
   }

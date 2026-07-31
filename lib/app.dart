@@ -13,6 +13,7 @@ import 'pages/home_page.dart';
 import 'pages/oss_notice_page.dart';
 import 'theme/lumen_theme.dart';
 import 'theme/lumen_tokens.dart';
+import 'widgets/custom_toast.dart';
 import 'widgets/lumen/lumen.dart';
 import 'utils/navigation_helper.dart';
 
@@ -100,7 +101,7 @@ class NexAIApp extends StatelessWidget {
             )
           : _buildTheme(settings, effectiveDark),
       home: const _CrashReportGate(),
-      builder: FlutterSmartDialog.init(),
+      builder: FlutterSmartDialog.init(toastBuilder: CustomToast.new),
       navigatorObservers: [FlutterSmartDialog.observer],
     );
   }

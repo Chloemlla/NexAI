@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -95,6 +96,10 @@ Future<void> _runMain() async {
   final shortUrlProvider = ShortUrlProvider();
   final authProvider = AuthProvider();
   authProvider.attachSettingsProvider(settingsProvider);
+
+  SmartDialog.config.toast = SmartConfigToast(
+    displayType: SmartToastType.onlyRefresh,
+  );
 
   runApp(
     MultiProvider(

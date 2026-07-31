@@ -12,6 +12,7 @@ Future<void> showSyncRecoveryKeyDialog(BuildContext context) async {
     if (!context.mounted) return;
     await AppSecurity.instance.setSecureScreen(enable: true);
     try {
+      if (!context.mounted) return;
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(

@@ -343,15 +343,27 @@ class _LoginPageState extends State<LoginPage>
           const SizedBox(height: 8),
           Row(
             children: [
-              TextButton.icon(
-                onPressed: () => _handlePasskeyLogin(auth),
-                icon: const Icon(Icons.fingerprint_rounded, size: 18),
-                label: const Text('Passkey 登录'),
+              Flexible(
+                child: TextButton.icon(
+                  onPressed: () => _handlePasskeyLogin(auth),
+                  icon: const Icon(Icons.fingerprint_rounded, size: 18),
+                  label: const Text(
+                    'Passkey 登录',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-              TextButton.icon(
-                onPressed: () => _handleDiscoverablePasskeyLogin(auth),
-                icon: const Icon(Icons.key_rounded, size: 18),
-                label: const Text('免输账号'),
+              Flexible(
+                child: TextButton.icon(
+                  onPressed: () => _handleDiscoverablePasskeyLogin(auth),
+                  icon: const Icon(Icons.key_rounded, size: 18),
+                  label: const Text(
+                    '免输账号',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
               const Spacer(),
               TextButton(

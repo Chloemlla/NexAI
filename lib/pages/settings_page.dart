@@ -2804,11 +2804,15 @@ class _SliderRow extends StatelessWidget {
           children: [
             Icon(icon, size: 18, color: cs.primary),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(

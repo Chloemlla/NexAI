@@ -533,21 +533,25 @@ class _NotesPageState extends State<NotesPage>
                 const SizedBox(width: 8),
                 Icon(Icons.chevron_right_rounded, size: 16, color: cs.outline),
                 const SizedBox(width: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                  ),
-                  child: Text(
-                    '#$_selectedTag',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onPrimaryContainer,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                    ),
+                    child: Text(
+                      '#$_selectedTag',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onPrimaryContainer,
+                      ),
                     ),
                   ),
                 ),

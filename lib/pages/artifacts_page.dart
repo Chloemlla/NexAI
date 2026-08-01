@@ -400,9 +400,13 @@ class _ArtifactListItem extends StatelessWidget {
             children: [
               Icon(Icons.schedule_rounded, size: 16, color: cs.outline),
               const SizedBox(width: 8),
-              Text(
-                '创建于 ${dateFormat.format(artifact.createdAt)}',
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              Flexible(
+                child: Text(
+                  '创建于 ${dateFormat.format(artifact.createdAt)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
               ),
             ],
           ),

@@ -1841,12 +1841,16 @@ class _ChatPageState extends State<ChatPage> {
                                     ),
                                   ),
                                   const SizedBox(width: 12),
-                                  Text(
-                                    chat.activeToolName == null
-                                      ? '思考中...'
-                                      : '工具执行中：${chat.activeToolName}',
-                                    style: TextStyle(
-                                      color: cs.onSurfaceVariant,
+                                  Flexible(
+                                    child: Text(
+                                      chat.activeToolName == null
+                                        ? '思考中...'
+                                        : '工具执行中：${chat.activeToolName}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: cs.onSurfaceVariant,
+                                      ),
                                     ),
                                   ),
                                 ],

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'artifacts_page.dart';
@@ -11,6 +13,10 @@ import 'video_compressor_page.dart';
 import 'video_to_audio_page.dart';
 import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
+
+/// Content-based target height for a tool-card grid tile, matching the card's
+/// intrinsic content (icon + title + description + arrow).
+const double _gridTileContentHeight = 200;
 
 class ToolsPage extends StatefulWidget {
   const ToolsPage({super.key});
@@ -167,6 +173,26 @@ class _ToolsPageState extends State<ToolsPage> {
     final filteredTools = _filteredTools;
     final groupedTools = _groupTools(filteredTools);
 
+    // Derive the grid aspect ratio from the actual tile width so every tile
+    // gets a content-based height and the card never overflows, regardless of
+    // the column count on the current screen.
+    final maxCrossAxisExtent = isNarrow ? 180.0 : 200.0;
+    final contentWidth = math.max(
+      0.0,
+      MediaQuery.of(context).size.width - hPad * 2,
+    );
+    final crossAxisCount = math.max(
+      1,
+      (contentWidth / maxCrossAxisExtent).ceil(),
+    );
+    final tileWidth =
+        (contentWidth - (crossAxisCount - 1) * LumenTokens.sectionGap) /
+        crossAxisCount;
+    final gridTileAspectRatio = math.max(
+      0.01,
+      tileWidth / _gridTileContentHeight,
+    );
+
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
       body: CustomScrollView(
@@ -215,10 +241,10 @@ class _ToolsPageState extends State<ToolsPage> {
                     padding: EdgeInsets.symmetric(horizontal: hPad),
                     sliver: SliverGrid(
                       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: isNarrow ? 180 : 200,
+                        maxCrossAxisExtent: maxCrossAxisExtent,
                         mainAxisSpacing: LumenTokens.sectionGap,
                         crossAxisSpacing: LumenTokens.sectionGap,
-                        childAspectRatio: 0.92,
+                        childAspectRatio: gridTileAspectRatio,
                       ),
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final tool = tools[index];

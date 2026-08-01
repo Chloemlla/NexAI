@@ -125,7 +125,13 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
               size: 18,
             ),
             const SizedBox(width: 10),
-            Text('已复制$label'),
+            Flexible(
+              child: Text(
+                '已复制$label',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         behavior: SnackBarBehavior.floating,

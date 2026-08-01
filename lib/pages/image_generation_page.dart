@@ -688,8 +688,9 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     return Row(
       children: [
         // Left panel - controls
-        SizedBox(
-          width: 350,
+        Flexible(
+          flex: 2,
+          fit: FlexFit.tight,
           child: Container(
             decoration: BoxDecoration(
               color: cs.surfaceContainerLow,
@@ -876,7 +877,9 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         ),
 
         // Right panel - gallery
-        Expanded(
+        Flexible(
+          flex: 3,
+          fit: FlexFit.tight,
           child: provider.images.isEmpty
               ? Center(
                   child: Column(

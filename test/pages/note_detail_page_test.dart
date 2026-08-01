@@ -16,14 +16,19 @@ void main() {
   setUpAll(() {
     // Route path_provider through a mocked channel backed by a temp dir so
     // real file I/O stays off the user's documents folder.
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    const MethodChannel('plugins.flutter.io/path_provider').setMockMethodCallHandler(
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/path_provider'),
       (call) async => Directory.systemTemp.path,
     );
   });
 
   tearDownAll(() {
-    debugDefaultTargetPlatformOverride = null;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          null,
+        );
   });
 
   Future<NotesProvider> makeProvider() async {
@@ -56,24 +61,29 @@ Some body text.
     final captured = <FlutterErrorDetails>[];
     final oldHandler = FlutterError.onError;
     FlutterError.onError = (details) => captured.add(details);
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<NotesProvider>.value(value: notes),
-          ChangeNotifierProvider<SettingsProvider>.value(value: SettingsProvider()),
-        ],
-        child: MaterialApp(
-          home: MediaQuery(
-            data: MediaQueryData(
-              size: const Size(800, 600),
-              textScaler: TextScaler.linear(textScale),
+    try {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<NotesProvider>.value(value: notes),
+            ChangeNotifierProvider<SettingsProvider>.value(value: SettingsProvider()),
+          ],
+          child: MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: const Size(800, 600),
+                textScaler: TextScaler.linear(textScale),
+              ),
+              child: NoteDetailPage(noteId: 'n1'),
             ),
-            child: NoteDetailPage(noteId: 'n1'),
           ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
     FlutterError.onError = oldHandler;
     for (final d in captured) {
       debugPrint('CAPTURED-ERROR@$textScale:\n${d.toString()}');
@@ -85,11 +95,10 @@ Some body text.
   testWidgets(
     'note detail bars size to content instead of fixed heights',
     (tester) async {
-      final notes = await tester.runAsync(makeProvider);
-      expect(notes, isNotNull);
+      final notes = (await tester.runAsync(makeProvider))!;
 
-      final h1 = await bottomBarHeightAt(tester, notes!, 1.0);
-      final h2 = await bottomBarHeightAt(tester, notes!, 2.0);
+      final h1 = await bottomBarHeightAt(tester, notes, 1.0);
+      final h2 = await bottomBarHeightAt(tester, notes, 2.0);
 
       // Content-based sizing: at large text scale the bottom bar grows.
       expect(h2, greaterThan(h1));

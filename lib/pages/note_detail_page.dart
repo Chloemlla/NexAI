@@ -1855,43 +1855,58 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       ),
       child: Row(
         children: [
-          _statChip(cs, Icons.text_fields_rounded, '$_wordCount 个单词'),
+          Flexible(
+            fit: FlexFit.loose,
+            child: _statChip(cs, Icons.text_fields_rounded, '$_wordCount 个单词'),
+          ),
           const SizedBox(width: 12),
-          _statChip(cs, Icons.abc_rounded, '$_charCount 个字符'),
+          Flexible(
+            fit: FlexFit.loose,
+            child: _statChip(cs, Icons.abc_rounded, '$_charCount 个字符'),
+          ),
           if (_taskTotal > 0) ...[
             const SizedBox(width: 12),
-            _statChip(
-              cs,
-              Icons.check_box_outlined,
-              '$_taskDone/$_taskTotal 个任务',
-              color: _taskDone == _taskTotal ? cs.tertiary : null,
+            Flexible(
+              fit: FlexFit.loose,
+              child: _statChip(
+                cs,
+                Icons.check_box_outlined,
+                '$_taskDone/$_taskTotal 个任务',
+                color: _taskDone == _taskTotal ? cs.tertiary : null,
+              ),
             ),
           ],
           const Spacer(),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
-              onTap: () => setState(() => _showToolbar = !_showToolbar),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _showToolbar ? '隐藏工具栏' : '显示工具栏',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: cs.primary,
-                        fontWeight: FontWeight.w600,
+          Flexible(
+            fit: FlexFit.loose,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
+                onTap: () => setState(() => _showToolbar = !_showToolbar),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          _showToolbar ? '隐藏工具栏' : '显示工具栏',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: cs.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      _showToolbar
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      size: 18,
+                      const SizedBox(width: 4),
+                      Icon(
+                        _showToolbar
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 18,
                       color: cs.primary,
                     ),
                   ],
@@ -1899,9 +1914,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
               ),
             ),
           ),
-        ],
-      ),
-    );
+        ),
+      ],
+    ),
+  );
   }
 
   Widget _statChip(
@@ -1923,12 +1939,16 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         children: [
           Icon(icon, size: 14, color: chipColor),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: chipColor,
-              fontWeight: FontWeight.w600,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: chipColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

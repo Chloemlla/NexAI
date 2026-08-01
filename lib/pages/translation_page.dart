@@ -540,6 +540,7 @@ class _LanguageField extends StatelessWidget {
 
     return DropdownButtonFormField<String>(
       initialValue: value,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: const Icon(Icons.language_rounded),

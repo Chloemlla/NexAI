@@ -377,11 +377,27 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
                       children: [
                         IconButton(
                           tooltip: '复制',
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                            maxWidth: 40,
+                            maxHeight: 40,
+                          ),
                           icon: const Icon(Icons.copy_rounded, size: 18),
                           onPressed: () => _copyToClipboard(record.shortUrl),
                         ),
                         IconButton(
                           tooltip: '删除',
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                            maxWidth: 40,
+                            maxHeight: 40,
+                          ),
                           icon: Icon(Icons.close_rounded, color: cs.error),
                           onPressed: () => context
                               .read<ShortUrlProvider>()

@@ -26,40 +26,49 @@ class LumenEmptyState extends StatelessWidget {
     return Center(
       child: LumenActionCard(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            LumenIconChip(
-              icon: icon,
-              size: 72,
-              iconSize: 34,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: tt.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-                letterSpacing: 0,
+        // Keep the empty-state card compact on wide layouts: cap the width so
+        // the full-width action never stretches across the whole screen.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LumenIconChip(
+                icon: icon,
+                size: 72,
+                iconSize: 34,
               ),
-            ),
-            if (message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Text(
-                message!,
+                title,
                 textAlign: TextAlign.center,
-                style: tt.bodyMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  height: 1.5,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                  letterSpacing: 0,
                 ),
               ),
+              if (message != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  message!,
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: tt.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+              if (action != null) ...[
+                const SizedBox(height: 16),
+                SizedBox(width: double.infinity, child: action),
+              ],
             ],
-            if (action != null) ...[
-              const SizedBox(height: 16),
-              action!,
-            ],
-          ],
+          ),
         ),
       ),
     );

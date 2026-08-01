@@ -32,6 +32,7 @@ class LumenIconChip extends StatelessWidget {
     return Container(
       width: size,
       height: size,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: bg,
         shape: shape == LumenIconChipShape.circle
@@ -42,7 +43,11 @@ class LumenIconChip extends StatelessWidget {
             : null,
       ),
       child: Center(
-        child: Icon(icon, size: iconSize, color: fg),
+        child: Icon(
+          icon,
+          size: iconSize.clamp(4.0, size).toDouble(),
+          color: fg,
+        ),
       ),
     );
   }

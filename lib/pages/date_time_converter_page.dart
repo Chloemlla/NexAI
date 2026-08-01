@@ -462,18 +462,26 @@ else
                       children: [
                         Row(
                           children: [
-                            Text(
-                              entry.name,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: cs.onSurface,
+                            Flexible(
+                              child: Text(
+                                entry.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurface,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              entry.desc,
-                              style: TextStyle(fontSize: 10, color: cs.outline),
+                            Flexible(
+                              child: Text(
+                                entry.desc,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: 10, color: cs.outline),
+                              ),
                             ),
                           ],
                         ),

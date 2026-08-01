@@ -1496,17 +1496,19 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _buildTagsBar(ColorScheme cs, List<String> tags) {
     return Container(
-      height: 36,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      key: const Key('noteTagsBar'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withAlpha(60),
         border: Border(
           bottom: BorderSide(color: cs.outlineVariant.withAlpha(40)),
         ),
       ),
-      child: ListView(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        children: [
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Center(child: Icon(Icons.tag_rounded, size: 14, color: cs.outline)),
           const SizedBox(width: 6),
           ...tags.map(
@@ -1535,6 +1537,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -1625,17 +1628,19 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _buildToolbar(ColorScheme cs) {
     return Container(
-      height: 52,
+      key: const Key('noteToolbar'),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         border: Border(
           bottom: BorderSide(color: cs.outlineVariant.withAlpha(80), width: 1),
         ),
       ),
-      child: ListView(
+      child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        children: [
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
           _toolBtn(
             Icons.format_bold_rounded,
             '粗体 (Ctrl+B)',
@@ -1714,6 +1719,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             () => _insertAtCursor('[['),
           ),
         ],
+        ),
       ),
     );
   }
@@ -1839,8 +1845,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   Widget _buildBottomBar(ColorScheme cs) {
     return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      key: const Key('noteBottomBar'),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         border: Border(

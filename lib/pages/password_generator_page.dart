@@ -1667,11 +1667,15 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                                       color: cs.onSurfaceVariant,
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      '创建于: ${password.createdAt.toString().substring(0, 19)}',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: cs.onSurfaceVariant,
+                                    Expanded(
+                                      child: Text(
+                                        '创建于: ${password.createdAt.toString().substring(0, 19)}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: cs.onSurfaceVariant,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],

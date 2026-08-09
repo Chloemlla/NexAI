@@ -209,6 +209,27 @@ const List<OssDependencyCredit> kOssDependencyCredits = [
     url: 'https://pub.dev/packages/google_sign_in',
   ),
   OssDependencyCredit(
+    name: 'speech_to_text',
+    author: 'csells / csdcorp',
+    description: '语音转文字（STT）识别支持。',
+    license: 'BSD-3-Clause',
+    url: 'https://pub.dev/packages/speech_to_text',
+  ),
+  OssDependencyCredit(
+    name: 'flutter_tts',
+    author: 'dlutton / eyedeadevelopment',
+    description: '文字转语音（TTS）朗读支持。',
+    license: 'MIT',
+    url: 'https://pub.dev/packages/flutter_tts',
+  ),
+  OssDependencyCredit(
+    name: 'share_plus',
+    author: 'Flutter Community',
+    description: '系统分享面板与分享能力。',
+    license: 'BSD-3-Clause',
+    url: 'https://pub.dev/packages/share_plus',
+  ),
+  OssDependencyCredit(
     name: 'JetBrains Mono (NexAI subset)',
     author: 'JetBrains',
     description: '等宽字体子集，用于开发者日志、计时器等界面。',

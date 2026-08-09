@@ -39,13 +39,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // Friendly display labels for the font picker. Keys stay canonical so the
-  // stored value / cloud sync round-trips as the real pubspec family name.
-  static const Map<String, String> _fontFamilyLabels = {
-    'System': 'System',
-    'HarmonyOS Sans SC': 'HarmonyOS 黑体',
-  };
-
   late final SettingsProvider _settingsProvider;
   late TextEditingController _baseUrlController;
   late TextEditingController _apiKeyController;
@@ -892,10 +885,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                       items: SettingsProvider.availableFonts
                           .map(
-                            (f) => DropdownMenuItem(
-                              value: f,
-                              child: Text(_fontFamilyLabels[f] ?? f),
-                            ),
+                            (f) => DropdownMenuItem(value: f, child: Text(f)),
                           )
                           .toList(),
                       onChanged: (v) {

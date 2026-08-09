@@ -60,7 +60,7 @@ class _StartupLoadingDialogState extends State<StartupLoadingDialog> {
     final fontSize = settings?.fontSize ?? 14.0;
 
     return Dialog(
-      backgroundColor: colorScheme.surfaceContainerLow,
+      backgroundColor: lumenScaffoldBackground(colorScheme),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(LumenTokens.radiusLg),
       ),

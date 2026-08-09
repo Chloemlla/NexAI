@@ -239,7 +239,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
     final fullScreen = settings.fullScreenMode && isChat;
 
     return Scaffold(
-      backgroundColor: isAndroid ? lumenScaffoldBackground(cs) : cs.surface,
+      backgroundColor: lumenScaffoldBackground(cs),
       appBar: fullScreen
           ? null
           : AppBar(

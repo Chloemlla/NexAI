@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -68,6 +69,14 @@ Future<void> _runMain() async {
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
     );
+  }
+
+  if (isAndroid) {
+    try {
+      await FlutterDisplayMode.setHighRefreshRate();
+    } catch (_) {
+      // Non-fatal: some devices/emulators reject refresh-rate switching.
+    }
   }
 
   if (isDesktop) {

@@ -52,6 +52,21 @@ void main() {
       expect(shape?.borderRadius, LumenTokens.cardBorderRadius);
     });
 
+    test('unified theme applies Lumen geometry to fromSeed schemes', () {
+      final theme = LumenTheme.build(
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6750A4)),
+      );
+
+      final shape = theme.cardTheme.shape as RoundedRectangleBorder?;
+      expect(shape?.borderRadius, LumenTokens.cardBorderRadius);
+      expect(theme.visualDensity, VisualDensity.standard);
+      expect(theme.appBarTheme.scrolledUnderElevation, 0);
+
+      final filledTextStyle =
+          theme.filledButtonTheme.style?.textStyle?.resolve({});
+      expect(filledTextStyle?.fontWeight, FontWeight.w600);
+    });
+
     test('page token helpers match Lumen layout json defaults', () {
       expect(LumenTokens.maxContentWidth, 720);
       expect(LumenTokens.pagePaddingStart, 12);

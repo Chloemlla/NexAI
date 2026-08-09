@@ -14,7 +14,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String monospaceFontFamily = 'JetBrainsMonoNexAI';
 
   // ── Available font families (from pubspec.yaml) ──────────────────────────
-  static const List<String> availableFonts = ['System'];
+  static const List<String> availableFonts = ['System', 'HarmonyOS Sans SC'];
 
   // ── Secure storage (Android Keystore / iOS Keychain) ─────────────────────
   static const _secure = FlutterSecureStorage(
@@ -62,7 +62,7 @@ class SettingsProvider extends ChangeNotifier {
 
   // Appearance
   double _fontSize = 14.0;
-  String _fontFamily = 'System';
+  String _fontFamily = 'HarmonyOS Sans SC';
   bool _borderlessMode = false;
   bool _fullScreenMode = false;
   bool _smartAutoScroll = true;

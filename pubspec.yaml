@@ -79,3 +79,10 @@ flutter:
       fonts:
         - asset: assets/fonts/jetbrains_mono/JetBrainsMonoNexAI-Regular.ttf
           weight: 400
+    # 本地中文字体（自托管，断网可用）：HarmonyOS Sans SC
+    - family: HarmonyOS Sans SC
+      fonts:
+        - asset: "assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Regular.ttf"
+          weight: 400
+        - asset: "assets/HarmonyOS Sans/HarmonyOS_Sans_SC/HarmonyOS_Sans_SC_Medium.ttf"
+          weight: 500

@@ -74,7 +74,7 @@ static bool propEquals(const std::string& content, const std::string& key,
 
 // Check whether a property value contains any of the given tokens (CI).
 static bool propContainsAny(const std::string& content, const std::string& key,
-                            const std::string tokens[], size_t tokenCount) {
+                            const char* const tokens[], size_t tokenCount) {
     std::string searchKey = key + "=";
     size_t pos = 0;
     while ((pos = content.find(searchKey, pos)) != std::string::npos) {

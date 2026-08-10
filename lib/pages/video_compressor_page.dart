@@ -45,10 +45,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   );
   double _frameRate = 30.0;
 
-  VVideoCodec _videoCodec = VVideoCodec.h264;
+  VVideoCodec _videoCodec = VVideoCodec.h265;
   VAudioCodec _audioCodec = VAudioCodec.aac;
   VEncodingSpeed _encodingSpeed = VEncodingSpeed.medium;
-  int _crf = 23;
+  int _crf = 28;
   bool _twoPassEncoding = false;
   bool _hardwareAcceleration = true;
 

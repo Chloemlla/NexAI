@@ -4,10 +4,13 @@ import android.content.Context
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.chloemlla.nexai.core.mmkv.NexAIMmkv
+import com.chloemlla.nexai.security.HardeningGuard
 import com.chloemlla.nexai.security.StartupSecurityBootstrap
 import io.flutter.app.FlutterApplication
 
 class NexAIApplication : FlutterApplication() {
+    private var hardeningGuard: HardeningGuard? = null
+
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
         // Host startup must stay non-fatal even if author integrity fail-closes.
@@ -44,6 +47,14 @@ class NexAIApplication : FlutterApplication() {
                 }
                 runCatching { LumenCrash.record(error) }
             }
+        // Start native hardening watchdog (non-fatal on failure).
+        runCatching {
+            HardeningGuard(this).also {
+                hardeningGuard = it
+                it.start()
+            }
+            LumenCrash.recordBreadcrumb("Hardening watchdog started")
+        }
     }
 
     private fun installLumenCrashSdk() {
@@ -64,5 +75,10 @@ class NexAIApplication : FlutterApplication() {
                 reportMessage = runCatching { getString(R.string.crash_report_message) }.getOrNull(),
             ),
         )
+    }
+
+    override fun onTerminate() {
+        runCatching { hardeningGuard?.stop() }
+        super.onTerminate()
     }
 }

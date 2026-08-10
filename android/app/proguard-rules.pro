@@ -145,3 +145,27 @@
     public <methods>;
     protected <methods>;
 }
+
+###############################################################################
+# NexAI HardeningGuard — JNI native method keep
+# Class: com.chloemlla.nexai.security.HardeningGuard
+# Library: libnexai_hardening.so
+# JNI symbol names are derived from the fully-qualified class name; if R8
+# renames or removes the class the native methods fail with UnsatisfiedLinkError.
+###############################################################################
+
+# Keep the class name and all members so JNI mangling never changes.
+-keep class com.chloemlla.nexai.security.HardeningGuard { *; }
+
+# Belt-and-suspenders: keep private native methods on this class specifically.
+-keepclassmembers class com.chloemlla.nexai.security.HardeningGuard {
+    private native <methods>;
+}
+
+# R8 diagnostic outputs for verifying hardening coverage.
+-printmapping build/outputs/mapping/release/mapping.txt
+-printseeds   build/outputs/mapping/release/seeds.txt
+
+# Incremental hardening knobs safe with Flutter AOT + existing rules.
+-optimizationpasses 5
+-mergeinterfacesaggressively

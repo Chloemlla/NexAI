@@ -25,6 +25,10 @@
         android:enableOnBackInvokedCallback="true"
         android:intentMatchingFlags="enforceIntentFilter"
         android:networkSecurityConfig="@xml/network_security_config"
+        android:debuggable="false"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:extractNativeLibs="false"
         tools:targetApi="37">
 
         <!--

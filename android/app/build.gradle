@@ -82,6 +82,9 @@ android {
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+        }
 
         // Host metadata used by LumenCrashConfig.
         buildConfigField "String", "SHORT_HASH", "\"${nexaiShort}\""
@@ -145,6 +148,15 @@ android {
         }
         if (hasReleaseTask && !hasReleaseSigning && !useDebugSigning) {
             throw new GradleException("Release signing config is required. Set NEXAI_STORE_FILE, NEXAI_STORE_PASSWORD, NEXAI_KEY_ALIAS, and NEXAI_KEY_PASSWORD.")
+        }
+    }
+
+    // NDK/CMake native hardening library (nexai_hardening)
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+            cppFlags "-std=c++17"
         }
     }
 

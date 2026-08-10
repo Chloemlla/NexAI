@@ -12,6 +12,8 @@ import java.io.File
 import java.security.MessageDigest
 
 class SecuritySignals(private val context: Context) {
+    private val hardeningGuard: HardeningGuard by lazy { HardeningGuard(context) }
+
     fun getApkSignatureSha256(): String? = runCatching {
         val cert = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             val info = context.packageManager.getPackageInfo(
@@ -130,6 +132,11 @@ class SecuritySignals(private val context: Context) {
         val tracerPid = checked("tracerPid", 0) { getTracerPid() }
         val tracerAttached = tracerPid > 0
 
+        val hardeningSnapshot = checked("nativeHardening", emptyMap<String, Any?>()) { hardeningGuard.snapshot() }
+        val nativeAntiDebug = (hardeningSnapshot["nativeAntiDebug"] as? Boolean) ?: false
+        val nativeTracerPid = (hardeningSnapshot["nativeTracerPid"] as? Int) ?: 0
+        val nativeEmulator = (hardeningSnapshot["nativeEmulator"] as? Boolean) ?: false
+
         val antiDebugScore = listOf(
             debuggerAttached to 0.35,
             tracerAttached to 0.25,
@@ -160,6 +167,9 @@ class SecuritySignals(private val context: Context) {
             "signatureSha256" to checked("signatureSha256", null) { getApkSignatureSha256() },
             "apkSha256" to checked("apkSha256", null) { getApkFileSha256() },
             "dexSha256" to checked("dexSha256", null) { getDexFileHash() },
+            "nativeAntiDebug" to nativeAntiDebug,
+            "nativeTracerPid" to nativeTracerPid,
+            "nativeEmulator" to nativeEmulator,
             "checkedAt" to checkedAt,
             "source" to "android_kotlin_native",
             "confidence" to 0.85,

@@ -152,11 +152,12 @@ android {
     }
 
     // NDK/CMake native hardening library (nexai_hardening)
+    // CXX_STANDARD 17 is set in src/main/cpp/CMakeLists.txt; AGP 9's
+    // CmakeOptions no longer accepts cppFlags(...) so it is not repeated here.
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
             version "3.22.1"
-            cppFlags "-std=c++17"
         }
     }
 

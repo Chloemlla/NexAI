@@ -145,27 +145,6 @@ static bool checkFridaMaps() {
     return false;
 }
 
-// Fork-based ptrace probe: child tries PTRACE_TRACEME; if it fails a
-// debugger is already attached to the child, implying one is present.
-static bool checkPtraceProbe() {
-    pid_t pid = fork();
-    if (pid == -1) return false;   // cannot determine
-    if (pid == 0) {
-        // Child
-        if (ptrace(PTRACE_TRACEME, 0, 0, 0) == 0) {
-            _exit(0);   // no debugger attached
-        } else {
-            _exit(1);   // debugger present
-        }
-    }
-    // Parent
-    int st = 0;
-    waitpid(pid, &st, 0);
-    // Best-effort detach (may fail if child already exited — safe to ignore)
-    ptrace(PTRACE_DETACH, pid, 0, 0);
-    return WIFEXITED(st) && WEXITSTATUS(st) == 1;
-}
-
 // Emulator detection via build.prop and /proc/cpuinfo
 static bool checkEmulator() {
     // Check build.prop
@@ -200,7 +179,10 @@ static std::atomic<bool> watchdogResult(false);
 
 static void* watchdogThread(void*) {
     while (!watchdogStop.load()) {
-        bool detected = checkTracerPid() || checkFridaMaps() || checkPtraceProbe();
+        // Passive checks only. The fork()-based ptrace probe is deliberately
+        // excluded here: fork() in a multithreaded ART process can stall the
+        // main thread (observed MainThreadFreeze on release builds).
+        bool detected = checkTracerPid() || checkFridaMaps();
         watchdogResult.store(detected);
         // Sleep in 1-second increments so we can react quickly to stop signal
         for (int i = 0; i < 5; ++i) {
@@ -220,7 +202,7 @@ extern "C" {
 JNIEXPORT jboolean JNICALL
 Java_com_chloemlla_nexai_security_HardeningGuard_nativeAntiDebugDetected(
     JNIEnv* env, jobject thiz) {
-    bool immediate = checkTracerPid() || checkFridaMaps() || checkPtraceProbe();
+    bool immediate = checkTracerPid() || checkFridaMaps();
     return (immediate || watchdogResult.load()) ? JNI_TRUE : JNI_FALSE;
 }
 

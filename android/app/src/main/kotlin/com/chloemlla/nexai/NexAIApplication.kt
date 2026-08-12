@@ -1,15 +1,26 @@
 package com.chloemlla.nexai
 
 import android.content.Context
+import android.os.Handler
+import android.os.HandlerThread
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.lumen.crash.LumenCrashConfig
+import com.chloemlla.nexai.channels.ClashCompatChannel
 import com.chloemlla.nexai.core.mmkv.NexAIMmkv
 import com.chloemlla.nexai.security.HardeningGuard
 import com.chloemlla.nexai.security.StartupSecurityBootstrap
 import io.flutter.app.FlutterApplication
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.FlutterEngineCache
+import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.embedding.engine.plugins.util.GeneratedPluginRegister
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 class NexAIApplication : FlutterApplication() {
     private var hardeningGuard: HardeningGuard? = null
+    private var prewarmClashCompatChannel: ClashCompatChannel? = null
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -55,6 +66,9 @@ class NexAIApplication : FlutterApplication() {
             }
             LumenCrash.recordBreadcrumb("Hardening watchdog started")
         }
+        // Warm the Flutter engine off the main thread so the multi-second
+        // cold-start engine creation does not stall the main looper.
+        startFlutterEnginePreWarm()
     }
 
     private fun installLumenCrashSdk() {
@@ -73,12 +87,65 @@ class NexAIApplication : FlutterApplication() {
                 shareSubject = runCatching { getString(R.string.crash_report_share_subject) }.getOrNull(),
                 reportTitle = runCatching { getString(R.string.crash_report_title) }.getOrNull(),
                 reportMessage = runCatching { getString(R.string.crash_report_message) }.getOrNull(),
+                startupHangWatchdogEnabled = true,
             ),
         )
     }
 
+    /**
+     * Pre-creates the default Flutter engine on a background thread and caches it.
+     * CrashGateActivity waits for it so MainActivity attaches to a ready engine
+     * instead of creating one on the main thread during cold start.
+     */
+    private fun startFlutterEnginePreWarm() {
+        val thread = HandlerThread("nexai-flutter-prewarm").apply { start() }
+        Handler(thread.looper).post {
+            runCatching {
+                val engine = FlutterEngine(applicationContext)
+                GeneratedPluginRegister.registerGeneratedPlugins(engine)
+                // Dart's startup bootstrap calls ClashCompat before MainActivity
+                // attaches; register the channel now so auto-adapt is not skipped.
+                prewarmClashCompatChannel =
+                    ClashCompatChannel(applicationContext, engine.dartExecutor.binaryMessenger)
+                engine.dartExecutor.executeDartEntrypoint(
+                    DartExecutor.DartEntrypoint.createDefault(),
+                )
+                FlutterEngineCache.getInstance().put(PREWARM_ENGINE_ID, engine)
+                engineReady.set(true)
+            }.onFailure { error ->
+                runCatching { LumenCrash.record(error) }
+            }
+            engineLatch.countDown()
+            thread.quitSafely()
+        }
+    }
+
+    /** Disposes channels registered during pre-warm before MainActivity re-registers them. */
+    fun disposePrewarmChannels() {
+        val channel = prewarmClashCompatChannel ?: return
+        prewarmClashCompatChannel = null
+        runCatching { channel.dispose() }
+    }
+
     override fun onTerminate() {
+        disposePrewarmChannels()
         runCatching { hardeningGuard?.stop() }
         super.onTerminate()
+    }
+
+    companion object {
+        const val PREWARM_ENGINE_ID = "nexai_default_engine"
+
+        private val engineReady = AtomicBoolean(false)
+        private val engineLatch = CountDownLatch(1)
+
+        fun enginePreWarmReady(): Boolean = engineReady.get()
+
+        fun awaitEnginePreWarm(timeoutMillis: Long): Boolean =
+            try {
+                engineLatch.await(timeoutMillis, TimeUnit.MILLISECONDS) && engineReady.get()
+            } catch (_: InterruptedException) {
+                false
+            }
     }
 }

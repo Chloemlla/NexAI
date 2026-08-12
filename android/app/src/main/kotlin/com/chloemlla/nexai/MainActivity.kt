@@ -13,6 +13,9 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     private var nativeChannelRegistry: NativeChannelRegistry? = null
 
+    override fun getCachedEngineId(): String? =
+        if (NexAIApplication.enginePreWarmReady()) NexAIApplication.PREWARM_ENGINE_ID else null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // FlutterActivity is not a ComponentActivity, so androidx.activity.enableEdgeToEdge()
         // cannot be used here. WindowCompat + transparent system bars give Flutter the same
@@ -31,10 +34,20 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Channels registered during pre-warm are replaced by fresh ones below;
+        // dispose them so their network callbacks do not leak.
+        runCatching { (application as? NexAIApplication)?.disposePrewarmChannels() }
         nativeChannelRegistry = NativeChannelRegistry(this, flutterEngine).also {
             it.register()
         }
         runCatching { LumenCrash.recordBreadcrumb("MainActivity.configureFlutterEngine") }
+    }
+
+    override fun onFlutterUiDisplayed() {
+        super.onFlutterUiDisplayed()
+        // First frame is on screen; end the startup-hang window so a responsive
+        // app is never misreported as hung.
+        runCatching { LumenCrash.markStartupComplete() }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {

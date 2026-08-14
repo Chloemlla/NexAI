@@ -67,7 +67,15 @@ class AndroidNotificationService {
     Map<String, dynamic>? arguments,
   ]) async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>(method, arguments);
-    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(method, arguments);
+      return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 }

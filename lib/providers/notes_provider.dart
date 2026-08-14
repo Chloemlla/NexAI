@@ -250,6 +250,7 @@ class NotesProvider extends ChangeNotifier {
       updatedAt: now,
     );
     _notes.insert(0, note);
+    _rebuildBacklinks();
     notifyListeners();
     await _save();
     return note;
@@ -313,7 +314,7 @@ class NotesProvider extends ChangeNotifier {
     if (oldTag == newTag || newTag.isEmpty) return;
     for (final note in _notes) {
       if (note.tags.contains(oldTag)) {
-        note.content = note.content.replaceAll('#$oldTag', '#$newTag');
+        note.content = note.content.replaceAll(RegExp('#$oldTag(?![\\w/])'), '#$newTag');
         note.updatedAt = DateTime.now();
       }
     }

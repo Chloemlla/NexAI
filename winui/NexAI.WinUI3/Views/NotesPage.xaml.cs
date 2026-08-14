@@ -13,6 +13,7 @@ public sealed partial class NotesPage : Page
     private readonly INotesStore _notesStore;
     private readonly ISettingsStore _settingsStore;
     private readonly ILocalizationService _localization;
+    private readonly EventHandler _onLanguageChanged;
     private string? _selectedId;
     private string _query = string.Empty;
     private bool _isDirty;
@@ -25,11 +26,12 @@ public sealed partial class NotesPage : Page
         _notesStore = App.Current.Services.GetRequiredService<INotesStore>();
         _settingsStore = App.Current.Services.GetRequiredService<ISettingsStore>();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
-        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(() =>
+        _onLanguageChanged = (_, _) => DispatcherQueue.TryEnqueue(() =>
         {
             ApplyStaticLocalization();
             RefreshList(loadEditor: !_isDirty);
         });
+        _localization.LanguageChanged += _onLanguageChanged;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -43,6 +45,7 @@ public sealed partial class NotesPage : Page
     protected override async void OnNavigatedFrom(NavigationEventArgs e)
     {
         _notesStore.Changed -= OnChanged;
+        _localization.LanguageChanged -= _onLanguageChanged;
         if (_isDirty && _settingsStore.Current.NotesAutoSave)
         {
             try

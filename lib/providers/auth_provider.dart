@@ -494,7 +494,11 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('[NexAI Auth] Logout error: $e');
     } finally {
-      await _clearTokens();
+      try {
+        await _clearTokens();
+      } catch (_) {
+        // Ignore token clearing errors; always reset loading state.
+      }
       _isLoading = false;
       notifyListeners();
     }

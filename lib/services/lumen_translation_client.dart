@@ -263,11 +263,18 @@ class LumenTranslationClient {
     final raw = response.body;
     Map<String, dynamic> json = const {};
     if (raw.trim().isNotEmpty) {
-      final decoded = jsonDecode(raw);
-      if (decoded is Map<String, dynamic>) {
-        json = decoded;
-      } else if (decoded is Map) {
-        json = decoded.map((k, v) => MapEntry(k.toString(), v));
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          json = decoded;
+        } else if (decoded is Map) {
+          json = decoded.map((k, v) => MapEntry(k.toString(), v));
+        }
+      } catch (e) {
+        throw LumenTranslationException(
+          '响应解析失败: $e',
+          statusCode: response.statusCode,
+        );
       }
     }
 

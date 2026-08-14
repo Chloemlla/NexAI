@@ -183,7 +183,9 @@ class _GraphPageState extends State<GraphPage>
       // Drop positions for removed nodes; keep survivors for warm start.
       final liveIds = _graphData.nodes.map((n) => n.id).toSet();
       _nodePositions.removeWhere((id, _) => !liveIds.contains(id));
-      _transformController.value = Matrix4.identity();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _transformController.value = Matrix4.identity();
+      });
       if (_highlightedNodeId != null &&
           !_graphData.nodes.any((node) => node.id == _highlightedNodeId)) {
         _highlightedNodeId = null;
@@ -684,5 +686,7 @@ class _GraphPainter extends CustomPainter {
   bool shouldRepaint(covariant _GraphPainter oldDelegate) =>
       oldDelegate.highlightedNodeId != highlightedNodeId ||
       oldDelegate.colorBy != colorBy ||
-      oldDelegate.graphData != graphData;
+      oldDelegate.graphData.nodes.length != graphData.nodes.length ||
+      oldDelegate.graphData.edges.length != graphData.edges.length ||
+      oldDelegate.graphData.hashCode != graphData.hashCode;
 }

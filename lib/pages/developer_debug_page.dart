@@ -8,6 +8,8 @@ import '../utils/build_config.dart';
 import 'crash_report_page.dart';
 import '../widgets/lumen/lumen.dart';
 
+final Future<CrashReport?> _crashReportFuture = CrashReporter.store.load();
+
 class DeveloperDebugPage extends StatelessWidget {
   const DeveloperDebugPage({super.key});
 
@@ -64,7 +66,7 @@ class DeveloperDebugPage extends StatelessWidget {
           ],
         ),
         FutureBuilder(
-            future: CrashReporter.store.load(),
+            future: _crashReportFuture,
             builder: (context, snapshot) {
               final report = snapshot.data;
               return LumenSettingsSection(

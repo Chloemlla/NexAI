@@ -26,20 +26,32 @@ class NexaiBackendClient {
 
   static const requestTimeout = Duration(seconds: 30);
   static http.Client? _client;
+  static Completer<http.Client>? _clientCompleter;
 
   /// Optional explicit signing key override (e.g. refreshToken).
   static String? overrideSigningKey;
   static String? overrideKeyId;
 
+  /// NOTE: The underlying HTTP client is certificate-pinned exclusively to
+  /// tts.chloemlla.com.  Any NexAI service that uses NexaiBackendClient must
+  /// point to the pinned host; pointing to staging/dev hosts will cause TLS
+  /// pinning failures.
   static Future<http.Client> _get({bool forceRebuild = false}) async {
     try {
       if (forceRebuild) {
         _client?.close();
         _client = null;
+        _clientCompleter = null;
       }
-      _client ??= await buildPinnedHttpClient();
+      if (_client != null) return _client!;
+      // Double-check with Completer to prevent concurrent first-build races.
+      if (_clientCompleter != null) return _clientCompleter!.future;
+      _clientCompleter = Completer<http.Client>();
+      _client = await buildPinnedHttpClient();
+      _clientCompleter!.complete(_client!);
       return _client!;
     } catch (e) {
+      _clientCompleter = null;
       throw NexaiApiError(
         stage: 'tls_pinning',
         code: 'CLIENT_TLS_PIN',

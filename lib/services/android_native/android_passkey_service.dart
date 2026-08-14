@@ -52,11 +52,19 @@ class AndroidPasskeyService {
   }) async {
     if (!_available) return AndroidNativeResult.unsupported();
 
-    final envelope = await _channel.invokeMethod<Object?>(
-      'diagnoseProviders',
-      {'googleOnly': googleOnly},
-    );
-    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(
+        'diagnoseProviders',
+        {'googleOnly': googleOnly},
+      );
+      return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> _invokePasskey(
@@ -73,11 +81,19 @@ class AndroidPasskeyService {
       args['googleOnly'] = googleOnly;
     }
 
-    final envelope = await _channel.invokeMethod<Object?>(method, args);
-    return AndroidNativeResult.fromEnvelope(
-      envelope,
-      _decodeNativePasskeyData,
-    );
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(method, args);
+      return AndroidNativeResult.fromEnvelope(
+        envelope,
+        _decodeNativePasskeyData,
+      );
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 
   Map<String, dynamic> _decodeNativePasskeyData(Object? data) {

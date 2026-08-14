@@ -13,6 +13,9 @@ class NexaiAuthApi {
   static String _baseUrl = _nexaiBaseUrl;
 
   static void setBaseUrl(String url) {
+    // NOTE: The underlying HTTP client is certificate-pinned exclusively to
+    // tts.chloemlla.com. setBaseUrl MUST only point to the pinned host;
+    // pointing to staging/dev hosts will cause TLS pinning failures.
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
@@ -703,8 +706,8 @@ class AuthResponse {
       user: userData != null && userData is Map<String, dynamic>
           ? NexaiUser.fromJson(userData)
           : null,
-      accessToken: accessToken as String?,
-      refreshToken: refreshToken as String?,
+      accessToken: accessToken?.toString(),
+      refreshToken: refreshToken?.toString(),
       isNewUser:
           (dataField is Map<String, dynamic>
                   ? dataField['isNewUser']

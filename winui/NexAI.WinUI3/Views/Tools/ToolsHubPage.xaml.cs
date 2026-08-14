@@ -20,19 +20,27 @@ public sealed class ToolListItem
 public sealed partial class ToolsHubPage : Page
 {
     private readonly ILocalizationService _localization;
+    private readonly EventHandler _onLanguageChanged;
     private string _query = string.Empty;
 
     public ToolsHubPage()
     {
         InitializeComponent();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
-        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(Refresh);
+        _onLanguageChanged = (_, _) => DispatcherQueue.TryEnqueue(Refresh);
+        _localization.LanguageChanged += _onLanguageChanged;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         Refresh();
+    }
+
+    protected override void OnNavigatedFrom(NavigationEventArgs e)
+    {
+        _localization.LanguageChanged -= _onLanguageChanged;
+        base.OnNavigatedFrom(e);
     }
 
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)

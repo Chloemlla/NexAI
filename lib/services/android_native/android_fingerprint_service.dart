@@ -34,13 +34,21 @@ class AndroidFingerprintService {
   Future<AndroidNativeResult<AndroidFingerprintSnapshot>>
   getFingerprintSnapshot() async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>(
-      'getFingerprintSnapshot',
-    );
-    return AndroidNativeResult.fromEnvelope(
-      envelope,
-      (data) => AndroidFingerprintSnapshot.fromMap(asStringMap(data)),
-    );
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(
+        'getFingerprintSnapshot',
+      );
+      return AndroidNativeResult.fromEnvelope(
+        envelope,
+        (data) => AndroidFingerprintSnapshot.fromMap(asStringMap(data)),
+      );
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> getHardwareInfo() =>
@@ -65,7 +73,15 @@ class AndroidFingerprintService {
     String method,
   ) async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>(method);
-    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(method);
+      return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 }

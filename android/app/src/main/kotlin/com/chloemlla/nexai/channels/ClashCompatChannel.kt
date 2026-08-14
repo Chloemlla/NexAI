@@ -17,6 +17,7 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.util.concurrent.Executors
 
 /**
  * Detect ClashMeta install/VPN state for zero-config traffic adaptation.
@@ -37,6 +38,9 @@ internal class ClashCompatChannel(
     private var lastVpnActive: Boolean? = null
     private var lastVpnNetwork: Network? = null
     private var boundVpnNetwork: Network? = null
+    private val backgroundExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "nexai-clash-compat").apply { isDaemon = true }
+    }
 
     init {
         methodChannel.setMethodCallHandler(this)
@@ -58,7 +62,10 @@ internal class ClashCompatChannel(
             when (call.method) {
                 "getStatus" -> {
                     startNetworkWatch()
-                    result.success(buildStatus())
+                    backgroundExecutor.execute {
+                        val status = buildStatus()
+                        mainHandler.post { result.success(status) }
+                    }
                 }
                 "setAutoAdaptEnabled" -> {
                     val enabled = call.argument<Boolean>("enabled") ?: true
@@ -66,7 +73,10 @@ internal class ClashCompatChannel(
                     // Ensure network watch is active so handle replace rebinds
                     // even if Flutter events were not yet subscribed.
                     startNetworkWatch()
-                    result.success(buildStatus())
+                    backgroundExecutor.execute {
+                        val status = buildStatus()
+                        mainHandler.post { result.success(status) }
+                    }
                 }
                 else -> result.notImplemented()
             }
@@ -127,9 +137,11 @@ internal class ClashCompatChannel(
     private fun emitStatus() {
         // Always recompute so process binding tracks VPN handle replacement
         // even when no Flutter listener is attached yet.
-        val status = buildStatus()
-        val sink = eventSink ?: return
-        mainHandler.post { sink.success(status) }
+        backgroundExecutor.execute {
+            val status = buildStatus()
+            val sink = eventSink ?: return@execute
+            mainHandler.post { sink.success(status) }
+        }
     }
 
     private fun startNetworkWatch() {

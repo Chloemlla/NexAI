@@ -713,7 +713,10 @@ class _NotesPageState extends State<NotesPage>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              controller.dispose();
+              Navigator.of(ctx).pop();
+            },
             child: const Text('取消'),
           ),
           FilledButton(
@@ -722,6 +725,7 @@ class _NotesPageState extends State<NotesPage>
               if (newTag.isNotEmpty && newTag != oldTag) {
                 await context.read<NotesProvider>().renameTag(oldTag, newTag);
               }
+              controller.dispose();
               if (!ctx.mounted) return;
               Navigator.of(ctx).pop();
             },
@@ -994,8 +998,11 @@ class _NoteCard extends StatelessWidget {
                           ? Colors.amber.shade600
                           : cs.onSurfaceVariant,
                     ),
-                    onPressed: () async =>
-                        await context.read<NotesProvider>().toggleStar(note.id),
+                    onPressed: () async {
+                        try {
+                          await context.read<NotesProvider>().toggleStar(note.id);
+                        } catch (_) {}
+                      },
                     visualDensity: VisualDensity.compact,
                     tooltip: note.isStarred ? '取消星标' : '星标',
                   ),

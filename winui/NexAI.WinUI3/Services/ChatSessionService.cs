@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading;
 using NexAI.Core.Chat;
 using NexAI.Core.Settings;
 
@@ -22,13 +23,13 @@ public sealed class ChatSessionService
         _chatClient = chatClient;
     }
 
-    public bool IsStreaming => _streamCts is not null;
+    public bool IsStreaming => Volatile.Read(ref _streamCts) is not null;
 
     public event EventHandler? StateChanged;
 
     public void Stop()
     {
-        _streamCts?.Cancel();
+        Volatile.Read(ref _streamCts)?.Cancel();
     }
 
     public async Task SendAsync(string content, CancellationToken cancellationToken = default)
@@ -85,7 +86,7 @@ public sealed class ChatSessionService
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _streamCts = linkedCts;
+        Interlocked.Exchange(ref _streamCts, linkedCts);
         _streamPersistCounter = 0;
         RaiseStateChanged();
 
@@ -179,7 +180,7 @@ public sealed class ChatSessionService
         }
         finally
         {
-            _streamCts = null;
+            Interlocked.Exchange(ref _streamCts, null);
             RaiseStateChanged();
         }
     }

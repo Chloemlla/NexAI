@@ -33,22 +33,24 @@ void main() {
   group('AppSecurity apk hash validity semantics', () {
     test('only confirmed mismatch is treated as invalid', () {
       final security = AppSecurity.instance;
-      security.apkHashStatus = ApkHashStatus.pending;
-      expect(security.isApkHashValid, isTrue);
+      try {
+        security.apkHashStatus = ApkHashStatus.pending;
+        expect(security.isApkHashValid, isTrue);
 
-      security.apkHashStatus = ApkHashStatus.unavailable;
-      expect(security.isApkHashValid, isTrue);
+        security.apkHashStatus = ApkHashStatus.unavailable;
+        expect(security.isApkHashValid, isTrue);
 
-      security.apkHashStatus = ApkHashStatus.verified;
-      expect(security.isApkHashValid, isTrue);
-      expect(security.isApkHashVerified, isTrue);
+        security.apkHashStatus = ApkHashStatus.verified;
+        expect(security.isApkHashValid, isTrue);
+        expect(security.isApkHashVerified, isTrue);
 
-      security.apkHashStatus = ApkHashStatus.mismatch;
-      expect(security.isApkHashValid, isFalse);
-      expect(security.isApkHashVerified, isFalse);
-
-      // Reset singleton for other tests/runtime use.
-      security.apkHashStatus = ApkHashStatus.pending;
+        security.apkHashStatus = ApkHashStatus.mismatch;
+        expect(security.isApkHashValid, isFalse);
+        expect(security.isApkHashVerified, isFalse);
+      } finally {
+        // Reset singleton for other tests/runtime use.
+        security.apkHashStatus = ApkHashStatus.pending;
+      }
     });
   });
 }

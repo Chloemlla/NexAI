@@ -1,8 +1,9 @@
 import 'dart:io';
+import 'package:uuid/uuid.dart';
 
 Future<void> writeTextAtomically(File file, String payload) async {
   await file.parent.create(recursive: true);
-  final tempFile = File('${file.path}.tmp');
+  final tempFile = File('${file.path}.${Uuid().v4()}.tmp');
   await tempFile.writeAsString(payload, flush: true);
 
   if (await file.exists()) {

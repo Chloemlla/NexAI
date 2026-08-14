@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show File;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -285,7 +285,11 @@ class _CrashReportPageState extends State<CrashReportPage> {
               TextButton(
                 onPressed: () async {
                   final uri = Uri.parse(url);
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  try {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (_) {
+                    // Silently ignore
+                  }
                 },
                 child: const Text('打开'),
               ),
@@ -309,7 +313,11 @@ class _CrashReportPageState extends State<CrashReportPage> {
 
   Future<void> _clearAndContinue() async {
     if (widget.clearStoredReportOnContinue) {
-      await CrashReporter.clearPendingReport();
+      try {
+        await CrashReporter.clearPendingReport();
+      } catch (_) {
+        // Silently ignore
+      }
     }
     if (widget.onContinue != null) {
       widget.onContinue?.call();

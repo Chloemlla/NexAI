@@ -51,7 +51,7 @@ class SecurityHeadersInterceptor extends Interceptor {
       options.headers['X-Device-Risk-Score'] = security.riskScore.toString();
       options.headers['X-Device-Risk-Level'] = security.riskLevel;
       options.headers['X-Device-Compromised'] = security.isCompromised ? '1' : '0';
-      options.headers['X-Device-Root'] = security.isCompromised ? '1' : '0';
+      options.headers['X-Device-Root'] = security.isRooted ? '1' : '0';
       options.headers['X-Device-Debugger'] = security.isDebuggerAttached ? '1' : '0';
       options.headers['X-Device-Adb'] = security.isAdbEnabled ? '1' : '0';
       options.headers['X-Device-Dev-Settings'] =
@@ -71,7 +71,7 @@ class SecurityHeadersInterceptor extends Interceptor {
       options.headers['X-App-Build'] = _cachedBuildNumber;
 
       debugPrint('SecurityHeaders: Added security headers to ${options.uri}');
-      debugPrint('  Fingerprint: ${_cachedFingerprint?.substring(0, 16)}...');
+      debugPrint('  Fingerprint: ${_cachedFingerprint != null && _cachedFingerprint!.length >= 16 ? _cachedFingerprint!.substring(0, 16) : _cachedFingerprint}...');
       debugPrint('  Risk: ${security.riskLevel} (${security.riskScore})');
     } catch (e) {
       debugPrint('SecurityHeaders: Error adding headers: $e');

@@ -109,12 +109,12 @@ class ImageGenerationProvider extends ChangeNotifier {
     }
   }
 
-  void _addImage(GeneratedImage image) {
+  Future<void> _addImage(GeneratedImage image) async {
     _images.insert(0, image);
     if (_images.length > _maxImages) {
       _images.removeRange(_maxImages, _images.length);
     }
-    _saveHistory();
+    await _saveHistory();
   }
 
   /// Chat-based image generation (v1/chat/completions)
@@ -205,6 +205,20 @@ class ImageGenerationProvider extends ChangeNotifier {
             for (final match in urlPattern.allMatches(content)) {
               final url = match.group(0);
               if (url != null) urls.add(url);
+            }
+          } else if (content is List) {
+            // Handle structured content (e.g. list of text/image_url parts)
+            for (final part in content) {
+              if (part is Map) {
+                final partMap = part.map((k, v) => MapEntry(k.toString(), v));
+                if (partMap['type'] == 'image_url') {
+                  final imageUrl = partMap['image_url'];
+                  if (imageUrl is Map) {
+                    final url = imageUrl['url']?.toString();
+                    if (url != null) urls.add(url);
+                  }
+                }
+              }
             }
           }
 
@@ -443,11 +457,11 @@ class ImageGenerationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void deleteImage(int index) {
+  Future<void> deleteImage(int index) async {
     if (index >= 0 && index < _images.length) {
       _images.removeAt(index);
       notifyListeners();
-      _saveHistory();
+      await _saveHistory();
     }
   }
 

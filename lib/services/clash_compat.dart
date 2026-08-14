@@ -99,15 +99,27 @@ abstract final class ClashCompat {
   }
 
   static void _applyMap(Map<Object?, Object?> map) {
-    clashInstalled = map['clashInstalled'] == true;
-    vpnActive = map['vpnActive'] == true;
-    clashVpnRunning = map['clashVpnRunning'] == true;
-    partnerAppAutoAdapt = map['partnerAppAutoAdapt'] != false;
-    partnerStatusAvailable = map['partnerStatusAvailable'] == true;
-    processBound = map['processBound'] == true;
-    autoAdaptEnabled = map['autoAdaptEnabled'] != false;
-    profileName = map['profileName'] as String?;
-    clashPackage = map['clashPackage'] as String?;
+    // Read all values first using safe casts to avoid mid-assignment TypeError
+    // leaving static fields inconsistent.
+    final newClashInstalled = map['clashInstalled'] == true;
+    final newVpnActive = map['vpnActive'] == true;
+    final newClashVpnRunning = map['clashVpnRunning'] == true;
+    final newPartnerAppAutoAdapt = map['partnerAppAutoAdapt'] != false;
+    final newPartnerStatusAvailable = map['partnerStatusAvailable'] == true;
+    final newProcessBound = map['processBound'] == true;
+    final newAutoAdaptEnabled = map['autoAdaptEnabled'] != false;
+    final newProfileName = map['profileName'] as String?;
+    final newClashPackage = map['clashPackage'] as String?;
+
+    clashInstalled = newClashInstalled;
+    vpnActive = newVpnActive;
+    clashVpnRunning = newClashVpnRunning;
+    partnerAppAutoAdapt = newPartnerAppAutoAdapt;
+    partnerStatusAvailable = newPartnerStatusAvailable;
+    processBound = newProcessBound;
+    autoAdaptEnabled = newAutoAdaptEnabled;
+    profileName = newProfileName;
+    clashPackage = newClashPackage;
   }
 
   static String statusLabel({required bool autoAdaptEnabled}) {

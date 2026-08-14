@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show File, Directory, Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
@@ -508,7 +509,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
   Future<bool> _requestGalleryPermission() async {
     // Use Gal library which handles MediaStore API properly for all Android versions
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       final hasAccess = await Gal.hasAccess(toAlbum: true);
       if (hasAccess) return true;
       return await Gal.requestAccess(toAlbum: true);

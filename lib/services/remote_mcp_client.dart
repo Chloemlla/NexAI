@@ -126,6 +126,8 @@ class RemoteMcpClient {
     required String method,
     required Map<String, dynamic> params,
   }) async {
+    // NOTE: NetworkSafety.validatePublicHttpUrl is a string-based host block
+    // only — it never resolves DNS.  DNS rebinding could bypass the guard.
     final urlErr = NetworkSafety.validatePublicHttpUrl(server.url, requireHttps: true);
     if (urlErr != null) {
       throw StateError('blocked_mcp_url:$urlErr');

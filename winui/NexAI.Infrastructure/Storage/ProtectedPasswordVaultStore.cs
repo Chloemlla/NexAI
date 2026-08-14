@@ -48,9 +48,11 @@ public sealed class ProtectedPasswordVaultStore : IPasswordVaultStore
                 _passwords = loaded.Select(x => x.Clone()).OrderByDescending(x => x.CreatedAt).ToList();
             }
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine("[NexAI Vault] LoadAsync failed: " + ex);
             lock (_gate) { _passwords = []; }
+            throw;
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -164,13 +166,20 @@ public sealed class ProtectedPasswordVaultStore : IPasswordVaultStore
                     await PersistKeyAsync(legacy, cancellationToken).ConfigureAwait(false);
                     return legacy;
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Fall through and rotate if unreadable.
+                    // Key file exists but is unreadable — do NOT silently overwrite, as that
+                    // would cause permanent data loss of all vault entries encrypted with the old key.
+                    throw new InvalidOperationException(
+                        "Password vault key file exists but could not be read. " +
+                        "The vault data may be corrupted or the DPAPI key unavailable. " +
+                        "Delete the key file manually to generate a new key (this will lose existing passwords).",
+                        ex);
                 }
             }
         }
 
+        // No existing key file — fresh first launch, generate a new key.
         var key = RandomNumberGenerator.GetBytes(32);
         await PersistKeyAsync(key, cancellationToken).ConfigureAwait(false);
         return key;

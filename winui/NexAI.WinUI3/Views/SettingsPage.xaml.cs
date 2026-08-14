@@ -19,6 +19,7 @@ public sealed partial class SettingsPage : Page
     private readonly IAuthClient _authClient;
     private readonly ISyncService _syncService;
     private readonly ILocalizationService _localization;
+    private readonly EventHandler _onLanguageChanged;
     private bool _suppressThemeEvent;
     private bool _suppressLanguageEvent;
 
@@ -31,7 +32,8 @@ public sealed partial class SettingsPage : Page
         _authClient = App.Current.Services.GetRequiredService<IAuthClient>();
         _syncService = App.Current.Services.GetRequiredService<ISyncService>();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
-        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(ApplyLocalization);
+        _onLanguageChanged = (_, _) => DispatcherQueue.TryEnqueue(ApplyLocalization);
+        _localization.LanguageChanged += _onLanguageChanged;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -49,6 +51,7 @@ public sealed partial class SettingsPage : Page
     {
         _authStore.Changed -= OnAuthChanged;
         _syncService.Changed -= OnSyncChanged;
+        _localization.LanguageChanged -= _onLanguageChanged;
         base.OnNavigatedFrom(e);
     }
 
@@ -77,8 +80,9 @@ public sealed partial class SettingsPage : Page
         SyncMethodBox.SelectedIndex = current.SyncMethod switch
         {
             // WebDAV / UpStash are not implemented in WinUI — keep UI honest.
-            SyncBackendKind.WebDAV => 0,
-            SyncBackendKind.UpStash => 0,
+            // Only coerce to 0 when the saved item is disabled; otherwise respect the saved value.
+            SyncBackendKind.WebDAV => SyncMethodBox.Items.Count > 1 && SyncMethodBox.Items[1] is ComboBoxItem wdItem && wdItem.IsEnabled ? 1 : 0,
+            SyncBackendKind.UpStash => SyncMethodBox.Items.Count > 2 && SyncMethodBox.Items[2] is ComboBoxItem usItem && usItem.IsEnabled ? 2 : 0,
             _ => 0,
         };
 

@@ -49,6 +49,9 @@ class AppSecurity {
   /// Used for honeypot mode — requests will carry [isCompromised] flag.
   bool isCompromised = false;
 
+  /// True if device is rooted (from native snapshot, independent of other flags).
+  bool isRooted = false;
+
   /// True if APK signature matches the first-run pinned value.
   bool isSignatureValid = true;
 
@@ -318,7 +321,7 @@ class AppSecurity {
           'X-GitHub-Api-Version': '2022-11-28',
           'User-Agent': 'NexAI-AppSecurity',
         },
-      );
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         return json.decode(response.body) as Map<String, dynamic>;
@@ -401,7 +404,9 @@ class AppSecurity {
     if (manifestUrl == null || manifestUrl.isEmpty) return result;
 
     try {
-      final response = await http.get(Uri.parse(manifestUrl));
+      final response = await http.get(Uri.parse(manifestUrl)).timeout(
+        const Duration(seconds: 10),
+      );
       if (response.statusCode != 200) return result;
       final decoded = json.decode(response.body);
       if (decoded is! Map) return result;
@@ -603,14 +608,39 @@ class AppSecurity {
         dexHash = hash;
         debugPrint('AppSecurity: DEX hash: ${hash.substring(0, 16)}...');
 
-        // Store initial DEX hash for runtime comparison
+        // Store initial DEX hash for runtime comparison, version-aware.
+        // On legitimate app updates the DEX hash changes; we re-store instead
+        // of flagging the device as compromised.
         final stored = await _storage.read(key: 'nexai.dex.hash.v1');
+        final storedVersion = await _storage.read(
+          key: 'nexai.dex.hash.version',
+        );
+        final packageInfo = await PackageInfo.fromPlatform();
+        final currentVersion =
+            '${packageInfo.version}+${packageInfo.buildNumber}';
+
         if (stored == null) {
           await _storage.write(key: 'nexai.dex.hash.v1', value: hash);
+          await _storage.write(
+            key: 'nexai.dex.hash.version',
+            value: currentVersion,
+          );
           debugPrint('AppSecurity: DEX hash stored (TOFU)');
         } else if (stored != hash) {
-          debugPrint('AppSecurity: DEX HASH MISMATCH (runtime tampering)');
-          isCompromised = true;
+          if (storedVersion != currentVersion) {
+            // Legitimate app update — re-store the new hash
+            await _storage.write(key: 'nexai.dex.hash.v1', value: hash);
+            await _storage.write(
+              key: 'nexai.dex.hash.version',
+              value: currentVersion,
+            );
+            debugPrint('AppSecurity: DEX hash updated after version change');
+          } else {
+            debugPrint(
+              'AppSecurity: DEX HASH MISMATCH (possible runtime tampering)',
+            );
+            isCompromised = true;
+          }
         }
       }
     } catch (e) {

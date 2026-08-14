@@ -48,6 +48,9 @@ class ChatProvider extends ChangeNotifier {
   List<ChatToolDefinition> enabledTools = const [];
   int maxToolRounds = 6;
 
+  /// Guard against notifyListeners() after dispose() in async continuations.
+  bool _disposed = false;
+
   final ChatToolExecutor _toolExecutor = ChatToolExecutor();
   final Dio _dio = Dio(
     BaseOptions(
@@ -458,7 +461,7 @@ class ChatProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('NexAI: error loading conversations: $e');
     }
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> _save() async {
@@ -771,7 +774,7 @@ class ChatProvider extends ChangeNotifier {
       _isLoading = false;
       _activeToolName = null;
       _cancelToken = null;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
       await _save();
       await _drainFollowUpQueue(conversation);
     }
@@ -843,8 +846,9 @@ class ChatProvider extends ChangeNotifier {
       for (var i = 0; i < models.length; i++) {
         if (_cancelToken?.isCancelled == true) break;
         final model = models[i];
+        final messagesBefore = conversation.messages.length;
         _activeToolName = 'compare:$model';
-        notifyListeners();
+        if (!_disposed) notifyListeners();
         await _performOpenAiToolLoop(
           conversation: conversation,
           baseUrl: turn.baseUrl,
@@ -857,6 +861,14 @@ class ChatProvider extends ChangeNotifier {
           siblingGroupId: groupId,
           markActive: i == 0,
         );
+        // Truncate messages back to before this model so each model starts
+        // with the same context (the user message only).
+        if (conversation.messages.length > messagesBefore) {
+          conversation.messages.removeRange(
+            messagesBefore,
+            conversation.messages.length,
+          );
+        }
       }
     } catch (e) {
       conversation.messages.add(
@@ -872,7 +884,7 @@ class ChatProvider extends ChangeNotifier {
       _isLoading = false;
       _activeToolName = null;
       _cancelToken = null;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
       await _save();
       await _drainFollowUpQueue(conversation);
     }
@@ -885,7 +897,7 @@ class ChatProvider extends ChangeNotifier {
       return;
     }
     final next = _followUpQueue.removeAt(0);
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     await _runQueuedTurn(conversation: conversation, turn: next);
   }
 
@@ -946,7 +958,10 @@ class ChatProvider extends ChangeNotifier {
         assistantMessage: turn.assistantMessage,
         toolCalls: turn.toolCalls,
       );
-      if (!executed) return;
+      if (!executed) {
+        conversation.messages.add(Message(role: 'assistant', content: '已停止生成。', timestamp: DateTime.now()));
+        return;
+      }
     }
 
     conversation.messages.add(Message(
@@ -975,7 +990,9 @@ class ChatProvider extends ChangeNotifier {
       messagesPayload.add({'role': 'system', 'content': systemPrompt});
     }
     for (final msg in conversation.messages) {
-      if (msg.isError) continue;
+      // Include tool role messages even when isError is true so the API
+      // receives the complete tool response sequence for every tool_call.
+      if (msg.isError && msg.role != 'tool') continue;
       messagesPayload.add(_toOpenAiMessage(msg));
     }
 
@@ -1012,7 +1029,7 @@ class ChatProvider extends ChangeNotifier {
         isError: true,
       );
       conversation.messages.add(errorMessage);
-      notifyListeners();
+      if (!_disposed) notifyListeners();
       return _OpenAiTurnResult(assistantMessage: errorMessage, toolCalls: const []);
     }
 
@@ -1027,7 +1044,7 @@ class ChatProvider extends ChangeNotifier {
       isActiveBranch: markActive,
     );
     conversation.messages.add(assistantMessage);
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     final buffer = StringBuffer();
     final toolBuffers = <int, _ToolCallBuffer>{};
@@ -1061,7 +1078,7 @@ class ChatProvider extends ChangeNotifier {
             ttftMs ??= DateTime.now().difference(startedAt).inMilliseconds;
             buffer.write(content);
             assistantMessage.updateContent(buffer.toString());
-            notifyListeners();
+            if (!_disposed) notifyListeners();
           }
 
           final reasoningDelta = deltaMap['reasoning_content'] ??
@@ -1069,7 +1086,7 @@ class ChatProvider extends ChangeNotifier {
               (deltaMap['delta'] is Map ? (deltaMap['delta'] as Map)['reasoning'] : null);
           if (reasoningDelta is String && reasoningDelta.isNotEmpty) {
             assistantMessage.appendReasoning(reasoningDelta);
-            notifyListeners();
+            if (!_disposed) notifyListeners();
           }
 
           final usage = json['usage'];
@@ -1136,11 +1153,11 @@ class ChatProvider extends ChangeNotifier {
       if (assistantMessage.content.trim().isEmpty) {
         assistantMessage.updateContent('正在调用工具…');
       }
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     } else if (assistantMessage.content.isEmpty) {
       assistantMessage.updateContent('接口返回为空');
       assistantMessage.markAsError();
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
 
     return _OpenAiTurnResult(assistantMessage: assistantMessage, toolCalls: toolCalls);
@@ -1171,7 +1188,7 @@ class ChatProvider extends ChangeNotifier {
         updatedAt: DateTime.now(),
       ));
       _activeToolName = call.name;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
 
       var approved = true;
       final needsPrompt = definition?.approval == ChatToolApprovalPolicy.prompt || definition == null;
@@ -1203,7 +1220,7 @@ class ChatProvider extends ChangeNotifier {
           timestamp: DateTime.now(),
           toolCallId: call.id,
         ));
-        notifyListeners();
+        if (!_disposed) notifyListeners();
         continue;
       }
 
@@ -1215,7 +1232,7 @@ class ChatProvider extends ChangeNotifier {
         resultPreview: summary,
         updatedAt: DateTime.now(),
       ));
-      notifyListeners();
+      if (!_disposed) notifyListeners();
 
       final result = await _toolExecutor.execute(
         name: call.name,
@@ -1246,11 +1263,11 @@ class ChatProvider extends ChangeNotifier {
         citations: result.citations,
         isError: result.isError,
       ));
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
 
     _activeToolName = null;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return true;
   }
 
@@ -1293,14 +1310,14 @@ class ChatProvider extends ChangeNotifier {
       if (imageCount >= NetworkSafety.maxImagesPerMessage) break;
       try {
         final file = File(attachment.path);
-        final size = file.lengthSync();
+        final size = await file.length();
         if (size <= 0 || size > NetworkSafety.maxImageBytes) {
           debugPrint(
             'NexAI: skip attachment ${attachment.path}, size=$size limit=${NetworkSafety.maxImageBytes}',
           );
           continue;
         }
-        final bytes = file.readAsBytesSync();
+        final bytes = await file.readAsBytes();
         if (bytes.length > NetworkSafety.maxImageBytes) continue;
         final b64 = base64Encode(bytes);
         final mime = attachment.mimeType ?? _guessImageMime(attachment.name);
@@ -1405,7 +1422,7 @@ class ChatProvider extends ChangeNotifier {
     if (response.statusCode == 200) {
       final assistantMessage = Message(role: 'assistant', content: '', timestamp: DateTime.now());
       conversation.messages.add(assistantMessage);
-      notifyListeners();
+      if (!_disposed) notifyListeners();
       final buffer = StringBuffer();
       String lineBuf = '';
       await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
@@ -1426,7 +1443,7 @@ class ChatProvider extends ChangeNotifier {
                 if (text != null) {
                   buffer.write(text);
                   assistantMessage.updateContent(buffer.toString());
-                  notifyListeners();
+                  if (!_disposed) notifyListeners();
                 }
               }
             }
@@ -1484,6 +1501,7 @@ class ChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _cancelToken?.cancel('disposed');
     _dio.close();
     super.dispose();

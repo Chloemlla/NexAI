@@ -92,6 +92,7 @@ class _Base64ConverterPageState extends State<Base64ConverterPage> {
     VoidCallback onChanged,
   ) async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted) return;
     final text = data?.text;
     if (text == null || text.isEmpty) return;
 

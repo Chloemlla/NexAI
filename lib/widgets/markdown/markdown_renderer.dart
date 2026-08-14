@@ -872,6 +872,30 @@ class MarkdownImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Only allow https URLs for security
+    final uri = Uri.tryParse(imageUrl);
+    if (uri == null || uri.scheme != 'https') {
+      return Container(
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        constraints: const BoxConstraints(maxHeight: 480),
+        decoration: BoxDecoration(
+          color: styles.imageBackgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: styles.imageBorderColor, width: 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          height: 220,
+          child: Center(
+            child: Icon(
+              Icons.broken_image_outlined,
+              size: 28,
+              color: styles.mutedTextColor,
+            ),
+          ),
+        ),
+      );
+    }
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       constraints: const BoxConstraints(maxHeight: 480),
@@ -996,7 +1020,16 @@ Future<void> openWikiLink(
     await provider.markViewed(targetNote.id);
     destination = targetNote;
   } else {
-    destination = await provider.createNote(title: link.target);
+    try {
+      destination = await provider.createNote(title: link.target);
+    } catch (e) {
+      debugPrint('openWikiLink: failed to create note: $e');
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('无法创建笔记：$e')),
+      );
+      return;
+    }
   }
 
   if (!context.mounted) return;

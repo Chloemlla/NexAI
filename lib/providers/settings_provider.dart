@@ -273,10 +273,26 @@ class SettingsProvider extends ChangeNotifier {
       await _migrateLegacySecrets(prefs);
 
       // ── Read sensitive fields from FlutterSecureStorage ────────────────────
-      _openaiApiKey = await _secure.read(key: _kSecApiKey) ?? '';
-      _webdavPassword = await _secure.read(key: _kSecWebdavPass) ?? '';
-      _upstashToken = await _secure.read(key: _kSecUpstashToken) ?? '';
-      _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
+      try {
+        _openaiApiKey = await _secure.read(key: _kSecApiKey) ?? '';
+      } catch (_) {
+        _openaiApiKey = '';
+      }
+      try {
+        _webdavPassword = await _secure.read(key: _kSecWebdavPass) ?? '';
+      } catch (_) {
+        _webdavPassword = '';
+      }
+      try {
+        _upstashToken = await _secure.read(key: _kSecUpstashToken) ?? '';
+      } catch (_) {
+        _upstashToken = '';
+      }
+      try {
+        _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
+      } catch (_) {
+        _vertexApiKey = '';
+      }
 
       // ── Read non-sensitive fields from SharedPreferences ───────────────────
       final savedOpenaiBaseUrl = prefs.getString('openaiBaseUrl');
@@ -344,7 +360,6 @@ class SettingsProvider extends ChangeNotifier {
       _semanticKnowledgeSearch =
           prefs.getBool('semanticKnowledgeSearch') ?? _semanticKnowledgeSearch;
       _reasoningBudget = prefs.getDouble('reasoningBudget') ?? _reasoningBudget;
-      await _restoreToolSecrets();
       if (mcpRaw != null && mcpRaw.isNotEmpty) {
         try {
           final decoded = jsonDecode(mcpRaw);
@@ -358,6 +373,7 @@ class SettingsProvider extends ChangeNotifier {
           }
         } catch (_) {}
       }
+      await _restoreToolSecrets();
 
       _fontSize = prefs.getDouble('fontSize') ?? 14.0;
       _fontFamily = _normalizeFontFamily(prefs.getString('fontFamily'));

@@ -15,10 +15,12 @@ public sealed class OpenAiCompatibleChatClient : IChatStreamingClient
 
     private readonly HttpClient _httpClient;
 
-    public OpenAiCompatibleChatClient(HttpClient httpClient)
+    public OpenAiCompatibleChatClient()
     {
-        _httpClient = httpClient;
-        _httpClient.Timeout = Timeout.InfiniteTimeSpan;
+        _httpClient = new HttpClient
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+        };
     }
 
     public async IAsyncEnumerable<string> StreamAsync(

@@ -126,6 +126,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
         _errorMessage = null;
       } else {
         _errorMessage = '无法解析该格式';
+        _selectedDate = null;
       }
     });
   }
@@ -151,7 +152,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? now,
+      initialDate: (_selectedDate != null && _selectedDate!.isAfter(DateTime(1970)) && _selectedDate!.isBefore(DateTime(2100))) ? _selectedDate : now,
       firstDate: DateTime(1970),
       lastDate: DateTime(2100),
     );
@@ -260,6 +261,7 @@ Row(
           final data = await Clipboard.getData(
             Clipboard.kTextPlain,
           );
+          if (!mounted) return;
           final text = data?.text;
           if (text != null && text.isNotEmpty) {
             _inputController.text = text;

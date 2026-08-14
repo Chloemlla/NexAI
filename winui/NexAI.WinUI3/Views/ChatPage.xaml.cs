@@ -17,6 +17,7 @@ public sealed partial class ChatPage : Page
     private readonly ChatSessionService _chatSession;
     private readonly ISettingsStore _settingsStore;
     private readonly ILocalizationService _localization;
+    private readonly EventHandler _onLanguageChanged;
     private string _searchQuery = string.Empty;
     private bool _isBusy;
     private bool _advancedRenderingEnabled = true;
@@ -28,7 +29,8 @@ public sealed partial class ChatPage : Page
         _chatSession = App.Current.Services.GetRequiredService<ChatSessionService>();
         _settingsStore = App.Current.Services.GetRequiredService<ISettingsStore>();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
-        _localization.LanguageChanged += (_, _) => DispatcherQueue.TryEnqueue(RefreshUi);
+        _onLanguageChanged = (_, _) => DispatcherQueue.TryEnqueue(RefreshUi);
+        _localization.LanguageChanged += _onLanguageChanged;
         _advancedRenderingEnabled = _settingsStore.Current.AdvancedRenderingEnabled;
     }
 
@@ -48,6 +50,7 @@ public sealed partial class ChatPage : Page
         _conversationStore.Changed -= OnConversationStoreChanged;
         _chatSession.StateChanged -= OnChatSessionStateChanged;
         _settingsStore.Changed -= OnSettingsChanged;
+        _localization.LanguageChanged -= _onLanguageChanged;
         base.OnNavigatedFrom(e);
     }
 
@@ -373,7 +376,10 @@ public sealed partial class ChatPage : Page
         DeleteCurrentButton.IsEnabled = current is not null && !_chatSession.IsStreaming;
 
         var messages = current?.Messages ?? [];
-        MessageList.ItemsSource = messages;
+        if (!ReferenceEquals(MessageList.ItemsSource, messages))
+        {
+            MessageList.ItemsSource = messages;
+        }
         MessageEmptyState.Visibility =
             current is null || messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 

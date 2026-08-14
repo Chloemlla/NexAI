@@ -12,6 +12,9 @@ class NexaiSyncApi {
   static String _baseUrl = _defaultBaseUrl;
 
   static void setBaseUrl(String url) {
+    // NOTE: The underlying HTTP client is certificate-pinned exclusively to
+    // tts.chloemlla.com. setBaseUrl MUST only point to the pinned host;
+    // pointing to staging/dev hosts will cause TLS pinning failures.
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
@@ -45,7 +48,8 @@ class NexaiSyncApi {
     if (_isSuccess(response.statusCode)) {
       final body = _tryDecode(response.body);
       if (body?['success'] == true) {
-        return body?['data'] as Map<String, dynamic>?;
+        final data = body?['data'];
+        return data is Map<String, dynamic> ? data : null;
       }
     }
     return null;
@@ -68,7 +72,8 @@ class NexaiSyncApi {
     if (_isSuccess(response.statusCode)) {
       final body = _tryDecode(response.body);
       if (body?['success'] == true) {
-        return body?['data'] as Map<String, dynamic>? ?? {};
+        final data = body?['data'];
+        return data is Map<String, dynamic> ? data : <String, dynamic>{};
       }
     }
     return null;
@@ -106,7 +111,8 @@ class NexaiSyncApi {
     if (_isSuccess(response.statusCode)) {
       final body = _tryDecode(response.body);
       if (body?['success'] == true) {
-        return body?['data'] as Map<String, dynamic>?;
+        final data = body?['data'];
+        return data is Map<String, dynamic> ? data : null;
       }
     }
     return null;
@@ -129,7 +135,8 @@ class NexaiSyncApi {
     if (_isSuccess(response.statusCode)) {
       final decoded = _tryDecode(response.body);
       if (decoded?['success'] == true) {
-        return decoded?['data'] as Map<String, dynamic>? ?? {};
+        final data = decoded?['data'];
+        return data is Map<String, dynamic> ? data : <String, dynamic>{};
       }
     }
     return null;

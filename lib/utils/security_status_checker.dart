@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/nexai_security_service.dart';
 
 class SecurityStatusChecker {
@@ -16,15 +17,24 @@ class SecurityStatusChecker {
   /// Start periodic security status check
   void startPeriodicCheck({
     Duration interval = const Duration(minutes: 30),
-    required BuildContext context,
+    VoidCallback? onCheck,
+    BuildContext? context,
   }) {
     _timer?.cancel();
     _timer = Timer.periodic(interval, (_) async {
-      await checkStatus(context);
+      if (onCheck != null) {
+        onCheck();
+      } else if (context != null && context.mounted) {
+        await checkStatus(context);
+      }
     });
 
     // Check immediately on start
-    checkStatus(context);
+    if (onCheck != null) {
+      onCheck();
+    } else if (context != null && context.mounted) {
+      checkStatus(context);
+    }
   }
 
   /// Stop periodic check
@@ -139,7 +149,7 @@ class SecurityStatusChecker {
               onPressed: () {
                 Navigator.of(context).pop();
                 // Exit app
-                // SystemNavigator.pop();
+                SystemNavigator.pop();
               },
               child: const Text('退出'),
             ),

@@ -346,10 +346,14 @@ class KnowledgeProvider extends ChangeNotifier {
       }
       if (score <= 0 && semanticScore <= 0) continue;
       final idx = hay.indexOf(terms.first);
-      final start = idx < 0 ? 0 : (idx - 40).clamp(0, hay.length);
-      final end = idx < 0
+      // Search in doc.content directly for correct snippet positioning.
+      final contentIdx = doc.content.toLowerCase().indexOf(terms.first);
+      final start = contentIdx < 0
+          ? 0
+          : (contentIdx - 40).clamp(0, doc.content.length);
+      final end = contentIdx < 0
           ? (doc.content.length < 160 ? doc.content.length : 160)
-          : (idx + 120).clamp(0, doc.content.length);
+          : (contentIdx + 120).clamp(0, doc.content.length);
       final snippet = doc.content.substring(
         start.clamp(0, doc.content.length),
         end.clamp(0, doc.content.length),

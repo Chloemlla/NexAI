@@ -138,7 +138,7 @@ class SecurityEventReporter {
       );
     }
 
-    if (security.isCompromised) {
+    if (security.isRooted) {
       await reportRootDetection();
     }
 

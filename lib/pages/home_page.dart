@@ -69,6 +69,8 @@ class _HomePageState extends State<HomePage> with WindowListener {
   }
 
   void _startSecurityStatusCheck() {
+    final rootContext = NavigationHelper.navigatorKey.currentContext;
+    if (rootContext == null) return;
     try {
       // Create security service with secure Dio
       final dio = createSecureDio();
@@ -78,7 +80,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
       // Start periodic check (every 30 minutes)
       _securityChecker?.startPeriodicCheck(
         interval: const Duration(minutes: 30),
-        context: context,
+        context: rootContext,
       );
     } catch (e) {
       debugPrint('Failed to start security status check: $e');

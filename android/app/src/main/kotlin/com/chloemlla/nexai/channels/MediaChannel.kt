@@ -33,11 +33,13 @@ class MediaChannel(
                 val source = call.argument<String>("uri")
                     ?: call.argument<String>("path")
                     ?: return result.success(NativeResult.invalidArgument("uri or path is required"))
-                result.success(runCatching {
-                    NativeResult.ok(readMetadata(source))
-                }.getOrElse {
-                    NativeResult.nativeFailure("Failed to read media metadata")
-                })
+                executor.execute {
+                    result.success(runCatching {
+                        NativeResult.ok(readMetadata(source))
+                    }.getOrElse {
+                        NativeResult.nativeFailure("Failed to read media metadata")
+                    })
+                }
             }
             "startAudioExtraction" -> startAudioExtraction(call, result)
             "startVideoCompression" -> result.success(
@@ -129,7 +131,8 @@ class MediaChannel(
             )
         }
         activeTasks.add(taskId)
-        val output = File(context.cacheDir, "$taskId.m4a")
+        val safeTaskId = sanitizeTaskId(taskId)
+        val output = File(context.cacheDir, "$safeTaskId.m4a")
         val task = mapOf(
             "taskId" to taskId,
             "type" to "audioExtraction",
@@ -191,6 +194,7 @@ class MediaChannel(
             }
             val buffer = ByteBuffer.allocate(bufferSize)
             val bufferInfo = android.media.MediaCodec.BufferInfo()
+            var lastReportedProgress = -1.0
 
             while (!cancelledTasks.contains(taskId)) {
                 bufferInfo.offset = 0
@@ -202,17 +206,21 @@ class MediaChannel(
 
                 val progress = (bufferInfo.presentationTimeUs.toDouble() / durationUs)
                     .coerceIn(0.0, 0.98)
-                taskStore.put(
-                    mapOf(
-                        "taskId" to taskId,
-                        "type" to "audioExtraction",
-                        "status" to "running",
-                        "progress" to progress,
-                        "outputUri" to Uri.fromFile(output).toString(),
-                        "updatedAt" to System.currentTimeMillis(),
-                    ),
-                )
-                emit(taskId, "progress", progress, "extracting")
+                // Throttle: only persist/emit when progress has changed by at least 1%
+                if (progress - lastReportedProgress >= 0.01) {
+                    lastReportedProgress = progress
+                    taskStore.put(
+                        mapOf(
+                            "taskId" to taskId,
+                            "type" to "audioExtraction",
+                            "status" to "running",
+                            "progress" to progress,
+                            "outputUri" to Uri.fromFile(output).toString(),
+                            "updatedAt" to System.currentTimeMillis(),
+                        ),
+                    )
+                    emit(taskId, "progress", progress, "extracting")
+                }
                 extractor.advance()
             }
 
@@ -304,5 +312,13 @@ class MediaChannel(
 
     private companion object {
         const val MAX_ACTIVE_AUDIO_TASKS = 2
+
+        /** Remove path traversal sequences and leading separators. */
+        private fun sanitizeTaskId(taskId: String): String =
+            taskId
+                .replace(File.separator, "_")
+                .replace("..", "")
+                .trimStart('.', '_')
+                .ifBlank { "unnamed" }
     }
 }

@@ -88,7 +88,7 @@ Some body text.
     for (final d in captured) {
       debugPrint('CAPTURED-ERROR@$textScale:\n${d.toString()}');
     }
-    expect(tester.takeException(), isNull);
+    expect(captured, isEmpty);
     return tester.getSize(find.byKey(const Key('noteBottomBar'))).height;
   }
 

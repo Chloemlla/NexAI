@@ -40,6 +40,8 @@ class _OssNoticePageState extends State<OssNoticePage> {
     setState(() => _submitting = true);
     try {
       await context.read<SettingsProvider>().acknowledgeOssNotice();
+    } catch (_) {
+      // Silently handle errors during acknowledgment
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

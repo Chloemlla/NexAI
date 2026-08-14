@@ -111,7 +111,9 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
             {
                 // Match backend: unauthenticated exempt paths may proceed unsigned only if explicitly not required.
                 // For authenticated/gated routes we fail closed.
-                if (!string.IsNullOrWhiteSpace(bearerToken) || IsGatedAnonymousPath(absoluteUrl))
+                // Gated anonymous paths (login, register, etc.) are allowed without a signing key
+                // so that fresh sign-in works without a pre-provisioned device key.
+                if (!string.IsNullOrWhiteSpace(bearerToken))
                 {
                     throw new InvalidOperationException(
                         "Missing NexAI signing key. Provide access token, configure NEXAI_APP_SIGN_SECRET, or obtain a device signing key.");
@@ -220,7 +222,13 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
                 };
             }
 
-            _ = _pinStore.SaveAsync(cert2);
+            _ = _pinStore.SaveAsync(cert2).ContinueWith(t =>
+                {
+                    if (t.Exception is not null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[NexAI Http] Pin store save failed: " + t.Exception);
+                    }
+                }, TaskContinuationOptions.OnlyOnFaulted);
             return true;
         }
 
@@ -242,7 +250,13 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
                 };
             }
 
-            _ = _pinStore.SaveAsync(cert2);
+            _ = _pinStore.SaveAsync(cert2).ContinueWith(t =>
+                {
+                    if (t.Exception is not null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[NexAI Http] Pin store save (rotation) failed: " + t.Exception);
+                    }
+                }, TaskContinuationOptions.OnlyOnFaulted);
             return true;
         }
 
@@ -251,14 +265,18 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
 
     private static string? TryGetRequestHost(object sender)
     {
-        // SslStream callback sender is typically SslStream; host is not always exposed.
-        // For SocketsHttpHandler, request host can be recovered from SslClientAuthenticationOptions.TargetHost via reflection fallback.
+        // SslStream callback sender is typically SslStream; recover the actual target host.
+        // Only apply pinning when the host matches the known pinned backend.
         try
         {
-            if (sender is SslStream)
+            if (sender is SslStream sslStream)
             {
-                // Best effort: pinning is only applied when caller targets PinnedHost URLs for NexAI backend.
-                return PinnedHost;
+                // TargetHostName was added in .NET 5+ and is available on SslStream.
+                var targetHost = sslStream.TargetHostName;
+                if (!string.IsNullOrWhiteSpace(targetHost))
+                {
+                    return targetHost;
+                }
             }
         }
         catch
@@ -266,7 +284,8 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
             // ignore
         }
 
-        return PinnedHost;
+        // Could not determine the target host; default to standard CA validation.
+        return null;
     }
 
     private async Task<(string? key, string keyId)> ResolveSigningKeyAsync(

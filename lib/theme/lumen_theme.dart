@@ -216,7 +216,7 @@ class LumenTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest.withAlpha(180),
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 180/255),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
           borderSide: BorderSide.none,
@@ -224,7 +224,7 @@ class LumenTheme {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(LumenTokens.radiusMd),
           borderSide: BorderSide(
-            color: colorScheme.outlineVariant.withAlpha(70),
+            color: colorScheme.outlineVariant.withValues(alpha: 70/255),
           ),
         ),
         focusedBorder: OutlineInputBorder(
@@ -279,7 +279,7 @@ class LumenTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
         ),
-        side: BorderSide(color: colorScheme.outlineVariant.withAlpha(100)),
+        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 100/255)),
         labelStyle: textTheme.labelLarge?.copyWith(
           fontWeight: FontWeight.w600,
           letterSpacing: 0,
@@ -296,7 +296,7 @@ class LumenTheme {
           ),
         ),
         backgroundColor: WidgetStatePropertyAll(
-          colorScheme.surfaceContainerHighest.withAlpha(170),
+          colorScheme.surfaceContainerHighest.withValues(alpha: 170/255),
         ),
       ),
       dialogTheme: DialogThemeData(
@@ -331,7 +331,7 @@ class LumenTheme {
         iconColor: colorScheme.primary,
       ),
       dividerTheme: DividerThemeData(
-        color: colorScheme.outlineVariant.withAlpha(90),
+        color: colorScheme.outlineVariant.withValues(alpha: 90/255),
         space: 1,
         thickness: 1,
       ),

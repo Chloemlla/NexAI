@@ -290,37 +290,43 @@ class UpdateChecker {
       }
 
       final apkFile = await _downloadAssetToTemp(selected);
-      final updater = AndroidUpdateService();
-      final verified = await updater.verifyApkPackage(
-        uriOrPath: apkFile.path,
-        expectedSha256: expectedSha256,
-      );
-      if (!verified.ok) {
-        if (context.mounted) {
-          final error = verified.error;
-          _showErrorDialog(
-            context,
-            _updateVerifyErrorMessage(error?.code, error?.message),
-          );
+      try {
+        final updater = AndroidUpdateService();
+        final verified = await updater.verifyApkPackage(
+          uriOrPath: apkFile.path,
+          expectedSha256: expectedSha256,
+        );
+        if (!verified.ok) {
+          if (context.mounted) {
+            final error = verified.error;
+            _showErrorDialog(
+              context,
+              _updateVerifyErrorMessage(error?.code, error?.message),
+            );
+          }
+          return;
         }
-        return;
-      }
 
-      final installed = await updater.installApk(
-        uriOrPath: apkFile.path,
-        expectedSha256: expectedSha256,
-      );
-      if (!installed.ok) {
-        final error = installed.error;
-        final code = error?.code;
-        if (code == 'permission_denied') {
-          await updater.openUnknownSourcesSettings();
+        final installed = await updater.installApk(
+          uriOrPath: apkFile.path,
+          expectedSha256: expectedSha256,
+        );
+        if (!installed.ok) {
+          final error = installed.error;
+          final code = error?.code;
+          if (code == 'permission_denied') {
+            await updater.openUnknownSourcesSettings();
+          }
+          if (context.mounted) {
+            _showErrorDialog(
+              context,
+              _updateVerifyErrorMessage(code, error?.message),
+            );
+          }
         }
-        if (context.mounted) {
-          _showErrorDialog(
-            context,
-            _updateVerifyErrorMessage(code, error?.message),
-          );
+      } finally {
+        if (await apkFile.exists()) {
+          await apkFile.delete();
         }
       }
     } catch (e) {

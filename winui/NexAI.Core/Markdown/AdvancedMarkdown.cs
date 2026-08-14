@@ -73,6 +73,7 @@ public static partial class AdvancedMarkdown
         var source = text ?? string.Empty;
         source = MermaidRegex().Replace(source, string.Empty);
         source = BlockLatexRegex().Replace(source, string.Empty);
+        source = InlineLatexRegex().Replace(source, string.Empty);
         return source;
     }
 }

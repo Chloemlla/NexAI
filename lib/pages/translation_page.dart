@@ -539,6 +539,7 @@ class _LanguageField extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return DropdownButtonFormField<String>(
+      key: ValueKey(value),
       initialValue: value,
       isExpanded: true,
       decoration: InputDecoration(

@@ -25,12 +25,20 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class PasskeyChannel(private val activity: MainActivity) : MethodChannel.MethodCallHandler {
     private val credentialManager = CredentialManager.create(activity)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val scopeJob = SupervisorJob()
+    private val scope = CoroutineScope(scopeJob + Dispatchers.Main.immediate)
+
+    /** Cancel outstanding coroutines. Call when the channel handler is disposed. */
+    fun dispose() {
+        scopeJob.cancel()
+    }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {

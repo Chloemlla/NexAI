@@ -197,8 +197,13 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
           ? null
           : int.tryParse(_expiresController.text);
 
+      final token = authProvider.accessToken;
+      if (token == null) {
+        throw Exception('请先登录');
+      }
+
       final response = await artifactsProvider.createArtifact(
-        accessToken: authProvider.accessToken!,
+        accessToken: token,
         title: _titleController.text,
         contentType: widget.contentType,
         content: widget.content,

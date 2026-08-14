@@ -77,31 +77,59 @@ class AndroidSecurityService {
   Future<AndroidNativeResult<AndroidSecuritySnapshot>>
   getSecuritySnapshot() async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>(
-      'getSecuritySnapshot',
-    );
-    return AndroidNativeResult.fromEnvelope(
-      envelope,
-      (data) => AndroidSecuritySnapshot.fromMap(asStringMap(data)),
-    );
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(
+        'getSecuritySnapshot',
+      );
+      return AndroidNativeResult.fromEnvelope(
+        envelope,
+        (data) => AndroidSecuritySnapshot.fromMap(asStringMap(data)),
+      );
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> getOverlayRisk() async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>('getOverlayRisk');
-    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    try {
+      final envelope = await _channel.invokeMethod<Object?>('getOverlayRisk');
+      return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> getStartupSecuritySnapshot() async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>(
-      'getStartupSecuritySnapshot',
-    );
-    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(
+        'getStartupSecuritySnapshot',
+      );
+      return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 
   Future<void> setSecureScreen({required bool enable}) async {
     if (!_available) return;
-    await _channel.invokeMethod<void>('setSecureScreen', {'enable': enable});
+    try {
+      await _channel.invokeMethod<void>('setSecureScreen', {'enable': enable});
+    } catch (e) {
+      debugPrint('[SecurityService] setSecureScreen failed: $e');
+    }
   }
 }

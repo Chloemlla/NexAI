@@ -115,12 +115,21 @@ public sealed class FfmpegMediaToolService : IMediaToolService
         process.BeginErrorReadLine();
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
 
+        // Give the async output readers a moment to drain remaining data after the process exits.
+        // Without this, the final lines of stdout/stderr may be truncated.
+        await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+
+        var exitCode = process.ExitCode;
+
+        // Best-effort cleanup of stale temp media files older than 1 hour.
+        CleanupStaleTempFiles(outputPath);
+
         return new MediaProcessResult
         {
             InputPath = inputPath,
-            OutputPath = outputPath,
+            OutputPath = exitCode != 0 ? TryCleanupFailedOutput(outputPath) : outputPath,
             Command = "ffmpeg " + string.Join(' ', args.Select(QuoteForDisplay)),
-            ExitCode = process.ExitCode,
+            ExitCode = exitCode,
             StdOut = stdout.ToString(),
             StdErr = stderr.ToString(),
         };
@@ -229,4 +238,58 @@ public sealed class FfmpegMediaToolService : IMediaToolService
         value.Contains(' ') || value.Contains('"')
             ? "\"" + value.Replace("\"", "\\\"") + "\""
             : value;
+
+    private static void CleanupStaleTempFiles(string currentOutputPath)
+    {
+        try
+        {
+            var tempDir = Path.Combine(Path.GetTempPath(), "NexAI", "media");
+            if (!Directory.Exists(tempDir))
+            {
+                return;
+            }
+
+            var stale = DateTime.UtcNow.AddHours(-1);
+            foreach (var file in Directory.GetFiles(tempDir))
+            {
+                if (string.Equals(file, currentOutputPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (File.GetLastWriteTimeUtc(file) < stale)
+                    {
+                        File.Delete(file);
+                    }
+                }
+                catch
+                {
+                    // Best-effort; skip files that are locked or inaccessible.
+                }
+            }
+        }
+        catch
+        {
+            // Best-effort cleanup; never crash the caller.
+        }
+    }
+
+    private static string? TryCleanupFailedOutput(string outputPath)
+    {
+        try
+        {
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+        catch
+        {
+            // Best-effort; the caller will get a non-zero exit code.
+        }
+
+        return null;
+    }
 }

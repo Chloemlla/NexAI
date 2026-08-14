@@ -112,7 +112,10 @@ class CrashReport {
       reportId: (json['reportId'] as String?)?.trim().isNotEmpty == true
           ? json['reportId'] as String
           : '${json['crashedAtMillis']}'.padLeft(12, '0').substring(0, 12),
-      crashedAtMillis: (json['crashedAtMillis'] as num).toInt(),
+      crashedAtMillis: int.tryParse('${json['crashedAtMillis']}') ??
+          (json['crashedAtMillis'] is num
+              ? (json['crashedAtMillis'] as num).toInt()
+              : 0),
       crashedAtText: json['crashedAtText'] as String,
       exceptionType: json['exceptionType'] as String,
       rootCause: json['rootCause'] as String,

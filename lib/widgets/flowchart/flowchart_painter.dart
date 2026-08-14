@@ -99,6 +99,12 @@ class FlowchartPainter extends CustomPainter {
     final to = layout.positions[edge.toId];
     if (from == null || to == null) return;
 
+    // Handle self-loop node
+    if (edge.fromId == edge.toId) {
+      _drawSelfLoop(canvas, from, edge);
+      return;
+    }
+
     final fromCenter = Offset(
       from.dx + nodeWidth / 2,
       from.dy + nodeHeight / 2,
@@ -187,6 +193,86 @@ class FlowchartPainter extends CustomPainter {
       ..close();
 
     canvas.drawPath(path, Paint()..color = color);
+  }
+
+  void _drawSelfLoop(Canvas canvas, Offset nodePos, MermaidEdge edge) {
+    final cx = nodePos.dx + nodeWidth / 2;
+    final cy = nodePos.dy + nodeHeight / 2;
+    final loopRadius = 20.0;
+    final loopTop = cy - nodeHeight / 2 - loopRadius * 2;
+
+    final paint = Paint()
+      ..color = edgeColor
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke;
+
+    final path = Path()
+      ..moveTo(cx + nodeWidth / 2, cy - nodeHeight / 2)
+      ..quadraticBezierTo(
+        cx + nodeWidth / 2 + loopRadius,
+        loopTop,
+        cx,
+        loopTop,
+      )
+      ..quadraticBezierTo(
+        cx - nodeWidth / 2 - loopRadius,
+        loopTop,
+        cx - nodeWidth / 2,
+        cy - nodeHeight / 2,
+      );
+
+    if (edge.isDashed) {
+      _drawDashedPath(canvas, path, paint);
+    } else {
+      canvas.drawPath(path, paint);
+    }
+
+    // Arrowhead at the end of the loop
+    _drawArrowhead(
+      canvas,
+      Offset(cx - nodeWidth / 2, cy - nodeHeight / 2 + 2),
+      Offset(cx - nodeWidth / 2, cy - nodeHeight / 2),
+      edgeColor,
+    );
+
+    // Edge label
+    if (edge.label != null && edge.label!.isNotEmpty) {
+      final tp = TextPainter(
+        text: TextSpan(
+          text: edge.label,
+          style: TextStyle(
+            fontSize: 11,
+            color: labelColor,
+            backgroundColor: nodeColor.withAlpha((0.9 * 255).round()),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final labelPos = Offset(cx - tp.width / 2, loopTop - tp.height - 4);
+      final bgRect = Rect.fromCenter(
+        center: Offset(cx, loopTop - tp.height / 2 - 2),
+        width: tp.width + 8,
+        height: tp.height + 4,
+      );
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(bgRect, const Radius.circular(4)),
+        Paint()..color = nodeColor.withAlpha((0.95 * 255).round()),
+      );
+      tp.paint(canvas, labelPos);
+    }
+  }
+
+  void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final end = (distance + 8.0).clamp(0.0, metric.length);
+        final segment = metric.extractPath(distance, end);
+        canvas.drawPath(segment, paint);
+        distance += 14.0;
+      }
+    }
   }
 
   void _drawDashedLine(Canvas canvas, Offset from, Offset to, Paint paint) {

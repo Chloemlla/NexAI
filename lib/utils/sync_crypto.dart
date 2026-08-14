@@ -69,33 +69,37 @@ class SyncCrypto {
   Future<Map<String, dynamic>?> decryptRecord(
     Map<String, dynamic> record,
   ) async {
-    final crypto = record['crypto'];
-    if (crypto is! Map<String, dynamic>) return null;
-    if (crypto['alg'] != algorithm) return null;
+    try {
+      final crypto = record['crypto'];
+      if (crypto is! Map<String, dynamic>) return null;
+      if (crypto['alg'] != algorithm) return null;
 
-    final storedKey = await _storage.read(key: _keyStorageKey);
-    if (storedKey == null || storedKey.isEmpty) return null;
+      final storedKey = await _storage.read(key: _keyStorageKey);
+      if (storedKey == null || storedKey.isEmpty) return null;
 
-    final key = enc.Key(_base64UrlDecode(storedKey));
-    final nonce = crypto['nonce'] as String?;
-    final ciphertext = crypto['ciphertext'] as String?;
-    if (nonce == null || ciphertext == null) return null;
+      final key = enc.Key(_base64UrlDecode(storedKey));
+      final nonce = crypto['nonce'] as String?;
+      final ciphertext = crypto['ciphertext'] as String?;
+      if (nonce == null || ciphertext == null) return null;
 
-    final aad = crypto['aad'] is String
-        ? _base64UrlDecode(crypto['aad'] as String)
-        : utf8.encode(
-            '${record['category']}:${record['id']}:${record['updatedAt']}',
-          );
+      final aad = crypto['aad'] is String
+          ? _base64UrlDecode(crypto['aad'] as String)
+          : utf8.encode(
+              '${record['category']}:${record['id']}:${record['updatedAt']}',
+            );
 
-    final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.gcm));
-    final decrypted = encrypter.decryptBytes(
-      enc.Encrypted(_base64UrlDecode(ciphertext)),
-      iv: enc.IV(_base64UrlDecode(nonce)),
-      associatedData: Uint8List.fromList(aad),
-    );
+      final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.gcm));
+      final decrypted = encrypter.decryptBytes(
+        enc.Encrypted(_base64UrlDecode(ciphertext)),
+        iv: enc.IV(_base64UrlDecode(nonce)),
+        associatedData: Uint8List.fromList(aad),
+      );
 
-    final decoded = jsonDecode(utf8.decode(decrypted));
-    return decoded is Map<String, dynamic> ? decoded : null;
+      final decoded = jsonDecode(utf8.decode(decrypted));
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<enc.Key> _getOrCreateKey() async {

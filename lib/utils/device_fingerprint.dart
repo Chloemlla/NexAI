@@ -9,6 +9,7 @@
 /// WARNING: This implementation prioritizes uniqueness over performance.
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
@@ -30,29 +31,44 @@ class DeviceFingerprint {
   static final DeviceFingerprint instance = DeviceFingerprint._();
 
   String? _cachedFingerprint;
+  Completer<String>? _pendingFingerprint;
 
   /// Get or generate device fingerprint
   Future<String> getFingerprint() async {
     if (_cachedFingerprint != null) return _cachedFingerprint!;
 
-    // Try to load from secure storage
-    final stored = await _storage.read(key: _fingerprintKey);
-    if (stored != null && stored.isNotEmpty) {
-      _cachedFingerprint = stored;
-      return stored;
+    // Deduplicate concurrent callers
+    if (_pendingFingerprint != null) return _pendingFingerprint!.future;
+
+    final completer = Completer<String>();
+    _pendingFingerprint = completer;
+
+    try {
+      // Try to load from secure storage
+      final stored = await _storage.read(key: _fingerprintKey);
+      if (stored != null && stored.isNotEmpty) {
+        _cachedFingerprint = stored;
+        completer.complete(stored);
+        return stored;
+      }
+
+      // Generate new fingerprint
+      final fingerprint = await _generateFingerprint();
+      await _storage.write(key: _fingerprintKey, value: fingerprint);
+      _cachedFingerprint = fingerprint;
+      completer.complete(fingerprint);
+      return fingerprint;
+    } catch (e) {
+      completer.completeError(e);
+      rethrow;
+    } finally {
+      _pendingFingerprint = null;
     }
-
-    // Generate new fingerprint
-    final fingerprint = await _generateFingerprint();
-    await _storage.write(key: _fingerprintKey, value: fingerprint);
-    _cachedFingerprint = fingerprint;
-
-    return fingerprint;
   }
 
   /// Generate comprehensive device fingerprint
   Future<String> _generateFingerprint() async {
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       try {
         final result = await AndroidFingerprintService()
             .getFingerprintSnapshot();

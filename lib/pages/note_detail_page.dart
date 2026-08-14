@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -202,7 +202,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 _dirty = false;
               });
             }
-          });
+          }).catchError((_) {});
     }
   }
 
@@ -218,7 +218,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         widget.noteId,
         title: title,
         content: _contentController.text,
-      ),
+      ).catchError((_) {}),
     );
   }
 
@@ -529,7 +529,11 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     // Sync content if changed externally while in preview mode
     if (_viewMode == _ViewMode.preview &&
         _contentController.text != note.content) {
-      _contentController.text = note.content;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _viewMode == _ViewMode.preview) {
+          _contentController.text = note.content;
+        }
+      });
     }
 
     final isLandscape = MediaQuery.of(context).size.width > 600;
@@ -1249,7 +1253,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      tagController.dispose();
+    });
   }
 
   // ─── Backlinks sheet ───

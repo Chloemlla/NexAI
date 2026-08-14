@@ -24,7 +24,7 @@ class SecurityChannel(
             "getDexHash" -> result.success(signals.getDexFileHash())
             "setSecureScreen" -> {
                 setSecureWindow(call.argument<Boolean>("enable") ?: true)
-                result.success(null)
+                result.success(NativeResult.ok(null))
             }
 
             "isFridaDetected" -> result.success(NativeResult.ok(detection("fridaDetected") {

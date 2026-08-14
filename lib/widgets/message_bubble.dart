@@ -414,8 +414,9 @@ class _MessageFooter extends StatelessWidget {
       );
     } else {
       // Desktop: use popup menu
-      final RenderBox button =
-          repaintKey.currentContext?.findRenderObject() as RenderBox;
+      final RenderBox? button =
+          repaintKey.currentContext?.findRenderObject() as RenderBox?;
+      if (button == null) return;
       final overlay =
           Navigator.of(context).overlay!.context.findRenderObject()
               as RenderBox;
@@ -518,6 +519,10 @@ class _MessageFooter extends StatelessWidget {
           );
           await file.writeAsBytes(pngBytes);
           await Gal.putImage(file.path, album: 'NexAI');
+          // Delete temp file after saving to gallery
+          try {
+            await file.delete();
+          } catch (_) {}
           scaffoldMessenger.showSnackBar(
             SnackBar(
               content: Row(
@@ -668,11 +673,9 @@ class _MessageFooter extends StatelessWidget {
       // 2. No code block — try to auto-detect from raw content
       final trimmed = message.content.trim();
       if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-        try {
-          // Basic JSON heuristic
-          contentType = 'json';
-          content = trimmed;
-        } catch (_) {}
+        // Basic JSON heuristic
+        contentType = 'json';
+        content = trimmed;
       } else if (trimmed.startsWith('<svg') || trimmed.startsWith('<?xml')) {
         contentType = trimmed.contains('<svg') ? 'svg' : 'xml';
         content = trimmed;
@@ -720,13 +723,17 @@ class _MessageFooter extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              controller.dispose();
+              Navigator.of(ctx).pop();
+            },
             child: const Text('取消'),
           ),
           FilledButton(
             onPressed: () {
               final newContent = controller.text.trim();
               if (newContent.isEmpty) return;
+              controller.dispose();
               Navigator.of(ctx).pop();
               _editAndResend(context, newContent);
             },
@@ -922,9 +929,16 @@ class _MessageFooter extends StatelessWidget {
     );
     try {
       final client = LumenTranslationClient();
-      final clipped = content.length > LumenTranslationClient.maxInputChars
-          ? content.substring(0, LumenTranslationClient.maxInputChars)
-          : content;
+      final String clipped;
+      if (content.length > LumenTranslationClient.maxInputChars) {
+        try {
+          clipped = content.substring(0, LumenTranslationClient.maxInputChars);
+        } catch (_) {
+          clipped = content;
+        }
+      } else {
+        clipped = content;
+      }
       final result = await client.translate(
         text: clipped,
         targetLang: 'ZH',

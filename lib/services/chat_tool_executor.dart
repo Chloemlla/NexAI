@@ -70,6 +70,10 @@ class ChatToolExecutor {
   final RemoteMcpClient _mcpClient = RemoteMcpClient();
 
   void _assertSafeEndpoint(String raw, {bool requireHttps = false}) {
+    // NOTE: NetworkSafety.validatePublicHttpUrl is a string-based host block
+    // only — it never resolves DNS.  This means a DNS rebinding attack could
+    // bypass the guard.  For production, consider adding a runtime DNS
+    // resolution check.
     final err = NetworkSafety.validatePublicHttpUrl(raw, requireHttps: requireHttps);
     if (err != null) {
       throw StateError('blocked_url:$err');
@@ -645,7 +649,9 @@ class ChatToolExecutor {
       );
     }
 
-    final created = images.take((images.length - before).clamp(1, 4)).toList();
+    final created = images.length > before
+        ? images.skip(before).take(images.length - before).toList()
+        : <ImageGenerationResult>[];
     final urls = created.map((image) => image.url).where((url) => url.isNotEmpty).toList();
     return ToolExecutionResult(
       content: jsonEncode({

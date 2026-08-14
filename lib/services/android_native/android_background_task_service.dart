@@ -47,8 +47,16 @@ class AndroidBackgroundTaskService {
 
   Future<AndroidNativeResult<List<Map<String, dynamic>>>> listTasks() async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>('listTasks');
-    return AndroidNativeResult.fromEnvelope(envelope, asStringMapList);
+    try {
+      final envelope = await _channel.invokeMethod<Object?>('listTasks');
+      return AndroidNativeResult.fromEnvelope(envelope, asStringMapList);
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 
   Future<AndroidNativeResult<Map<String, dynamic>>> cancelTask(
@@ -60,7 +68,15 @@ class AndroidBackgroundTaskService {
     Map<String, dynamic>? arguments,
   ]) async {
     if (!_available) return AndroidNativeResult.unsupported();
-    final envelope = await _channel.invokeMethod<Object?>(method, arguments);
-    return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    try {
+      final envelope = await _channel.invokeMethod<Object?>(method, arguments);
+      return AndroidNativeResult.fromEnvelope(envelope, asStringMap);
+    } catch (e) {
+      return AndroidNativeResult.error(
+        'invocation_failed',
+        e.toString(),
+        recoverable: true,
+      );
+    }
   }
 }

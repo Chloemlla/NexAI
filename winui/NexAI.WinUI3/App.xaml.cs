@@ -278,13 +278,19 @@ public partial class App : Application
 
             settingsStore.Changed += (_, _) =>
             {
-                try { themeService.Apply(settingsStore.Current.ThemeMode); }
-                catch (Exception ex) { LogStartup("theme changed failed: " + ex); }
+                _ = _window?.DispatcherQueue.TryEnqueue(() =>
+                {
+                    try { themeService.Apply(settingsStore.Current.ThemeMode); }
+                    catch (Exception ex) { LogStartup("theme changed failed: " + ex); }
+                });
             };
             settingsStore.Changed += (_, _) =>
             {
-                try { localization.Apply(settingsStore.Current.Language); }
-                catch (Exception ex) { LogStartup("language changed failed: " + ex); }
+                _ = _window?.DispatcherQueue.TryEnqueue(() =>
+                {
+                    try { localization.Apply(settingsStore.Current.Language); }
+                    catch (Exception ex) { LogStartup("language changed failed: " + ex); }
+                });
             };
             LogStartup("settings change handlers registered");
         }
@@ -320,7 +326,17 @@ public partial class App : Application
     private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
         LogStartup("UnhandledException " + e.Exception);
-        // Keep the process alive only for non-fatal UI exceptions; still log everything.
+        // Only mark as handled for known recoverable UI exceptions (layout, rendering, etc.).
+        // Let everything else crash so the crash dump captures the root cause.
+        var ex = e.Exception;
+        if (ex is NullReferenceException or AccessViolationException or InvalidOperationException
+            or System.IO.IOException or System.UnauthorizedAccessException or OutOfMemoryException
+            or StackOverflowException or System.Threading.ThreadAbortException)
+        {
+            return;
+        }
+
+        // Recoverable: XAML layout/rendering failures, resource resolution, binding errors.
         e.Handled = true;
     }
 

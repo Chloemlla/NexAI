@@ -42,7 +42,7 @@ class Artifact {
       tags: List<String>.from(json['tags'] ?? const <dynamic>[]),
       visibility: (json['visibility'] ?? 'public').toString(),
       viewCount: int.tryParse('${json['viewCount'] ?? json['view_count'] ?? 0}') ?? 0,
-      createdAt: DateTime.parse(createdAtRaw.toString()),
+      createdAt: DateTime.tryParse(createdAtRaw?.toString() ?? '') ?? DateTime.now(),
       expiresAt: expiresAtRaw != null ? DateTime.tryParse(expiresAtRaw.toString()) : null,
     );
   }
@@ -67,13 +67,13 @@ class ArtifactCreateResponse {
 
   factory ArtifactCreateResponse.fromJson(Map<String, dynamic> json) {
     return ArtifactCreateResponse(
-      id: json['id'],
-      shortId: json['shortId'],
-      shareUrl: json['shareUrl'],
-      embedUrl: json['embedUrl'],
-      createdAt: DateTime.parse(json['createdAt']),
+      id: (json['id'] ?? '').toString(),
+      shortId: (json['shortId'] ?? '').toString(),
+      shareUrl: (json['shareUrl'] ?? '').toString(),
+      embedUrl: (json['embedUrl'] ?? '').toString(),
+      createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString()) ?? DateTime.now(),
       expiresAt: json['expiresAt'] != null
-          ? DateTime.parse(json['expiresAt'])
+          ? DateTime.tryParse(json['expiresAt'].toString())
           : null,
     );
   }

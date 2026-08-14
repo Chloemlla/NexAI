@@ -36,8 +36,11 @@ class NetworkSecurity {
       if (httpProxy != null || httpsProxy != null) {
         isProxyDetected = true;
         debugPrint('NetworkSecurity: Proxy detected');
-        debugPrint('  HTTP_PROXY: $httpProxy');
-        debugPrint('  HTTPS_PROXY: $httpsProxy');
+        // Redact credentials before logging proxy URLs
+        final redactedHttp = _redactProxyUrl(httpProxy);
+        final redactedHttps = _redactProxyUrl(httpsProxy);
+        debugPrint('  HTTP_PROXY: $redactedHttp');
+        debugPrint('  HTTPS_PROXY: $redactedHttps');
       }
     } catch (e) {
       debugPrint('NetworkSecurity: proxy check error: $e');
@@ -62,4 +65,12 @@ class NetworkSecurity {
 
   /// Check if current network environment is high-risk
   bool get isHighRiskEnvironment => isProxyDetected || isVpnDetected;
+
+  /// Redact userinfo (credentials) from a proxy URL for safe logging.
+  static String? _redactProxyUrl(String? url) {
+    if (url == null || url.isEmpty) return url;
+    final uri = Uri.tryParse(url);
+    if (uri == null || uri.userInfo.isEmpty) return url;
+    return url.replaceFirst('${uri.userInfo}@', '***@');
+  }
 }

@@ -57,6 +57,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isDirty = false;
   bool _isSyncingControllers = false;
   String _version = '';
+  late final Future<bool> _autoUpdateFuture;
 
   String _formatSyncTime(DateTime dt) {
     final now = DateTime.now();
@@ -94,12 +95,14 @@ class _SettingsPageState extends State<SettingsPage> {
       _apiKeyController,
       _modelsController,
       _systemPromptController,
+      _vertexApiKeyController,
       _vertexProjectIdController,
       _vertexLocationController,
     ]) {
       c.addListener(_markDirty);
     }
     _settingsProvider.addListener(_handleSettingsChanged);
+    _autoUpdateFuture = UpdateChecker.getAutoUpdate();
     _clashStatusSub = ClashCompat.onStatusChanged.listen((_) {
       if (mounted) setState(() {});
     });
@@ -410,7 +413,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
+                    if (settings.models.isEmpty)
+                      const TextField(
+                        enabled: false,
+                        decoration: InputDecoration(
+                          labelText: '当前模型',
+                          prefixIcon: Icon(Icons.smart_toy_outlined, size: 20),
+                          hintText: '请先在上方输入可用模型',
+                        ),
+                      )
+                    else
+                      DropdownButtonFormField<String>(
                       initialValue:
                           settings.models.isNotEmpty &&
                               settings.models.contains(settings.selectedModel)
@@ -1594,7 +1607,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                     const SizedBox(height: 16),
                     FutureBuilder<bool>(
-                      future: UpdateChecker.getAutoUpdate(),
+                      future: _autoUpdateFuture,
                       builder: (context, snapshot) {
                         final autoUpdate = snapshot.data ?? true;
                         return SwitchListTile(
@@ -2500,43 +2513,49 @@ class _SettingsPageState extends State<SettingsPage> {
     final nameCtrl = TextEditingController(text: 'MCP');
     final urlCtrl = TextEditingController(text: 'https://');
     final tokenCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('添加 MCP 服务器'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: '名称'),
-            ),
-            TextField(
-              controller: urlCtrl,
-              decoration: const InputDecoration(labelText: 'URL'),
-            ),
-            TextField(
-              controller: tokenCtrl,
-              decoration: const InputDecoration(labelText: 'Bearer Token（可选）'),
-            ),
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('添加 MCP 服务器'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: '名称'),
+              ),
+              TextField(
+                controller: urlCtrl,
+                decoration: const InputDecoration(labelText: 'URL'),
+              ),
+              TextField(
+                controller: tokenCtrl,
+                decoration: const InputDecoration(labelText: 'Bearer Token（可选）'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('添加')),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('添加')),
-        ],
-      ),
-    );
-    if (ok != true) return null;
-    final url = urlCtrl.text.trim();
-    if (url.isEmpty) return null;
-    return McpServerConfig(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: nameCtrl.text.trim().isEmpty ? 'MCP' : nameCtrl.text.trim(),
-      url: url,
-      enabled: true,
-      bearerToken: tokenCtrl.text.trim().isEmpty ? null : tokenCtrl.text.trim(),
-    );
+      );
+      if (ok != true) return null;
+      final url = urlCtrl.text.trim();
+      if (url.isEmpty) return null;
+      return McpServerConfig(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: nameCtrl.text.trim().isEmpty ? 'MCP' : nameCtrl.text.trim(),
+        url: url,
+        enabled: true,
+        bearerToken: tokenCtrl.text.trim().isEmpty ? null : tokenCtrl.text.trim(),
+      );
+    } finally {
+      nameCtrl.dispose();
+      urlCtrl.dispose();
+      tokenCtrl.dispose();
+    }
   }
 
   Future<void> _editToolGateway(
@@ -2544,31 +2563,35 @@ class _SettingsPageState extends State<SettingsPage> {
     SettingsProvider settings,
   ) async {
     final controller = TextEditingController(text: settings.toolGatewayBaseUrl);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('工具网关 Base URL'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Base URL',
-            hintText: 'https://example.com/api/tools',
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('工具网关 Base URL'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Base URL',
+              hintText: 'https://example.com/api/tools',
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('保存'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    await settings.setToolGatewayBaseUrl(controller.text.trim());
+      );
+      if (ok != true) return;
+      await settings.setToolGatewayBaseUrl(controller.text.trim());
+    } finally {
+      controller.dispose();
+    }
   }
 
   Future<void> _editWebSearchProviders(
@@ -2680,57 +2703,64 @@ class _SettingsPageState extends State<SettingsPage> {
     final typeCtrl = TextEditingController(text: 'tavily');
     final endpointCtrl = TextEditingController(text: 'https://');
     final keyCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('添加搜索 Provider'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: '名称'),
-            ),
-            TextField(
-              controller: typeCtrl,
-              decoration: const InputDecoration(
-                labelText: '类型',
-                hintText: 'duckduckgo / tavily / searxng / exa / jina / nexai_gateway',
+    try {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('添加搜索 Provider'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: '名称'),
               ),
+              TextField(
+                controller: typeCtrl,
+                decoration: const InputDecoration(
+                  labelText: '类型',
+                  hintText: 'duckduckgo / tavily / searxng / exa / jina / nexai_gateway',
+                ),
+              ),
+              TextField(
+                controller: endpointCtrl,
+                decoration: const InputDecoration(labelText: 'Endpoint'),
+              ),
+              TextField(
+                controller: keyCtrl,
+                decoration: const InputDecoration(labelText: 'API Key（可选）'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('取消'),
             ),
-            TextField(
-              controller: endpointCtrl,
-              decoration: const InputDecoration(labelText: 'Endpoint'),
-            ),
-            TextField(
-              controller: keyCtrl,
-              decoration: const InputDecoration(labelText: 'API Key（可选）'),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('添加'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('添加'),
-          ),
-        ],
-      ),
+      );
+      if (ok != true) return null;
+      return WebSearchProviderConfig(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: nameCtrl.text.trim().isEmpty
+            ? 'Custom Search'
+            : nameCtrl.text.trim(),
+        type: typeCtrl.text.trim().isEmpty ? 'tavily' : typeCtrl.text.trim(),
+        endpoint: endpointCtrl.text.trim(),
+        apiKey: keyCtrl.text.trim().isEmpty ? null : keyCtrl.text.trim(),
+        enabled: true,
     );
-    if (ok != true) return null;
-    return WebSearchProviderConfig(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: nameCtrl.text.trim().isEmpty
-          ? 'Custom Search'
-          : nameCtrl.text.trim(),
-      type: typeCtrl.text.trim().isEmpty ? 'tavily' : typeCtrl.text.trim(),
-      endpoint: endpointCtrl.text.trim(),
-      apiKey: keyCtrl.text.trim().isEmpty ? null : keyCtrl.text.trim(),
-      enabled: true,
-    );
+    } finally {
+      nameCtrl.dispose();
+      typeCtrl.dispose();
+      endpointCtrl.dispose();
+      keyCtrl.dispose();
+    }
   }
 
 }

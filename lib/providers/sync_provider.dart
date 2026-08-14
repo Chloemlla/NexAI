@@ -268,7 +268,7 @@ class SyncProvider extends ChangeNotifier {
   Future<void> _saveLastSyncedAt(String isoTime) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastSyncKey, isoTime);
-    _lastSyncedAt = DateTime.parse(isoTime);
+    _lastSyncedAt = DateTime.tryParse(isoTime) ?? DateTime.now();
   }
 
   /// 加载本地保存的同步时间

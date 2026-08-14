@@ -338,7 +338,7 @@ class _LoginPageState extends State<LoginPage>
             obscureText: !_loginPasswordVisible,
             textInputAction: TextInputAction.done,
             validator: (v) => v == null || v.isEmpty ? '请输入密码' : null,
-            onFieldSubmitted: (_) => _handleLogin(auth),
+            onFieldSubmitted: (_) => _handleLogin(auth).catchError((_) {}),
           ),
           const SizedBox(height: 8),
           Row(
@@ -469,7 +469,7 @@ class _LoginPageState extends State<LoginPage>
                 if (v != _registerPasswordController.text) return '两次密码不一致';
                 return null;
               },
-              onFieldSubmitted: (_) => _handleRegister(auth),
+              onFieldSubmitted: (_) => _handleRegister(auth).catchError((_) {}),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -653,7 +653,10 @@ class _LoginPageState extends State<LoginPage>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
+            onPressed: () {
+              emailController.dispose();
+              Navigator.of(ctx).pop();
+            },
             child: const Text('取消'),
           ),
           FilledButton(
@@ -673,6 +676,8 @@ class _LoginPageState extends State<LoginPage>
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('发送失败：$e')),
                 );
+              } finally {
+                emailController.dispose();
               }
             },
             child: const Text('发送'),

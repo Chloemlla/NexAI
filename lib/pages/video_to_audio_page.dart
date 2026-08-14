@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' show File, Directory;
 import 'package:flutter/material.dart';
 import '../theme/lumen_tokens.dart';
 import 'package:path_provider/path_provider.dart';
@@ -189,7 +189,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       }
     });
 
-    for (final task in _tasks) {
+    for (final task in List.of(_tasks)) {
       if (!mounted || !_isProcessing) break;
       if (task.status == TaskStatus.success) continue;
 
@@ -231,7 +231,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
     }
 
     final command =
-        '-i "${task.inputPath}" -vn ${_selectedFormat.codecArgs} -y "${task.outputPath}"';
+        '-i ${_quotePath(task.inputPath)} -vn ${_selectedFormat.codecArgs} -y ${_quotePath(task.outputPath)}';
 
     try {
       final session = await FFmpegKit.executeAsync(
@@ -371,6 +371,10 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
     final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+
+  String _quotePath(String path) {
+    return '"${path.replaceAll('"', r'\"')}"';
   }
 
   double get _overallProgress {

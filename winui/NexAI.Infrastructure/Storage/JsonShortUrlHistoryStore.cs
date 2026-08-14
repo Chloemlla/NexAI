@@ -43,9 +43,9 @@ public sealed class JsonShortUrlHistoryStore : IShortUrlHistoryStore
             _history = loaded.Select(x => x.Clone()).OrderByDescending(x => x.CreatedAt).Take(MaxItems).ToList();
         }
 
-        // Upgrade legacy plaintext files on first load.
+        // Upgrade legacy plaintext files on first load, regardless of record count.
         var raw = (await File.ReadAllTextAsync(AppPaths.ShortUrlHistoryFilePath, cancellationToken).ConfigureAwait(false)).Trim();
-        if (loaded.Count > 0 && !NexAI.Infrastructure.Security.SecretProtector.IsProtected(raw))
+        if (!NexAI.Infrastructure.Security.SecretProtector.IsProtected(raw))
         {
             await PersistAsync(cancellationToken).ConfigureAwait(false);
         }

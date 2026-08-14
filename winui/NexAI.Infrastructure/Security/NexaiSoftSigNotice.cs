@@ -13,6 +13,7 @@ public static class NexaiSoftSigNotice
 {
     private static DateTimeOffset _lastShownAt = DateTimeOffset.MinValue;
     private static string? _lastCode;
+    private static readonly object _gate = new();
     private static readonly TimeSpan Throttle = TimeSpan.FromSeconds(12);
 
     public static event EventHandler<NexaiSoftSigNoticeEventArgs>? Raised;
@@ -43,14 +44,17 @@ public static class NexaiSoftSigNotice
         }
 
         var now = DateTimeOffset.UtcNow;
-        if (now - _lastShownAt < Throttle &&
-            string.Equals(_lastCode, code, StringComparison.OrdinalIgnoreCase))
+        lock (_gate)
         {
-            return;
-        }
+            if (now - _lastShownAt < Throttle &&
+                string.Equals(_lastCode, code, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
 
-        _lastShownAt = now;
-        _lastCode = code;
+            _lastShownAt = now;
+            _lastCode = code;
+        }
 
         var hint = (!string.IsNullOrWhiteSpace(code) && CodeHints.TryGetValue(code, out var mapped))
             ? mapped

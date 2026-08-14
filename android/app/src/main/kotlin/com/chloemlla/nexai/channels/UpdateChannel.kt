@@ -16,11 +16,15 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.security.MessageDigest
+import java.util.concurrent.Executors
 
 class UpdateChannel(
     private val activity: MainActivity,
     private val securitySignals: SecuritySignals,
 ) : MethodChannel.MethodCallHandler {
+    private val backgroundExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "nexai-update-verify").apply { isDaemon = true }
+    }
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "getInstallEnvironment" -> result.success(NativeResult.ok(installEnvironment()))
@@ -60,7 +64,19 @@ class UpdateChannel(
     private fun openUrl(call: MethodCall, result: MethodChannel.Result) {
         val url = call.argument<String>("url")
             ?: return result.success(NativeResult.invalidArgument("url is required"))
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        val uri = Uri.parse(url)
+        val scheme = uri.scheme?.lowercase()
+        if (scheme !in ALLOWED_URL_SCHEMES) {
+            return result.success(
+                NativeResult.error(
+                    "invalid_scheme",
+                    "Only HTTPS URLs are allowed",
+                    recoverable = false,
+                    details = mapOf("scheme" to scheme),
+                ),
+            )
+        }
+        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
             addCategory(Intent.CATEGORY_BROWSABLE)
         }
         result.success(
@@ -78,23 +94,25 @@ class UpdateChannel(
             ?: call.argument<String>("path")
             ?: return result.success(NativeResult.invalidArgument("uri or path is required"))
         val expectedSha256 = call.argument<String>("expectedSha256")
-        result.success(
-            runCatching {
-                val verification = verifyPackageIdentity(
+        backgroundExecutor.execute {
+            val verification = runCatching {
+                verifyPackageIdentity(
                     uriOrPath = uriOrPath,
                     expectedSha256 = expectedSha256,
                     requireHashMatch = expectedSha256 != null,
                     requirePackageMatch = false,
                     requireSignatureMatch = false,
                 )
+            }.getOrElse {
+                VerificationOutcome.Error(NativeResult.nativeFailure("Failed to verify APK hash"))
+            }
+            result.success(
                 when (verification) {
                     is VerificationOutcome.Ok -> NativeResult.ok(verification.payload)
                     is VerificationOutcome.Error -> verification.result
-                }
-            }.getOrElse {
-                NativeResult.nativeFailure("Failed to verify APK hash")
-            },
-        )
+                },
+            )
+        }
     }
 
     private fun verifyApkPackage(call: MethodCall, result: MethodChannel.Result) {
@@ -102,23 +120,25 @@ class UpdateChannel(
             ?: call.argument<String>("path")
             ?: return result.success(NativeResult.invalidArgument("uri or path is required"))
         val expectedSha256 = call.argument<String>("expectedSha256")
-        result.success(
-            runCatching {
-                val verification = verifyPackageIdentity(
+        backgroundExecutor.execute {
+            val verification = runCatching {
+                verifyPackageIdentity(
                     uriOrPath = uriOrPath,
                     expectedSha256 = expectedSha256,
                     requireHashMatch = expectedSha256 != null,
                     requirePackageMatch = true,
                     requireSignatureMatch = true,
                 )
+            }.getOrElse {
+                VerificationOutcome.Error(NativeResult.nativeFailure("Failed to verify APK package identity"))
+            }
+            result.success(
                 when (verification) {
                     is VerificationOutcome.Ok -> NativeResult.ok(verification.payload)
                     is VerificationOutcome.Error -> verification.result
-                }
-            }.getOrElse {
-                NativeResult.nativeFailure("Failed to verify APK package identity")
-            },
-        )
+                },
+            )
+        }
     }
 
     private fun installApk(call: MethodCall, result: MethodChannel.Result) {
@@ -135,44 +155,45 @@ class UpdateChannel(
             ?: call.argument<String>("path")
             ?: return result.success(NativeResult.invalidArgument("uri or path is required"))
         val expectedSha256 = call.argument<String>("expectedSha256")
-
-        val verification = runCatching {
-            verifyPackageIdentity(
-                uriOrPath = uriOrPath,
-                expectedSha256 = expectedSha256,
-                requireHashMatch = expectedSha256 != null,
-                requirePackageMatch = true,
-                requireSignatureMatch = true,
-            )
-        }.getOrElse {
-            return result.success(NativeResult.nativeFailure("Failed to verify APK before install"))
-        }
-        if (verification is VerificationOutcome.Error) {
-            return result.success(verification.result)
-        }
-
-        val uri = shareableApkUri(uriOrPath)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/vnd.android.package-archive")
-            // Explicit ClipData + grant flags: Android 17/18 stop relying on implicit URI grants.
-            clipData = ClipData.newUri(activity.contentResolver, "apk", uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            addCategory(Intent.CATEGORY_DEFAULT)
-        }
-        result.success(
-            runCatching {
-                activity.startActivity(intent)
-                NativeResult.ok(
-                    mapOf(
-                        "started" to true,
-                        "verification" to (verification as VerificationOutcome.Ok).payload,
-                    ),
+        backgroundExecutor.execute {
+            val verification = runCatching {
+                verifyPackageIdentity(
+                    uriOrPath = uriOrPath,
+                    expectedSha256 = expectedSha256,
+                    requireHashMatch = expectedSha256 != null,
+                    requirePackageMatch = true,
+                    requireSignatureMatch = true,
                 )
             }.getOrElse {
-                NativeResult.nativeFailure("Failed to open system package installer")
-            },
-        )
+                return@execute result.success(NativeResult.nativeFailure("Failed to verify APK before install"))
+            }
+            if (verification is VerificationOutcome.Error) {
+                return@execute result.success(verification.result)
+            }
+
+            val uri = shareableApkUri(uriOrPath)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                // Explicit ClipData + grant flags: Android 17/18 stop relying on implicit URI grants.
+                clipData = ClipData.newUri(activity.contentResolver, "apk", uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addCategory(Intent.CATEGORY_DEFAULT)
+            }
+            result.success(
+                runCatching {
+                    activity.startActivity(intent)
+                    NativeResult.ok(
+                        mapOf(
+                            "started" to true,
+                            "verification" to (verification as VerificationOutcome.Ok).payload,
+                        ),
+                    )
+                }.getOrElse {
+                    NativeResult.nativeFailure("Failed to open system package installer")
+                },
+            )
+        }
     }
 
     private fun verifyPackageIdentity(
@@ -210,6 +231,16 @@ class UpdateChannel(
         }
 
         val packageInfo = readPackageInfo(uriOrPath)
+        if (packageInfo == null && (requirePackageMatch || requireSignatureMatch)) {
+            return VerificationOutcome.Error(
+                NativeResult.error(
+                    "package_parse_failed",
+                    "APK cannot be parsed; package info is not available",
+                    recoverable = false,
+                    details = mapOf("uri" to uriOrPath),
+                ),
+            )
+        }
         val packageName = packageInfo?.packageName
         val versionName = packageInfo?.versionName
         val versionCode = packageInfo?.let {
@@ -373,5 +404,9 @@ class UpdateChannel(
     private sealed class VerificationOutcome {
         data class Ok(val payload: Map<String, Any?>) : VerificationOutcome()
         data class Error(val result: Map<String, Any?>) : VerificationOutcome()
+    }
+
+    companion object {
+        private val ALLOWED_URL_SCHEMES = setOf("https")
     }
 }

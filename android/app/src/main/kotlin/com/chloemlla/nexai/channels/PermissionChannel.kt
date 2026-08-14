@@ -52,13 +52,13 @@ class PermissionChannel(private val activity: MainActivity) : MethodChannel.Meth
         pendingActivityResult = null
 
         if (resultCode != Activity.RESULT_OK || data == null) {
-            result.success(NativeResult.error("user_cancelled", "User cancelled picker"))
+            safeResultSuccess(result, NativeResult.error("user_cancelled", "User cancelled picker"))
             return true
         }
 
         val uri = data.data
         if (uri == null) {
-            result.success(NativeResult.error("user_cancelled", "No document selected"))
+            safeResultSuccess(result, NativeResult.error("user_cancelled", "No document selected"))
             return true
         }
 
@@ -70,7 +70,7 @@ class PermissionChannel(private val activity: MainActivity) : MethodChannel.Meth
             }
         }
 
-        result.success(NativeResult.ok(uriPayload(uri)))
+        safeResultSuccess(result, NativeResult.ok(uriPayload(uri)))
         return true
     }
 
@@ -83,7 +83,8 @@ class PermissionChannel(private val activity: MainActivity) : MethodChannel.Meth
         val result = pendingPermissionResult ?: return true
         pendingPermissionResult = null
         val granted = grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
-        result.success(
+        safeResultSuccess(
+            result,
             if (granted) {
                 NativeResult.ok(notificationStatus())
             } else {
@@ -91,6 +92,14 @@ class PermissionChannel(private val activity: MainActivity) : MethodChannel.Meth
             },
         )
         return true
+    }
+
+    private fun safeResultSuccess(result: MethodChannel.Result, value: Any?) {
+        runCatching {
+            result.success(value)
+        }.onFailure {
+            // Result may be stale after activity recreation; swallow gracefully.
+        }
     }
 
     private fun pickMedia(result: MethodChannel.Result, requestCode: Int, mimeType: String) {

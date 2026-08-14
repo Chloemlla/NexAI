@@ -87,6 +87,11 @@ class PasswordProvider extends ChangeNotifier {
     return jsonEncode(_passwords.map((e) => e.toJson()).toList());
   }
 
+  String _csvEscape(String value) {
+    // Escape double quotes by doubling them, then wrap in double quotes.
+    return '"${value.replaceAll('"', '""')}"';
+  }
+
   String exportToCsv() {
     final buffer = StringBuffer();
     buffer.writeln('用途,密码,强度,备注,创建时间');
@@ -97,7 +102,7 @@ class PasswordProvider extends ChangeNotifier {
           ? '中等'
           : '强';
       buffer.writeln(
-        '"${password.category}","${password.password}","$strength","${password.note}","${password.createdAt}"',
+        '${_csvEscape(password.category)},${_csvEscape(password.password)},$strength,${_csvEscape(password.note)},${_csvEscape(password.createdAt)}',
       );
     }
     return buffer.toString();

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.chloemlla.nexai.core.mmkv.NexAIMmkv
 import java.io.File
+import org.json.JSONArray
 import org.json.JSONObject
 
 class NativeTaskStore(context: Context) {
@@ -88,8 +89,24 @@ class NativeTaskStore(context: Context) {
         val keys = json.keys()
         while (keys.hasNext()) {
             val key = keys.next()
-            val value = json.get(key)
-            result[key] = if (value == JSONObject.NULL) null else value
+            result[key] = jsonToValue(json.get(key))
+        }
+        return result
+    }
+
+    private fun jsonToValue(value: Any?): Any? {
+        return when (value) {
+            JSONObject.NULL -> null
+            is JSONObject -> jsonToMap(value)
+            is JSONArray -> jsonToList(value)
+            else -> value
+        }
+    }
+
+    private fun jsonToList(array: JSONArray): List<Any?> {
+        val result = mutableListOf<Any?>()
+        for (i in 0 until array.length()) {
+            result.add(jsonToValue(array.get(i)))
         }
         return result
     }

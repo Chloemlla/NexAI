@@ -22,6 +22,7 @@ public sealed class NexaiSyncService : ISyncService
     private readonly INotesStore _notesStore;
     private readonly ISyncCrypto _syncCrypto;
     private readonly INexaiHttp _http;
+    private readonly object _stateGate = new();
     private SyncState _state = new();
 
     public NexaiSyncService(
@@ -40,13 +41,22 @@ public sealed class NexaiSyncService : ISyncService
         _http = http;
     }
 
-    public SyncState State => new()
+    public SyncState State
     {
-        Status = _state.Status,
-        ErrorMessage = _state.ErrorMessage,
-        LastSyncedAt = _state.LastSyncedAt,
-        RecoveryKeyHint = _state.RecoveryKeyHint,
-    };
+        get
+        {
+            lock (_stateGate)
+            {
+                return new SyncState
+                {
+                    Status = _state.Status,
+                    ErrorMessage = _state.ErrorMessage,
+                    LastSyncedAt = _state.LastSyncedAt,
+                    RecoveryKeyHint = _state.RecoveryKeyHint,
+                };
+            }
+        }
+    }
 
     public event EventHandler? Changed;
 
@@ -263,7 +273,8 @@ public sealed class NexaiSyncService : ISyncService
         {
             var record = JsonSerializer.Deserialize<Dictionary<string, object?>>(item.GetRawText())
                 ?? throw new InvalidOperationException("Invalid sync record.");
-            if (record.TryGetValue("deleted", out var deleted) && deleted is true or "true")
+            if (record.TryGetValue("deleted", out var deleted) &&
+                deleted is JsonElement { ValueKind: JsonValueKind.True } or true or "true")
             {
                 continue;
             }

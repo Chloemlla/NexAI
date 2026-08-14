@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'mermaid_parser.dart';
 import 'flowchart_layout.dart';
@@ -183,7 +184,7 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
               bottomRight: Radius.circular(10),
             ),
             child: SizedBox(
-              height: (_layout.totalHeight).clamp(200.0, 500.0),
+              height: math.max(200.0, _layout.totalHeight),
               width: double.infinity,
               child: InteractiveViewer(
                 constrained: false,

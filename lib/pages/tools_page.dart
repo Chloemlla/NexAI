@@ -131,7 +131,8 @@ class _ToolsPageState extends State<ToolsPage> {
   }
 
   List<_ToolEntry> get _featuredTools => _featuredToolTitles
-      .map((title) => _tools.firstWhere((tool) => tool.title == title))
+      .map((title) => _tools.where((tool) => tool.title == title).firstOrNull)
+      .whereType<_ToolEntry>()
       .toList();
 
   Map<_ToolCategory, List<_ToolEntry>> _groupTools(List<_ToolEntry> tools) {

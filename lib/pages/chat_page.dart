@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:io' show File;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1824,7 +1824,11 @@ class _ChatPageState extends State<ChatPage> {
                           vertical: 16,
                         ),
                         addAutomaticKeepAlives: true,
-                        itemCount: visibleEntries.length + (chat.isLoading ? 1 : 0),
+                        itemCount: visibleEntries.length +
+                        (chat.isLoading &&
+                                !_hasInProgressAssistant(visibleEntries)
+                            ? 1
+                            : 0),
                         itemBuilder: (context, index) {
                           if (index == visibleEntries.length && chat.isLoading) {
                             return Padding(

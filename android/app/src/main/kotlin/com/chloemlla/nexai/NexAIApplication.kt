@@ -17,10 +17,12 @@ import io.flutter.embedding.engine.plugins.util.GeneratedPluginRegister
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 class NexAIApplication : FlutterApplication() {
     private var hardeningGuard: HardeningGuard? = null
-    private var prewarmClashCompatChannel: ClashCompatChannel? = null
+    private val prewarmClashCompatChannelRef = AtomicReference<ClashCompatChannel?>(null)
+    private val prewarmLock = Any()
 
     override fun attachBaseContext(base: Context) {
         super.attachBaseContext(base)
@@ -38,9 +40,10 @@ class NexAIApplication : FlutterApplication() {
             LumenCrash.recordBreadcrumb("Application.onCreate")
         }
         // Early non-fatal security/provider snapshot for diagnostics + crash breadcrumbs.
+        // Run on background thread to avoid ANR (APK SHA-256, subprocesses, PM queries).
         runCatching {
-            StartupSecurityBootstrap.ensureInitialized(this)
-            LumenCrash.recordBreadcrumb("Startup security snapshot ready")
+            Thread { StartupSecurityBootstrap.ensureInitialized(this) }.start()
+            LumenCrash.recordBreadcrumb("Startup security snapshot dispatched")
         }.onFailure { error ->
             runCatching {
                 LumenCrash.recordBreadcrumb(
@@ -100,30 +103,32 @@ class NexAIApplication : FlutterApplication() {
     private fun startFlutterEnginePreWarm() {
         val thread = HandlerThread("nexai-flutter-prewarm").apply { start() }
         Handler(thread.looper).post {
-            runCatching {
-                val engine = FlutterEngine(applicationContext)
-                GeneratedPluginRegister.registerGeneratedPlugins(engine)
-                // Dart's startup bootstrap calls ClashCompat before MainActivity
-                // attaches; register the channel now so auto-adapt is not skipped.
-                prewarmClashCompatChannel =
-                    ClashCompatChannel(applicationContext, engine.dartExecutor.binaryMessenger)
-                engine.dartExecutor.executeDartEntrypoint(
-                    DartExecutor.DartEntrypoint.createDefault(),
-                )
-                FlutterEngineCache.getInstance().put(PREWARM_ENGINE_ID, engine)
-                engineReady.set(true)
-            }.onFailure { error ->
-                runCatching { LumenCrash.record(error) }
+            synchronized(prewarmLock) {
+                runCatching {
+                    val engine = FlutterEngine(applicationContext)
+                    GeneratedPluginRegister.registerGeneratedPlugins(engine)
+                    // Dart's startup bootstrap calls ClashCompat before MainActivity
+                    // attaches; register the channel now so auto-adapt is not skipped.
+                    prewarmClashCompatChannelRef.set(
+                        ClashCompatChannel(applicationContext, engine.dartExecutor.binaryMessenger),
+                    )
+                    engine.dartExecutor.executeDartEntrypoint(
+                        DartExecutor.DartEntrypoint.createDefault(),
+                    )
+                    FlutterEngineCache.getInstance().put(PREWARM_ENGINE_ID, engine)
+                    engineReady.set(true)
+                }.onFailure { error ->
+                    runCatching { LumenCrash.record(error) }
+                }
+                engineLatch.countDown()
+                thread.quitSafely()
             }
-            engineLatch.countDown()
-            thread.quitSafely()
         }
     }
 
     /** Disposes channels registered during pre-warm before MainActivity re-registers them. */
     fun disposePrewarmChannels() {
-        val channel = prewarmClashCompatChannel ?: return
-        prewarmClashCompatChannel = null
+        val channel = prewarmClashCompatChannelRef.getAndSet(null) ?: return
         runCatching { channel.dispose() }
     }
 

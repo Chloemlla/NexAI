@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File;
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -223,6 +223,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     }
 
     if (provider.error == null) {
+      if (!mounted) return;
       _promptController.clear();
     } else if (mounted) {
       _showError(provider.error!);

@@ -44,19 +44,21 @@ class ShortUrlProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final data = prefs.getString(_key);
       if (data != null && data.isNotEmpty) {
-        final List<dynamic> decoded = jsonDecode(data);
-        _history.clear();
-        // Filter to Map entries and safely parse
-        for (final item in decoded) {
-          if (item is Map<String, dynamic>) {
-            try {
-              _history.add(ShortUrlRecord.fromJson(item));
-            } catch (e) {
-              debugPrint('NexAI: skipping malformed short url record: $e');
+        final decoded = jsonDecode(data);
+        if (decoded is List) {
+          _history.clear();
+          // Filter to Map entries and safely parse
+          for (final item in decoded) {
+            if (item is Map<String, dynamic>) {
+              try {
+                _history.add(ShortUrlRecord.fromJson(item));
+              } catch (e) {
+                debugPrint('NexAI: skipping malformed short url record: $e');
+              }
             }
           }
+          notifyListeners();
         }
-        notifyListeners();
       }
     } catch (e) {
       debugPrint('NexAI: error loading short url history: $e');

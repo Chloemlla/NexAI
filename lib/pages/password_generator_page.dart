@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
+import 'dart:io' show File;
 import '../providers/password_provider.dart';
 import '../models/saved_password.dart';
 import '../utils/file_access_helper.dart';
@@ -114,10 +114,25 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     if (_includeNumbers) chars += '0123456789';
     if (_includeSymbols) chars += '!@#\$%^&*()_+-=[]{}|;:,.<>?';
     if (chars.isEmpty) chars = 'abcdefghijklmnopqrstuvwxyz';
-    return List.generate(
+    final password = List.generate(
       _length,
       (_) => chars[_random.nextInt(chars.length)],
     ).join();
+
+    // Ensure at least one character from each enabled class
+    final result = password.split('');
+    final classes = <String>{
+      if (_includeLowercase) 'abcdefghijklmnopqrstuvwxyz',
+      if (_includeUppercase) 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      if (_includeNumbers) '0123456789',
+      if (_includeSymbols) '!@#\$%^&*()_+-=[]{}|;:,.<>?',
+    };
+    for (final cls in classes) {
+      if (!result.any((c) => cls.contains(c))) {
+        result[_random.nextInt(result.length)] = cls[_random.nextInt(cls.length)];
+      }
+    }
+    return result.join();
   }
 
   String _generateMemorablePassword() {
@@ -202,82 +217,87 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     final categoryController = TextEditingController();
     final noteController = TextEditingController();
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.cardRadius)),
-        title: const Row(
-          children: [
-            Icon(Icons.save_rounded, size: 24),
-            SizedBox(width: 12),
-            Text('保存密码'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: categoryController,
-              decoration: InputDecoration(
-                labelText: '用途/分类',
-                hintText: '例如：微信、邮箱、淘宝',
-                border: OutlineInputBorder(
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(LumenTokens.cardRadius)),
+          title: const Row(
+            children: [
+              Icon(Icons.save_rounded, size: 24),
+              SizedBox(width: 12),
+              Text('保存密码'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: categoryController,
+                decoration: InputDecoration(
+                  labelText: '用途/分类',
+                  hintText: '例如：微信、邮箱、淘宝',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                  ),
+                  prefixIcon: const Icon(Icons.category_rounded),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: noteController,
+                decoration: InputDecoration(
+                  labelText: '备注（可选）',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                  ),
+                  prefixIcon: const Icon(Icons.note_rounded),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
                 ),
-                prefixIcon: const Icon(Icons.category_rounded),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: noteController,
-              decoration: InputDecoration(
-                labelText: '备注（可选）',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-                ),
-                prefixIcon: const Icon(Icons.note_rounded),
-              ),
-              maxLines: 2,
+              child: const Text('保存'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
-              ),
-            ),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true && mounted) {
-      final savedPassword = SavedPassword(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        password: password,
-        category: categoryController.text.trim(),
-        note: noteController.text.trim(),
-        createdAt: DateTime.now(),
-        strength: _calculatePasswordStrength(password),
       );
 
-      await context.read<PasswordProvider>().addPassword(savedPassword);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('密码已保存'),
-            behavior: SnackBarBehavior.floating,
-          ),
+      if (result == true && mounted) {
+        final savedPassword = SavedPassword(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          password: password,
+          category: categoryController.text.trim(),
+          note: noteController.text.trim(),
+          createdAt: DateTime.now(),
+          strength: _calculatePasswordStrength(password),
         );
+
+        await context.read<PasswordProvider>().addPassword(savedPassword);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('密码已保存'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
+    } finally {
+      categoryController.dispose();
+      noteController.dispose();
     }
   }
 

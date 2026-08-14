@@ -102,6 +102,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
 
   Future<void> _pasteUrl() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (!mounted) return;
     final text = data?.text?.trim();
     if (text == null || text.isEmpty) {
       SmartDialog.showToast('剪贴板为空');

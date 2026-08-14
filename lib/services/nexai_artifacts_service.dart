@@ -13,9 +13,22 @@ const String _nexaiBaseUrl = 'https://tts.chloemlla.com/api/nexai';
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 class NexaiArtifactsApi {
+  /// Safely decode JSON body, returning null on parse errors.
+  static Map<String, dynamic>? _safeDecode(String body) {
+    if (body.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(body);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      return null;
+    }
+  }
   static String _baseUrl = _nexaiBaseUrl;
 
   static void setBaseUrl(String url) {
+    // NOTE: The underlying HTTP client is certificate-pinned exclusively to
+    // tts.chloemlla.com. setBaseUrl MUST only point to the pinned host;
+    // pointing to staging/dev hosts will cause TLS pinning failures.
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
@@ -58,15 +71,18 @@ class NexaiArtifactsApi {
       body: jsonEncode(body),
     );
 
-    if (response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-      return ArtifactCreateResponse.fromJson(data['data']);
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = _safeDecode(response.body);
+      if (data != null && data['data'] != null) {
+        return ArtifactCreateResponse.fromJson(data['data'] as Map<String, dynamic>);
+      }
+      throw Exception('Invalid response: missing data');
     } else {
-      final error = jsonDecode(response.body);
+      final error = _safeDecode(response.body);
       debugPrint(
         '[ArtifactsApi] createArtifact ${response.statusCode}: ${response.body}',
       );
-      throw Exception(error['error'] ?? 'Failed to create artifact');
+      throw Exception(error?['error'] ?? 'Failed to create artifact');
     }
   }
 
@@ -86,24 +102,29 @@ class NexaiArtifactsApi {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return Artifact.fromJson(data['data']);
-    } else if (response.statusCode == 403) {
-      final error = jsonDecode(response.body);
-      if (error['error'] == 'password_required') {
-        throw PasswordRequiredException();
-      } else if (error['error'] == 'invalid_password') {
-        throw InvalidPasswordException();
+      final data = _safeDecode(response.body);
+      if (data != null && data['data'] != null) {
+        return Artifact.fromJson(data['data'] as Map<String, dynamic>);
       }
-      throw Exception(error['message']);
+      throw Exception('Invalid response: missing data');
+    } else if (response.statusCode == 403) {
+      final error = _safeDecode(response.body);
+      if (error != null) {
+        if (error['error'] == 'password_required') {
+          throw PasswordRequiredException();
+        } else if (error['error'] == 'invalid_password') {
+          throw InvalidPasswordException();
+        }
+      }
+      throw Exception(error?['message'] ?? 'Access denied');
     } else if (response.statusCode == 404) {
       throw ArtifactNotFoundException();
     } else {
-      final error = jsonDecode(response.body);
+      final error = _safeDecode(response.body);
       debugPrint(
         '[ArtifactsApi] getArtifact ${response.statusCode}: ${response.body}',
       );
-      throw Exception(error['error'] ?? 'Failed to get artifact');
+      throw Exception(error?['error'] ?? 'Failed to get artifact');
     }
   }
 
@@ -136,11 +157,11 @@ class NexaiArtifactsApi {
     );
 
     if (response.statusCode != 200) {
-      final error = jsonDecode(response.body);
+      final error = _safeDecode(response.body);
       debugPrint(
         '[ArtifactsApi] updateArtifact ${response.statusCode}: ${response.body}',
       );
-      throw Exception(error['error'] ?? 'Failed to update artifact');
+      throw Exception(error?['error'] ?? 'Failed to update artifact');
     }
   }
 
@@ -158,11 +179,11 @@ class NexaiArtifactsApi {
     );
 
     if (response.statusCode != 204) {
-      final error = jsonDecode(response.body);
+      final error = _safeDecode(response.body);
       debugPrint(
         '[ArtifactsApi] deleteArtifact ${response.statusCode}: ${response.body}',
       );
-      throw Exception(error['error'] ?? 'Failed to delete artifact');
+      throw Exception(error?['error'] ?? 'Failed to delete artifact');
     }
   }
 
@@ -194,14 +215,17 @@ class NexaiArtifactsApi {
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return ArtifactListResponse.fromJson(data['data']);
+      final data = _safeDecode(response.body);
+      if (data != null && data['data'] != null) {
+        return ArtifactListResponse.fromJson(data['data'] as Map<String, dynamic>);
+      }
+      throw Exception('Invalid response: missing data');
     } else {
-      final error = jsonDecode(response.body);
+      final error = _safeDecode(response.body);
       debugPrint(
         '[ArtifactsApi] listArtifacts ${response.statusCode}: ${response.body}',
       );
-      throw Exception(error['error'] ?? 'Failed to list artifacts');
+      throw Exception(error?['error'] ?? 'Failed to list artifacts');
     }
   }
 

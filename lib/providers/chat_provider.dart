@@ -993,7 +993,7 @@ class ChatProvider extends ChangeNotifier {
       // Include tool role messages even when isError is true so the API
       // receives the complete tool response sequence for every tool_call.
       if (msg.isError && msg.role != 'tool') continue;
-      messagesPayload.add(_toOpenAiMessage(msg));
+      messagesPayload.add(await _toOpenAiMessage(msg));
     }
 
     final body = <String, dynamic>{
@@ -1271,7 +1271,7 @@ class ChatProvider extends ChangeNotifier {
     return true;
   }
 
-  Map<String, dynamic> _toOpenAiMessage(Message msg) {
+  Future<Map<String, dynamic>> _toOpenAiMessage(Message msg) async {
     if (msg.role == 'tool') {
       return {
         'role': 'tool',
@@ -1289,13 +1289,13 @@ class ChatProvider extends ChangeNotifier {
     if (msg.role == 'user' && msg.hasAttachments) {
       return {
         'role': 'user',
-        'content': _messageContentForApi(msg),
+        'content': await _messageContentForApi(msg),
       };
     }
     return {'role': msg.role, 'content': msg.content};
   }
 
-  dynamic _messageContentForApi(Message msg) {
+  Future<dynamic> _messageContentForApi(Message msg) async {
     if (!msg.hasAttachments) return msg.content;
     final parts = <Map<String, dynamic>>[];
     final text = msg.content.trim();

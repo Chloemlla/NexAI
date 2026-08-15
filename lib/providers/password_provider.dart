@@ -102,7 +102,7 @@ class PasswordProvider extends ChangeNotifier {
           ? '中等'
           : '强';
       buffer.writeln(
-        '${_csvEscape(password.category)},${_csvEscape(password.password)},$strength,${_csvEscape(password.note)},${_csvEscape(password.createdAt)}',
+        '${_csvEscape(password.category)},${_csvEscape(password.password)},$strength,${_csvEscape(password.note)},${_csvEscape(password.createdAt.toIso8601String())}',
       );
     }
     return buffer.toString();

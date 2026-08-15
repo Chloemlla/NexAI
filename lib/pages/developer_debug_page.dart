@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
+import '../models/crash_report.dart';
 import '../services/crash_reporter.dart';
 import '../utils/build_config.dart';
 import 'crash_report_page.dart';

@@ -929,7 +929,7 @@ class _MessageFooter extends StatelessWidget {
     );
     try {
       final client = LumenTranslationClient();
-      final String clipped;
+      String clipped;
       if (content.length > LumenTranslationClient.maxInputChars) {
         try {
           clipped = content.substring(0, LumenTranslationClient.maxInputChars);

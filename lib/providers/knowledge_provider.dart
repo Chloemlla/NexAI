@@ -345,7 +345,6 @@ class KnowledgeProvider extends ChangeNotifier {
         }
       }
       if (score <= 0 && semanticScore <= 0) continue;
-      final idx = hay.indexOf(terms.first);
       // Search in doc.content directly for correct snippet positioning.
       final contentIdx = doc.content.toLowerCase().indexOf(terms.first);
       final start = contentIdx < 0

@@ -651,7 +651,7 @@ class ChatToolExecutor {
 
     final created = images.length > before
         ? images.skip(before).take(images.length - before).toList()
-        : <ImageGenerationResult>[];
+        : <GeneratedImage>[];
     final urls = created.map((image) => image.url).where((url) => url.isNotEmpty).toList();
     return ToolExecutionResult(
       content: jsonEncode({

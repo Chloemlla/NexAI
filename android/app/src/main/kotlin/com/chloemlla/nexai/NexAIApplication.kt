@@ -2,7 +2,7 @@ package com.chloemlla.nexai
 
 import android.content.Context
 import android.os.Handler
-import android.os.HandlerThread
+import android.os.Looper
 import com.chloemlla.lumen.crash.LumenCrash
 import com.chloemlla.lumen.crash.LumenCrashConfig
 import com.chloemlla.nexai.channels.ClashCompatChannel
@@ -96,13 +96,18 @@ class NexAIApplication : FlutterApplication() {
     }
 
     /**
-     * Pre-creates the default Flutter engine on a background thread and caches it.
+     * Pre-creates the default Flutter engine and caches it.
      * CrashGateActivity waits for it so MainActivity attaches to a ready engine
-     * instead of creating one on the main thread during cold start.
+     * instead of creating one during cold start.
      */
     private fun startFlutterEnginePreWarm() {
-        val thread = HandlerThread("nexai-flutter-prewarm").apply { start() }
-        Handler(thread.looper).post {
+        // FlutterEngine construction touches FlutterJNI methods annotated
+        // @UiThread; Android 16 enforces this and crashes off-main-thread
+        // creation ("nexai-flutter-prewarm"). Post the work to the main
+        // looper. CrashGateActivity already shows a spinner while it waits,
+        // and engine creation here is the only main-thread work scheduled,
+        // so the gate remains responsive.
+        Handler(Looper.getMainLooper()).post {
             synchronized(prewarmLock) {
                 runCatching {
                     val engine = FlutterEngine(applicationContext)
@@ -121,7 +126,6 @@ class NexAIApplication : FlutterApplication() {
                     runCatching { LumenCrash.record(error) }
                 }
                 engineLatch.countDown()
-                thread.quitSafely()
             }
         }
     }

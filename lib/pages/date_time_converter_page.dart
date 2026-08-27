@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../widgets/lumen/lumen.dart';
 import 'package:flutter/services.dart';
@@ -18,7 +20,21 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
   DateTime? _selectedDate;
   String _selectedFormat = 'Timestamp';
   String? _errorMessage;
-  String? _copiedLabel;
+  final _copiedLabel = ValueNotifier<String?>(null);
+  Timer? _copiedResetTimer;
+
+  /// `DateFormat` construction parses the pattern and resolves the locale, so
+  /// these are built once instead of on every keystroke-driven rebuild.
+  static final DateFormat _sqlFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+  static final DateFormat _httpFormat = DateFormat(
+    'EEE, dd MMM yyyy HH:mm:ss',
+  );
+  static final DateTime _excelEpoch = DateTime(1899, 12, 30);
+
+  /// Formatted results memoized per date: a `_copiedLabel` flash or a theme
+  /// change no longer re-formats all ten outputs.
+  DateTime? _formattedFor;
+  List<String> _formattedValues = const <String>[];
 
   static const _formatEntries = <_FormatEntry>[
     _FormatEntry('Timestamp', Icons.timer_outlined, '毫秒时间戳'),
@@ -42,8 +58,21 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
 
   @override
   void dispose() {
+    _copiedResetTimer?.cancel();
+    _copiedLabel.dispose();
     _inputController.dispose();
     super.dispose();
+  }
+
+  List<String> _formattedValuesFor(DateTime date) {
+    if (_formattedFor == date) return _formattedValues;
+    _formattedFor = date;
+    _formattedValues = List<String>.generate(
+      _formatEntries.length,
+      (i) => _formatDate(date, _formatEntries[i].name),
+      growable: false,
+    );
+    return _formattedValues;
   }
 
   void _updateInputFromDate() {
@@ -60,11 +89,11 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
       case 'ISO 8601':
         return date.toIso8601String();
       case 'ISO 9075':
-        return DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
+        return _sqlFormat.format(date);
       case 'RFC 3339':
         return date.toIso8601String();
       case 'RFC 7231':
-        return '${DateFormat('EEE, dd MMM yyyy HH:mm:ss').format(date.toUtc())} GMT';
+        return '${_httpFormat.format(date.toUtc())} GMT';
       case 'Unix timestamp':
         return (date.millisecondsSinceEpoch ~/ 1000).toString();
       case 'UTC format':
@@ -72,8 +101,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
       case 'Mongo ObjectID':
         return '${(date.millisecondsSinceEpoch ~/ 1000).toRadixString(16).padLeft(8, '0')}0000000000000000';
       case 'Excel date/time':
-        final excelEpoch = DateTime(1899, 12, 30);
-        final diff = date.difference(excelEpoch);
+        final diff = date.difference(_excelEpoch);
         return (diff.inMilliseconds / 86400000).toStringAsFixed(5);
       default:
         return date.toString();
@@ -99,8 +127,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
         case 'Excel date/time':
           final days = double.tryParse(input);
           if (days == null) return null;
-          final excelEpoch = DateTime(1899, 12, 30);
-          return excelEpoch.add(
+          return _excelEpoch.add(
             Duration(milliseconds: (days * 86400000).round()),
           );
         default:
@@ -177,9 +204,10 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
 
   void _copyToClipboard(String value, String label) {
     Clipboard.setData(ClipboardData(text: value));
-    setState(() => _copiedLabel = label);
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) setState(() => _copiedLabel = null);
+    _copiedLabel.value = label;
+    _copiedResetTimer?.cancel();
+    _copiedResetTimer = Timer(const Duration(seconds: 1), () {
+      _copiedLabel.value = null;
     });
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -219,8 +247,7 @@ class _DateTimeConverterPageState extends State<DateTimeConverterPage>
           title: '日期时间转换器',
           description: '输入或选择时间，转换为多种日期时间格式并复制结果。',
           chips: [
-            if (_selectedDate != null)
-              DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedDate!),
+            if (_selectedDate != null) _sqlFormat.format(_selectedDate!),
             '多格式输出',
             '一键复制',
           ],
@@ -316,14 +343,16 @@ const SizedBox(height: 12),
 if (_selectedDate != null)
   ...List.generate(_formatEntries.length, (i) {
     final entry = _formatEntries[i];
-    final value = _formatDate(_selectedDate!, entry.name);
-    final isCopied = _copiedLabel == entry.name;
-    return _buildResultTile(
-      cs,
-      entry,
-      value,
-      isNarrow,
-      isCopied,
+    final value = _formattedValuesFor(_selectedDate!)[i];
+    return ValueListenableBuilder<String?>(
+      valueListenable: _copiedLabel,
+      builder: (context, copied, _) => _buildResultTile(
+        cs,
+        entry,
+        value,
+        isNarrow,
+        copied == entry.name,
+      ),
     );
   })
 else

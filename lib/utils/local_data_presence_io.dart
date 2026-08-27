@@ -13,12 +13,13 @@ const _localDocumentTraceFiles = <String>[
 Future<bool> hasLocalDocumentDataTraces() async {
   try {
     final dir = await getApplicationDocumentsDirectory();
-    for (final name in _localDocumentTraceFiles) {
-      if (await File('${dir.path}/$name').exists()) {
-        return true;
-      }
-    }
-    return false;
+    // Probe in parallel: one IO round-trip instead of up to three serial ones.
+    final results = await Future.wait(
+      _localDocumentTraceFiles.map(
+        (name) => File('${dir.path}/$name').exists(),
+      ),
+    );
+    return results.contains(true);
   } catch (_) {
     return false;
   }

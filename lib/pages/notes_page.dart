@@ -1302,6 +1302,7 @@ class _NoteCard extends StatelessWidget {
   void _confirmDelete(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<NotesProvider>();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1315,8 +1316,9 @@ class _NoteCard extends StatelessWidget {
           FilledButton(
             onPressed: () async {
               final navigator = Navigator.of(ctx);
+              final deleted = note;
               try {
-                await context.read<NotesProvider>().deleteNote(note.id);
+                await provider.deleteNote(deleted.id);
               } catch (e) {
                 navigator.pop();
                 messenger.showSnackBar(
@@ -1331,8 +1333,13 @@ class _NoteCard extends StatelessWidget {
               // Deletion used to happen with no confirmation at all.
               messenger.showSnackBar(
                 SnackBar(
-                  content: Text('已删除 "${note.title}"'),
+                  content: Text('已删除 "${deleted.title}"'),
                   behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 5),
+                  action: SnackBarAction(
+                    label: '撤销',
+                    onPressed: () => provider.restoreNote(deleted),
+                  ),
                 ),
               );
             },

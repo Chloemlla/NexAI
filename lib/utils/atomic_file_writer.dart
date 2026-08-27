@@ -1,9 +1,15 @@
 import 'dart:io';
-import 'package:uuid/uuid.dart';
+
+/// Process-local counter for temp-file names. Combined with the pid and a
+/// microsecond timestamp this stays collision-free across concurrent writers
+/// without paying for secure-random UUID generation on every save.
+int _tempSequence = 0;
 
 Future<void> writeTextAtomically(File file, String payload) async {
   await file.parent.create(recursive: true);
-  final tempFile = File('${file.path}.${Uuid().v4()}.tmp');
+  final tempId =
+      '$pid-${DateTime.now().microsecondsSinceEpoch}-${_tempSequence++}';
+  final tempFile = File('${file.path}.$tempId.tmp');
   await tempFile.writeAsString(payload, flush: true);
 
   if (await file.exists()) {

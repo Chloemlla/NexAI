@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 final _cePattern = RegExp(r'\$\s*\\ce\{([^{}]+)\}\s*\$|\\ce\{([^{}]+)\}');
+final _reversibleArrowPattern = RegExp(r'\s*<->\s*');
+final _forwardArrowPattern = RegExp(r'\s*->\s*');
 final _subscriptPattern = RegExp(r'([A-Za-z)])(\d+)');
 final _underscoreSubscriptPattern = RegExp(r'_([^{\s}]+)');
 final _chargePattern = RegExp(r'(?<=[A-Za-z\d\)\}])\^?(\d*[+\-])(?!\})');
@@ -10,6 +12,13 @@ final _mermaidBlockPattern = RegExp(
   multiLine: true,
   caseSensitive: false,
 );
+
+/// Cheap sentinel: every branch of [_cePattern] requires this literal, so text
+/// without it can skip the whole protected-span walk.
+const _chemicalMarker = r'\ce{';
+
+/// Cheap sentinel: a mermaid block always opens with a fence.
+const _fenceMarker = '```';
 
 enum RichContentSegmentType { markdown, mermaid }
 
@@ -22,11 +31,23 @@ class RichContentSegment {
 }
 
 String normalizeMarkdownLineEndings(String text) {
+  if (!text.contains('\r')) return text;
   return text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 }
 
 List<RichContentSegment> parseRichContentSegments(String text) {
   final normalized = normalizeMarkdownLineEndings(text);
+
+  if (!normalized.contains(_fenceMarker)) {
+    if (normalized.trim().isEmpty) return const <RichContentSegment>[];
+    return <RichContentSegment>[
+      RichContentSegment(
+        type: RichContentSegmentType.markdown,
+        content: normalized,
+      ),
+    ];
+  }
+
   final segments = <RichContentSegment>[];
   var lastEnd = 0;
 
@@ -81,19 +102,14 @@ List<RichContentSegment> parseRichContentSegments(String text) {
 
 String preprocessChemicalMarkdown(String text) {
   final normalized = normalizeMarkdownLineEndings(text);
+  if (!normalized.contains(_chemicalMarker)) return normalized;
   return _transformOutsideMarkdownCode(normalized, _replaceChemicalSegments);
 }
 
 String convertChemicalToLatex(String formula) {
   var result = formula;
-  result = result.replaceAllMapped(
-    RegExp(r'\s*<->\s*'),
-    (_) => r' \rightleftharpoons ',
-  );
-  result = result.replaceAllMapped(
-    RegExp(r'\s*->\s*'),
-    (_) => r' \rightarrow ',
-  );
+  result = result.replaceAll(_reversibleArrowPattern, r' \rightleftharpoons ');
+  result = result.replaceAll(_forwardArrowPattern, r' \rightarrow ');
   result = result.replaceAllMapped(
     _underscoreSubscriptPattern,
     (match) => '_{${match.group(1)}}',
@@ -113,6 +129,8 @@ String _transformOutsideMarkdownCode(
   String text,
   String Function(String value) transform,
 ) {
+  if (!text.contains('`')) return transform(text);
+
   final buffer = StringBuffer();
   var lastEnd = 0;
 

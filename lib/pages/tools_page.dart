@@ -112,6 +112,10 @@ class _ToolsPageState extends State<ToolsPage> {
     'AI 绘图',
   ];
 
+  /// Resolved once: the featured set never changes, so the per-title linear
+  /// scan must not run on every rebuild.
+  late final List<_ToolEntry> _featuredTools = _resolveFeaturedTools();
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -130,16 +134,27 @@ class _ToolsPageState extends State<ToolsPage> {
     }).toList();
   }
 
-  List<_ToolEntry> get _featuredTools => _featuredToolTitles
-      .map((title) => _tools.where((tool) => tool.title == title).firstOrNull)
-      .whereType<_ToolEntry>()
-      .toList();
+  List<_ToolEntry> _resolveFeaturedTools() {
+    final byTitle = <String, _ToolEntry>{
+      for (final tool in _tools) tool.title: tool,
+    };
+    return [
+      for (final title in _featuredToolTitles)
+        if (byTitle[title] case final tool?) tool,
+    ];
+  }
 
   Map<_ToolCategory, List<_ToolEntry>> _groupTools(List<_ToolEntry> tools) {
+    final buckets = <_ToolCategory, List<_ToolEntry>>{};
+    for (final tool in tools) {
+      (buckets[tool.category] ??= <_ToolEntry>[]).add(tool);
+    }
+    // Emit in declared category order without re-scanning the tool list once
+    // per category.
     final grouped = <_ToolCategory, List<_ToolEntry>>{};
     for (final category in _ToolCategory.values) {
-      final entries = tools.where((tool) => tool.category == category).toList();
-      if (entries.isNotEmpty) {
+      final entries = buckets[category];
+      if (entries != null) {
         grouped[category] = entries;
       }
     }
@@ -167,10 +182,12 @@ class _ToolsPageState extends State<ToolsPage> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isNarrow = MediaQuery.of(context).size.width < 600;
-    final hPad = LumenTokens.horizontalPaddingForWidth(
-      MediaQuery.of(context).size.width,
-    );
+    // sizeOf keeps this page off the viewInsets dependency, so opening the
+    // keyboard for the search field no longer re-filters and re-groups the
+    // tool list on every keyboard animation frame.
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isNarrow = screenWidth < 600;
+    final hPad = LumenTokens.horizontalPaddingForWidth(screenWidth);
     final filteredTools = _filteredTools;
     final groupedTools = _groupTools(filteredTools);
 
@@ -178,10 +195,7 @@ class _ToolsPageState extends State<ToolsPage> {
     // gets a content-based height and the card never overflows, regardless of
     // the column count on the current screen.
     final maxCrossAxisExtent = isNarrow ? 180.0 : 200.0;
-    final contentWidth = math.max(
-      0.0,
-      MediaQuery.of(context).size.width - hPad * 2,
-    );
+    final contentWidth = math.max(0.0, screenWidth - hPad * 2);
     final crossAxisCount = math.max(
       1,
       (contentWidth / maxCrossAxisExtent).ceil(),
@@ -457,7 +471,7 @@ class _ToolEntry {
   final _ToolCategory category;
   final IconData icon;
   final Widget Function() pageBuilder;
-  const _ToolEntry({
+  _ToolEntry({
     required this.title,
     required this.description,
     required this.keywords,
@@ -466,7 +480,9 @@ class _ToolEntry {
     required this.pageBuilder,
   });
 
-  String get searchText =>
+  /// Built once per entry: as a getter this re-joined and re-lower-cased the
+  /// whole keyword set on every keystroke of the tool search.
+  late final String searchText =
       '$title $description ${keywords.join(' ')} ${category.title} ${category.shortTitle}'
           .toLowerCase();
 }
@@ -550,13 +566,8 @@ class _ToolCardState extends State<_ToolCard> {
             onTap: widget.onTap,
             onHover: (value) => setState(() => _hovered = value),
             borderRadius: LumenTokens.cardBorderRadius,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              curve: Curves.easeOutCubic,
+            child: Padding(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: LumenTokens.cardBorderRadius,
-              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

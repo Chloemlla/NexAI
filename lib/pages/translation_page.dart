@@ -46,24 +46,24 @@ class _TranslationPageState extends State<TranslationPage> {
       _loadingConfig = true;
       _serviceMessage = null;
     });
+
+    bool enabled;
+    String message;
     try {
       final config = await _client.fetchConfig();
-      if (!mounted) return;
-      setState(() {
-        _serviceEnabled = config.enabled;
-        _serviceMessage = config.enabled ? '服务可用' : '翻译服务未开启';
-      });
+      enabled = config.enabled;
+      message = config.enabled ? '服务可用' : '翻译服务未开启';
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _serviceEnabled = false;
-        _serviceMessage = '服务检查失败：$error';
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _loadingConfig = false);
-      }
+      enabled = false;
+      message = '服务检查失败：$error';
     }
+
+    if (!mounted) return;
+    setState(() {
+      _serviceEnabled = enabled;
+      _serviceMessage = message;
+      _loadingConfig = false;
+    });
   }
 
   Future<void> _translate() async {
@@ -123,7 +123,7 @@ class _TranslationPageState extends State<TranslationPage> {
       _showMessage('剪贴板为空');
       return;
     }
-    setState(() => _sourceController.text = text.take(LumenTranslationClient.maxInputChars));
+    _sourceController.text = text.take(LumenTranslationClient.maxInputChars);
   }
 
   void _copyTarget() {
@@ -163,8 +163,7 @@ class _TranslationPageState extends State<TranslationPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final mq = MediaQuery.of(context);
-    final isNarrow = mq.size.width < 600;
+    final isNarrow = MediaQuery.sizeOf(context).width < 600;
     final sourceLabel =
         LumenTranslationLanguages.source[_sourceLanguage] ?? _sourceLanguage;
     final targetLabel =
@@ -313,41 +312,51 @@ class _TranslationPageState extends State<TranslationPage> {
             ToolPanel(
               child: Column(
                 children: [
-                  TextField(
-                    controller: _sourceController,
-                    minLines: 6,
-                    maxLines: 10,
-                    maxLength: LumenTranslationClient.maxInputChars,
-                    onChanged: (value) {
-                      if (value.runes.length > LumenTranslationClient.maxInputChars) {
-                        final clipped = value.take(LumenTranslationClient.maxInputChars);
-                        _sourceController.value = TextEditingValue(
-                          text: clipped,
-                          selection: TextSelection.collapsed(offset: clipped.length),
-                        );
-                      }
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _sourceController,
+                    builder: (context, value, _) {
+                      final typedLength = value.text.runes.length;
+                      return TextField(
+                        controller: _sourceController,
+                        minLines: 6,
+                        maxLines: 10,
+                        maxLength: LumenTranslationClient.maxInputChars,
+                        onChanged: (text) {
+                          if (text.runes.length >
+                              LumenTranslationClient.maxInputChars) {
+                            final clipped = text.take(
+                              LumenTranslationClient.maxInputChars,
+                            );
+                            _sourceController.value = TextEditingValue(
+                              text: clipped,
+                              selection: TextSelection.collapsed(
+                                offset: clipped.length,
+                              ),
+                            );
+                          }
+                        },
+                        decoration: InputDecoration(
+                          hintText: '输入或粘贴需要翻译的文本',
+                          counterText:
+                              '$typedLength/${LumenTranslationClient.maxInputChars}',
+                          prefixIcon: const Padding(
+                            padding: EdgeInsets.only(bottom: 88),
+                            child: Icon(Icons.notes_rounded),
+                          ),
+                          suffixIcon: value.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: '清空原文',
+                                  icon: const Icon(Icons.clear_rounded),
+                                  onPressed: _sourceController.clear,
+                                ),
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(LumenTokens.radiusSm),
+                          ),
+                        ),
+                      );
                     },
-                    decoration: InputDecoration(
-                      hintText: '输入或粘贴需要翻译的文本',
-                      counterText:
-                          '${_sourceController.text.runes.length}/${LumenTranslationClient.maxInputChars}',
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.only(bottom: 88),
-                        child: Icon(Icons.notes_rounded),
-                      ),
-                      suffixIcon: _sourceController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded),
-                              onPressed: () => setState(() {
-                                _sourceController.clear();
-                              }),
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(LumenTokens.radiusSm),
-                      ),
-                    ),
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -389,28 +398,34 @@ class _TranslationPageState extends State<TranslationPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: _targetController,
-                    minLines: 6,
-                    maxLines: 10,
-                    readOnly: true,
-                    decoration: InputDecoration(
-                      hintText: '翻译结果会显示在这里',
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.only(bottom: 88),
-                        child: Icon(Icons.translate_rounded),
-                      ),
-                      suffixIcon: _targetController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.copy_rounded),
-                              onPressed: _copyTarget,
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(LumenTokens.radiusSm),
-                      ),
-                    ),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _targetController,
+                    builder: (context, value, _) {
+                      return TextField(
+                        controller: _targetController,
+                        minLines: 6,
+                        maxLines: 10,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          hintText: '翻译结果会显示在这里',
+                          prefixIcon: const Padding(
+                            padding: EdgeInsets.only(bottom: 88),
+                            child: Icon(Icons.translate_rounded),
+                          ),
+                          suffixIcon: value.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: '复制结果',
+                                  icon: const Icon(Icons.copy_rounded),
+                                  onPressed: _copyTarget,
+                                ),
+                          border: OutlineInputBorder(
+                            borderRadius:
+                                BorderRadius.circular(LumenTokens.radiusSm),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   if (_alternatives.isNotEmpty) ...[
                     const SizedBox(height: 12),
@@ -446,70 +461,73 @@ class _TranslationPageState extends State<TranslationPage> {
   }
 
   Widget _buildTranslationHistorySection(ColorScheme cs) {
-    final history = context.watch<TranslationProvider>().history;
-    return LumenSettingsSection(
-      icon: Icons.history_rounded,
-      title: '翻译历史',
-      children: [
-        if (history.isEmpty)
-          const ToolEmptyStateCard(
-            icon: Icons.history_toggle_off_rounded,
-            title: '暂无记录',
-            description: '翻译成功后会自动记录在这里，可一键恢复原文与译文。',
-          )
-        else
-          ToolPanel(
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      await context.read<TranslationProvider>().clearHistory();
-                      if (!mounted) return;
-                      _showMessage('已清空翻译历史');
-                    },
-                    icon: const Icon(Icons.delete_sweep_rounded, size: 18),
-                    label: const Text('清空历史'),
-                  ),
+    return Consumer<TranslationProvider>(
+      builder: (context, translations, _) {
+        final history = translations.history;
+        return LumenSettingsSection(
+          icon: Icons.history_rounded,
+          title: '翻译历史',
+          children: [
+            if (history.isEmpty)
+              const ToolEmptyStateCard(
+                icon: Icons.history_toggle_off_rounded,
+                title: '暂无记录',
+                description: '翻译成功后会自动记录在这里，可一键恢复原文与译文。',
+              )
+            else
+              ToolPanel(
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          await translations.clearHistory();
+                          if (!mounted) return;
+                          _showMessage('已清空翻译历史');
+                        },
+                        icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                        label: const Text('清空历史'),
+                      ),
+                    ),
+                    ...history.take(20).map((record) {
+                      return ListTile(
+                        key: ValueKey(record.id),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          record.translatedText,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          '${record.sourceLanguage} → ${record.targetLanguage} · ${record.sourceText}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          tooltip: '删除',
+                          icon: Icon(Icons.close_rounded, color: cs.error),
+                          onPressed: () => translations.deleteRecord(record.id),
+                        ),
+                        onTap: () {
+                          _sourceController.text = record.sourceText;
+                          _targetController.text = record.translatedText;
+                          setState(() {
+                            _sourceLanguage = record.sourceLanguage;
+                            _targetLanguage = record.targetLanguage;
+                            _alternatives = const [];
+                          });
+                          _showMessage('已恢复到输入区');
+                        },
+                      );
+                    }),
+                  ],
                 ),
-                ...history.take(20).map((record) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      record.translatedText,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      '${record.sourceLanguage} → ${record.targetLanguage} · ${record.sourceText}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: IconButton(
-                      tooltip: '删除',
-                      icon: Icon(Icons.close_rounded, color: cs.error),
-                      onPressed: () => context
-                          .read<TranslationProvider>()
-                          .deleteRecord(record.id),
-                    ),
-                    onTap: () {
-                      setState(() {
-                        _sourceController.text = record.sourceText;
-                        _targetController.text = record.translatedText;
-                        _sourceLanguage = record.sourceLanguage;
-                        _targetLanguage = record.targetLanguage;
-                        _alternatives = const [];
-                      });
-                      _showMessage('已恢复到输入区');
-                    },
-                  );
-                }),
-              ],
-            ),
-          ),
-      ],
+              ),
+          ],
+        );
+      },
     );
   }
 }

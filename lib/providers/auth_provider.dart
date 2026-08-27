@@ -60,6 +60,16 @@ class AndroidPasskeyNativeException implements Exception {
   }
 }
 
+// Compiled once: these run on every passkey diagnostics pass and every error
+// path, where the old inline literals recompiled the pattern each call.
+final _nonHexCharPattern = RegExp(r'[^0-9a-fA-F]');
+final _originMismatchPattern = RegExp(
+  r'Unexpected (?:registration|authentication) response origin '
+  r'"([^"]+)", expected one of: (.+)$',
+  caseSensitive: false,
+);
+final _base64UrlCharsetPattern = RegExp(r'^[A-Za-z0-9_-]+$');
+
 /// Expand a cert SHA-256 (compact or colon hex) into both Android WebAuthn
 /// `android:apk-key-hash:` origin encodings that Credential Manager may emit.
 ///
@@ -68,7 +78,7 @@ class AndroidPasskeyNativeException implements Exception {
 List<String> androidApkKeyHashOriginsFromSha256(String? sha256Hex) {
   final compact = (sha256Hex ?? '')
       .trim()
-      .replaceAll(RegExp(r'[^0-9a-fA-F]'), '')
+      .replaceAll(_nonHexCharPattern, '')
       .toUpperCase();
   if (compact.length != 64) {
     return const <String>[];
@@ -94,11 +104,7 @@ Map<String, dynamic>? parseAndroidApkKeyHashOriginMismatch(String? message) {
     return null;
   }
 
-  final match = RegExp(
-    r'Unexpected (?:registration|authentication) response origin '
-    r'"([^"]+)", expected one of: (.+)$',
-    caseSensitive: false,
-  ).firstMatch(text);
+  final match = _originMismatchPattern.firstMatch(text);
   if (match == null) {
     return null;
   }
@@ -460,16 +466,18 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e, stackTrace) {
+      // _extractErrorDetails walks the whole diagnostics tree; build it once.
+      final errorDetails = _extractErrorDetails(e);
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
-      debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['errorDetails'] = errorDetails;
       debugContext['stackTrace'] = stackTrace.toString();
 
       debugPrint('[NexAI Google] Sign-in error: $e');
       debugPrint('[NexAI Google] Error type: ${e.runtimeType}');
       debugPrint('[NexAI Google] Stack trace: $stackTrace');
 
-      _error = 'Google 快速登录错误: ${_extractErrorDetails(e)}';
+      _error = 'Google 快速登录错误: $errorDetails';
       _lastGoogleDebugContext = debugContext;
       return false;
     } finally {
@@ -622,15 +630,16 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
     } catch (e, stackTrace) {
+      final errorDetails = _extractErrorDetails(e);
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
-      debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['errorDetails'] = errorDetails;
       debugContext['stackTrace'] = stackTrace.toString();
 
       debugPrint('[NexAI Google] Link error: $e');
       debugPrint('[NexAI Google] Stack trace: $stackTrace');
 
-      _error = '关联错误: ${_extractErrorDetails(e)}';
+      _error = '关联错误: $errorDetails';
       _lastGoogleDebugContext = debugContext;
       return false;
     }
@@ -830,9 +839,10 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
+      final errorDetails = _extractErrorDetails(e);
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
-      debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['errorDetails'] = errorDetails;
       debugContext['errorDiagnostics'] = _buildErrorDiagnostics(e, stackTrace);
       debugContext['errorHints'] = _buildPasskeyErrorHints(e, debugContext);
       debugContext['stackTrace'] = stackTrace.toString();
@@ -846,7 +856,7 @@ class AuthProvider extends ChangeNotifier {
       );
       debugPrint('[NexAI Passkey] Stack trace: $stackTrace');
 
-      _error = '绑定 Passkey 失败: ${_extractErrorDetails(e)}';
+      _error = '绑定 Passkey 失败: $errorDetails';
       _lastPasskeyDebugContext = debugContext;
       return false;
     } finally {
@@ -1026,9 +1036,10 @@ class AuthProvider extends ChangeNotifier {
         return false;
       }
 
+      final errorDetails = _extractErrorDetails(e);
       debugContext['error'] = e.toString();
       debugContext['errorType'] = e.runtimeType.toString();
-      debugContext['errorDetails'] = _extractErrorDetails(e);
+      debugContext['errorDetails'] = errorDetails;
       debugContext['errorDiagnostics'] = _buildErrorDiagnostics(e, stackTrace);
       debugContext['errorHints'] = _buildPasskeyErrorHints(e, debugContext);
       debugContext['stackTrace'] = stackTrace.toString();
@@ -1037,7 +1048,7 @@ class AuthProvider extends ChangeNotifier {
       debugPrint('[NexAI Passkey] Error type: ${e.runtimeType}');
       debugPrint('[NexAI Passkey] Stack trace: $stackTrace');
 
-      _error = 'Passkey 登录失败: ${_extractErrorDetails(e)}';
+      _error = 'Passkey 登录失败: $errorDetails';
       _lastPasskeyDebugContext = debugContext;
       return false;
     } finally {
@@ -1049,6 +1060,19 @@ class AuthProvider extends ChangeNotifier {
   // ========== Internal Methods ==========
 
   Future<Map<String, dynamic>> _buildPasskeyEnvironmentContext() async {
+    final isAndroid = _isAndroidPasskeyNativePlatform;
+    final googleOnly = _passkeyGoogleOnlyPreference();
+
+    // Kicked off together: three independent platform round-trips that used to
+    // run in series ahead of every Credential Manager prompt.
+    final packageEntries = _collectPackageInfoContext();
+    final androidEntries = isAndroid
+        ? _collectAndroidDeviceContext()
+        : Future<Map<String, dynamic>>.value(const <String, dynamic>{});
+    final providerEntries = isAndroid
+        ? _collectPasskeyProviderContext(googleOnly)
+        : Future<Map<String, dynamic>>.value(const <String, dynamic>{});
+
     final context = <String, dynamic>{
       'platform': defaultTargetPlatform.toString(),
       'isWeb': kIsWeb,
@@ -1067,31 +1091,44 @@ class AuthProvider extends ChangeNotifier {
         'fullVersion': BuildConfig.fullVersion,
       },
     };
+    if (isAndroid) {
+      context['passkeyGoogleOnly'] = googleOnly;
+    }
 
+    context.addAll(await packageEntries);
+    context.addAll(await androidEntries);
+    context.addAll(await providerEntries);
+    return context;
+  }
+
+  Future<Map<String, dynamic>> _collectPackageInfoContext() async {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      context['packageInfo'] = {
-        'appName': packageInfo.appName,
-        'packageName': packageInfo.packageName,
-        'version': packageInfo.version,
-        'buildNumber': packageInfo.buildNumber,
-        'buildSignature': packageInfo.buildSignature,
-        'installerStore': packageInfo.installerStore,
-      };
       final expectedApkKeyHashOrigins = androidApkKeyHashOriginsFromSha256(
         packageInfo.buildSignature,
       );
-      if (expectedApkKeyHashOrigins.isNotEmpty) {
-        context['expectedApkKeyHashOrigins'] = expectedApkKeyHashOrigins;
-      }
+      return {
+        'packageInfo': {
+          'appName': packageInfo.appName,
+          'packageName': packageInfo.packageName,
+          'version': packageInfo.version,
+          'buildNumber': packageInfo.buildNumber,
+          'buildSignature': packageInfo.buildSignature,
+          'installerStore': packageInfo.installerStore,
+        },
+        if (expectedApkKeyHashOrigins.isNotEmpty)
+          'expectedApkKeyHashOrigins': expectedApkKeyHashOrigins,
+      };
     } catch (e) {
-      context['packageInfoError'] = e.toString();
+      return {'packageInfoError': e.toString()};
     }
+  }
 
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      try {
-        final android = await DeviceInfoPlugin().androidInfo;
-        context['androidDevice'] = {
+  Future<Map<String, dynamic>> _collectAndroidDeviceContext() async {
+    try {
+      final android = await DeviceInfoPlugin().androidInfo;
+      return {
+        'androidDevice': {
           'sdkInt': android.version.sdkInt,
           'release': android.version.release,
           'previewSdkInt': android.version.previewSdkInt,
@@ -1104,30 +1141,31 @@ class AuthProvider extends ChangeNotifier {
           'hardware': android.hardware,
           'supportedAbis': android.supportedAbis,
           'isPhysicalDevice': android.isPhysicalDevice,
-        };
-      } catch (e) {
-        context['androidDeviceError'] = e.toString();
-      }
-
-      final googleOnly = _passkeyGoogleOnlyPreference();
-      context['passkeyGoogleOnly'] = googleOnly;
-      try {
-        final diagnostics = await _androidPasskeyService.diagnoseProviders(
-          googleOnly: googleOnly,
-        );
-        if (diagnostics.ok) {
-          context['providerDiagnostics'] = diagnostics.data;
-        } else {
-          context['providerDiagnosticsError'] =
-              diagnostics.error?.toDebugMap() ??
-              <String, dynamic>{'code': 'native_failure'};
-        }
-      } catch (e) {
-        context['providerDiagnosticsError'] = e.toString();
-      }
+        },
+      };
+    } catch (e) {
+      return {'androidDeviceError': e.toString()};
     }
+  }
 
-    return context;
+  Future<Map<String, dynamic>> _collectPasskeyProviderContext(
+    bool googleOnly,
+  ) async {
+    try {
+      final diagnostics = await _androidPasskeyService.diagnoseProviders(
+        googleOnly: googleOnly,
+      );
+      if (diagnostics.ok) {
+        return {'providerDiagnostics': diagnostics.data};
+      }
+      return {
+        'providerDiagnosticsError':
+            diagnostics.error?.toDebugMap() ??
+            <String, dynamic>{'code': 'native_failure'},
+      };
+    } catch (e) {
+      return {'providerDiagnosticsError': e.toString()};
+    }
   }
 
   Map<String, dynamic> _buildRegistrationOptionsDiagnostics(
@@ -1230,7 +1268,7 @@ class AuthProvider extends ChangeNotifier {
       'hasPadding': text?.contains('=') ?? false,
       'charsetLooksBase64Url': text == null
           ? false
-          : RegExp(r'^[A-Za-z0-9_-]+$').hasMatch(text),
+          : _base64UrlCharsetPattern.hasMatch(text),
     };
 
     if (text == null || text.isEmpty) {
@@ -1967,6 +2005,11 @@ class AuthProvider extends ChangeNotifier {
     _currentUser = null;
     _accessToken = null;
     _refreshToken = null;
+    // Debug contexts carry the previous session's identifiers and drive
+    // `wasLastPasskeyCancelled`; keeping them makes the next failed sign-in
+    // report the old outcome.
+    _lastPasskeyDebugContext = null;
+    _lastGoogleDebugContext = null;
 
     await _storage.delete(key: _keyAccessToken);
     await _storage.delete(key: _keyRefreshToken);

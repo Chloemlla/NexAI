@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Detailed debug dialog for authentication errors with full context and copy support
-class AuthDebugDialog extends StatelessWidget {
+class AuthDebugDialog extends StatefulWidget {
   final Map<String, dynamic> debugContext;
   final String title;
 
@@ -13,12 +13,24 @@ class AuthDebugDialog extends StatelessWidget {
     this.title = '调试信息',
   });
 
+  @override
+  State<AuthDebugDialog> createState() => _AuthDebugDialogState();
+}
+
+class _AuthDebugDialogState extends State<AuthDebugDialog> {
+  static const _jsonEncoder = JsonEncoder.withIndent('  ');
+
+  /// Formatting re-encodes a dozen JSON blobs; building it once keeps rebuilds
+  /// (theme change, keyboard, text selection) from redoing that work.
+  late final String _formattedContext = _formatContext();
+
+  Map<String, dynamic> get debugContext => widget.debugContext;
+
   void _writeJsonSection(StringBuffer buffer, String title, dynamic value) {
     if (value == null) return;
     buffer.writeln('=== $title ===');
     try {
-      final formatted = const JsonEncoder.withIndent('  ').convert(value);
-      buffer.writeln(formatted);
+      buffer.writeln(_jsonEncoder.convert(value));
     } catch (_) {
       buffer.writeln(value.toString());
     }
@@ -109,32 +121,18 @@ class AuthDebugDialog extends StatelessWidget {
     }
 
     // Backend response
-    if (debugContext['backendResponse'] != null) {
-      buffer.writeln('=== Backend Response ===');
-      try {
-        final formatted = JsonEncoder.withIndent(
-          '  ',
-        ).convert(debugContext['backendResponse']);
-        buffer.writeln(formatted);
-      } catch (e) {
-        buffer.writeln(debugContext['backendResponse'].toString());
-      }
-      buffer.writeln();
-    }
+    _writeJsonSection(
+      buffer,
+      'Backend Response',
+      debugContext['backendResponse'],
+    );
 
     // Raw options (for Passkey)
-    if (debugContext['rawOptions'] != null) {
-      buffer.writeln('=== Raw Options from Backend ===');
-      try {
-        final formatted = JsonEncoder.withIndent(
-          '  ',
-        ).convert(debugContext['rawOptions']);
-        buffer.writeln(formatted);
-      } catch (e) {
-        buffer.writeln(debugContext['rawOptions'].toString());
-      }
-      buffer.writeln();
-    }
+    _writeJsonSection(
+      buffer,
+      'Raw Options from Backend',
+      debugContext['rawOptions'],
+    );
     _writeJsonSection(
       buffer,
       'Raw Options Diagnostics',
@@ -142,20 +140,11 @@ class AuthDebugDialog extends StatelessWidget {
     );
 
     // Credential Manager request options (for Passkey)
-    final requestOptions =
-        debugContext['requestOptions'] ?? debugContext['sanitizedOptions'];
-    if (requestOptions != null) {
-      buffer.writeln('=== Credential Manager Request Options ===');
-      try {
-        final formatted = JsonEncoder.withIndent(
-          '  ',
-        ).convert(requestOptions);
-        buffer.writeln(formatted);
-      } catch (e) {
-        buffer.writeln(requestOptions.toString());
-      }
-      buffer.writeln();
-    }
+    _writeJsonSection(
+      buffer,
+      'Credential Manager Request Options',
+      debugContext['requestOptions'] ?? debugContext['sanitizedOptions'],
+    );
     _writeJsonSection(
       buffer,
       'Request Options Diagnostics',
@@ -202,7 +191,7 @@ class AuthDebugDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formattedContext = _formatContext();
+    final formattedContext = _formattedContext;
     final theme = Theme.of(context);
 
     return AlertDialog(
@@ -210,7 +199,7 @@ class AuthDebugDialog extends StatelessWidget {
         children: [
           Icon(Icons.bug_report, color: theme.colorScheme.error),
           const SizedBox(width: 8),
-          Text(title),
+          Text(widget.title),
         ],
       ),
       content: SizedBox(

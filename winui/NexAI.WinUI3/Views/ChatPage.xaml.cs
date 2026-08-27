@@ -7,6 +7,7 @@ using NexAI.Core.Chat;
 using NexAI.Core.Settings;
 using NexAI.WinUI3.Controls;
 using NexAI.WinUI3.Services;
+using System.Collections.ObjectModel;
 using Windows.System;
 
 namespace NexAI.WinUI3.Views;
@@ -18,6 +19,8 @@ public sealed partial class ChatPage : Page
     private readonly ISettingsStore _settingsStore;
     private readonly ILocalizationService _localization;
     private readonly EventHandler _onLanguageChanged;
+    private readonly ObservableCollection<ChatMessage> _messages = [];
+    private string? _boundConversationId;
     private string _searchQuery = string.Empty;
     private bool _isBusy;
     private bool _advancedRenderingEnabled = true;
@@ -29,9 +32,14 @@ public sealed partial class ChatPage : Page
         _chatSession = App.Current.Services.GetRequiredService<ChatSessionService>();
         _settingsStore = App.Current.Services.GetRequiredService<ISettingsStore>();
         _localization = App.Current.Services.GetRequiredService<ILocalizationService>();
-        _onLanguageChanged = (_, _) => DispatcherQueue.TryEnqueue(RefreshUi);
+        _onLanguageChanged = (_, _) => DispatcherQueue.TryEnqueue(() =>
+        {
+            ApplyStaticLocalization();
+            RefreshUi();
+        });
         _localization.LanguageChanged += _onLanguageChanged;
         _advancedRenderingEnabled = _settingsStore.Current.AdvancedRenderingEnabled;
+        MessageList.ItemsSource = _messages;
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -75,10 +83,10 @@ public sealed partial class ChatPage : Page
             }
 
             _advancedRenderingEnabled = next;
-            // Force rebind so MarkdownMessagePresenter picks up EnableAdvanced.
-            var current = _conversationStore.CurrentConversation;
-            MessageList.ItemsSource = null;
-            MessageList.ItemsSource = current?.Messages ?? [];
+            // Force a full rebuild so MarkdownMessagePresenter picks up EnableAdvanced.
+            _messages.Clear();
+            _boundConversationId = null;
+            RefreshUi();
         });
     }
 
@@ -343,10 +351,12 @@ public sealed partial class ChatPage : Page
 
     private void RefreshUi()
     {
-        ApplyStaticLocalization();
         var all = _conversationStore.Conversations;
-        var filtered = FilterConversations(all).ToList();
-        var current = _conversationStore.CurrentConversation;
+        var filtered = FilterConversations(all);
+        var currentId = _conversationStore.CurrentConversationId;
+        var current = currentId is null
+            ? null
+            : all.FirstOrDefault(c => string.Equals(c.Id, currentId, StringComparison.Ordinal));
 
         ConversationList.ItemsSource = filtered;
         ConversationCountText.Text = all.Count == 1
@@ -375,20 +385,75 @@ public sealed partial class ChatPage : Page
                     : _localization.GetString("Chat.MetaLocalPlural", current.Messages.Count);
         DeleteCurrentButton.IsEnabled = current is not null && !_chatSession.IsStreaming;
 
-        var messages = current?.Messages ?? [];
-        if (!ReferenceEquals(MessageList.ItemsSource, messages))
-        {
-            MessageList.ItemsSource = messages;
-        }
+        var changed = SyncMessages(current);
         MessageEmptyState.Visibility =
-            current is null || messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            _messages.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        if (messages.Count > 0)
+        if (changed && _messages.Count > 0)
         {
-            MessageList.ScrollIntoView(messages[^1]);
+            MessageList.ScrollIntoView(_messages[^1]);
         }
 
         UpdateComposerState();
+    }
+
+    /// <summary>Reconciles the bound message collection in place so a streaming
+    /// update only recreates the one item container whose content changed.</summary>
+    private bool SyncMessages(Conversation? conversation)
+    {
+        if (conversation is null)
+        {
+            _boundConversationId = null;
+            if (_messages.Count == 0)
+            {
+                return false;
+            }
+
+            _messages.Clear();
+            return true;
+        }
+
+        var source = conversation.Messages;
+        if (!string.Equals(_boundConversationId, conversation.Id, StringComparison.Ordinal))
+        {
+            _boundConversationId = conversation.Id;
+            _messages.Clear();
+            foreach (var message in source)
+            {
+                _messages.Add(message);
+            }
+
+            return true;
+        }
+
+        var changed = false;
+        for (var i = _messages.Count - 1; i >= source.Count; i--)
+        {
+            _messages.RemoveAt(i);
+            changed = true;
+        }
+
+        for (var i = 0; i < source.Count; i++)
+        {
+            var next = source[i];
+            if (i >= _messages.Count)
+            {
+                _messages.Add(next);
+                changed = true;
+                continue;
+            }
+
+            var existing = _messages[i];
+            if (!string.Equals(existing.Id, next.Id, StringComparison.Ordinal) ||
+                existing.IsError != next.IsError ||
+                !string.Equals(existing.Content, next.Content, StringComparison.Ordinal))
+            {
+                _messages[i] = next;
+                changed = true;
+            }
+        }
+
+        return changed;
     }
 
     private void UpdateComposerState()
@@ -410,18 +475,25 @@ public sealed partial class ChatPage : Page
                 : _localization.GetString("Chat.HintReady");
     }
 
-    private IEnumerable<Conversation> FilterConversations(IReadOnlyList<Conversation> source)
+    private List<Conversation> FilterConversations(IReadOnlyList<Conversation> source)
     {
         if (string.IsNullOrWhiteSpace(_searchQuery))
         {
-            return source;
+            return [.. source];
         }
 
-        return source.Where(conversation =>
+        var query = _searchQuery;
+        var matches = new List<Conversation>(source.Count);
+        foreach (var conversation in source)
         {
-            var haystack = $"{conversation.Title}\n{conversation.Preview}".ToLowerInvariant();
-            return haystack.Contains(_searchQuery.ToLowerInvariant(), StringComparison.Ordinal);
-        });
+            if (conversation.Title.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                conversation.Preview.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                matches.Add(conversation);
+            }
+        }
+
+        return matches;
     }
 
     private async Task ShowInfoAsync(string title, string message)

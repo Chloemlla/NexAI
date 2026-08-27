@@ -52,14 +52,17 @@ class ToolPageHeroSliver extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final mq = MediaQuery.of(context);
+    // Depend on size/padding only: with MediaQuery.of this hero re-ran all of
+    // its text measurements on every keyboard animation frame of tool pages.
+    final screenSize = MediaQuery.sizeOf(context);
+    final topInset = MediaQuery.paddingOf(context).top;
     final bottomHeight = bottom?.preferredSize.height ?? 0;
     final hasLeading = ModalRoute.of(context)?.canPop ?? false;
     final actionCount = actions?.length ?? 0;
     final titleBottom = bottomHeight + 14;
     final titleLeft = hasLeading ? (kToolbarHeight + 20) : 20.0;
     final titleRight = 16.0 + (actionCount > 0 ? actionCount * 52.0 : 0.0);
-    final heroContentWidth = math.min(mq.size.width - 48, 560.0);
+    final heroContentWidth = math.min(screenSize.width - 48, 560.0);
     final titleStyle =
         tt.titleMedium?.copyWith(fontWeight: FontWeight.w600) ??
         const TextStyle(fontSize: 16, fontWeight: FontWeight.w600);
@@ -69,7 +72,7 @@ class ToolPageHeroSliver extends StatelessWidget {
     final titleHeight = _measureTextHeight(
       text: title,
       style: titleStyle,
-      maxWidth: math.max(120, mq.size.width - titleLeft - titleRight),
+      maxWidth: math.max(120, screenSize.width - titleLeft - titleRight),
       maxLines: 1,
     );
     final subtitleHeight = _measureTextHeight(
@@ -82,14 +85,14 @@ class ToolPageHeroSliver extends StatelessWidget {
       textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       maxWidth: heroContentWidth,
     );
-    final heroTopPadding = mq.padding.top + kToolbarHeight + 16;
+    final heroTopPadding = topInset + kToolbarHeight + 16;
     final heroBottomPadding = bottomHeight + titleHeight + 26;
     final heroContentHeight =
         64 + 12 + subtitleHeight + (chips.isEmpty ? 0 : 14 + chipsHeight);
     final minimumExpandedHeight =
         heroTopPadding + heroContentHeight + heroBottomPadding;
     final baseExpandedHeight =
-        expandedHeight + bottomHeight + (mq.size.width < 600 ? 28 : 0);
+        expandedHeight + bottomHeight + (screenSize.width < 600 ? 28 : 0);
     final effectiveExpandedHeight = math.max(
       baseExpandedHeight,
       minimumExpandedHeight,
@@ -173,19 +176,41 @@ class ToolPageHeroSliver extends StatelessWidget {
   }
 }
 
+/// Text layout is the expensive part of the hero: the same handful of
+/// title/subtitle/chip strings is measured again on every rebuild of every tool
+/// page, so results are cached by their full measurement inputs.
+final Map<String, double> _textMetricCache = <String, double>{};
+
+/// Layout-affecting style fields only; `TextStyle.toString()` collapses to a
+/// bare "TextStyle" in release builds and would alias distinct styles.
+String _styleKey(TextStyle style) =>
+    '${style.fontSize}/${style.fontWeight}/${style.height}/'
+    '${style.letterSpacing}/${style.wordSpacing}/${style.fontFamily}';
+
+double _cachedMetric(String key, double Function() compute) {
+  final cached = _textMetricCache[key];
+  if (cached != null) return cached;
+  if (_textMetricCache.length >= 128) _textMetricCache.clear();
+  final value = compute();
+  _textMetricCache[key] = value;
+  return value;
+}
+
 double _measureTextHeight({
   required String text,
   required TextStyle style,
   required double maxWidth,
   int? maxLines,
 }) {
-  final painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: TextDirection.ltr,
-    maxLines: maxLines,
-    ellipsis: maxLines == null ? null : '…',
-  )..layout(maxWidth: maxWidth);
-  return painter.size.height;
+  return _cachedMetric('h|$maxWidth|$maxLines|${_styleKey(style)}|$text', () {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: maxLines,
+      ellipsis: maxLines == null ? null : '…',
+    )..layout(maxWidth: maxWidth);
+    return painter.size.height;
+  });
 }
 
 double _measureChipWrapHeight({
@@ -236,13 +261,15 @@ double _measureTextWidth({
   required TextStyle style,
   required double maxWidth,
 }) {
-  final painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: TextDirection.ltr,
-    maxLines: 1,
-    ellipsis: '…',
-  )..layout(maxWidth: maxWidth);
-  return painter.size.width;
+  return _cachedMetric('w|$maxWidth|${_styleKey(style)}|$text', () {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: maxWidth);
+    return painter.size.width;
+  });
 }
 
 class ToolQuickActionsBar extends StatelessWidget {
@@ -421,11 +448,8 @@ class _ToolQuickActionCard extends StatelessWidget {
         child: InkWell(
           onTap: action.onTap,
           borderRadius: LumenTokens.cardBorderRadius,
-          child: Container(
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: LumenTokens.cardBorderRadius,
-            ),
             child: Row(
               children: [
                 Container(

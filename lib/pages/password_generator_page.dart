@@ -40,7 +40,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
 
   // Memorable password settings
   int _wordCount = 4;
-  final String _separator = '-';
+  static const _separator = '-';
   bool _capitalizeWords = true;
   bool _addNumbers = true;
 
@@ -49,7 +49,19 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
 
   final _random = Random.secure();
 
-  final List<String> _words = [
+  static const _lowercaseChars = 'abcdefghijklmnopqrstuvwxyz';
+  static const _uppercaseChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  static const _numberChars = '0123456789';
+  static const _symbolChars = '!@#\$%^&*()_+-=[]{}|;:,.<>?';
+
+  /// Hoisted out of `_calculatePasswordStrength`, which runs on every rebuild
+  /// (and once per row when exporting a batch).
+  static final RegExp _lowercaseRe = RegExp(r'[a-z]');
+  static final RegExp _uppercaseRe = RegExp(r'[A-Z]');
+  static final RegExp _numberRe = RegExp(r'[0-9]');
+  static final RegExp _symbolRe = RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]');
+
+  static const List<String> _words = [
     'apple',
     'banana',
     'cherry',
@@ -92,65 +104,64 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
   }
 
   void _generatePassword() {
-    setState(() {
-      switch (_selectedType) {
-        case PasswordType.random:
-          _generatedPassword = _generateRandomPassword();
-          break;
-        case PasswordType.memorable:
-          _generatedPassword = _generateMemorablePassword();
-          break;
-        case PasswordType.pin:
-          _generatedPassword = _generatePIN();
-          break;
-      }
-    });
+    final password = _generateForCurrentType();
+    setState(() => _generatedPassword = password);
+  }
+
+  String _generateForCurrentType() {
+    switch (_selectedType) {
+      case PasswordType.random:
+        return _generateRandomPassword();
+      case PasswordType.memorable:
+        return _generateMemorablePassword();
+      case PasswordType.pin:
+        return _generatePIN();
+    }
   }
 
   String _generateRandomPassword() {
-    String chars = '';
-    if (_includeLowercase) chars += 'abcdefghijklmnopqrstuvwxyz';
-    if (_includeUppercase) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    if (_includeNumbers) chars += '0123456789';
-    if (_includeSymbols) chars += '!@#\$%^&*()_+-=[]{}|;:,.<>?';
-    if (chars.isEmpty) chars = 'abcdefghijklmnopqrstuvwxyz';
-    final password = List.generate(
+    // Same secure RNG and the same "one char per enabled class" guarantee,
+    // without the extra join/split round-trip and Set allocation.
+    final pools = <String>[
+      if (_includeLowercase) _lowercaseChars,
+      if (_includeUppercase) _uppercaseChars,
+      if (_includeNumbers) _numberChars,
+      if (_includeSymbols) _symbolChars,
+    ];
+    final chars = pools.isEmpty ? _lowercaseChars : pools.join();
+    final result = List<String>.generate(
       _length,
       (_) => chars[_random.nextInt(chars.length)],
-    ).join();
+      growable: false,
+    );
 
-    // Ensure at least one character from each enabled class
-    final result = password.split('');
-    final classes = <String>{
-      if (_includeLowercase) 'abcdefghijklmnopqrstuvwxyz',
-      if (_includeUppercase) 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-      if (_includeNumbers) '0123456789',
-      if (_includeSymbols) '!@#\$%^&*()_+-=[]{}|;:,.<>?',
-    };
-    for (final cls in classes) {
-      if (!result.any((c) => cls.contains(c))) {
-        result[_random.nextInt(result.length)] = cls[_random.nextInt(cls.length)];
+    for (final pool in pools) {
+      if (!result.any(pool.contains)) {
+        result[_random.nextInt(result.length)] =
+            pool[_random.nextInt(pool.length)];
       }
     }
     return result.join();
   }
 
   String _generateMemorablePassword() {
-    final selectedWords = <String>[];
-    final availableWords = List<String>.from(_words);
+    final availableWords = List<String>.of(_words);
+    final buffer = StringBuffer();
     for (int i = 0; i < _wordCount; i++) {
-      final word = availableWords[_random.nextInt(availableWords.length)];
-      availableWords.remove(word);
-      String processedWord = word;
+      // removeAt on the drawn index avoids the O(n) `remove(word)` lookup.
+      final word = availableWords.removeAt(
+        _random.nextInt(availableWords.length),
+      );
+      if (i > 0) buffer.write(_separator);
       if (_capitalizeWords) {
-        processedWord =
-            processedWord[0].toUpperCase() + processedWord.substring(1);
+        buffer.write(word[0].toUpperCase());
+        buffer.write(word.substring(1));
+      } else {
+        buffer.write(word);
       }
-      selectedWords.add(processedWord);
     }
-    String password = selectedWords.join(_separator);
-    if (_addNumbers) password += _random.nextInt(100).toString();
-    return password;
+    if (_addNumbers) buffer.write(_random.nextInt(100));
+    return buffer.toString();
   }
 
   String _generatePIN() {
@@ -158,26 +169,25 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
   }
 
   void _generateBatchPasswords() {
-    setState(() {
-      _batchPasswords.clear();
-      final generated = <String>{};
-      while (generated.length < _batchCount) {
-        String password;
-        switch (_selectedType) {
-          case PasswordType.random:
-            password = _generateRandomPassword();
-            break;
-          case PasswordType.memorable:
-            password = _generateMemorablePassword();
-            break;
-          case PasswordType.pin:
-            password = _generatePIN();
-            break;
-        }
-        generated.add(password);
-      }
-      _batchPasswords = generated.toList();
-    });
+    final generated = <String>{};
+    // Bounded retries: with a small option space (short PIN, few words) the
+    // unique-password loop could otherwise spin forever on the UI thread.
+    final attemptLimit = _batchCount * 20;
+    for (var attempt = 0;
+        generated.length < _batchCount && attempt < attemptLimit;
+        attempt++) {
+      generated.add(_generateForCurrentType());
+    }
+    setState(() => _batchPasswords = generated.toList(growable: false));
+    if (generated.length < _batchCount) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('当前设置可生成的唯一密码有限，已生成 ${generated.length} 条'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   int _calculatePasswordStrength(String password) {
@@ -186,17 +196,16 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
     if (password.length >= 8) strength += 20;
     if (password.length >= 12) strength += 20;
     if (password.length >= 16) strength += 10;
-    if (RegExp(r'[a-z]').hasMatch(password)) strength += 15;
-    if (RegExp(r'[A-Z]').hasMatch(password)) strength += 15;
-    if (RegExp(r'[0-9]').hasMatch(password)) strength += 10;
-    if (RegExp(r'[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]').hasMatch(password)) {
-      strength += 10;
-    }
+    if (_lowercaseRe.hasMatch(password)) strength += 15;
+    if (_uppercaseRe.hasMatch(password)) strength += 15;
+    if (_numberRe.hasMatch(password)) strength += 10;
+    if (_symbolRe.hasMatch(password)) strength += 10;
     return strength.clamp(0, 100);
   }
 
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
@@ -748,7 +757,6 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
       PasswordType.memorable => '易记密码',
       PasswordType.pin => 'PIN 码',
     };
-    final savedCount = context.watch<PasswordProvider>().passwords.length;
 
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
@@ -849,15 +857,20 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
               constraints: const BoxConstraints(maxWidth: LumenTokens.maxContentWidth),
               child: Column(
                 children: [
-                  LumenPageIntro(
-                    icon: Icons.password_rounded,
-                    title: '密码生成器',
-                    description: '生成随机/易记/PIN 密码，支持批量导出、本地保存与加密备份。',
-                    chips: [
-                      typeLabel,
-                      '强度 $strengthLabel',
-                      '已保存 $savedCount 项',
-                    ],
+                  // Selector so saving or deleting a password only rebuilds
+                  // this header instead of the whole page and every tab.
+                  Selector<PasswordProvider, int>(
+                    selector: (_, provider) => provider.passwords.length,
+                    builder: (context, savedCount, _) => LumenPageIntro(
+                      icon: Icons.password_rounded,
+                      title: '密码生成器',
+                      description: '生成随机/易记/PIN 密码，支持批量导出、本地保存与加密备份。',
+                      chips: [
+                        typeLabel,
+                        '强度 $strengthLabel',
+                        '已保存 $savedCount 项',
+                      ],
+                    ),
                   ),
                   const SizedBox(height: LumenTokens.sectionGap),
                   ToolQuickActionsBar(
@@ -1537,7 +1550,18 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
           );
         }
 
-        final categories = provider.getAllCategories();
+        // Single pass for the chip counts: `getAllCategories()` plus one
+        // `getPasswordsByCategory()` filter per category scanned (and copied)
+        // the whole list once per category on every rebuild.
+        final categoryCounts = <String, int>{};
+        for (final saved in provider.passwords) {
+          categoryCounts.update(
+            saved.category,
+            (count) => count + 1,
+            ifAbsent: () => 1,
+          );
+        }
+        final categories = categoryCounts.keys.toList()..sort();
         return CustomScrollView(
           slivers: [
             if (categories.isNotEmpty)
@@ -1549,9 +1573,7 @@ class _PasswordGeneratorPageState extends State<PasswordGeneratorPage>
                     physics: const BouncingScrollPhysics(),
                     child: Row(
                       children: categories.map((category) {
-                        final count = provider
-                            .getPasswordsByCategory(category)
-                            .length;
+                        final count = categoryCounts[category] ?? 0;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: Chip(

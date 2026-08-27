@@ -18,6 +18,10 @@ public interface ILocalizationService
 
 public sealed class LocalizationService : ILocalizationService
 {
+    // Every page re-applies dozens of static strings on navigation, language change and
+    // (for chat) each refresh; each miss is a cross-ABI MRT lookup. The cache is cleared
+    // in Apply, which is the only place the resolved language / loader can change.
+    private readonly Dictionary<string, string> _stringCache = new(StringComparer.Ordinal);
     private ResourceLoader? _loader;
     private bool _loaderFailed;
 
@@ -29,6 +33,7 @@ public void Apply(AppLanguage language)
 {
     Current = language;
     CurrentLanguageTag = ResolveLanguageTag(language);
+    _stringCache.Clear();
 
     try
     {
@@ -84,11 +89,18 @@ public void Apply(AppLanguage language)
             return key;
         }
 
+        if (_stringCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
         try
         {
             _loader ??= ResourceLoader.GetForViewIndependentUse();
             var value = _loader.GetString(key);
-            return string.IsNullOrEmpty(value) ? key : value;
+            var resolved = string.IsNullOrEmpty(value) ? key : value;
+            _stringCache[key] = resolved;
+            return resolved;
         }
         catch
         {

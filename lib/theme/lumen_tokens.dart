@@ -73,14 +73,19 @@ class LumenTokens {
   static const double topBarTitleSize = 22;
   static const double navigationBarHeight = 80;
 
-  static BorderRadius get cardBorderRadius =>
-      BorderRadius.circular(cardRadius);
+  // Shared shapes: const so widget builds reuse one canonical instance
+  // instead of allocating a BorderRadius per build.
+  static const BorderRadius cardBorderRadius = BorderRadius.all(
+    Radius.circular(cardRadius),
+  );
 
-  static BorderRadius get panelBorderRadius =>
-      BorderRadius.circular(radiusMd);
+  static const BorderRadius panelBorderRadius = BorderRadius.all(
+    Radius.circular(radiusMd),
+  );
 
-  static BorderRadius get chipBorderRadius =>
-      BorderRadius.circular(iconChipRadius);
+  static const BorderRadius chipBorderRadius = BorderRadius.all(
+    Radius.circular(iconChipRadius),
+  );
 
   static EdgeInsets pagePadding({double? horizontalBoost}) {
     final h = horizontalBoost ?? pagePaddingStart;

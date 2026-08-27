@@ -10,8 +10,10 @@ import 'package:flutter/material.dart';
 /// )
 /// ```
 class GoogleLogoPainter extends CustomPainter {
+  const GoogleLogoPainter();
+
   @override
-  bool shouldRepaint(_) => true;
+  bool shouldRepaint(covariant GoogleLogoPainter oldDelegate) => false;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -77,7 +79,10 @@ class GoogleLogo extends StatelessWidget {
     return Container(
       alignment: Alignment.center,
       color: backgroundColor,
-      child: CustomPaint(painter: GoogleLogoPainter(), size: Size.square(size)),
+      child: CustomPaint(
+        painter: const GoogleLogoPainter(),
+        size: Size.square(size),
+      ),
     );
   }
 }
@@ -101,5 +106,5 @@ class GoogleLogo extends StatelessWidget {
 /// }
 /// ```
 void paintGoogleLogo(Canvas canvas, Size size) {
-  GoogleLogoPainter().paint(canvas, size);
+  const GoogleLogoPainter().paint(canvas, size);
 }

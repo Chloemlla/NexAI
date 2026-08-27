@@ -138,14 +138,28 @@ class PasswordProvider extends ChangeNotifier {
 
   /// 增量合并：按 id upsert
   Future<void> mergeItems(List<dynamic> list) async {
+    // One id→index pass instead of an `indexWhere` scan per incoming item.
+    final indexById = <String, int>{};
+    for (var i = 0; i < _passwords.length; i++) {
+      indexById[_passwords[i].id] = i;
+    }
+    // Keyed by id so a batch that repeats an id upserts the pending addition
+    // rather than adding it twice; insertion-ordered to preserve arrival order.
+    final additions = <String, SavedPassword>{};
+
     for (final item in list) {
       final incoming = SavedPassword.fromJson(item as Map<String, dynamic>);
-      final idx = _passwords.indexWhere((p) => p.id == incoming.id);
-      if (idx == -1) {
-        _passwords.insert(0, incoming);
+      final idx = indexById[incoming.id];
+      if (idx == null) {
+        additions[incoming.id] = incoming;
       } else {
         _passwords[idx] = incoming;
       }
+    }
+
+    if (additions.isNotEmpty) {
+      // Matches the previous insert-at-0 per item: latest arrival ends first.
+      _passwords.insertAll(0, additions.values.toList().reversed);
     }
     notifyListeners();
     await _saveToStorage();
@@ -379,18 +393,22 @@ class PasswordProvider extends ChangeNotifier {
   }) {
     const keyLength = 32;
     final password = utf8.encode(passphrase);
+    // Same algorithm and output; the Hmac is keyed once instead of being
+    // rebuilt 120k times per derivation.
+    final hmac = Hmac(sha256, password);
     final hmacLength = sha256.convert(<int>[]).bytes.length;
     final blockCount = (keyLength + hmacLength - 1) ~/ hmacLength;
     final derived = BytesBuilder(copy: false);
+    final saltedBlock = Uint8List(salt.length + 4);
+    saltedBlock.setRange(0, salt.length, salt);
+    final blockIndex = ByteData.sublistView(saltedBlock, salt.length);
 
     for (var block = 1; block <= blockCount; block++) {
-      final blockBytes = ByteData(4)..setUint32(0, block, Endian.big);
-      var u = Hmac(sha256, password).convert(
-        <int>[...salt, ...blockBytes.buffer.asUint8List()],
-      ).bytes;
-      final t = List<int>.from(u);
+      blockIndex.setUint32(0, block, Endian.big);
+      var u = hmac.convert(saltedBlock).bytes;
+      final t = Uint8List.fromList(u);
       for (var i = 1; i < iterations; i++) {
-        u = Hmac(sha256, password).convert(u).bytes;
+        u = hmac.convert(u).bytes;
         for (var j = 0; j < t.length; j++) {
           t[j] ^= u[j];
         }

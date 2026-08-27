@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +12,31 @@ import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
 
 final _taskItemRegex = RegExp(r'^\s*-\s+\[([ xX])\]\s+', multiLine: true);
+final _searchOperatorRegex = RegExp(
+  r'\b(and|or|not|tag:\S+|is:\S+)\b',
+  caseSensitive: false,
+);
+final _quoteAndSlashRegex = RegExp(r'[/"]');
+final _whitespaceRegex = RegExp(r'\s+');
+
+/// Counts words without allocating the intermediate list `split` would build;
+/// this runs for every visible note card on every rebuild.
+int _countWords(String text) {
+  var count = 0;
+  var inWord = false;
+  for (var i = 0; i < text.length; i++) {
+    final c = text.codeUnitAt(i);
+    final isSpace =
+        c == 0x20 || (c >= 0x09 && c <= 0x0D) || c == 0xA0 || c == 0x3000;
+    if (isSpace) {
+      inWord = false;
+    } else if (!inWord) {
+      inWord = true;
+      count++;
+    }
+  }
+  return count;
+}
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
@@ -27,6 +54,14 @@ class _NotesPageState extends State<NotesPage>
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
 
+  // Debounced query + memoized results: searching scans and regex-matches every
+  // note, so it must not re-run per keystroke or per unrelated rebuild.
+  Timer? _searchDebounce;
+  NotesProvider? _notesProvider;
+  String? _resultsQuery;
+  List<NoteSearchResult>? _resultsCache;
+  List<String> _highlightTerms = const [];
+
   @override
   void initState() {
     super.initState();
@@ -39,11 +74,50 @@ class _NotesPageState extends State<NotesPage>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<NotesProvider>();
+    if (provider != _notesProvider) {
+      _notesProvider?.removeListener(_invalidateSearchCache);
+      _notesProvider = provider;
+      provider.addListener(_invalidateSearchCache);
+    }
+  }
+
+  @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _notesProvider?.removeListener(_invalidateSearchCache);
     _tabController.dispose();
     _searchController.dispose();
     _searchFocus.dispose();
     super.dispose();
+  }
+
+  void _invalidateSearchCache() {
+    _resultsQuery = null;
+    _resultsCache = null;
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    if (value.isEmpty) {
+      if (_searchQuery.isNotEmpty) setState(() => _searchQuery = '');
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted || _searchQuery == value) return;
+      setState(() => _searchQuery = value);
+    });
+  }
+
+  void _clearSearch({bool hideBar = false}) {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      if (hideBar) _showSearch = false;
+    });
   }
 
   @override
@@ -117,7 +191,7 @@ class _NotesPageState extends State<NotesPage>
       child: SearchBar(
         controller: _searchController,
         focusNode: _searchFocus,
-        onChanged: (v) => setState(() => _searchQuery = v),
+        onChanged: _onSearchChanged,
         hintText: '搜索笔记...',
         hintStyle: WidgetStatePropertyAll(
           TextStyle(fontSize: 14, color: cs.onSurfaceVariant.withAlpha(160)),
@@ -128,19 +202,22 @@ class _NotesPageState extends State<NotesPage>
           color: cs.onSurfaceVariant,
         ),
         trailing: [
-          if (_searchQuery.isNotEmpty)
-            IconButton(
-              icon: Icon(
-                Icons.clear_rounded,
-                size: 20,
-                color: cs.onSurfaceVariant,
-              ),
-              onPressed: () {
-                _searchController.clear();
-                setState(() => _searchQuery = '');
-              },
-              tooltip: '清除',
-            ),
+          // Listens to the controller so the clear affordance stays instant
+          // even though the query itself is debounced.
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _searchController,
+            builder: (_, value, __) => value.text.isEmpty
+                ? const SizedBox.shrink()
+                : IconButton(
+                    icon: Icon(
+                      Icons.clear_rounded,
+                      size: 20,
+                      color: cs.onSurfaceVariant,
+                    ),
+                    onPressed: _clearSearch,
+                    tooltip: '清除',
+                  ),
+          ),
           IconButton(
             icon: Icon(
               Icons.tune_rounded,
@@ -156,13 +233,7 @@ class _NotesPageState extends State<NotesPage>
               size: 20,
               color: cs.onSurfaceVariant,
             ),
-            onPressed: () {
-              _searchController.clear();
-              setState(() {
-                _searchQuery = '';
-                _showSearch = false;
-              });
-            },
+            onPressed: () => _clearSearch(hideBar: true),
             tooltip: '关闭搜索',
           ),
         ],
@@ -327,7 +398,7 @@ class _NotesPageState extends State<NotesPage>
   }
 
   Widget _buildSearchResults(ColorScheme cs, NotesProvider provider) {
-    final results = provider.searchNotes(_searchQuery);
+    final results = _searchResults(provider);
     if (results.isEmpty) {
       return Center(
         child: Column(
@@ -356,24 +427,34 @@ class _NotesPageState extends State<NotesPage>
       itemBuilder: (_, idx) {
         final r = results[idx];
         return _NoteCard(
+          key: ValueKey(r.note.id),
           note: r.note,
-          highlightTerms: _extractHighlightTerms(_searchQuery),
+          highlightTerms: _highlightTerms,
         );
       },
     );
   }
 
+  /// Search results for the current query, recomputed only when the query or
+  /// the note set changes (see [_invalidateSearchCache]).
+  List<NoteSearchResult> _searchResults(NotesProvider provider) {
+    final cached = _resultsCache;
+    if (cached != null && _resultsQuery == _searchQuery) return cached;
+    final results = provider.searchNotes(_searchQuery);
+    _highlightTerms = _extractHighlightTerms(_searchQuery);
+    _resultsCache = results;
+    _resultsQuery = _searchQuery;
+    return results;
+  }
+
   List<String> _extractHighlightTerms(String query) {
     final terms = <String>[];
     final cleaned = query
-        .replaceAll(
-          RegExp(r'\b(and|or|not|tag:\S+|is:\S+)\b', caseSensitive: false),
-          '',
-        )
-        .replaceAll(RegExp(r'[/"]'), '')
+        .replaceAll(_searchOperatorRegex, '')
+        .replaceAll(_quoteAndSlashRegex, '')
         .trim();
     if (cleaned.isNotEmpty) {
-      terms.addAll(cleaned.split(RegExp(r'\s+')).where((t) => t.isNotEmpty));
+      terms.addAll(cleaned.split(_whitespaceRegex).where((t) => t.isNotEmpty));
     }
     return terms;
   }
@@ -713,10 +794,7 @@ class _NotesPageState extends State<NotesPage>
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              controller.dispose();
-              Navigator.of(ctx).pop();
-            },
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('取消'),
           ),
           FilledButton(
@@ -725,7 +803,6 @@ class _NotesPageState extends State<NotesPage>
               if (newTag.isNotEmpty && newTag != oldTag) {
                 await context.read<NotesProvider>().renameTag(oldTag, newTag);
               }
-              controller.dispose();
               if (!ctx.mounted) return;
               Navigator.of(ctx).pop();
             },
@@ -733,7 +810,9 @@ class _NotesPageState extends State<NotesPage>
           ),
         ],
       ),
-    );
+      // Dismissing by barrier tap or back gesture also has to free the
+      // controller, so dispose once the route is gone.
+    ).whenComplete(controller.dispose);
   }
 
   void _showDeleteTagDialog(String tag) {
@@ -785,7 +864,10 @@ class _NotesPageState extends State<NotesPage>
       padding: const EdgeInsets.fromLTRB(14, 4, 14, 96),
       itemCount: notes.length,
       separatorBuilder: (context, index) => const SizedBox(height: 6),
-      itemBuilder: (_, index) => _NoteCard(note: notes[index]),
+      itemBuilder: (_, index) {
+        final note = notes[index];
+        return _NoteCard(key: ValueKey(note.id), note: note);
+      },
     );
   }
 
@@ -820,7 +902,6 @@ class _TagTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final parts = tag.name.split('/');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -843,33 +924,12 @@ class _TagTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (isNested)
-                    Row(
-                      children: [
-                        for (int i = 0; i < parts.length; i++) ...[
-                          if (i > 0)
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              size: 14,
-                              color: cs.outline,
-                            ),
-                          Text(
-                            parts[i],
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: i == parts.length - 1
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                              color: i == parts.length - 1
-                                  ? cs.onSurface
-                                  : cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ],
-                    )
+                    _buildNestedName(cs)
                   else
                     Text(
                       '#${tag.name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -903,28 +963,67 @@ class _TagTile extends StatelessWidget {
       ),
     );
   }
+
+  /// Breadcrumb rendering for `parent/child` tags; segments shrink instead of
+  /// overflowing the row on long nested names.
+  Widget _buildNestedName(ColorScheme cs) {
+    final parts = tag.name.split('/');
+    return Row(
+      children: [
+        for (int i = 0; i < parts.length; i++) ...[
+          if (i > 0)
+            Icon(Icons.chevron_right_rounded, size: 14, color: cs.outline),
+          Flexible(
+            child: Text(
+              parts[i],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: i == parts.length - 1
+                    ? FontWeight.w600
+                    : FontWeight.w400,
+                color: i == parts.length - 1
+                    ? cs.onSurface
+                    : cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _NoteCard extends StatelessWidget {
   final Note note;
   final List<String> highlightTerms;
 
-  const _NoteCard({required this.note, this.highlightTerms = const []});
+  const _NoteCard({
+    super.key,
+    required this.note,
+    this.highlightTerms = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final preview = note.content.length > 120
-        ? '${note.content.substring(0, 120)}...'
-        : note.content;
+    final content = note.content;
+    final preview = content.length > 120
+        ? '${content.substring(0, 120)}...'
+        : content;
     final timeStr = _formatTime(note.updatedAt);
     final tags = note.tags;
 
-    final tasks = _taskItemRegex.allMatches(note.content);
-    final taskTotal = tasks.length;
-    final taskDone = tasks
-        .where((m) => m.group(1)!.trim().toLowerCase() == 'x')
-        .length;
+    // One regex pass over the body instead of scanning it twice per rebuild.
+    var taskTotal = 0;
+    var taskDone = 0;
+    for (final m in _taskItemRegex.allMatches(content)) {
+      taskTotal++;
+      final mark = m.group(1)!;
+      if (mark == 'x' || mark == 'X') taskDone++;
+    }
+    final wordCount = _countWords(content);
 
     return LumenActionCard(
       padding: const EdgeInsets.all(16),
@@ -966,6 +1065,8 @@ class _NoteCard extends StatelessWidget {
                     child: highlightTerms.isEmpty
                         ? Text(
                             note.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 16,
@@ -977,6 +1078,7 @@ class _NoteCard extends StatelessWidget {
                         : _HighlightText(
                             text: note.title,
                             terms: highlightTerms,
+                            maxLines: 2,
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 16,
@@ -999,10 +1101,21 @@ class _NoteCard extends StatelessWidget {
                           : cs.onSurfaceVariant,
                     ),
                     onPressed: () async {
-                        try {
-                          await context.read<NotesProvider>().toggleStar(note.id);
-                        } catch (_) {}
-                      },
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        await context.read<NotesProvider>().toggleStar(
+                          note.id,
+                        );
+                      } catch (_) {
+                        // Silent failures left users unsure whether the star stuck.
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('星标更新失败，请重试'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
                     visualDensity: VisualDensity.compact,
                     tooltip: note.isStarred ? '取消星标' : '星标',
                   ),
@@ -1172,7 +1285,7 @@ class _NoteCard extends StatelessWidget {
                   Icon(Icons.text_fields_rounded, size: 14, color: cs.outline),
                   const SizedBox(width: 4),
                   Text(
-                    '${note.content.trim().isEmpty ? 0 : note.content.trim().split(RegExp(r'\s+')).length}',
+                    '$wordCount',
                     style: TextStyle(
                       fontSize: 12,
                       color: cs.outline,
@@ -1188,6 +1301,8 @@ class _NoteCard extends StatelessWidget {
 
   void _confirmDelete(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<NotesProvider>();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1200,9 +1315,33 @@ class _NoteCard extends StatelessWidget {
           ),
           FilledButton(
             onPressed: () async {
-              await context.read<NotesProvider>().deleteNote(note.id);
-              if (!ctx.mounted) return;
-              Navigator.of(ctx).pop();
+              final navigator = Navigator.of(ctx);
+              final deleted = note;
+              try {
+                await provider.deleteNote(deleted.id);
+              } catch (e) {
+                navigator.pop();
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('删除失败：$e'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+              navigator.pop();
+              // Deletion used to happen with no confirmation at all.
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text('已删除 "${deleted.title}"'),
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 5),
+                  action: SnackBarAction(
+                    label: '撤销',
+                    onPressed: () => provider.restoreNote(deleted),
+                  ),
+                ),
+              );
             },
             style: FilledButton.styleFrom(backgroundColor: cs.error),
             child: const Text('删除'),
@@ -1252,20 +1391,22 @@ class _HighlightText extends StatelessWidget {
 
     final spans = <TextSpan>[];
     final lower = text.toLowerCase();
+    // Lowercase each term once instead of once per scan position.
+    final lowerTerms = terms.map((t) => t.toLowerCase()).toList();
     int pos = 0;
 
     while (pos < text.length) {
       int earliest = text.length;
-      String? matchedTerm;
-      for (final term in terms) {
-        final idx = lower.indexOf(term.toLowerCase(), pos);
+      int matchedLength = 0;
+      for (int i = 0; i < lowerTerms.length; i++) {
+        final idx = lower.indexOf(lowerTerms[i], pos);
         if (idx != -1 && idx < earliest) {
           earliest = idx;
-          matchedTerm = term;
+          matchedLength = lowerTerms[i].length;
         }
       }
 
-      if (matchedTerm == null) {
+      if (matchedLength == 0) {
         spans.add(TextSpan(text: text.substring(pos)));
         break;
       }
@@ -1275,14 +1416,14 @@ class _HighlightText extends StatelessWidget {
       }
       spans.add(
         TextSpan(
-          text: text.substring(earliest, earliest + matchedTerm.length),
+          text: text.substring(earliest, earliest + matchedLength),
           style: TextStyle(
             backgroundColor: highlightColor,
             fontWeight: FontWeight.w600,
           ),
         ),
       );
-      pos = earliest + matchedTerm.length;
+      pos = earliest + matchedLength;
     }
 
     return RichText(

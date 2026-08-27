@@ -47,8 +47,18 @@ class MarkdownRenderer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
-    final styles = MarkdownRendererStyles.resolve(context, settings, cssTheme);
+    // Font size / family are the only settings markdown styling reads, so
+    // selecting them keeps rendered messages out of the rebuild path of every
+    // unrelated setting change.
+    final styles = MarkdownRendererStyles.resolve(
+      context,
+      context.read<SettingsProvider>(),
+      cssTheme,
+      fontSize: context.select<SettingsProvider, double>((s) => s.fontSize),
+      fontFamily: context.select<SettingsProvider, String?>(
+        (s) => s.effectiveFontFamily,
+      ),
+    );
     final processed = preprocessChemicalMarkdown(data);
 
     return ConstrainedBox(
@@ -99,6 +109,41 @@ class MarkdownRenderer extends StatelessWidget {
       ),
     );
   }
+}
+
+@immutable
+class _MarkdownStylesKey {
+  const _MarkdownStylesKey(
+    this.cssTheme,
+    this.brightness,
+    this.colorScheme,
+    this.fontSize,
+    this.fontFamily,
+  );
+
+  final CssTheme? cssTheme;
+  final Brightness brightness;
+  final ColorScheme colorScheme;
+  final double fontSize;
+  final String? fontFamily;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _MarkdownStylesKey &&
+      identical(other.cssTheme, cssTheme) &&
+      other.brightness == brightness &&
+      other.colorScheme == colorScheme &&
+      other.fontSize == fontSize &&
+      other.fontFamily == fontFamily;
+
+  @override
+  int get hashCode => Object.hash(
+    identityHashCode(cssTheme),
+    brightness,
+    colorScheme,
+    fontSize,
+    fontFamily,
+  );
 }
 
 class MarkdownRendererStyles {
@@ -159,9 +204,41 @@ class MarkdownRendererStyles {
   factory MarkdownRendererStyles.resolve(
     BuildContext context,
     SettingsProvider settings,
-    CssTheme? cssTheme,
-  ) {
+    CssTheme? cssTheme, {
+    double? fontSize,
+    String? fontFamily,
+  }) {
     final theme = Theme.of(context);
+    final key = _MarkdownStylesKey(
+      cssTheme,
+      theme.brightness,
+      theme.colorScheme,
+      fontSize ?? settings.fontSize,
+      fontFamily ?? settings.effectiveFontFamily,
+    );
+
+    final cached = _resolveCache[key];
+    if (cached != null) return cached;
+
+    final resolved = _resolve(theme, cssTheme, key.fontSize, key.fontFamily);
+    // Bounded: at most one entry per (theme, font) pair actually in use.
+    if (_resolveCache.length >= 6) _resolveCache.clear();
+    _resolveCache[key] = resolved;
+    return resolved;
+  }
+
+  /// Resolving GitHub-CSS selectors costs ~15 selector matches plus a dozen
+  /// `copyWith` allocations, and every markdown segment of every message asks
+  /// for it on every build, so identical inputs reuse one immutable result.
+  static final Map<_MarkdownStylesKey, MarkdownRendererStyles> _resolveCache =
+      {};
+
+  static MarkdownRendererStyles _resolve(
+    ThemeData theme,
+    CssTheme? cssTheme,
+    double fontSize,
+    String? fontFamily,
+  ) {
     final cs = theme.colorScheme;
     final baseTextColor = resolveCssColor(
       cssTheme,
@@ -172,8 +249,8 @@ class MarkdownRendererStyles {
     );
 
     final baseBodyStyle = TextStyle(
-      fontSize: settings.fontSize,
-      fontFamily: settings.effectiveFontFamily,
+      fontSize: fontSize,
+      fontFamily: fontFamily,
       color: baseTextColor,
       height: 1.65,
       letterSpacing: 0.1,
@@ -181,8 +258,8 @@ class MarkdownRendererStyles {
 
     final themedBodyStyle = sanitizeMarkdownBodyStyle(
       resolveCssTextStyle(cssTheme, '.markdown-body', baseBodyStyle).copyWith(
-        fontSize: settings.fontSize,
-        fontFamily: settings.effectiveFontFamily,
+        fontSize: fontSize,
+        fontFamily: fontFamily,
         color: baseTextColor,
         height: 1.65,
         letterSpacing: 0.1,
@@ -221,7 +298,7 @@ class MarkdownRendererStyles {
       '.markdown-body code',
       themedBodyStyle.copyWith(
         fontFamily: 'JetBrainsMonoNexAI',
-        fontSize: (themedBodyStyle.fontSize ?? settings.fontSize) * 0.92,
+        fontSize: (themedBodyStyle.fontSize ?? fontSize) * 0.92,
         height: 1.55,
       ),
     );
@@ -235,7 +312,7 @@ class MarkdownRendererStyles {
       ),
     );
 
-    final bodyFontSize = themedBodyStyle.fontSize ?? settings.fontSize;
+    final bodyFontSize = themedBodyStyle.fontSize ?? fontSize;
 
     return MarkdownRendererStyles(
       bodyStyle: themedBodyStyle,
@@ -399,17 +476,19 @@ List<MarkdownComponent> buildInlineComponents(
   ];
 }
 
+final _blockQuotePattern = RegExp(
+  r'(?:(?:^)\ *>[^\n]+)(?:(?:\n)\ *>[^\n]+)*',
+  dotAll: true,
+  multiLine: true,
+);
+
 class StyledBlockQuoteMd extends InlineMd {
   StyledBlockQuoteMd(this.styles);
 
   final MarkdownRendererStyles styles;
 
   @override
-  RegExp get exp => RegExp(
-    r'(?:(?:^)\ *>[^\n]+)(?:(?:\n)\ *>[^\n]+)*',
-    dotAll: true,
-    multiLine: true,
-  );
+  RegExp get exp => _blockQuotePattern;
 
   @override
   InlineSpan span(BuildContext context, String text, GptMarkdownConfig config) {

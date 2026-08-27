@@ -8,6 +8,10 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 class ChatSpeechService {
   ChatSpeechService();
 
+  /// Shared instance for one-off TTS playback, so a tap does not allocate a
+  /// new platform speech engine (and leak its channel) every time.
+  static final ChatSpeechService shared = ChatSpeechService();
+
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
   bool _speechReady = false;
@@ -87,6 +91,12 @@ class ChatSpeechService {
   }
 
   Future<void> stopSpeaking() async {
+    await _tts.stop();
+  }
+
+  /// Releases the mic and the TTS engine; safe to call more than once.
+  Future<void> dispose() async {
+    await cancelListening();
     await _tts.stop();
   }
 }

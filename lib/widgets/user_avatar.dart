@@ -47,6 +47,11 @@ class UserAvatar extends StatelessWidget {
       return fallback;
     }
 
+    // Decode at display resolution: profile photos are often 512px+ but render
+    // at a ~48px avatar, so full-size decoding wastes heap and decode time.
+    // Only the width is constrained so the source aspect ratio is preserved.
+    final decodeWidth = (size * MediaQuery.devicePixelRatioOf(context)).round();
+
     return ClipOval(
       child: SizedBox(
         width: size,
@@ -56,6 +61,7 @@ class UserAvatar extends StatelessWidget {
           fit: BoxFit.cover,
           width: size,
           height: size,
+          cacheWidth: decodeWidth,
           gaplessPlayback: true,
           filterQuality: FilterQuality.medium,
           errorBuilder: (context, error, stackTrace) => fallback,

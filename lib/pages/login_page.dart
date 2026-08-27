@@ -23,6 +23,8 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
+  static final _usernamePattern = RegExp(r'^[a-zA-Z0-9_-]+$');
+
   late TabController _tabController;
   final _loginFormKey = GlobalKey<FormState>();
   final _registerFormKey = GlobalKey<FormState>();
@@ -30,14 +32,14 @@ class _LoginPageState extends State<LoginPage>
   // Login fields
   final _loginIdentifierController = TextEditingController();
   final _loginPasswordController = TextEditingController();
-  bool _loginPasswordVisible = false;
+  final _loginPasswordVisible = ValueNotifier<bool>(false);
 
   // Register fields
   final _registerUsernameController = TextEditingController();
   final _registerEmailController = TextEditingController();
   final _registerPasswordController = TextEditingController();
   final _registerConfirmPasswordController = TextEditingController();
-  bool _registerPasswordVisible = false;
+  final _registerPasswordVisible = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -54,10 +56,12 @@ class _LoginPageState extends State<LoginPage>
     _tabController.dispose();
     _loginIdentifierController.dispose();
     _loginPasswordController.dispose();
+    _loginPasswordVisible.dispose();
     _registerUsernameController.dispose();
     _registerEmailController.dispose();
     _registerPasswordController.dispose();
     _registerConfirmPasswordController.dispose();
+    _registerPasswordVisible.dispose();
     super.dispose();
   }
 
@@ -151,6 +155,7 @@ class _LoginPageState extends State<LoginPage>
                           ),
                           IconButton(
                             icon: const Icon(Icons.close, size: 18),
+                            tooltip: '关闭提示',
                             onPressed: auth.clearError,
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
@@ -319,33 +324,36 @@ class _LoginPageState extends State<LoginPage>
                 v == null || v.trim().isEmpty ? '请输入用户名或邮箱' : null,
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: _loginPasswordController,
-            decoration: InputDecoration(
-              labelText: '密码',
-              prefixIcon: const Icon(Icons.lock_outline),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _loginPasswordVisible
-                      ? Icons.visibility_off
-                      : Icons.visibility,
-                ),
-                onPressed: () => setState(
-                  () => _loginPasswordVisible = !_loginPasswordVisible,
+          // Toggling visibility rebuilds only this field instead of the page.
+          ValueListenableBuilder<bool>(
+            valueListenable: _loginPasswordVisible,
+            builder: (context, visible, _) => TextFormField(
+              controller: _loginPasswordController,
+              decoration: InputDecoration(
+                labelText: '密码',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    visible ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  tooltip: visible ? '隐藏密码' : '显示密码',
+                  onPressed: () => _loginPasswordVisible.value = !visible,
                 ),
               ),
+              obscureText: !visible,
+              textInputAction: TextInputAction.done,
+              validator: (v) => v == null || v.isEmpty ? '请输入密码' : null,
+              onFieldSubmitted: (_) => _handleLogin(auth).catchError((_) {}),
             ),
-            obscureText: !_loginPasswordVisible,
-            textInputAction: TextInputAction.done,
-            validator: (v) => v == null || v.isEmpty ? '请输入密码' : null,
-            onFieldSubmitted: (_) => _handleLogin(auth).catchError((_) {}),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Flexible(
                 child: TextButton.icon(
-                  onPressed: () => _handlePasskeyLogin(auth),
+                  onPressed: auth.isLoading
+                      ? null
+                      : () => _handlePasskeyLogin(auth),
                   icon: const Icon(Icons.fingerprint_rounded, size: 18),
                   label: const Text(
                     'Passkey 登录',
@@ -356,7 +364,9 @@ class _LoginPageState extends State<LoginPage>
               ),
               Flexible(
                 child: TextButton.icon(
-                  onPressed: () => _handleDiscoverablePasskeyLogin(auth),
+                  onPressed: auth.isLoading
+                      ? null
+                      : () => _handleDiscoverablePasskeyLogin(auth),
                   icon: const Icon(Icons.key_rounded, size: 18),
                   label: const Text(
                     '免输账号',
@@ -367,7 +377,9 @@ class _LoginPageState extends State<LoginPage>
               ),
               const Spacer(),
               TextButton(
-                onPressed: () => _showForgotPasswordDialog(),
+                onPressed: auth.isLoading
+                    ? null
+                    : () => _showForgotPasswordDialog(),
                 child: const Text('忘记密码？'),
               ),
             ],
@@ -409,7 +421,7 @@ class _LoginPageState extends State<LoginPage>
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return '请输入用户名';
                 if (v.length < 3) return '用户名至少3个字符';
-                if (!RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(v)) {
+                if (!_usernamePattern.hasMatch(v)) {
                   return '只能包含字母、数字、下划线';
                 }
                 return null;
@@ -431,30 +443,30 @@ class _LoginPageState extends State<LoginPage>
               },
             ),
             const SizedBox(height: 12),
-            TextFormField(
-              controller: _registerPasswordController,
-              decoration: InputDecoration(
-                labelText: '密码',
-                prefixIcon: const Icon(Icons.lock_outline),
-                hintText: '至少6位',
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _registerPasswordVisible
-                        ? Icons.visibility_off
-                        : Icons.visibility,
-                  ),
-                  onPressed: () => setState(
-                    () => _registerPasswordVisible = !_registerPasswordVisible,
+            ValueListenableBuilder<bool>(
+              valueListenable: _registerPasswordVisible,
+              builder: (context, visible, _) => TextFormField(
+                controller: _registerPasswordController,
+                decoration: InputDecoration(
+                  labelText: '密码',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  hintText: '至少6位',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      visible ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    tooltip: visible ? '隐藏密码' : '显示密码',
+                    onPressed: () => _registerPasswordVisible.value = !visible,
                   ),
                 ),
+                obscureText: !visible,
+                textInputAction: TextInputAction.next,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return '请输入密码';
+                  if (v.length < 6) return '密码至少6个字符';
+                  return null;
+                },
               ),
-              obscureText: !_registerPasswordVisible,
-              textInputAction: TextInputAction.next,
-              validator: (v) {
-                if (v == null || v.isEmpty) return '请输入密码';
-                if (v.length < 6) return '密码至少6个字符';
-                return null;
-              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -639,7 +651,7 @@ class _LoginPageState extends State<LoginPage>
 
   void _showForgotPasswordDialog() {
     final emailController = TextEditingController();
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('忘记密码'),
@@ -653,37 +665,43 @@ class _LoginPageState extends State<LoginPage>
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              emailController.dispose();
-              Navigator.of(ctx).pop();
-            },
+            onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('取消'),
           ),
-          FilledButton(
-            onPressed: () async {
-              if (emailController.text.trim().isEmpty) return;
-              Navigator.of(ctx).pop();
-              try {
-                await NexaiAuthApi.forgotPassword(
-                  email: emailController.text.trim(),
-                );
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('如果邮箱已注册，您将收到密码重置指引')),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('发送失败：$e')),
-                );
-              } finally {
-                emailController.dispose();
-              }
+          // Stays disabled while the field is empty; it used to silently do
+          // nothing when tapped without an address.
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: emailController,
+            builder: (_, value, _) {
+              final email = value.text.trim();
+              return FilledButton(
+                onPressed: email.isEmpty
+                    ? null
+                    : () async {
+                        Navigator.of(ctx).pop();
+                        try {
+                          await NexaiAuthApi.forgotPassword(email: email);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('如果邮箱已注册，您将收到密码重置指引'),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('发送失败：$e')),
+                          );
+                        }
+                      },
+                child: const Text('发送'),
+              );
             },
-            child: const Text('发送'),
           ),
         ],
       ),
-    );
+      // Single disposal path: the controller leaked whenever the dialog was
+      // dismissed by the barrier or the back button.
+    ).whenComplete(emailController.dispose);
   }
 }

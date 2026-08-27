@@ -3,10 +3,61 @@ import 'package:flutter/services.dart';
 
 import 'lumen_tokens.dart';
 
+@immutable
+class _LumenThemeKey {
+  const _LumenThemeKey(this.colorScheme, this.fontFamily);
+
+  final ColorScheme colorScheme;
+  final String? fontFamily;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _LumenThemeKey &&
+      other.colorScheme == colorScheme &&
+      other.fontFamily == fontFamily;
+
+  @override
+  int get hashCode => Object.hash(colorScheme, fontFamily);
+}
+
 class LumenTheme {
   LumenTheme._();
 
+  // The app rebuilds both themes on every SettingsProvider notification, and
+  // ColorScheme/ThemeData are pure functions of their inputs, so recent results
+  // are reused instead of rebuilt. Bounded to the few palettes actually in use.
+  static final Map<Color?, ColorScheme> _lightSchemeCache = {};
+  static final Map<Color?, ColorScheme> _darkSchemeCache = {};
+  static final Map<_LumenThemeKey, ThemeData> _themeCache = {};
+
   static ColorScheme lightColorScheme({Color? accentOverride}) {
+    final cached = _lightSchemeCache[accentOverride];
+    if (cached != null) return cached;
+    if (_lightSchemeCache.length >= 4) _lightSchemeCache.clear();
+    return _lightSchemeCache[accentOverride] = _lightColorScheme(
+      accentOverride,
+    );
+  }
+
+  static ColorScheme darkColorScheme({Color? accentOverride}) {
+    final cached = _darkSchemeCache[accentOverride];
+    if (cached != null) return cached;
+    if (_darkSchemeCache.length >= 4) _darkSchemeCache.clear();
+    return _darkSchemeCache[accentOverride] = _darkColorScheme(accentOverride);
+  }
+
+  static ThemeData build({
+    required ColorScheme colorScheme,
+    String? fontFamily,
+  }) {
+    final key = _LumenThemeKey(colorScheme, fontFamily);
+    final cached = _themeCache[key];
+    if (cached != null) return cached;
+    if (_themeCache.length >= 4) _themeCache.clear();
+    return _themeCache[key] = _build(colorScheme, fontFamily);
+  }
+
+  static ColorScheme _lightColorScheme(Color? accentOverride) {
     final base = ColorScheme(
       brightness: Brightness.light,
       primary: accentOverride ?? LumenTokens.teal,
@@ -47,7 +98,7 @@ class LumenTheme {
     return base;
   }
 
-  static ColorScheme darkColorScheme({Color? accentOverride}) {
+  static ColorScheme _darkColorScheme(Color? accentOverride) {
     final primary = accentOverride ?? LumenTokens.tealDark;
     return ColorScheme(
       brightness: Brightness.dark,
@@ -88,10 +139,7 @@ class LumenTheme {
     );
   }
 
-  static ThemeData build({
-    required ColorScheme colorScheme,
-    String? fontFamily,
-  }) {
+  static ThemeData _build(ColorScheme colorScheme, String? fontFamily) {
     final base = ThemeData(
       useMaterial3: true,
       brightness: colorScheme.brightness,

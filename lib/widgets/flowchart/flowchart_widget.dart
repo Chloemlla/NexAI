@@ -19,6 +19,8 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
   late MermaidGraph _graph;
   late FlowchartLayout _layout;
   String? _parseError;
+  final TransformationController _transformController =
+      TransformationController();
 
   @override
   void initState() {
@@ -32,6 +34,12 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
     if (oldWidget.mermaidSource != widget.mermaidSource) {
       _parse();
     }
+  }
+
+  @override
+  void dispose() {
+    _transformController.dispose();
+    super.dispose();
   }
 
   void _parse() {
@@ -52,8 +60,9 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     if (_parseError != null || _graph.nodes.isEmpty) {
       return _fallbackBlock(
@@ -169,10 +178,21 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const Spacer(),
-                Text(
-                  '${_graph.nodes.length} nodes · ${_graph.edges.length} edges',
-                  style: TextStyle(fontSize: 10, color: inactiveColor),
+                Expanded(
+                  child: Text(
+                    '${_graph.nodes.length} nodes · ${_graph.edges.length} edges',
+                    textAlign: TextAlign.right,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 10, color: inactiveColor),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () =>
+                      _transformController.value = Matrix4.identity(),
+                  icon: const Icon(Icons.center_focus_strong_rounded, size: 16),
+                  color: inactiveColor,
+                  tooltip: 'Reset view',
                 ),
               ],
             ),
@@ -184,23 +204,30 @@ class _FlowchartWidgetState extends State<FlowchartWidget> {
               bottomRight: Radius.circular(10),
             ),
             child: SizedBox(
-              height: math.max(200.0, _layout.totalHeight),
+              // Cap the height so a tall diagram stays a pannable viewport
+              // instead of stretching the surrounding message list.
+              height: math.min(math.max(200.0, _layout.totalHeight), 440.0),
               width: double.infinity,
               child: InteractiveViewer(
+                transformationController: _transformController,
                 constrained: false,
                 boundaryMargin: const EdgeInsets.all(60),
                 minScale: 0.3,
                 maxScale: 3.0,
-                child: CustomPaint(
-                  size: Size(_layout.totalWidth, _layout.totalHeight),
-                  painter: FlowchartPainter(
-                    graph: _graph,
-                    layout: _layout,
-                    nodeColor: nodeColor,
-                    nodeBorderColor: nodeBorder,
-                    textColor: textColor,
-                    edgeColor: edgeColor,
-                    labelColor: labelColor,
+                // Keeps pan & zoom a pure re-composite of a cached raster
+                // instead of re-running the whole canvas each frame.
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    size: Size(_layout.totalWidth, _layout.totalHeight),
+                    painter: FlowchartPainter(
+                      graph: _graph,
+                      layout: _layout,
+                      nodeColor: nodeColor,
+                      nodeBorderColor: nodeBorder,
+                      textColor: textColor,
+                      edgeColor: edgeColor,
+                      labelColor: labelColor,
+                    ),
                   ),
                 ),
               ),

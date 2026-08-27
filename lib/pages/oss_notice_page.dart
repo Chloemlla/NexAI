@@ -41,7 +41,8 @@ class _OssNoticePageState extends State<OssNoticePage> {
     try {
       await context.read<SettingsProvider>().acknowledgeOssNotice();
     } catch (_) {
-      // Silently handle errors during acknowledgment
+      // The button is the only way forward, so a failure must be visible.
+      SmartDialog.showToast('保存失败，请重试');
     } finally {
       if (mounted) {
         setState(() => _submitting = false);
@@ -51,10 +52,12 @@ class _OssNoticePageState extends State<OssNoticePage> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    final mq = MediaQuery.of(context);
-    final hPad = LumenTokens.horizontalPaddingForWidth(mq.size.width);
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final tt = theme.textTheme;
+    final hPad = LumenTokens.horizontalPaddingForWidth(
+      MediaQuery.sizeOf(context).width,
+    );
 
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
@@ -364,8 +367,9 @@ class _DependencyTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final tt = theme.textTheme;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -374,7 +378,7 @@ class _DependencyTile extends StatelessWidget {
         border: Border.all(color: cs.outlineVariant.withAlpha(110)),
       ),
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
           childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),

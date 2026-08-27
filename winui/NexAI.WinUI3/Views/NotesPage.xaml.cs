@@ -79,22 +79,25 @@ public sealed partial class NotesPage : Page
 
     private void RefreshList(bool loadEditor)
     {
-        var notes = _notesStore.Notes
+        // INotesStore.Notes hands back a fresh deep clone of every note on each read,
+        // so take a single snapshot per refresh.
+        var all = _notesStore.Notes;
+        var notes = all
             .Where(n =>
                 string.IsNullOrWhiteSpace(_query) ||
                 n.Title.Contains(_query, StringComparison.OrdinalIgnoreCase) ||
                 n.Content.Contains(_query, StringComparison.OrdinalIgnoreCase))
             .ToList();
         NotesList.ItemsSource = notes;
-        NotesCountText.Text = _notesStore.Notes.Count == 1
-            ? _localization.GetString("Notes.Count", _notesStore.Notes.Count)
-            : _localization.GetString("Notes.CountPlural", _notesStore.Notes.Count);
+        NotesCountText.Text = all.Count == 1
+            ? _localization.GetString("Notes.Count", all.Count)
+            : _localization.GetString("Notes.CountPlural", all.Count);
 
         // Never clobber an in-progress editor from list/store refresh.
         if (!loadEditor && _isDirty)
         {
             NotesList.SelectedItem = notes.FirstOrDefault(n => n.Id == _selectedId);
-            var starred = _notesStore.Notes.FirstOrDefault(n => n.Id == _selectedId);
+            var starred = all.FirstOrDefault(n => n.Id == _selectedId);
             if (starred is not null)
             {
                 StarButton.Content = starred.IsStarred

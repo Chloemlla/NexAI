@@ -10,6 +10,8 @@ import '../models/message.dart' show asStringMap;
 import '../models/note.dart';
 import '../utils/atomic_file_writer.dart';
 
+final _doubleSpacePattern = RegExp(r'  +');
+
 /// Generates a random UUID v4 without external dependencies.
 String _newId() {
   final rng = Random.secure();
@@ -26,7 +28,46 @@ class NotesProvider extends ChangeNotifier {
   // Backlink index: targetNoteId -> set of sourceNoteIds
   Map<String, Set<String>> _backlinks = {};
 
-  // Dio instance for AI title generation
+  // Derived lookups/caches, rebuilt lazily after any mutation.
+  Map<String, Note>? _byTitle;
+  Map<String, Note>? _byId;
+  List<TagInfo>? _tagsCache;
+  final Map<String, GraphData> _graphCache = {};
+
+  void _invalidateDerived() {
+    _byTitle = null;
+    _byId = null;
+    _tagsCache = null;
+    _graphCache.clear();
+  }
+
+  @override
+  void notifyListeners() {
+    _invalidateDerived();
+    super.notifyListeners();
+  }
+
+  Map<String, Note> get _titleIndex {
+    var index = _byTitle;
+    if (index != null) return index;
+    index = <String, Note>{};
+    // First note wins, matching the previous `where(...).firstOrNull` scan.
+    for (final note in _notes) {
+      index.putIfAbsent(note.title.toLowerCase().trim(), () => note);
+    }
+    _byTitle = index;
+    return index;
+  }
+
+  Map<String, Note> get _idIndex {
+    var index = _byId;
+    if (index != null) return index;
+    index = {for (final note in _notes) note.id: note};
+    _byId = index;
+    return index;
+  }
+
+  /// Dio instance for AI title generation
   final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 15),
@@ -36,6 +77,9 @@ class NotesProvider extends ChangeNotifier {
   );
 
   List<Note> get notes => _notes;
+
+  /// Look up a note by id without scanning the whole list.
+  Note? noteById(String id) => _idIndex[id];
 
   /// All starred notes
   List<Note> get starredNotes => _notes.where((n) => n.isStarred).toList();
@@ -49,6 +93,8 @@ class NotesProvider extends ChangeNotifier {
 
   /// All unique tags across all notes, sorted by frequency descending
   List<TagInfo> get allTags {
+    final cached = _tagsCache;
+    if (cached != null) return cached;
     final freq = <String, int>{};
     for (final note in _notes) {
       for (final tag in note.tags) {
@@ -57,7 +103,9 @@ class NotesProvider extends ChangeNotifier {
     }
     final entries = freq.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    return entries.map((e) => TagInfo(e.key, e.value)).toList();
+    final tags = entries.map((e) => TagInfo(e.key, e.value)).toList();
+    _tagsCache = tags;
+    return tags;
   }
 
   /// Get notes filtered by tag
@@ -68,10 +116,14 @@ class NotesProvider extends ChangeNotifier {
 
   /// Rebuild the backlink index by scanning all notes for wiki-links
   void _rebuildBacklinks() {
+    // Runs before notifyListeners on mutation paths, so stale indexes must go
+    // first — the title index below is what resolves link targets.
+    _invalidateDerived();
     _backlinks = {};
+    final byTitle = _titleIndex;
     for (final note in _notes) {
       for (final link in note.wikiLinks) {
-        final target = _findNoteByTitle(link.target);
+        final target = byTitle[link.target.toLowerCase().trim()];
         if (target != null) {
           _backlinks.putIfAbsent(target.id, () => {}).add(note.id);
         }
@@ -80,12 +132,8 @@ class NotesProvider extends ChangeNotifier {
   }
 
   /// Find a note by title (case-insensitive)
-  Note? _findNoteByTitle(String title) {
-    final lower = title.toLowerCase().trim();
-    return _notes
-        .where((n) => n.title.toLowerCase().trim() == lower)
-        .firstOrNull;
-  }
+  Note? _findNoteByTitle(String title) =>
+      _titleIndex[title.toLowerCase().trim()];
 
   /// Find a note by title (public)
   Note? findNoteByTitle(String title) => _findNoteByTitle(title);
@@ -99,7 +147,7 @@ class NotesProvider extends ChangeNotifier {
 
   /// Get all notes that the given note links TO (outgoing)
   List<Note> getOutgoingLinks(String noteId) {
-    final note = _notes.where((n) => n.id == noteId).firstOrNull;
+    final note = _idIndex[noteId];
     if (note == null) return [];
     final targets = <Note>[];
     for (final link in note.wikiLinks) {
@@ -112,7 +160,7 @@ class NotesProvider extends ChangeNotifier {
   /// Find unlinked mentions: notes whose title appears in the given note's
   /// content but are not linked via [[...]]
   List<Note> getUnlinkedMentions(String noteId) {
-    final note = _notes.where((n) => n.id == noteId).firstOrNull;
+    final note = _idIndex[noteId];
     if (note == null) return [];
     final linkedNames = note.linkedNoteNames;
     final body = note.bodyContent.toLowerCase();
@@ -157,6 +205,12 @@ class NotesProvider extends ChangeNotifier {
 
   /// Get graph data: nodes and edges for all notes
   GraphData getGraphData({String? tagFilter, bool? starredOnly}) {
+    // Rebuilding this walks every note's wiki-links; callers hit it from
+    // build(), so memoize per filter until the note set changes.
+    final cacheKey = '${tagFilter ?? ''}\u0000${starredOnly ?? ''}';
+    final cached = _graphCache[cacheKey];
+    if (cached != null) return cached;
+
     var filtered = _notes.toList();
     if (tagFilter != null) {
       filtered = filtered.where((n) => n.tags.contains(tagFilter)).toList();
@@ -165,6 +219,7 @@ class NotesProvider extends ChangeNotifier {
       filtered = filtered.where((n) => n.isStarred).toList();
     }
     final filteredIds = filtered.map((n) => n.id).toSet();
+    final byTitle = _titleIndex;
 
     final nodes = <GraphNode>[];
     final edges = <GraphEdge>[];
@@ -184,14 +239,16 @@ class NotesProvider extends ChangeNotifier {
       );
 
       for (final link in note.wikiLinks) {
-        final target = _findNoteByTitle(link.target);
+        final target = byTitle[link.target.toLowerCase().trim()];
         if (target != null && filteredIds.contains(target.id)) {
           edges.add(GraphEdge(sourceId: note.id, targetId: target.id));
         }
       }
     }
 
-    return GraphData(nodes: nodes, edges: edges);
+    final data = GraphData(nodes: nodes, edges: edges);
+    _graphCache[cacheKey] = data;
+    return data;
   }
 
   Future<File> _getFile() async {
@@ -257,11 +314,11 @@ class NotesProvider extends ChangeNotifier {
   }
 
   Future<void> updateNote(String id, {String? title, String? content}) async {
-    final idx = _notes.indexWhere((n) => n.id == id);
-    if (idx == -1) return;
-    if (title != null) _notes[idx].title = title;
-    if (content != null) _notes[idx].content = content;
-    _notes[idx].updatedAt = DateTime.now();
+    final note = _idIndex[id];
+    if (note == null) return;
+    if (title != null) note.title = title;
+    if (content != null) note.content = content;
+    note.updatedAt = DateTime.now();
     _rebuildBacklinks();
     notifyListeners();
     await _save();
@@ -274,10 +331,19 @@ class NotesProvider extends ChangeNotifier {
     await _save();
   }
 
+  /// Re-insert a previously deleted note (undo support for list deletions).
+  Future<void> restoreNote(Note note) async {
+    if (_idIndex.containsKey(note.id)) return;
+    _notes.add(note);
+    _notes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    _rebuildBacklinks();
+    notifyListeners();
+    await _save();
+  }
+
   Future<void> appendToNote(String id, String text) async {
-    final idx = _notes.indexWhere((n) => n.id == id);
-    if (idx == -1) return;
-    final note = _notes[idx];
+    final note = _idIndex[id];
+    if (note == null) return;
     note.content = note.content.isEmpty
         ? text
         : '${note.content}\n\n---\n\n$text';
@@ -290,9 +356,9 @@ class NotesProvider extends ChangeNotifier {
   // ─── Star ───
 
   Future<void> toggleStar(String id) async {
-    final idx = _notes.indexWhere((n) => n.id == id);
-    if (idx == -1) return;
-    _notes[idx].isStarred = !_notes[idx].isStarred;
+    final note = _idIndex[id];
+    if (note == null) return;
+    note.isStarred = !note.isStarred;
     notifyListeners();
     await _save();
   }
@@ -300,9 +366,9 @@ class NotesProvider extends ChangeNotifier {
   // ─── Recent ───
 
   Future<void> markViewed(String id) async {
-    final idx = _notes.indexWhere((n) => n.id == id);
-    if (idx == -1) return;
-    _notes[idx].lastViewedAt = DateTime.now();
+    final note = _idIndex[id];
+    if (note == null) return;
+    note.lastViewedAt = DateTime.now();
     // Don't notifyListeners here to avoid rebuild loops
     await _save();
   }
@@ -312,9 +378,10 @@ class NotesProvider extends ChangeNotifier {
   /// Rename a tag across all notes
   Future<void> renameTag(String oldTag, String newTag) async {
     if (oldTag == newTag || newTag.isEmpty) return;
+    final pattern = RegExp('#${RegExp.escape(oldTag)}(?![\\w/])');
     for (final note in _notes) {
       if (note.tags.contains(oldTag)) {
-        note.content = note.content.replaceAll(RegExp('#$oldTag(?![\\w/])'), '#$newTag');
+        note.content = note.content.replaceAll(pattern, '#$newTag');
         note.updatedAt = DateTime.now();
       }
     }
@@ -329,12 +396,13 @@ class NotesProvider extends ChangeNotifier {
 
   /// Delete a tag from all notes
   Future<void> deleteTag(String tag) async {
+    final pattern = RegExp('#${RegExp.escape(tag)}(?![\\w/])');
     for (final note in _notes) {
       if (note.tags.contains(tag)) {
         // Remove the tag but keep surrounding text clean
-        note.content = note.content.replaceAll(RegExp('#$tag(?![\\w/])'), '');
+        note.content = note.content.replaceAll(pattern, '');
         // Clean up double spaces
-        note.content = note.content.replaceAll(RegExp(r'  +'), ' ');
+        note.content = note.content.replaceAll(_doubleSpacePattern, ' ');
         note.updatedAt = DateTime.now();
       }
     }
@@ -409,6 +477,13 @@ class NotesProvider extends ChangeNotifier {
       }
     }
 
+    // Query-level work is loop-invariant: tokenise the query and extract the
+    // highlight terms once instead of per candidate note.
+    final parser = regexSearch == null ? _QueryParser(searchQuery) : null;
+    final terms = regexSearch == null
+        ? _extractTerms(searchQuery).map((t) => t.toLowerCase()).toList()
+        : const <String>[];
+
     for (final note in candidates) {
       final fullText = '${note.title}\n${note.content}';
       final matches = <SearchMatch>[];
@@ -419,46 +494,45 @@ class NotesProvider extends ChangeNotifier {
             SearchMatch(start: m.start, end: m.end, text: m.group(0)!),
           );
         }
-      } else {
-        // Parse AND/OR/NOT operators
-        final matched = _evaluateQuery(searchQuery, fullText);
-        if (matched) {
-          // Find positions of individual terms for highlighting
-          final terms = _extractTerms(searchQuery);
-          for (final term in terms) {
-            final lower = fullText.toLowerCase();
-            int pos = 0;
-            while (true) {
-              pos = lower.indexOf(term.toLowerCase(), pos);
-              if (pos == -1) break;
-              matches.add(
-                SearchMatch(
-                  start: pos,
-                  end: pos + term.length,
-                  text: fullText.substring(pos, pos + term.length),
-                ),
-              );
-              pos += term.length;
-            }
-          }
+        if (matches.isNotEmpty) {
+          results.add(NoteSearchResult(note: note, matches: matches));
         }
+        continue;
       }
 
-      if (matches.isNotEmpty ||
-          (regexSearch == null && _evaluateQuery(searchQuery, fullText))) {
-        results.add(NoteSearchResult(note: note, matches: matches));
+      // Parse AND/OR/NOT operators against a single lowercased copy.
+      final lower = fullText.toLowerCase();
+      if (!_evaluateQuery(parser!, searchQuery, lower)) continue;
+
+      // Find positions of individual terms for highlighting
+      for (final term in terms) {
+        if (term.isEmpty) continue;
+        int pos = 0;
+        while (true) {
+          pos = lower.indexOf(term, pos);
+          if (pos == -1) break;
+          matches.add(
+            SearchMatch(
+              start: pos,
+              end: pos + term.length,
+              text: fullText.substring(pos, pos + term.length),
+            ),
+          );
+          pos += term.length;
+        }
       }
+      results.add(NoteSearchResult(note: note, matches: matches));
     }
 
     return results;
   }
 
-  bool _evaluateQuery(String query, String text) {
+  bool _evaluateQuery(_QueryParser parser, String query, String loweredText) {
     try {
-      return _QueryParser(query, text).parse();
+      return parser.parseAgainst(loweredText);
     } catch (_) {
       // Malformed query — fall back to simple contains
-      return text.toLowerCase().contains(query.trim().toLowerCase());
+      return loweredText.contains(query.trim().toLowerCase());
     }
   }
 
@@ -659,13 +733,18 @@ class GraphData {
 //   atom     := '(' expr ')'  |  '"' phrase '"'  |  word
 
 class _QueryParser {
-  final String _lower; // normalised haystack
   final List<String> _tokens;
+  String _lower = ''; // normalised haystack
   int _pos = 0;
 
-  _QueryParser(String query, String text)
-    : _lower = text.toLowerCase(),
-      _tokens = _tokenise(query);
+  _QueryParser(String query) : _tokens = _tokenise(query);
+
+  /// Re-run the already tokenised query against another lowercased haystack.
+  bool parseAgainst(String loweredText) {
+    _lower = loweredText;
+    _pos = 0;
+    return parse();
+  }
 
   // Split query into tokens: words, quoted strings, parens, operators
   static List<String> _tokenise(String q) {

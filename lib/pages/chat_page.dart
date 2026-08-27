@@ -70,7 +70,6 @@ class _ChatPageState extends State<ChatPage> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
   final Map<String, String> _draftsByConversationId = {};
-  bool _hasText = false;
   bool _isAtBottom = true;
   bool _forceScroll = false;
   bool _showComposerPreview = false;
@@ -96,12 +95,11 @@ class _ChatPageState extends State<ChatPage> {
   void _onTextChanged() {
     final text = _controller.text;
     _saveDraftForConversation(_activeConversationId, text);
-    setState(() {
-      _hasText = text.trim().isNotEmpty;
-      if (!_hasText) {
-        _showComposerPreview = false;
-      }
-    });
+    // No setState: the composer widgets listen to _controller directly, so a
+    // keystroke never rebuilds the message list.
+    if (text.trim().isEmpty) {
+      _showComposerPreview = false;
+    }
   }
 
   @override
@@ -111,6 +109,8 @@ class _ChatPageState extends State<ChatPage> {
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
+    // Release the mic if the page is left mid-dictation.
+    _speechService.dispose();
     super.dispose();
   }
 
@@ -130,8 +130,7 @@ class _ChatPageState extends State<ChatPage> {
       selection: TextSelection.collapsed(offset: text.length),
     );
     _controller.addListener(_onTextChanged);
-    _hasText = text.trim().isNotEmpty;
-    if (!_hasText || collapsePreview) {
+    if (text.trim().isEmpty || collapsePreview) {
       _showComposerPreview = false;
     }
   }
@@ -141,8 +140,7 @@ class _ChatPageState extends State<ChatPage> {
         ? ''
         : (_draftsByConversationId[conversationId] ?? '');
     if (_controller.text == restoredText) {
-      _hasText = restoredText.trim().isNotEmpty;
-      if (!_hasText) {
+      if (restoredText.trim().isEmpty) {
         _showComposerPreview = false;
       }
       return;
@@ -150,10 +148,12 @@ class _ChatPageState extends State<ChatPage> {
     _replaceComposerText(restoredText, collapsePreview: true);
   }
 
-  void _maybeScrollToFocus(ChatProvider chat) {
+  void _maybeScrollToFocus(
+    ChatProvider chat,
+    List<({Message message, int originalIndex})> visible,
+  ) {
     final focus = chat.focusMessageIndex;
     if (focus == null) return;
-    final visible = _visibleEntries(chat.messages);
     final target = visible.indexWhere((e) => e.originalIndex == focus);
     if (target < 0) {
       chat.clearFocusMessage();
@@ -1140,7 +1140,10 @@ class _ChatPageState extends State<ChatPage> {
         LumenTokens.horizontalPaddingForWidth(screenWidth);
 
     _syncVisibleConversation(chat);
-    _maybeScrollToFocus(chat);
+    _maybeScrollToFocus(chat, visibleEntries);
+    // Computed once instead of per built list item.
+    final showThinkingIndicator =
+        chat.isLoading && !_hasInProgressAssistant(visibleEntries);
 
     return Column(
       children: [
@@ -1174,24 +1177,19 @@ class _ChatPageState extends State<ChatPage> {
                               10,
                             ),
                             itemCount: visibleEntries.length +
-                                (chat.isLoading &&
-                                        !_hasInProgressAssistant(visibleEntries)
-                                    ? 1
-                                    : 0),
+                                (showThinkingIndicator ? 1 : 0),
                             itemBuilder: (context, index) {
-                              if (index == visibleEntries.length &&
-                                  chat.isLoading &&
-                                  !_hasInProgressAssistant(visibleEntries)) {
+                              if (index == visibleEntries.length) {
                                 return _buildThinkingIndicator(cs, chat);
                               }
-                              return RepaintBoundary(
+                              // MessageBubble already wraps itself in a
+                              // RepaintBoundary; a second one only adds a layer.
+                              return MessageBubble(
                                 key: ValueKey(
                                   'msg_${visibleEntries[index].message.timestamp.millisecondsSinceEpoch}_$index',
                                 ),
-                                child: MessageBubble(
-                                  message: visibleEntries[index].message,
-                                  messageIndex: visibleEntries[index].originalIndex,
-                                ),
+                                message: visibleEntries[index].message,
+                                messageIndex: visibleEntries[index].originalIndex,
                               );
                             },
                           ),
@@ -1208,8 +1206,20 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ),
 
-        if (_hasText) _buildComposerActionBar(cs),
-        if (_showComposerPreview && _hasText) _buildPreviewBubble(cs),
+        // Composer chrome is the only thing that reacts to typing.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _controller,
+          builder: (context, value, _) {
+            if (value.text.trim().isEmpty) return const SizedBox.shrink();
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildComposerActionBar(cs),
+                if (_showComposerPreview) _buildPreviewBubble(cs),
+              ],
+            );
+          },
+        ),
         if (settings.composerShowToolChips)
           Padding(
             padding: EdgeInsets.fromLTRB(contentHorizontalPad, 0, contentHorizontalPad, 0),
@@ -1358,7 +1368,14 @@ class _ChatPageState extends State<ChatPage> {
                   // Send button with animated state
                   Padding(
                     padding: const EdgeInsets.only(bottom: 2),
-                    child: _buildSendButton(cs, chat.isLoading),
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _controller,
+                      builder: (context, value, _) => _buildSendButton(
+                        cs,
+                        chat.isLoading,
+                        value.text.trim().isNotEmpty,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1687,8 +1704,8 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildSendButton(ColorScheme cs, bool isLoading) {
-    final hasPayload = _hasText || _pendingAttachments.isNotEmpty;
+  Widget _buildSendButton(ColorScheme cs, bool isLoading, bool hasText) {
+    final hasPayload = hasText || _pendingAttachments.isNotEmpty;
     // While generating: empty composer → Stop; non-empty → queue follow-up.
     final canQueue = isLoading && hasPayload;
     final canSend = !isLoading && hasPayload;
@@ -1703,47 +1720,52 @@ class _ChatPageState extends State<ChatPage> {
       bg = cs.surfaceContainerHighest;
     }
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOutCubic,
-      width: 46,
-      height: 46,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(23),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+    return Tooltip(
+      message: showStop
+          ? '停止生成'
+          : (canQueue ? '加入后续消息队列' : '发送消息'),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: bg,
           borderRadius: BorderRadius.circular(23),
-          onTap: showStop
-              ? () => context.read<ChatProvider>().cancelGeneration()
-              : ((canSend || canQueue) ? _send : null),
-          child: Center(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: showStop
-                  ? Icon(
-                      Icons.stop_rounded,
-                      key: const ValueKey('stop'),
-                      size: 22,
-                      color: cs.onError,
-                    )
-                  : canQueue
-                  ? Icon(
-                      Icons.playlist_add_check_rounded,
-                      key: const ValueKey('queue'),
-                      size: 22,
-                      color: cs.onPrimary,
-                    )
-                  : Icon(
-                      Icons.arrow_upward_rounded,
-                      key: const ValueKey('send'),
-                      size: 22,
-                      color: canSend
-                          ? cs.onPrimary
-                          : cs.onSurfaceVariant.withAlpha(100),
-                    ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(23),
+            onTap: showStop
+                ? () => context.read<ChatProvider>().cancelGeneration()
+                : ((canSend || canQueue) ? _send : null),
+            child: Center(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: showStop
+                    ? Icon(
+                        Icons.stop_rounded,
+                        key: const ValueKey('stop'),
+                        size: 22,
+                        color: cs.onError,
+                      )
+                    : canQueue
+                    ? Icon(
+                        Icons.playlist_add_check_rounded,
+                        key: const ValueKey('queue'),
+                        size: 22,
+                        color: cs.onPrimary,
+                      )
+                    : Icon(
+                        Icons.arrow_upward_rounded,
+                        key: const ValueKey('send'),
+                        size: 22,
+                        color: canSend
+                            ? cs.onPrimary
+                            : cs.onSurfaceVariant.withAlpha(100),
+                      ),
+              ),
             ),
           ),
         ),
@@ -1805,7 +1827,9 @@ class _ChatPageState extends State<ChatPage> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     _syncVisibleConversation(chat);
-    _maybeScrollToFocus(chat);
+    _maybeScrollToFocus(chat, visibleEntries);
+    final showThinkingIndicator =
+        chat.isLoading && !_hasInProgressAssistant(visibleEntries);
 
     return Column(
       children: [
@@ -1825,12 +1849,9 @@ class _ChatPageState extends State<ChatPage> {
                         ),
                         addAutomaticKeepAlives: true,
                         itemCount: visibleEntries.length +
-                        (chat.isLoading &&
-                                !_hasInProgressAssistant(visibleEntries)
-                            ? 1
-                            : 0),
+                            (showThinkingIndicator ? 1 : 0),
                         itemBuilder: (context, index) {
-                          if (index == visibleEntries.length && chat.isLoading) {
+                          if (index == visibleEntries.length) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               child: Row(
@@ -1861,14 +1882,14 @@ class _ChatPageState extends State<ChatPage> {
                               ),
                             );
                           }
-                          return RepaintBoundary(
+                          // MessageBubble already wraps itself in a
+                          // RepaintBoundary; a second one only adds a layer.
+                          return MessageBubble(
                             key: ValueKey(
                               'msg_${visibleEntries[index].message.timestamp.millisecondsSinceEpoch}_$index',
                             ),
-                            child: MessageBubble(
-                              message: visibleEntries[index].message,
-                              messageIndex: visibleEntries[index].originalIndex,
-                            ),
+                            message: visibleEntries[index].message,
+                            messageIndex: visibleEntries[index].originalIndex,
                           );
                         },
                       ),
@@ -1893,17 +1914,26 @@ class _ChatPageState extends State<ChatPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (_hasText) ...[
-                _buildComposerActionBar(cs, margin: EdgeInsets.zero),
-                if (_showComposerPreview) ...[
-                  _buildPreviewBubble(
-                    cs,
-                    margin: EdgeInsets.zero,
-                    maxHeightFactor: 0.18,
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ],
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _controller,
+                builder: (context, value, _) {
+                  if (value.text.trim().isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildComposerActionBar(cs, margin: EdgeInsets.zero),
+                      if (_showComposerPreview) ...[
+                        _buildPreviewBubble(
+                          cs,
+                          margin: EdgeInsets.zero,
+                          maxHeightFactor: 0.18,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ],
+                  );
+                },
+              ),
               Row(
                 children: [
                   Expanded(
@@ -2017,24 +2047,33 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  FilledButton.icon(
-                    onPressed: chat.isLoading
-                        ? () => chat.cancelGeneration()
-                        : ((!_hasText && _pendingAttachments.isEmpty) ? null : _send),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    icon: Icon(
-                      chat.isLoading ? Icons.stop_rounded : Icons.send_rounded,
-                      size: 18,
-                    ),
-                    label: Text(chat.isLoading ? '停止' : '发送'),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, value, _) {
+                      final hasPayload = value.text.trim().isNotEmpty ||
+                          _pendingAttachments.isNotEmpty;
+                      return FilledButton.icon(
+                        onPressed: chat.isLoading
+                            ? () => chat.cancelGeneration()
+                            : (hasPayload ? _send : null),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 16,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        icon: Icon(
+                          chat.isLoading
+                              ? Icons.stop_rounded
+                              : Icons.send_rounded,
+                          size: 18,
+                        ),
+                        label: Text(chat.isLoading ? '停止' : '发送'),
+                      );
+                    },
                   ),
                 ],
               ),

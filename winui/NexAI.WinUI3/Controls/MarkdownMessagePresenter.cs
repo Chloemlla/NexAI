@@ -12,6 +12,10 @@ namespace NexAI.WinUI3.Controls;
 
 public sealed class MarkdownMessagePresenter : UserControl
 {
+    // Parsing the font fallback list is not free, and it is theme independent —
+    // build it once instead of per code block and per inline code span.
+    private static readonly FontFamily MonoFontFamily = new("Cascadia Mono, Consolas, Courier New");
+
     public static readonly DependencyProperty MessageProperty =
         DependencyProperty.Register(
             nameof(Message),
@@ -145,7 +149,7 @@ public sealed class MarkdownMessagePresenter : UserControl
             panel.Children.Add(new TextBlock
             {
                 Text = block.Content,
-                FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
+                FontFamily = MonoFontFamily,
                 FontSize = 12,
                 TextWrapping = TextWrapping.Wrap,
                 IsTextSelectionEnabled = true,
@@ -163,7 +167,7 @@ public sealed class MarkdownMessagePresenter : UserControl
             panel.Children.Add(new TextBlock
             {
                 Text = block.Content,
-                FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
+                FontFamily = MonoFontFamily,
                 FontSize = 12,
                 TextWrapping = TextWrapping.Wrap,
                 IsTextSelectionEnabled = true,
@@ -312,7 +316,7 @@ public sealed class MarkdownMessagePresenter : UserControl
         panel.Children.Add(new TextBlock
         {
             Text = block.Text,
-            FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New"),
+            FontFamily = MonoFontFamily,
             FontSize = 12.5,
             TextWrapping = TextWrapping.Wrap,
             IsTextSelectionEnabled = true,
@@ -377,7 +381,7 @@ public sealed class MarkdownMessagePresenter : UserControl
         {
             InlineStyle.Bold => new Run { Text = span.Text, FontWeight = FontWeights.SemiBold },
             InlineStyle.Italic => new Run { Text = span.Text, FontStyle = Windows.UI.Text.FontStyle.Italic },
-            InlineStyle.Code => new Run { Text = span.Text, FontFamily = new FontFamily("Cascadia Mono, Consolas, Courier New") },
+            InlineStyle.Code => new Run { Text = span.Text, FontFamily = MonoFontFamily },
             InlineStyle.Link => CreateHyperlink(span),
             _ => new Run { Text = span.Text },
         };

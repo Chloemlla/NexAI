@@ -3,6 +3,23 @@ library;
 
 import 'dart:io';
 
+/// IPv4-mapped IPv6 (::ffff:x.x.x.x and ::ffff:0:0/96).
+final _ipv4MappedHostPattern = RegExp(
+  r'^::ffff(?:\.0\.0)?:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$',
+);
+final _ipv4HostPattern = RegExp(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$');
+final _bearerPattern = RegExp(r'Bearer\s+\S+', caseSensitive: false);
+final _queryTokenPattern = RegExp(
+  r'([?&](?:key|api_key|apikey|access_token|token|password|secret)=)[^&\s]+',
+  caseSensitive: false,
+);
+final _jsonTokenPattern = RegExp(
+  r'("?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|password|secret|token)"?\s*[:=]\s*")([^"]+)(")',
+  caseSensitive: false,
+);
+final _openAiKeyPattern = RegExp(r'sk-[A-Za-z0-9_-]{12,}');
+final _googleKeyPattern = RegExp(r'AIza[0-9A-Za-z_-]{20,}');
+
 class NetworkSafety {
   NetworkSafety._();
 
@@ -40,16 +57,13 @@ class NetworkSafety {
     if (h.endsWith('.local') || h.endsWith('.internal')) return true;
 
     // IPv4-mapped IPv6 (::ffff:x.x.x.x and ::ffff:0:0/96)
-    final ipv4Mapped = RegExp(r'^::ffff(?:\.0\.0)?:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$');
-    final mappedMatch = ipv4Mapped.firstMatch(h);
+    final mappedMatch = _ipv4MappedHostPattern.firstMatch(h);
     if (mappedMatch != null) {
       return _isPrivateDottedQuad(mappedMatch.group(1)!);
     }
 
     // IPv4
-    final ipv4 = RegExp(r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$');
-    final m = ipv4.firstMatch(h);
-    if (m != null) {
+    if (_ipv4HostPattern.hasMatch(h)) {
       return _isPrivateDottedQuad(h);
     }
 
@@ -104,26 +118,29 @@ class NetworkSafety {
 
   static String redactSecrets(String input) {
     var out = input;
-    out = out.replaceAll(
-      RegExp(r'Bearer\s+\S+', caseSensitive: false),
-      'Bearer <redacted>',
-    );
-    out = out.replaceAllMapped(
-      RegExp(
-        r'([?&](?:key|api_key|apikey|access_token|token|password|secret)=)[^&\s]+',
-        caseSensitive: false,
-      ),
-      (m) => '${m.group(1)}<redacted>',
-    );
-    out = out.replaceAllMapped(
-      RegExp(
-        r'("?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|password|secret|token)"?\s*[:=]\s*")([^"]+)(")',
-        caseSensitive: false,
-      ),
-      (m) => '${m.group(1)}<redacted>${m.group(3)}',
-    );
-    out = out.replaceAll(RegExp(r'sk-[A-Za-z0-9_-]{12,}'), 'sk-<redacted>');
-    out = out.replaceAll(RegExp(r'AIza[0-9A-Za-z_-]{20,}'), 'AIza<redacted>');
+    // Each guard avoids a full-string copy when the pattern is absent, which
+    // is the common case for tool output that can reach megabytes.
+    if (_bearerPattern.hasMatch(out)) {
+      out = out.replaceAll(_bearerPattern, 'Bearer <redacted>');
+    }
+    if (_queryTokenPattern.hasMatch(out)) {
+      out = out.replaceAllMapped(
+        _queryTokenPattern,
+        (m) => '${m.group(1)}<redacted>',
+      );
+    }
+    if (_jsonTokenPattern.hasMatch(out)) {
+      out = out.replaceAllMapped(
+        _jsonTokenPattern,
+        (m) => '${m.group(1)}<redacted>${m.group(3)}',
+      );
+    }
+    if (_openAiKeyPattern.hasMatch(out)) {
+      out = out.replaceAll(_openAiKeyPattern, 'sk-<redacted>');
+    }
+    if (_googleKeyPattern.hasMatch(out)) {
+      out = out.replaceAll(_googleKeyPattern, 'AIza<redacted>');
+    }
     return out;
   }
 }

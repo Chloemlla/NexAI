@@ -25,6 +25,10 @@ class _RichContentViewState extends State<RichContentView> {
   Future<CssTheme>? _cssThemeFuture;
   Brightness? _themeBrightness;
 
+  /// Last rendered subtree, reused verbatim while the inputs are unchanged.
+  Widget? _cachedBody;
+  CssTheme? _cachedBodyCssTheme;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +46,10 @@ class _RichContentViewState extends State<RichContentView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.content != widget.content) {
       _segments = parseRichContentSegments(widget.content);
+      _cachedBody = null;
+    }
+    if (oldWidget.enableWikiLinks != widget.enableWikiLinks) {
+      _cachedBody = null;
     }
   }
 
@@ -66,8 +74,15 @@ class _RichContentViewState extends State<RichContentView> {
       future: cssThemeFuture,
       builder: (context, snapshot) {
         final cssTheme = snapshot.data;
+        // Handing Flutter back the identical widget instance lets it skip the
+        // whole markdown/LaTeX subtree, so a streaming rebuild of the message
+        // list no longer re-parses and re-lays-out unchanged content.
+        final cached = _cachedBody;
+        if (cached != null && identical(_cachedBodyCssTheme, cssTheme)) {
+          return cached;
+        }
 
-        return SelectionArea(
+        final body = SelectionArea(
           child: RepaintBoundary(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,6 +93,9 @@ class _RichContentViewState extends State<RichContentView> {
             ),
           ),
         );
+        _cachedBody = body;
+        _cachedBodyCssTheme = cssTheme;
+        return body;
       },
     );
   }

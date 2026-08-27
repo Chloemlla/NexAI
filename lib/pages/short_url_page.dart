@@ -20,13 +20,28 @@ class ShortUrlPage extends StatefulWidget {
 class _ShortUrlPageState extends State<ShortUrlPage> {
   final _targetController = TextEditingController();
 
+  /// Tracks only the empty/non-empty transition so typing rebuilds the input
+  /// panel instead of the whole page (hero + result + history list).
+  final _hasTarget = ValueNotifier<bool>(false);
+
   String? _resultUrl;
   bool _isLoading = false;
 
-  final String _apiUrl = 'https://api.mmp.cc/api/dwz';
+  static const _apiUrl = 'https://api.mmp.cc/api/dwz';
+
+  /// One client for the page: a fresh `Dio` per tap re-allocated the option
+  /// set and connection pool on every request.
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+    ),
+  );
 
   @override
   void dispose() {
+    _dio.close();
+    _hasTarget.dispose();
     _targetController.dispose();
     super.dispose();
   }
@@ -39,7 +54,9 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
     }
 
     final uri = Uri.tryParse(target);
-    if (uri == null || !uri.hasScheme || !uri.hasAuthority) {
+    if (uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
       SmartDialog.showToast('请输入有效的 http:// 或 https:// 链接');
       return;
     }
@@ -48,13 +65,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
     SmartDialog.showLoading(msg: '正在生成短链接...');
 
     try {
-      final dio = Dio(
-        BaseOptions(
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
-        ),
-      );
-      final response = await dio.get(
+      final response = await _dio.get(
         _apiUrl,
         queryParameters: {'longurl': target},
       );
@@ -108,14 +119,14 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
       SmartDialog.showToast('剪贴板为空');
       return;
     }
-    setState(() => _targetController.text = text);
+    _targetController.text = text;
+    _hasTarget.value = true;
   }
 
   void _clearAll() {
-    setState(() {
-      _targetController.clear();
-      _resultUrl = null;
-    });
+    _targetController.clear();
+    _hasTarget.value = false;
+    setState(() => _resultUrl = null);
   }
 
   void _copyToClipboard(String text) {
@@ -195,24 +206,33 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  TextField(
-                    controller: _targetController,
-                    minLines: 1,
-                    maxLines: 4,
-                    keyboardType: TextInputType.url,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: '目标链接',
-                      hintText: 'https://example.com/very/long/path',
-                      prefixIcon: const Icon(Icons.public_rounded),
-                      suffixIcon: _targetController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear_rounded),
-                              onPressed: _clearAll,
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _hasTarget,
+                    builder: (context, hasTarget, _) => TextField(
+                      controller: _targetController,
+                      minLines: 1,
+                      maxLines: 4,
+                      keyboardType: TextInputType.url,
+                      textInputAction: TextInputAction.go,
+                      onSubmitted: (_) {
+                        if (!_isLoading) _createShortUrl();
+                      },
+                      onChanged: (value) =>
+                          _hasTarget.value = value.isNotEmpty,
+                      decoration: InputDecoration(
+                        labelText: '目标链接',
+                        hintText: 'https://example.com/very/long/path',
+                        prefixIcon: const Icon(Icons.public_rounded),
+                        suffixIcon: hasTarget
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded),
+                                tooltip: '清空输入',
+                                onPressed: _clearAll,
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                        ),
                       ),
                     ),
                   ),
@@ -328,96 +348,101 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
   }
 
   Widget _buildShortUrlHistorySection(ColorScheme cs) {
-    final history = context.watch<ShortUrlProvider>().history;
-    return LumenSettingsSection(
-      icon: Icons.history_rounded,
-      title: '历史记录',
-      children: [
-        if (history.isEmpty)
-          const ToolEmptyStateCard(
-            icon: Icons.history_toggle_off_rounded,
-            title: '暂无记录',
-            description: '生成短链后会自动记录，可复制或再次打开。',
-          )
-        else
-          ToolPanel(
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () async {
-                      await context.read<ShortUrlProvider>().clearHistory();
-                      if (!mounted) return;
-                      SmartDialog.showToast('已清空历史');
-                    },
-                    icon: const Icon(Icons.delete_sweep_rounded, size: 18),
-                    label: const Text('清空历史'),
-                  ),
-                ),
-                ...history.take(20).map((record) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      record.shortUrl,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: cs.primary,
-                        fontFamily: 'JetBrainsMonoNexAI',
+    // Consumer instead of a page-level watch: adding or deleting a record now
+    // rebuilds only this section, not the hero, input panel and result card.
+    return Consumer<ShortUrlProvider>(
+      builder: (context, provider, _) {
+        final history = provider.history;
+        return LumenSettingsSection(
+          icon: Icons.history_rounded,
+          title: '历史记录',
+          children: [
+            if (history.isEmpty)
+              const ToolEmptyStateCard(
+                icon: Icons.history_toggle_off_rounded,
+                title: '暂无记录',
+                description: '生成短链后会自动记录，可复制或再次打开。',
+              )
+            else
+              ToolPanel(
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          await context.read<ShortUrlProvider>().clearHistory();
+                          if (!mounted) return;
+                          SmartDialog.showToast('已清空历史');
+                        },
+                        icon: const Icon(Icons.delete_sweep_rounded, size: 18),
+                        label: const Text('清空历史'),
                       ),
                     ),
-                    subtitle: Text(
-                      record.originalUrl,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: '复制',
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                            maxWidth: 40,
-                            maxHeight: 40,
+                    ...history.take(20).map((record) {
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          record.shortUrl,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: cs.primary,
+                            fontFamily: 'JetBrainsMonoNexAI',
                           ),
-                          icon: const Icon(Icons.copy_rounded, size: 18),
-                          onPressed: () => _copyToClipboard(record.shortUrl),
                         ),
-                        IconButton(
-                          tooltip: '删除',
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(
-                            minWidth: 40,
-                            minHeight: 40,
-                            maxWidth: 40,
-                            maxHeight: 40,
-                          ),
-                          icon: Icon(Icons.close_rounded, color: cs.error),
-                          onPressed: () => context
-                              .read<ShortUrlProvider>()
-                              .deleteRecord(record.id),
+                        subtitle: Text(
+                          record.originalUrl,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
-                    onTap: () {
-                      setState(() {
-                        _targetController.text = record.originalUrl;
-                        _resultUrl = record.shortUrl;
-                      });
-                    },
-                  );
-                }),
-              ],
-            ),
-          ),
-      ],
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: '复制',
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                                maxWidth: 40,
+                                maxHeight: 40,
+                              ),
+                              icon: const Icon(Icons.copy_rounded, size: 18),
+                              onPressed: () =>
+                                  _copyToClipboard(record.shortUrl),
+                            ),
+                            IconButton(
+                              tooltip: '删除',
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 40,
+                                minHeight: 40,
+                                maxWidth: 40,
+                                maxHeight: 40,
+                              ),
+                              icon: Icon(Icons.close_rounded, color: cs.error),
+                              onPressed: () =>
+                                  provider.deleteRecord(record.id),
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          _targetController.text = record.originalUrl;
+                          _hasTarget.value = record.originalUrl.isNotEmpty;
+                          setState(() => _resultUrl = record.shortUrl);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

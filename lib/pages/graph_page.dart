@@ -30,6 +30,8 @@ class _GraphPageState extends State<GraphPage>
   late GraphData _graphData;
   bool _layoutDone = false;
   String _layoutSignature = '';
+  int _layoutVersion = 0;
+  GraphData? _signedGraphData;
   final Map<String, Offset> _nodePositions = {};
 
   @override
@@ -70,30 +72,42 @@ class _GraphPageState extends State<GraphPage>
       return;
     }
 
-    // Build adjacency for quick lookup
-    final adj = <String, Set<String>>{};
-    for (final n in nodes) {
-      adj[n.id] = {};
-    }
-    for (final e in edges) {
-      adj[e.sourceId]?.add(e.targetId);
-      adj[e.targetId]?.add(e.sourceId);
-    }
-
-    // Simple force-directed layout (100 iterations)
+    // Simple force-directed layout, capped at `iterations` but stopped as soon
+    // as the graph settles.
     const iterations = 120;
     const repulsion = 8000.0;
     const attraction = 0.005;
     const damping = 0.9;
-    final velocities = {for (final n in nodes) n.id: Offset.zero};
+    const settledStep = 0.05;
+
+    final count = nodes.length;
+    final vx = List<double>.filled(count, 0);
+    final vy = List<double>.filled(count, 0);
+
+    // Resolve edge endpoints to indices once instead of scanning `nodes` for
+    // every edge on every iteration.
+    final indexOf = <String, int>{};
+    for (int i = 0; i < count; i++) {
+      indexOf[nodes[i].id] = i;
+    }
+    final edgeA = <int>[];
+    final edgeB = <int>[];
+    for (final e in edges) {
+      final a = indexOf[e.sourceId];
+      final b = indexOf[e.targetId];
+      if (a != null && b != null) {
+        edgeA.add(a);
+        edgeB.add(b);
+      }
+    }
 
     for (int iter = 0; iter < iterations; iter++) {
       final temp = 1.0 - iter / iterations;
 
       // Repulsion between all pairs
-      for (int i = 0; i < nodes.length; i++) {
-        for (int j = i + 1; j < nodes.length; j++) {
-          final a = nodes[i];
+      for (int i = 0; i < count; i++) {
+        final a = nodes[i];
+        for (int j = i + 1; j < count; j++) {
           final b = nodes[j];
           var dx = a.x - b.x;
           var dy = a.y - b.y;
@@ -101,31 +115,40 @@ class _GraphPageState extends State<GraphPage>
           final force = repulsion / (dist * dist);
           dx = dx / dist * force * temp;
           dy = dy / dist * force * temp;
-          velocities[a.id] = velocities[a.id]! + Offset(dx, dy);
-          velocities[b.id] = velocities[b.id]! - Offset(dx, dy);
+          vx[i] += dx;
+          vy[i] += dy;
+          vx[j] -= dx;
+          vy[j] -= dy;
         }
       }
 
       // Attraction along edges
-      for (final e in edges) {
-        final a = nodes.firstWhere((n) => n.id == e.sourceId);
-        final b = nodes.firstWhere((n) => n.id == e.targetId);
-        var dx = b.x - a.x;
-        var dy = b.y - a.y;
-
-        dx = dx * attraction * temp;
-        dy = dy * attraction * temp;
-        velocities[a.id] = velocities[a.id]! + Offset(dx, dy);
-        velocities[b.id] = velocities[b.id]! - Offset(dx, dy);
+      for (int k = 0; k < edgeA.length; k++) {
+        final i = edgeA[k];
+        final j = edgeB[k];
+        final dx = (nodes[j].x - nodes[i].x) * attraction * temp;
+        final dy = (nodes[j].y - nodes[i].y) * attraction * temp;
+        vx[i] += dx;
+        vy[i] += dy;
+        vx[j] -= dx;
+        vy[j] -= dy;
       }
 
       // Apply velocities
-      for (final n in nodes) {
-        final v = velocities[n.id]! * damping;
-        n.x += v.dx;
-        n.y += v.dy;
-        velocities[n.id] = v;
+      var maxStep = 0.0;
+      for (int i = 0; i < count; i++) {
+        final dx = vx[i] * damping;
+        final dy = vy[i] * damping;
+        nodes[i].x += dx;
+        nodes[i].y += dy;
+        vx[i] = dx;
+        vy[i] = dy;
+        final step = dx.abs() + dy.abs();
+        if (step > maxStep) maxStep = step;
       }
+
+      // Converged: further iterations would only burn CPU/battery.
+      if (maxStep < settledStep) break;
     }
 
     // Center the graph
@@ -153,6 +176,7 @@ class _GraphPageState extends State<GraphPage>
   }
 
   void _storeNodePositions(List<GraphNode> nodes) {
+    _layoutVersion++;
     _nodePositions
       ..clear()
       ..addEntries(nodes.map((n) => MapEntry(n.id, Offset(n.x, n.y))));
@@ -176,7 +200,12 @@ class _GraphPageState extends State<GraphPage>
       tagFilter: _tagFilter,
       starredOnly: _starredOnly ? true : null,
     );
-    final layoutSignature = _computeLayoutSignature(_graphData);
+    // getGraphData memoizes per filter, so an unchanged instance means the
+    // topology is unchanged: skip re-sorting/joining the signature strings.
+    final layoutSignature = identical(_signedGraphData, _graphData)
+        ? _layoutSignature
+        : _computeLayoutSignature(_graphData);
+    _signedGraphData = _graphData;
     if (layoutSignature != _layoutSignature) {
       _layoutSignature = layoutSignature;
       _layoutDone = false;
@@ -329,73 +358,11 @@ class _GraphPageState extends State<GraphPage>
                         highlightedNodeId: _highlightedNodeId,
                         colorBy: _colorBy,
                         colorScheme: cs,
+                        layoutVersion: _layoutVersion,
                       ),
                       child: Stack(
                         clipBehavior: Clip.none,
-                        children: [
-                          // Hit targets on actual node circles (paint itself is not tappable).
-                          ..._graphData.nodes.map((node) {
-                            final radius = _nodeRadius(node);
-                            final hit = (radius + 10) * 2;
-                            return Positioned(
-                              left: node.x - hit / 2,
-                              top: node.y - hit / 2,
-                              width: hit,
-                              height: hit,
-                              child: GestureDetector(
-                                behavior: HitTestBehavior.opaque,
-                                onTap: () => _onNodeTap(node),
-                                onLongPress: () => setState(() {
-                                  _highlightedNodeId =
-                                      _highlightedNodeId == node.id
-                                      ? null
-                                      : node.id;
-                                }),
-                                child: const SizedBox.expand(),
-                              ),
-                            );
-                          }),
-                          // Labels under nodes remain secondary hit targets.
-                          ..._graphData.nodes.map((node) {
-                            final radius = _nodeRadius(node);
-                            final isHighlighted =
-                                _highlightedNodeId == node.id;
-                            final labelWidth =
-                                math.max((radius + 20) * 2, 80.0);
-                            return Positioned(
-                              left: node.x - labelWidth / 2,
-                              top: node.y + radius + 4,
-                              child: GestureDetector(
-                                onTap: () => _onNodeTap(node),
-                                onLongPress: () => setState(() {
-                                  _highlightedNodeId =
-                                      _highlightedNodeId == node.id
-                                      ? null
-                                      : node.id;
-                                }),
-                                child: SizedBox(
-                                  width: labelWidth,
-                                  child: Text(
-                                    node.title,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: isHighlighted ? 12 : 10,
-                                      fontWeight: isHighlighted
-                                          ? FontWeight.w700
-                                          : FontWeight.w500,
-                                      color: isHighlighted
-                                          ? cs.primary
-                                          : cs.onSurfaceVariant,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        ],
+                        children: _buildNodeOverlays(cs),
                       ),
                     ),
                   ),
@@ -407,6 +374,82 @@ class _GraphPageState extends State<GraphPage>
 
   double _nodeRadius(GraphNode node) {
     return (8.0 + node.linkCount * 3.0).clamp(8.0, 28.0);
+  }
+
+  /// Hit targets and labels for every node, built in one pass with the label
+  /// text styles hoisted out of the per-node loop.
+  List<Widget> _buildNodeOverlays(ColorScheme cs) {
+    final labelStyle = TextStyle(
+      fontSize: 10,
+      fontWeight: FontWeight.w500,
+      color: cs.onSurfaceVariant,
+      height: 1.3,
+    );
+    final highlightedLabelStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: cs.primary,
+      height: 1.3,
+    );
+
+    final hitTargets = <Widget>[];
+    final labels = <Widget>[];
+    for (final node in _graphData.nodes) {
+      final radius = _nodeRadius(node);
+      final isHighlighted = _highlightedNodeId == node.id;
+      void toggleHighlight() => setState(() {
+        _highlightedNodeId = isHighlighted ? null : node.id;
+      });
+
+      // Hit target on the actual node circle (the painted canvas is not tappable).
+      final hit = (radius + 10) * 2;
+      hitTargets.add(
+        Positioned(
+          left: node.x - hit / 2,
+          top: node.y - hit / 2,
+          width: hit,
+          height: hit,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _onNodeTap(node),
+            onLongPress: toggleHighlight,
+            child: Semantics(
+              button: true,
+              label: node.title,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+      );
+
+      // Labels under nodes remain secondary hit targets.
+      final labelWidth = math.max((radius + 20) * 2, 80.0);
+      labels.add(
+        Positioned(
+          left: node.x - labelWidth / 2,
+          top: node.y + radius + 4,
+          child: GestureDetector(
+            onTap: () => _onNodeTap(node),
+            onLongPress: toggleHighlight,
+            child: SizedBox(
+              width: labelWidth,
+              // The circle hit target above already exposes the title to
+              // screen readers; keep each node a single semantic button.
+              child: ExcludeSemantics(
+                child: Text(
+                  node.title,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: isHighlighted ? highlightedLabelStyle : labelStyle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return hitTargets..addAll(labels);
   }
 
   void _onNodeTap(GraphNode node) {
@@ -422,13 +465,12 @@ class _GraphPageState extends State<GraphPage>
         String query = '';
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
+            // Lowercase the query once per rebuild instead of once per node.
+            final lowerQuery = query.toLowerCase();
             final matches = query.isEmpty
                 ? <GraphNode>[]
                 : _graphData.nodes
-                      .where(
-                        (n) =>
-                            n.title.toLowerCase().contains(query.toLowerCase()),
-                      )
+                      .where((n) => n.title.toLowerCase().contains(lowerQuery))
                       .take(10)
                       .toList();
             return AlertDialog(
@@ -509,14 +551,21 @@ class _GraphPageState extends State<GraphPage>
   }
 
   Widget _buildEmptyState(ColorScheme cs) {
+    // Distinguish "no notes at all" from "the active filter matched nothing",
+    // otherwise the hint tells users to create notes they already have.
+    final isFiltered = _tagFilter != null || _starredOnly;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.hub_outlined, size: 64, color: cs.outlineVariant),
+          Icon(
+            isFiltered ? Icons.filter_alt_off_rounded : Icons.hub_outlined,
+            size: 64,
+            color: cs.outlineVariant,
+          ),
           const SizedBox(height: 16),
           Text(
-            '还没有笔记节点',
+            isFiltered ? '没有符合筛选条件的节点' : '还没有笔记节点',
             style: TextStyle(
               color: cs.outline,
               fontSize: 16,
@@ -525,10 +574,23 @@ class _GraphPageState extends State<GraphPage>
           ),
           const SizedBox(height: 8),
           Text(
-            '创建笔记后会出现在图谱中；使用 [[笔记名称]] 可建立连接',
+            isFiltered
+                ? '试试清除标签或星标筛选'
+                : '创建笔记后会出现在图谱中；使用 [[笔记名称]] 可建立连接',
             textAlign: TextAlign.center,
             style: TextStyle(color: cs.outlineVariant, fontSize: 13),
           ),
+          if (isFiltered) ...[
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => setState(() {
+                _tagFilter = null;
+                _starredOnly = false;
+              }),
+              icon: const Icon(Icons.clear_rounded, size: 18),
+              label: const Text('清除筛选'),
+            ),
+          ],
         ],
       ),
     );
@@ -540,17 +602,27 @@ class _GraphPainter extends CustomPainter {
   final String? highlightedNodeId;
   final String colorBy;
   final ColorScheme colorScheme;
+  final int layoutVersion;
 
   _GraphPainter({
     required this.graphData,
     required this.highlightedNodeId,
     required this.colorBy,
     required this.colorScheme,
+    required this.layoutVersion,
   });
+
+  // Reused across every edge/node instead of allocating per draw call.
+  final Paint _strokePaint = Paint()..style = PaintingStyle.stroke;
+  final Paint _fillPaint = Paint();
+
+  late final Map<String, GraphNode> _nodeMap = {
+    for (final n in graphData.nodes) n.id: n,
+  };
 
   @override
   void paint(Canvas canvas, Size size) {
-    final nodeMap = {for (final n in graphData.nodes) n.id: n};
+    final nodeMap = _nodeMap;
 
     // Find connected nodes for highlighting
     final connectedIds = <String>{};
@@ -573,24 +645,22 @@ class _GraphPainter extends CustomPainter {
           connectedIds.contains(edge.sourceId) &&
               connectedIds.contains(edge.targetId);
 
-      final paint = Paint()
-        ..color = isConnected
-            ? colorScheme.primary.withAlpha(
-                highlightedNodeId != null ? 180 : 80,
-              )
-            : colorScheme.outlineVariant.withAlpha(30)
-        ..strokeWidth = isConnected && highlightedNodeId != null ? 2.0 : 1.0
-        ..style = PaintingStyle.stroke;
+      final edgeColor = isConnected
+          ? colorScheme.primary.withAlpha(highlightedNodeId != null ? 180 : 80)
+          : colorScheme.outlineVariant.withAlpha(30);
+      _strokePaint
+        ..color = edgeColor
+        ..strokeWidth = isConnected && highlightedNodeId != null ? 2.0 : 1.0;
 
       canvas.drawLine(
         Offset(source.x, source.y),
         Offset(target.x, target.y),
-        paint,
+        _strokePaint,
       );
 
       // Draw arrow
       if (isConnected) {
-        _drawArrow(canvas, source, target, paint);
+        _drawArrow(canvas, source, target, edgeColor);
       }
     }
 
@@ -622,31 +692,32 @@ class _GraphPainter extends CustomPainter {
           nodeColor = HSLColor.fromAHSL(1.0, hue, 0.7, 0.5).toColor();
       }
 
+      final center = Offset(node.x, node.y);
+
       // Glow for highlighted
       if (isHighlighted) {
         canvas.drawCircle(
-          Offset(node.x, node.y),
+          center,
           radius + 6,
-          Paint()..color = nodeColor.withAlpha(60),
+          _fillPaint..color = nodeColor.withAlpha(60),
         );
       }
 
       // Node circle
       canvas.drawCircle(
-        Offset(node.x, node.y),
+        center,
         radius,
-        Paint()..color = nodeColor.withAlpha(alpha),
+        _fillPaint..color = nodeColor.withAlpha(alpha),
       );
 
       // Border
       canvas.drawCircle(
-        Offset(node.x, node.y),
+        center,
         radius,
-        Paint()
+        _strokePaint
           ..color = isHighlighted
               ? colorScheme.primary
               : nodeColor.withAlpha((alpha * 0.6).round())
-          ..style = PaintingStyle.stroke
           ..strokeWidth = isHighlighted ? 3.0 : 1.5,
       );
     }
@@ -656,7 +727,7 @@ class _GraphPainter extends CustomPainter {
     Canvas canvas,
     GraphNode source,
     GraphNode target,
-    Paint paint,
+    Color color,
   ) {
     final dx = target.x - source.x;
     final dy = target.y - source.y;
@@ -679,14 +750,14 @@ class _GraphPainter extends CustomPainter {
         tipY - arrowSize * uy + arrowSize * 0.4 * ux,
       )
       ..close();
-    canvas.drawPath(path, Paint()..color = paint.color);
+    canvas.drawPath(path, _fillPaint..color = color);
   }
 
   @override
   bool shouldRepaint(covariant _GraphPainter oldDelegate) =>
       oldDelegate.highlightedNodeId != highlightedNodeId ||
       oldDelegate.colorBy != colorBy ||
-      oldDelegate.graphData.nodes.length != graphData.nodes.length ||
-      oldDelegate.graphData.edges.length != graphData.edges.length ||
-      oldDelegate.graphData.hashCode != graphData.hashCode;
+      oldDelegate.layoutVersion != layoutVersion ||
+      oldDelegate.colorScheme != colorScheme ||
+      !identical(oldDelegate.graphData, graphData);
 }

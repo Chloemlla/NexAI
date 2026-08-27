@@ -69,16 +69,24 @@ class DeveloperDebugPage extends StatelessWidget {
         FutureBuilder(
             future: _crashReportFuture,
             builder: (context, snapshot) {
+              final loading =
+                  snapshot.connectionState == ConnectionState.waiting;
               final report = snapshot.data;
               return LumenSettingsSection(
                 icon: Icons.bug_report_outlined,
                 title: '崩溃报告',
-                subtitle: report == null ? '当前没有已存储的崩溃报告' : report.reportId,
+                subtitle: loading
+                    ? '正在读取崩溃报告...'
+                    : report == null
+                        ? '当前没有已存储的崩溃报告'
+                        : report.reportId,
                 children: [
                       Text(
-                        report == null
-                            ? '尚未捕获崩溃报告。'
-                            : '${report.exceptionType}\n${report.crashedAtText}',
+                        loading
+                            ? '读取中...'
+                            : report == null
+                                ? '尚未捕获崩溃报告。'
+                                : '${report.exceptionType}\n${report.crashedAtText}',
                         style: TextStyle(
                           color: cs.onSurface,
                           fontFamily: SettingsProvider.monospaceFontFamily,
@@ -201,7 +209,7 @@ class _DebugMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     final cardWidth = width >= 720 ? (width - 62) / 4 : (width - 42) / 2;
 
     return SizedBox(

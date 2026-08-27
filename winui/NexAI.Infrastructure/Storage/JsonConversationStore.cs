@@ -273,7 +273,19 @@ public sealed class JsonConversationStore : IConversationStore
             : _conversations.FirstOrDefault(c => c.Id == _currentConversationId);
 
     private void ResortUnlocked()
-        => _conversations = _conversations.OrderByDescending(c => c.UpdatedAt).ToList();
+    {
+        // Touching a conversation stamps UpdatedAt = UtcNow, which usually leaves the
+        // list already ordered. Skip the sort + reallocation unless it is really needed;
+        // OrderByDescending is stable, so re-sorting ordered input is a no-op anyway.
+        for (var i = 1; i < _conversations.Count; i++)
+        {
+            if (_conversations[i - 1].UpdatedAt < _conversations[i].UpdatedAt)
+            {
+                _conversations = _conversations.OrderByDescending(c => c.UpdatedAt).ToList();
+                return;
+            }
+        }
+    }
 
     private static Conversation Normalize(Conversation conversation)
     {

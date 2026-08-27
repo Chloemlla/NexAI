@@ -72,11 +72,9 @@ Future<void> _runMain() async {
   }
 
   if (isAndroid) {
-    try {
-      await FlutterDisplayMode.setHighRefreshRate();
-    } catch (_) {
-      // Non-fatal: some devices/emulators reject refresh-rate switching.
-    }
+    // Refresh-rate switching is a platform round-trip that nothing below
+    // depends on, so it must not sit in front of the first frame.
+    unawaited(_applyHighRefreshRate());
   }
 
   if (isDesktop) {
@@ -137,6 +135,14 @@ Future<void> _runMain() async {
       authProvider: authProvider,
     ),
   );
+}
+
+Future<void> _applyHighRefreshRate() async {
+  try {
+    await FlutterDisplayMode.setHighRefreshRate();
+  } catch (_) {
+    // Non-fatal: some devices/emulators reject refresh-rate switching.
+  }
 }
 
 Future<void> _bootstrapAppInBackground({

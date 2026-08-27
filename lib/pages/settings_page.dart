@@ -52,12 +52,15 @@ class _SettingsPageState extends State<SettingsPage> {
   late TextEditingController _vertexLocationController;
 
   StreamSubscription<void>? _clashStatusSub;
+  Timer? _vertexApiKeyDebounce;
 
   bool _showApiKey = false;
   bool _isDirty = false;
+  bool _isSaving = false;
   bool _isSyncingControllers = false;
   String _version = '';
   late final Future<bool> _autoUpdateFuture;
+  bool? _autoUpdateOverride;
 
   String _formatSyncTime(DateTime dt) {
     final now = DateTime.now();
@@ -115,6 +118,17 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() => _isDirty = true);
   }
 
+  /// The Gemini key field persists on change; without coalescing, every
+  /// keystroke triggered a secure-storage write plus a full page rebuild.
+  void _scheduleVertexApiKeySave(String value) {
+    _vertexApiKeyDebounce?.cancel();
+    _vertexApiKeyDebounce = Timer(const Duration(milliseconds: 400), () {
+      _vertexApiKeyDebounce = null;
+      if (!mounted) return;
+      _settingsProvider.setVertexApiKey(value);
+    });
+  }
+
   void _handleSettingsChanged() {
     if (!mounted || !_settingsProvider.loaded || _isDirty) return;
     _syncControllersFromSettings(_settingsProvider);
@@ -154,6 +168,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   void dispose() {
+    // A keystroke still inside the debounce window must not be dropped; the
+    // write is deferred to a microtask so it cannot notify during a build.
+    final pendingVertexKey = (_vertexApiKeyDebounce?.isActive ?? false)
+        ? _vertexApiKeyController.text
+        : null;
+    _vertexApiKeyDebounce?.cancel();
     _clashStatusSub?.cancel();
     _settingsProvider.removeListener(_handleSettingsChanged);
     _baseUrlController.dispose();
@@ -163,6 +183,10 @@ class _SettingsPageState extends State<SettingsPage> {
     _vertexApiKeyController.dispose();
     _vertexProjectIdController.dispose();
     _vertexLocationController.dispose();
+    if (pendingVertexKey != null) {
+      final settings = _settingsProvider;
+      scheduleMicrotask(() => settings.setVertexApiKey(pendingVertexKey));
+    }
     super.dispose();
   }
 
@@ -174,8 +198,9 @@ class _SettingsPageState extends State<SettingsPage> {
   // ─── Android: Material 3 ───
   Widget _buildM3Settings(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final tt = theme.textTheme;
 
     if (!settings.loaded) {
       return Scaffold(
@@ -197,6 +222,8 @@ class _SettingsPageState extends State<SettingsPage> {
     }
 
     Future<void> saveAll() async {
+      if (_isSaving) return;
+      setState(() => _isSaving = true);
       try {
         await settings.setApiMode(_currentApiMode);
         await settings.setBaseUrl(_baseUrlController.text);
@@ -243,6 +270,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           );
         }
+      } finally {
+        if (mounted) setState(() => _isSaving = false);
       }
     }
 
@@ -259,12 +288,23 @@ class _SettingsPageState extends State<SettingsPage> {
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOutBack,
             child: FloatingActionButton.extended(
-              onPressed: () async {
-                HapticFeedback.selectionClick();
-                await saveAll();
-              },
-              icon: const Icon(Icons.save_rounded),
-              label: const Text('保存'),
+              onPressed: _isSaving
+                  ? null
+                  : () async {
+                      HapticFeedback.selectionClick();
+                      await saveAll();
+                    },
+              icon: _isSaving
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: cs.onPrimaryContainer,
+                      ),
+                    )
+                  : const Icon(Icons.save_rounded),
+              label: Text(_isSaving ? '保存中...' : '保存'),
               elevation: 0,
               highlightElevation: 0,
             ),
@@ -469,7 +509,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.thermostat_rounded,
                       label: '温度',
                       value: settings.temperature,
-                      displayValue: settings.temperature.toStringAsFixed(2),
+                      format: (v) => v.toStringAsFixed(2),
                       min: 0,
                       max: 2,
                       divisions: 40,
@@ -497,9 +537,9 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.token_rounded,
                       label: '最大令牌数',
                       value: settings.maxTokens.toDouble(),
-                      displayValue: settings.maxTokens >= 1000
-                          ? '${(settings.maxTokens / 1000).toStringAsFixed(1)}k'
-                          : '${settings.maxTokens}',
+                      format: (v) => v >= 1000
+                          ? '${(v / 1000).toStringAsFixed(1)}k'
+                          : '${v.toInt()}',
                       min: 256,
                       max: 32768,
                       divisions: 64,
@@ -880,7 +920,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       icon: Icons.format_size_rounded,
                       label: '字体大小',
                       value: settings.fontSize,
-                      displayValue: '${settings.fontSize.toInt()}px',
+                      format: (v) => '${v.toInt()}px',
                       min: 10,
                       max: 24,
                       divisions: 14,
@@ -1609,12 +1649,21 @@ class _SettingsPageState extends State<SettingsPage> {
                     FutureBuilder<bool>(
                       future: _autoUpdateFuture,
                       builder: (context, snapshot) {
-                        final autoUpdate = snapshot.data ?? true;
+                        // The future never re-resolves, so the toggle has to
+                        // track the user's choice locally to stay in sync.
+                        final autoUpdate =
+                            _autoUpdateOverride ?? snapshot.data ?? true;
                         return SwitchListTile(
                           value: autoUpdate,
                           onChanged: (value) async {
-                            await UpdateChecker.setAutoUpdate(value);
-                            setState(() {});
+                            setState(() => _autoUpdateOverride = value);
+                            try {
+                              await UpdateChecker.setAutoUpdate(value);
+                            } catch (_) {
+                              if (mounted) {
+                                setState(() => _autoUpdateOverride = !value);
+                              }
+                            }
                           },
                           title: Text('自动检查更新', style: tt.bodyMedium),
                           subtitle: Text(
@@ -1679,8 +1728,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         helperMaxLines: 2,
                       ),
                       obscureText: true,
-                      onChanged: (v) =>
-                          context.read<SettingsProvider>().setVertexApiKey(v),
+                      onChanged: _scheduleVertexApiKeySave,
                     ),
                   ],
                 ),
@@ -2801,13 +2849,13 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-class _SliderRow extends StatelessWidget {
+class _SliderRow extends StatefulWidget {
   final ColorScheme cs;
   final TextTheme tt;
   final IconData icon;
   final String label;
   final double value;
-  final String displayValue;
+  final String Function(double) format;
   final double min, max;
   final int divisions;
   final ValueChanged<double> onChanged;
@@ -2818,7 +2866,7 @@ class _SliderRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    required this.displayValue,
+    required this.format,
     required this.min,
     required this.max,
     required this.divisions,
@@ -2826,20 +2874,66 @@ class _SliderRow extends StatelessWidget {
   });
 
   @override
+  State<_SliderRow> createState() => _SliderRowState();
+}
+
+class _SliderRowState extends State<_SliderRow> {
+  // Drag position is tracked locally so a drag repaints only this row instead
+  // of publishing every intermediate step to the provider (full page rebuild
+  // plus a settings write per division).
+  double? _dragValue;
+  Timer? _commitTimer;
+
+  @override
+  void didUpdateWidget(_SliderRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_commitTimer == null && widget.value != oldWidget.value) {
+      _dragValue = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _commitTimer?.cancel();
+    super.dispose();
+  }
+
+  void _handleChanged(double value) {
+    setState(() => _dragValue = value);
+    _commitTimer?.cancel();
+    // Covers keyboard/accessibility adjustments, which never report an end.
+    _commitTimer = Timer(const Duration(milliseconds: 220), () {
+      _commitTimer = null;
+      widget.onChanged(value);
+    });
+  }
+
+  void _handleChangeEnd(double value) {
+    _commitTimer?.cancel();
+    _commitTimer = null;
+    widget.onChanged(value);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final cs = widget.cs;
+    final value = (_dragValue ?? widget.value).clamp(widget.min, widget.max);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 18, color: cs.primary),
+            Icon(widget.icon, size: 18, color: cs.primary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                label,
+                widget.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                style: widget.tt.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -2850,7 +2944,7 @@ class _SliderRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
               ),
               child: Text(
-                displayValue,
+                widget.format(value),
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -2862,10 +2956,11 @@ class _SliderRow extends StatelessWidget {
         ),
         Slider(
           value: value,
-          min: min,
-          max: max,
-          divisions: divisions,
-          onChanged: onChanged,
+          min: widget.min,
+          max: widget.max,
+          divisions: widget.divisions,
+          onChanged: _handleChanged,
+          onChangeEnd: _handleChangeEnd,
         ),
       ],
     );

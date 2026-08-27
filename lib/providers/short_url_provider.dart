@@ -114,20 +114,35 @@ class ShortUrlProvider extends ChangeNotifier {
 
   /// 增量合并：按 id upsert
   Future<void> mergeItems(List<dynamic> list) async {
+    // One id→index pass instead of an `indexWhere` scan per incoming record
+    // (O(n+m) instead of O(n·m) on a 100-record history).
+    final indexById = <String, int>{};
+    for (var i = 0; i < _history.length; i++) {
+      indexById[_history[i].id] = i;
+    }
+    // Keyed by id so a batch that repeats an id upserts the pending addition
+    // rather than adding it twice; insertion-ordered to preserve arrival order.
+    final additions = <String, ShortUrlRecord>{};
+
     for (final item in list) {
       if (item is! Map<String, dynamic>) continue;
 
       try {
         final incoming = ShortUrlRecord.fromJson(item);
-        final idx = _history.indexWhere((r) => r.id == incoming.id);
-        if (idx == -1) {
-          _history.insert(0, incoming);
+        final idx = indexById[incoming.id];
+        if (idx == null) {
+          additions[incoming.id] = incoming;
         } else {
           _history[idx] = incoming;
         }
       } catch (e) {
         debugPrint('NexAI: skipping malformed short url record in merge: $e');
       }
+    }
+
+    if (additions.isNotEmpty) {
+      // Matches the previous insert-at-0 per record: latest arrival ends first.
+      _history.insertAll(0, additions.values.toList().reversed);
     }
     if (_history.length > 100) _history.removeRange(100, _history.length);
     notifyListeners();

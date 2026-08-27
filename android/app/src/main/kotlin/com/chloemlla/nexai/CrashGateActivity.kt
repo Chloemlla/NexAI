@@ -37,6 +37,11 @@ class CrashGateActivity : ComponentActivity() {
             return
         }
 
+        // Reading this report outlasts the 15s startup-hang window, and Flutter only
+        // draws after the user leaves the gate, so the window has to close here or the
+        // watchdog manufactures a startup_hang out of the gate itself.
+        runCatching { LumenCrash.markStartupComplete() }
+
         setContent {
             // Explicit nullable type: continue path assigns null to leave the gate.
             var report by remember { mutableStateOf<CrashReport?>(pendingReport) }

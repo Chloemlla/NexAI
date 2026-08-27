@@ -13,9 +13,6 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     private var nativeChannelRegistry: NativeChannelRegistry? = null
 
-    override fun getCachedEngineId(): String? =
-        if (NexAIApplication.enginePreWarmReady()) NexAIApplication.PREWARM_ENGINE_ID else null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         // FlutterActivity is not a ComponentActivity, so androidx.activity.enableEdgeToEdge()
         // cannot be used here. WindowCompat + transparent system bars give Flutter the same
@@ -34,9 +31,8 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        // Channels registered during pre-warm are replaced by fresh ones below;
-        // dispose them so their network callbacks do not leak.
-        runCatching { (application as? NexAIApplication)?.disposePrewarmChannels() }
+        // Runs before the Dart entrypoint, so every channel is in place by the
+        // time main() reaches its startup bootstrap.
         nativeChannelRegistry = NativeChannelRegistry(this, flutterEngine).also {
             it.register()
         }

@@ -26,7 +26,46 @@ class NotesProvider extends ChangeNotifier {
   // Backlink index: targetNoteId -> set of sourceNoteIds
   Map<String, Set<String>> _backlinks = {};
 
-  // Dio instance for AI title generation
+  // Derived lookups/caches, rebuilt lazily after any mutation.
+  Map<String, Note>? _byTitle;
+  Map<String, Note>? _byId;
+  List<TagInfo>? _tagsCache;
+  final Map<String, GraphData> _graphCache = {};
+
+  void _invalidateDerived() {
+    _byTitle = null;
+    _byId = null;
+    _tagsCache = null;
+    _graphCache.clear();
+  }
+
+  @override
+  void notifyListeners() {
+    _invalidateDerived();
+    super.notifyListeners();
+  }
+
+  Map<String, Note> get _titleIndex {
+    var index = _byTitle;
+    if (index != null) return index;
+    index = <String, Note>{};
+    // First note wins, matching the previous `where(...).firstOrNull` scan.
+    for (final note in _notes) {
+      index.putIfAbsent(note.title.toLowerCase().trim(), () => note);
+    }
+    _byTitle = index;
+    return index;
+  }
+
+  Map<String, Note> get _idIndex {
+    var index = _byId;
+    if (index != null) return index;
+    index = {for (final note in _notes) note.id: note};
+    _byId = index;
+    return index;
+  }
+
+  /// Dio instance for AI title generation
   final Dio _dio = Dio(
     BaseOptions(
       connectTimeout: const Duration(seconds: 15),
@@ -36,6 +75,9 @@ class NotesProvider extends ChangeNotifier {
   );
 
   List<Note> get notes => _notes;
+
+  /// Look up a note by id without scanning the whole list.
+  Note? noteById(String id) => _idIndex[id];
 
   /// All starred notes
   List<Note> get starredNotes => _notes.where((n) => n.isStarred).toList();
@@ -49,6 +91,8 @@ class NotesProvider extends ChangeNotifier {
 
   /// All unique tags across all notes, sorted by frequency descending
   List<TagInfo> get allTags {
+    final cached = _tagsCache;
+    if (cached != null) return cached;
     final freq = <String, int>{};
     for (final note in _notes) {
       for (final tag in note.tags) {
@@ -57,7 +101,9 @@ class NotesProvider extends ChangeNotifier {
     }
     final entries = freq.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    return entries.map((e) => TagInfo(e.key, e.value)).toList();
+    final tags = entries.map((e) => TagInfo(e.key, e.value)).toList();
+    _tagsCache = tags;
+    return tags;
   }
 
   /// Get notes filtered by tag
@@ -68,10 +114,14 @@ class NotesProvider extends ChangeNotifier {
 
   /// Rebuild the backlink index by scanning all notes for wiki-links
   void _rebuildBacklinks() {
+    // Runs before notifyListeners on mutation paths, so stale indexes must go
+    // first — the title index below is what resolves link targets.
+    _invalidateDerived();
     _backlinks = {};
+    final byTitle = _titleIndex;
     for (final note in _notes) {
       for (final link in note.wikiLinks) {
-        final target = _findNoteByTitle(link.target);
+        final target = byTitle[link.target.toLowerCase().trim()];
         if (target != null) {
           _backlinks.putIfAbsent(target.id, () => {}).add(note.id);
         }
@@ -80,12 +130,8 @@ class NotesProvider extends ChangeNotifier {
   }
 
   /// Find a note by title (case-insensitive)
-  Note? _findNoteByTitle(String title) {
-    final lower = title.toLowerCase().trim();
-    return _notes
-        .where((n) => n.title.toLowerCase().trim() == lower)
-        .firstOrNull;
-  }
+  Note? _findNoteByTitle(String title) =>
+      _titleIndex[title.toLowerCase().trim()];
 
   /// Find a note by title (public)
   Note? findNoteByTitle(String title) => _findNoteByTitle(title);
@@ -99,7 +145,7 @@ class NotesProvider extends ChangeNotifier {
 
   /// Get all notes that the given note links TO (outgoing)
   List<Note> getOutgoingLinks(String noteId) {
-    final note = _notes.where((n) => n.id == noteId).firstOrNull;
+    final note = _idIndex[noteId];
     if (note == null) return [];
     final targets = <Note>[];
     for (final link in note.wikiLinks) {
@@ -112,7 +158,7 @@ class NotesProvider extends ChangeNotifier {
   /// Find unlinked mentions: notes whose title appears in the given note's
   /// content but are not linked via [[...]]
   List<Note> getUnlinkedMentions(String noteId) {
-    final note = _notes.where((n) => n.id == noteId).firstOrNull;
+    final note = _idIndex[noteId];
     if (note == null) return [];
     final linkedNames = note.linkedNoteNames;
     final body = note.bodyContent.toLowerCase();
@@ -157,6 +203,12 @@ class NotesProvider extends ChangeNotifier {
 
   /// Get graph data: nodes and edges for all notes
   GraphData getGraphData({String? tagFilter, bool? starredOnly}) {
+    // Rebuilding this walks every note's wiki-links; callers hit it from
+    // build(), so memoize per filter until the note set changes.
+    final cacheKey = '${tagFilter ?? ''}\u0000${starredOnly ?? ''}';
+    final cached = _graphCache[cacheKey];
+    if (cached != null) return cached;
+
     var filtered = _notes.toList();
     if (tagFilter != null) {
       filtered = filtered.where((n) => n.tags.contains(tagFilter)).toList();
@@ -165,6 +217,7 @@ class NotesProvider extends ChangeNotifier {
       filtered = filtered.where((n) => n.isStarred).toList();
     }
     final filteredIds = filtered.map((n) => n.id).toSet();
+    final byTitle = _titleIndex;
 
     final nodes = <GraphNode>[];
     final edges = <GraphEdge>[];
@@ -184,14 +237,16 @@ class NotesProvider extends ChangeNotifier {
       );
 
       for (final link in note.wikiLinks) {
-        final target = _findNoteByTitle(link.target);
+        final target = byTitle[link.target.toLowerCase().trim()];
         if (target != null && filteredIds.contains(target.id)) {
           edges.add(GraphEdge(sourceId: note.id, targetId: target.id));
         }
       }
     }
 
-    return GraphData(nodes: nodes, edges: edges);
+    final data = GraphData(nodes: nodes, edges: edges);
+    _graphCache[cacheKey] = data;
+    return data;
   }
 
   Future<File> _getFile() async {

@@ -14,6 +14,8 @@ final wikiLinkPattern = RegExp(r'\[\[([^\]]+)\]\]');
 /// Regex to extract YAML frontmatter
 final frontmatterPattern = RegExp(r'^---\s*\n([\s\S]*?)\n---', multiLine: true);
 
+final _codeBlockPattern = RegExp(r'```[\s\S]*?```');
+
 class Note {
   final String id;
   String title;
@@ -33,63 +35,81 @@ class Note {
     this.isStarred = false,
   });
 
-  /// Extract all tags from content (both body #tags and frontmatter tags)
-  List<String> get tags {
-    final result = <String>{};
-    // Extract from frontmatter
-    final fm = frontmatter;
-    if (fm.containsKey('tags')) {
-      final fmTags = fm['tags'];
-      if (fmTags is String) {
-        for (final m in tagPattern.allMatches(fmTags)) {
-          result.add(m.group(1)!);
+  // Derived values (frontmatter / body / tags / wiki-links) are parsed together
+  // and memoized against the content instance they came from; `content` is
+  // reassigned on every edit, so an identity check is enough to invalidate.
+  String? _derivedFrom;
+  Map<String, String> _frontmatterCache = const {};
+  String _bodyCache = '';
+  List<String> _tagsCache = const [];
+  List<WikiLink> _wikiLinksCache = const [];
+
+  void _ensureDerived() {
+    final source = content;
+    if (identical(_derivedFrom, source)) return;
+
+    final fmMatch = frontmatterPattern.firstMatch(source);
+    final fm = <String, String>{};
+    if (fmMatch != null) {
+      for (final line in fmMatch.group(1)!.split('\n')) {
+        final idx = line.indexOf(':');
+        if (idx > 0) {
+          fm[line.substring(0, idx).trim()] = line.substring(idx + 1).trim();
         }
       }
     }
-    // Extract from body (skip frontmatter and code blocks)
-    final body = bodyContent;
-    // Remove code blocks before scanning
-    final noCode = body.replaceAll(RegExp(r'```[\s\S]*?```'), '');
-    for (final m in tagPattern.allMatches(noCode)) {
-      result.add(m.group(1)!);
+
+    final body = fmMatch == null
+        ? source
+        : source.substring(fmMatch.end).trimLeft();
+    // Skip code blocks so fenced samples don't produce tags or links.
+    final noCode = body.replaceAll(_codeBlockPattern, '');
+
+    final tags = <String>{};
+    final fmTags = fm['tags'];
+    if (fmTags != null) {
+      for (final m in tagPattern.allMatches(fmTags)) {
+        tags.add(m.group(1)!);
+      }
     }
-    return result.toList()..sort();
+    for (final m in tagPattern.allMatches(noCode)) {
+      tags.add(m.group(1)!);
+    }
+
+    final links = <WikiLink>[];
+    for (final m in wikiLinkPattern.allMatches(noCode)) {
+      links.add(WikiLink.parse(m.group(1)!));
+    }
+
+    _frontmatterCache = fm;
+    _bodyCache = body;
+    _tagsCache = tags.toList()..sort();
+    _wikiLinksCache = links;
+    _derivedFrom = source;
+  }
+
+  /// Extract all tags from content (both body #tags and frontmatter tags)
+  List<String> get tags {
+    _ensureDerived();
+    return _tagsCache;
   }
 
   /// Parse frontmatter as simple key-value map
   Map<String, String> get frontmatter {
-    final match = frontmatterPattern.firstMatch(content);
-    if (match == null) return {};
-    final yaml = match.group(1)!;
-    final map = <String, String>{};
-    for (final line in yaml.split('\n')) {
-      final idx = line.indexOf(':');
-      if (idx > 0) {
-        final key = line.substring(0, idx).trim();
-        final value = line.substring(idx + 1).trim();
-        map[key] = value;
-      }
-    }
-    return map;
+    _ensureDerived();
+    return _frontmatterCache;
   }
 
   /// Content without frontmatter
   String get bodyContent {
-    final match = frontmatterPattern.firstMatch(content);
-    if (match == null) return content;
-    return content.substring(match.end).trimLeft();
+    _ensureDerived();
+    return _bodyCache;
   }
 
   /// Extract all wiki-links from content
   List<WikiLink> get wikiLinks {
-    final result = <WikiLink>[];
-    final body = bodyContent;
-    final noCode = body.replaceAll(RegExp(r'```[\s\S]*?```'), '');
-    for (final m in wikiLinkPattern.allMatches(noCode)) {
-      final raw = m.group(1)!;
-      result.add(WikiLink.parse(raw));
-    }
-    return result;
+    _ensureDerived();
+    return _wikiLinksCache;
   }
 
   /// Just the target note names from wiki-links (deduplicated)

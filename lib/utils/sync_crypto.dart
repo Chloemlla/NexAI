@@ -14,6 +14,17 @@ class SyncCrypto {
   static const algorithm = 'AES-256-GCM';
   static const keyId = 'local-secure-storage-v1';
 
+  // Process memo of the local sync key. Only importRecoveryKey ever replaces
+  // `nexai.sync.v2.key`, so a snapshot of N records no longer pays N secure
+  // storage round trips plus N Encrypter allocations.
+  static enc.Key? _memoKey;
+  static enc.Encrypter? _memoEncrypter;
+
+  static void _remember(enc.Key key) {
+    _memoKey = key;
+    _memoEncrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.gcm));
+  }
+
   const SyncCrypto();
 
   Future<String> exportRecoveryKey() async {
@@ -31,6 +42,7 @@ class SyncCrypto {
       key: _keyStorageKey,
       value: _base64UrlNoPadding(bytes),
     );
+    _remember(enc.Key(bytes));
   }
 
   Future<Map<String, dynamic>> encryptRecord({
@@ -39,10 +51,9 @@ class SyncCrypto {
     required String updatedAt,
     required Map<String, dynamic> payload,
   }) async {
-    final key = await _getOrCreateKey();
     final iv = enc.IV.fromSecureRandom(12);
     final aad = utf8.encode('$category:$id:$updatedAt');
-    final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.gcm));
+    final encrypter = await _gcmEncrypter();
     final plaintext = utf8.encode(jsonEncode(payload));
     final encrypted = encrypter.encryptBytes(
       plaintext,
@@ -74,10 +85,14 @@ class SyncCrypto {
       if (crypto is! Map<String, dynamic>) return null;
       if (crypto['alg'] != algorithm) return null;
 
-      final storedKey = await _storage.read(key: _keyStorageKey);
-      if (storedKey == null || storedKey.isEmpty) return null;
+      var encrypter = _memoEncrypter;
+      if (encrypter == null) {
+        final storedKey = await _storage.read(key: _keyStorageKey);
+        if (storedKey == null || storedKey.isEmpty) return null;
+        _remember(enc.Key(_base64UrlDecode(storedKey)));
+        encrypter = _memoEncrypter!;
+      }
 
-      final key = enc.Key(_base64UrlDecode(storedKey));
       final nonce = crypto['nonce'] as String?;
       final ciphertext = crypto['ciphertext'] as String?;
       if (nonce == null || ciphertext == null) return null;
@@ -88,7 +103,6 @@ class SyncCrypto {
               '${record['category']}:${record['id']}:${record['updatedAt']}',
             );
 
-      final encrypter = enc.Encrypter(enc.AES(key, mode: enc.AESMode.gcm));
       final decrypted = encrypter.decryptBytes(
         enc.Encrypted(_base64UrlDecode(ciphertext)),
         iv: enc.IV(_base64UrlDecode(nonce)),
@@ -102,10 +116,20 @@ class SyncCrypto {
     }
   }
 
+  Future<enc.Encrypter> _gcmEncrypter() async {
+    await _getOrCreateKey();
+    return _memoEncrypter!;
+  }
+
   Future<enc.Key> _getOrCreateKey() async {
+    final memo = _memoKey;
+    if (memo != null) return memo;
+
     final existing = await _storage.read(key: _keyStorageKey);
     if (existing != null && existing.isNotEmpty) {
-      return enc.Key(_base64UrlDecode(existing));
+      final key = enc.Key(_base64UrlDecode(existing));
+      _remember(key);
+      return key;
     }
 
     final key = enc.Key.fromSecureRandom(32);
@@ -113,6 +137,7 @@ class SyncCrypto {
       key: _keyStorageKey,
       value: _base64UrlNoPadding(key.bytes),
     );
+    _remember(key);
     return key;
   }
 

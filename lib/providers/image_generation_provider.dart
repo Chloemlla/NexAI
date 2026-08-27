@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
@@ -30,6 +31,23 @@ class GeneratedImage {
     required this.timestamp,
     required this.mode,
   });
+
+  Uint8List? _decodedBytes;
+  bool _decodeAttempted = false;
+
+  /// Base64 payload decoded at most once per instance; null when absent/invalid.
+  Uint8List? get decodedBytes {
+    if (_decodeAttempted) return _decodedBytes;
+    _decodeAttempted = true;
+    final raw = b64Json;
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      _decodedBytes = base64Decode(raw);
+    } catch (_) {
+      _decodedBytes = null;
+    }
+    return _decodedBytes;
+  }
 
   Map<String, dynamic> toJson() => {
     'url': url,

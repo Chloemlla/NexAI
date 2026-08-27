@@ -21,6 +21,7 @@ OpenAI-compatible AI chat client. Android/Web use Flutter + Material Design 3; W
 | Account | Login/register, Google Sign-In (Android/Web), Passkeys (Android) |
 | Sync | NexAI `/sync/v2` end-to-end encrypted sync (+ WebDAV / Upstash options in settings) |
 | Security | Secure storage, request signing, certificate pinning (TOFU), device checks (Android) |
+| Performance | Narrow rebuild scope, coalesced streaming, linear sync merges, display-size image decode |
 
 ## Features
 
@@ -70,6 +71,21 @@ OpenAI-compatible AI chat client. Android/Web use Flutter + Material Design 3; W
 - **Dark / Light / System** theme
 - **Borderless mode** — Clean, bubble-free chat layout
 - **Full-screen mode** — Immersive chat on Android
+- **High refresh rate** — Requests the highest display mode available on Android
+
+### Performance
+
+Optimization pass merged 2026-08-27 (`c20cc47`, 72 files across Flutter and WinUI3):
+
+- **Narrow rebuild scope** — Page-level `Consumer` replaced by `context.select` / `Selector`; text fields, switches, sliders, and progress are driven by `ValueNotifier`, so streaming output and slider drags no longer rebuild whole pages
+- **Coalesced streaming** — Flutter and WinUI3 both flush stream frames at roughly 20 fps and persist the full reply once at the end, so nothing is truncated
+- **Linear sync merges** — Incremental merges for notes, translation, password, and short-URL history use id indexes: O(n·m) → O(n+m)
+- **Memoized derivations** — Note preview/tags/body, crash-report parsing, advanced-Markdown detection, and base64 image decoding are computed once per input
+- **Fewer secure-storage writes** — Values are compared before writing and byte-identical writes are skipped; the Vertex API key is debounced by 400 ms and flushed on dispose
+- **Right-sized image decode** — Avatars, generated-image thumbnails, and video preview frames decode at display size (`cacheWidth`), so 4K keyframes no longer enter the image cache at full resolution
+- **Streamed APK download** — Update packages stream to disk instead of buffering in memory, and partial files are removed on failure
+- **FFmpeg pipeline** — Session completion is event-driven (`Completer`) instead of a 300 ms poll, progress callbacks are deduplicated to whole percents, and video durations are probed in parallel
+- **WinUI3 list reuse** — The chat message collection is reconciled in place so only changed items are rebuilt; localization lookups are cached; already-ordered conversation lists skip re-sorting
 
 ### Account, Sync & Settings
 
@@ -224,7 +240,7 @@ scripts/                      # Build metadata, font subsetting, icons helpers
 
 ## 更新日志
 
-按月份整理 2026 年提交。1–6 月完整列出全部 commit；7 月按主题分组。
+按月份整理 2026 年提交。1–6 月完整列出全部 commit；7 月起按主题分组。
 
 
 
@@ -1049,6 +1065,98 @@ scripts/                      # Build metadata, font subsetting, icons helpers
 - `eefcdcd` 修复视频预览播放器 UX
 - `7e97f8d` 修复跨页面交互 UX：图谱可点、笔记 FAB 遮挡、空剪贴板反馈、绘图失败提示
 - `ec03166` 修复 login/sync 与 `const Theme.of` 相关 analyzer 错误
+
+#### 07-18 起（按主题）
+
+**WinUI3 原生桌面端落地**
+
+- `daa619b` 搭建原生 WinUI3 外壳
+- `7d8f7a3` 多会话聊天存储
+- `ada8944` OpenAI 兼容流式聊天
+- `cbd9a19` 基础 Markdown 与聊天细节
+- `62d522d` 可编辑设置与主题切换
+- `53decb4` / `ff73aaa` 迁移笔记、工具、同步、高级渲染并接入 CI
+- `86eaf5c` 工具拆分为独立页面，与 Flutter 对齐
+- `35879dd` / `4af80b1` 中英双语 i18n 基础与全页面文案本地化
+- `48032dd` nexai-sig-v2 请求签名与证书固定
+- `98d4ae7` / `a2582db` 移除旧 Flutter windows 宿主残留，项目树指向 `winui/`
+- `5392f94` / `e67e973` / `13dfb85` / `00bc411` 启动窗口可见性与初始化失败兜底
+- `d4b8cb1` / `c7cc6ba` 解决 PRI 资源命名冲突并在 CI 预检
+- `eafa3ee` CI 发布完整 Windows zip
+
+**聊天内工具调用**
+
+- `3a4e299` 新增聊天内工具调用运行时
+- `527df49` / `99f2b85` phase1 / phase2 工具生态
+- `9108b47` 补齐对标 cherry-studio 的剩余能力
+- `520dc7a` 首次进入的工具灰度提示
+- `3f92891` 工具默认值收口
+
+**安全 / 鉴权**
+
+- `5d4756b` WinUI 密钥存储与签名 P0 加固
+- `1af4d15` / `96a624d` 工具密码加密、输入长度限制、历史加密与备份传输收紧
+- `c108542` sig-v2 软失败提示可见化
+- `d0ab776` 密码库与恢复密钥弹窗启用 FLAG_SECURE
+- `840178a` 修正误报的 APK 完整性告警
+- `9f73216` OEM Android 上 Passkey allowedProviders 权限拒绝处理
+- `96f4c2f` CI 注入 `NEXAI_APP_SIGN_SECRET`
+- `5022e2f` 匿名请求自跳过签名时不再弹 NEXAI_SIG_MISSING
+
+**网络 / 翻译**
+
+- `1d516ff` Windows 与 Android 翻译统一到 Project-Lumen DeepLX
+- `934a28e` 恢复翻译 TLS 握手失败
+- `f0dba44` / `da9a245` Clash Meta VPN 进程网络适配
+
+**UX / 稳定性**
+
+- `b8c4a21` 聊天、工具、笔记、WinUI 关键流程加固
+- `93955c9` 云同步表述与聊天信任缺口对齐 Happy-TTS v2
+- `f61cf67` `Message.fromJson` 不再改动 const 引用列表
+- `ee0e6ad` 空指针崩溃源加固
+- `5c447c9` / `65ae6e4` Lumen 二级页语言与工具介绍改写
+
+### 2026 年 8 月
+
+#### 08-01 响应式布局
+
+- `86fba4c` / `6a3ff35` / `bcc4ab9` 共 18 个 UI 文件的响应式布局修复
+- `bc10c40` 补充响应式扫描结论到 uiux-review 报告
+- `2e044b3` CI 的 `flutter analyze` 加 `--no-fatal-infos`
+
+#### 08-09 ~ 08-10 外观与 Android 加固
+
+- `ff5bcde` 通过 flutter_displaymode 申请最高刷新率
+- `124c3f1` 自托管 HarmonyOS Sans SC 作为本地 CJK 字体；`2ea1b6a` 随后移除随包字体资源
+- `d47d0b9` / `ccbf8d3` 全平台统一 Lumen scaffold 背景与单一 LumenTheme 构建
+- `2d0536f` 开源声明补充 speech_to_text / flutter_tts / share_plus
+- `62e443d` 反调试、反反编译、ADB 篡改加固
+- `c0bf0ab` / `03f917d` / `a50e05e` / `69656a8` AGP 9 DSL、split-per-abi、lintVitalRelease 收口
+- `a2a086e` 移除导致主线程冻结的 fork ptrace 探测
+- `895544d` 视频压缩默认改 H.265 / CRF 28，产物更小
+
+#### 08-12 ~ 08-18 启动
+
+- `d0d2612` / `fa65267` / `d24a358` Flutter 引擎预热最终改为在主线程完成
+
+#### 08-14 ~ 08-15 缺陷修复
+
+- `f228b39` 跨 7 个模块修复 150+ 缺陷
+- `c7e0467` 清理随之产生的 analyzer 错误
+
+#### 08-27 性能 / 算法 / UX 专项
+
+合并提交 `c20cc47`（GPG 签名，`--no-ff`），5 批共 72 文件、+3880 / −2000，每批单独通过 CI 后才合并。
+
+- `b2e32f4` 笔记派生数据记忆化、同步改索引查找
+- `a2b5c3d` 收窄应用外壳重建范围、缓存工具页度量
+- `c751f26` 流式合帧、热点路径记忆化、重建范围收紧
+- `7c2ab90` 去掉二次扫描与重复推导（笔记、工具、utils）
+- `2a47674` 降低鉴权 / 设置 / 工具 / WinUI 的重建与 IO 成本
+
+同批顺手修掉的缺陷：忘记密码弹窗的 `TextEditingController` 泄漏、流式合帧定时器未在 dispose 取消、自动更新开关点击后不回显、原子写临时文件名仅进程内唯一、WinUI 密码符号表被复制成两份可能与评分口径漂移、批量生成密码去重后数量不足时静默。
+
 
 ## License
 

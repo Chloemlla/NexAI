@@ -23,26 +23,44 @@ class NexAIApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
+    // Only theme-shaping settings may rebuild MaterialApp; watching the whole
+    // provider rebuilt both ThemeData objects on every unrelated settings edit.
+    final themeMode = context.select<SettingsProvider, ThemeMode>(
+      (s) => s.themeMode,
+    );
+    final accentColorValue = context.select<SettingsProvider, int?>(
+      (s) => s.accentColorValue,
+    );
+    final fontFamily = context.select<SettingsProvider, String?>(
+      (s) => s.effectiveFontFamily,
+    );
 
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        return _buildMaterialApp(settings, lightDynamic, darkDynamic);
+        return _buildMaterialApp(
+          themeMode,
+          accentColorValue,
+          fontFamily,
+          lightDynamic,
+          darkDynamic,
+        );
       },
     );
   }
 
   Widget _buildMaterialApp(
-    SettingsProvider settings,
+    ThemeMode themeMode,
+    int? accentColorValue,
+    String? fontFamily,
     ColorScheme? lightDynamic,
     ColorScheme? darkDynamic,
   ) {
-    final seedColor = settings.accentColorValue != null
-        ? Color(settings.accentColorValue!)
+    final seedColor = accentColorValue != null
+        ? Color(accentColorValue)
         : (_isAndroid ? LumenTokens.teal : const Color(0xFF6750A4));
 
-    final accentOverride = settings.accentColorValue != null
-        ? Color(settings.accentColorValue!)
+    final accentOverride = accentColorValue != null
+        ? Color(accentColorValue)
         : null;
 
     final ColorScheme effectiveLight;
@@ -67,15 +85,15 @@ class NexAIApp extends StatelessWidget {
             brightness: Brightness.dark,
           );
 
-      effectiveLight = settings.accentColorValue != null
+      effectiveLight = accentColorValue != null
           ? ColorScheme.fromSeed(
-              seedColor: Color(settings.accentColorValue!),
+              seedColor: Color(accentColorValue),
               brightness: Brightness.light,
             )
           : lightScheme;
-      effectiveDark = settings.accentColorValue != null
+      effectiveDark = accentColorValue != null
           ? ColorScheme.fromSeed(
-              seedColor: Color(settings.accentColorValue!),
+              seedColor: Color(accentColorValue),
               brightness: Brightness.dark,
             )
           : darkScheme;
@@ -85,14 +103,14 @@ class NexAIApp extends StatelessWidget {
       title: 'NexAI',
       debugShowCheckedModeBanner: false,
       navigatorKey: NavigationHelper.navigatorKey,
-      themeMode: settings.themeMode,
+      themeMode: themeMode,
       theme: LumenTheme.build(
         colorScheme: effectiveLight,
-        fontFamily: settings.effectiveFontFamily,
+        fontFamily: fontFamily,
       ),
       darkTheme: LumenTheme.build(
         colorScheme: effectiveDark,
-        fontFamily: settings.effectiveFontFamily,
+        fontFamily: fontFamily,
       ),
       home: const _CrashReportGate(),
       builder: FlutterSmartDialog.init(),
@@ -129,11 +147,16 @@ class _OssNoticeGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
+    // This gate only reacts to the two boot decisions; watching the whole
+    // provider re-ran it on every unrelated settings change.
+    final loaded = context.select<SettingsProvider, bool>((s) => s.loaded);
+    final acknowledged = context.select<SettingsProvider, bool>(
+      (s) => s.ossNoticeAcknowledged,
+    );
 
     // Settings load in background after first frame. Keep a calm waiting state
     // so we never flash Home before the first-install decision is known.
-    if (!settings.loaded) {
+    if (!loaded) {
       final cs = Theme.of(context).colorScheme;
       return Scaffold(
         backgroundColor: lumenScaffoldBackground(cs),
@@ -143,7 +166,7 @@ class _OssNoticeGate extends StatelessWidget {
       );
     }
 
-    if (!settings.ossNoticeAcknowledged) {
+    if (!acknowledged) {
       return const OssNoticePage();
     }
 

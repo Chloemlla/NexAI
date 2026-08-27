@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -33,6 +35,21 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WindowListener {
+  // Hoisted out of build(): the tab bodies and titles never vary, so they must
+  // not be re-allocated on every shell rebuild.
+  static const List<Widget> _androidPages = <Widget>[
+    ChatPage(),
+    NotesPage(),
+    ToolsPage(),
+    SettingsPage(),
+  ];
+  static const List<String> _androidPageTitles = <String>[
+    'NexAI',
+    '笔记',
+    '工具',
+    '设置',
+  ];
+
   int _androidNavIndex = 0;
   String _currentPage = 'chat';
   SecurityStatusChecker? _securityChecker;
@@ -190,15 +207,19 @@ class _HomePageState extends State<HomePage> with WindowListener {
         false;
   }
 
-  bool _matchesConversationSearch(Conversation conversation) {
-    final query = _desktopConversationSearchQuery.trim().toLowerCase();
-    if (query.isEmpty) return true;
+  /// [normalizedQuery] must already be trimmed and lower-cased so the caller
+  /// pays that cost once per rebuild instead of once per conversation.
+  bool _matchesConversationSearch(
+    Conversation conversation,
+    String normalizedQuery,
+  ) {
+    if (normalizedQuery.isEmpty) return true;
 
-    final lastMessage = conversation.messages.isNotEmpty
-        ? conversation.messages.last.content
-        : '';
-    final haystack = '${conversation.title}\n$lastMessage'.toLowerCase();
-    return haystack.contains(query);
+    if (conversation.title.toLowerCase().contains(normalizedQuery)) return true;
+    if (conversation.messages.isEmpty) return false;
+    return conversation.messages.last.content.toLowerCase().contains(
+      normalizedQuery,
+    );
   }
 
   @override
@@ -224,21 +245,19 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
   // ─── Android: Material 3 layout ───
   Widget _buildAndroidLayout(BuildContext context) {
-    final chat = context.watch<ChatProvider>();
-    final settings = context.watch<SettingsProvider>();
+    // Actions only need the provider instance; the one observable value this
+    // shell shows (conversation count) is watched by a Selector below, so
+    // streaming token notifications no longer rebuild the whole scaffold.
+    final chat = context.read<ChatProvider>();
+    final fullScreenMode = context.select<SettingsProvider, bool>(
+      (s) => s.fullScreenMode,
+    );
     final cs = Theme.of(context).colorScheme;
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
-    final pages = <Widget>[
-      const ChatPage(),
-      const NotesPage(),
-      const ToolsPage(),
-      const SettingsPage(),
-    ];
-
-    final pageTitles = ['NexAI', '笔记', '工具', '设置'];
     final isChat = _androidNavIndex == 0;
-    final fullScreen = settings.fullScreenMode && isChat;
+    final fullScreen = fullScreenMode && isChat;
+    final topPadding = fullScreen ? MediaQuery.paddingOf(context).top : 0.0;
 
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
@@ -289,7 +308,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
                       );
                     },
                     child: Text(
-                      pageTitles[_androidNavIndex],
+                      _androidPageTitles[_androidNavIndex],
                       key: ValueKey(_androidNavIndex),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
@@ -320,9 +339,13 @@ class _HomePageState extends State<HomePage> with WindowListener {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Badge(
-                    isLabelVisible: chat.conversations.length > 1,
-                    label: Text('${chat.conversations.length}'),
+                  Selector<ChatProvider, int>(
+                    selector: (_, provider) => provider.conversations.length,
+                    builder: (_, conversationCount, child) => Badge(
+                      isLabelVisible: conversationCount > 1,
+                      label: Text('$conversationCount'),
+                      child: child,
+                    ),
                     child: IconButton(
                       icon: Icon(
                         Icons.history_rounded,
@@ -374,14 +397,15 @@ class _HomePageState extends State<HomePage> with WindowListener {
             ),
       body: Stack(
         children: [
-          IndexedStack(index: _androidNavIndex, children: pages),
+          IndexedStack(index: _androidNavIndex, children: _androidPages),
           if (fullScreen)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
+              top: topPadding + 10,
               right: 10,
               child: FloatingActionButton.small(
                 heroTag: 'exit_full_screen',
-                onPressed: () => settings.setFullScreenMode(false),
+                onPressed: () =>
+                    context.read<SettingsProvider>().setFullScreenMode(false),
                 backgroundColor: cs.surfaceContainerHighest.withAlpha(150),
                 elevation: 0,
                 highlightElevation: 0,
@@ -390,7 +414,7 @@ class _HomePageState extends State<HomePage> with WindowListener {
             ),
           if (fullScreen)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
+              top: topPadding + 10,
               left: 10,
               child: FloatingActionButton.small(
                 heroTag: 'history_full_screen',
@@ -762,7 +786,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
 
   // ─── Desktop: Material Design NavigationRail layout ───
   Widget _buildDesktopLayout(BuildContext context) {
-    final chat = context.watch<ChatProvider>();
+    // Chrome and footer navigation do not depend on chat state; only the
+    // sidebar count and list do, and those subscribe on their own below.
+    final chat = context.read<ChatProvider>();
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const pages = <Widget>[
@@ -772,11 +798,6 @@ class _HomePageState extends State<HomePage> with WindowListener {
       SettingsPage(),
       AboutPage(),
     ];
-    final filteredConversationEntries = chat.conversations
-        .asMap()
-        .entries
-        .where((entry) => _matchesConversationSearch(entry.value))
-        .toList();
 
     Widget titleWidget = Align(
       alignment: AlignmentDirectional.centerStart,
@@ -882,15 +903,20 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                       color: cs.primaryContainer.withAlpha(140),
                                       borderRadius: BorderRadius.circular(999),
                                     ),
-                                    child: Text(
-                                      '${chat.conversations.length}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: cs.primary,
-                                      ),
+                                    child: Selector<ChatProvider, int>(
+                                      selector: (_, provider) =>
+                                          provider.conversations.length,
+                                      builder: (_, conversationCount, _) =>
+                                          Text(
+                                            '$conversationCount',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: cs.primary,
+                                            ),
+                                          ),
                                     ),
                                   ),
                                 ),
@@ -958,7 +984,24 @@ class _HomePageState extends State<HomePage> with WindowListener {
                         ),
                       ),
                       Expanded(
-                        child: chat.conversations.isEmpty
+                        child: Consumer<ChatProvider>(
+                          builder: (context, chat, _) {
+                            final normalizedQuery =
+                                _desktopConversationSearchQuery
+                                    .trim()
+                                    .toLowerCase();
+                            final filteredConversationEntries = chat
+                                .conversations
+                                .asMap()
+                                .entries
+                                .where(
+                                  (entry) => _matchesConversationSearch(
+                                    entry.value,
+                                    normalizedQuery,
+                                  ),
+                                )
+                                .toList();
+                            return chat.conversations.isEmpty
                             ? Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(20),
@@ -1152,7 +1195,9 @@ class _HomePageState extends State<HomePage> with WindowListener {
                                     ),
                                   );
                                 },
-                              ),
+                              );
+                          },
+                        ),
                       ),
                       // Footer nav items
                       const Divider(height: 1),
@@ -1350,8 +1395,32 @@ class _ConversationSheetBody extends StatefulWidget {
 }
 
 class _ConversationSheetBodyState extends State<_ConversationSheetBody> {
+  // Message search rescans and lower-cases every message in every
+  // conversation, so it must not run once per keystroke.
+  static const Duration _searchDebounce = Duration(milliseconds: 180);
+
+  Timer? _searchDebounceTimer;
   String _searchQuery = '';
   List<SearchResult> _searchResults = const [];
+
+  @override
+  void dispose() {
+    _searchDebounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounceTimer?.cancel();
+    setState(() {
+      _searchQuery = value;
+      if (value.isEmpty) _searchResults = const [];
+    });
+    if (value.isEmpty) return;
+    _searchDebounceTimer = Timer(_searchDebounce, () {
+      if (!mounted) return;
+      setState(() => _searchResults = widget.chat.searchMessages(value));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1429,12 +1498,7 @@ class _ConversationSheetBodyState extends State<_ConversationSheetBody> {
                 borderSide: BorderSide.none,
               ),
             ),
-            onChanged: (v) {
-              setState(() {
-                _searchQuery = v;
-                _searchResults = chat.searchMessages(v);
-              });
-            },
+            onChanged: _onSearchChanged,
           ),
         ),
         const SizedBox(height: 12),

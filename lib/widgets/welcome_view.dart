@@ -17,11 +17,15 @@ class WelcomeView extends StatelessWidget {
 
   Widget _buildWelcome(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final screenWidth = MediaQuery.of(context).size.width;
+    // sizeOf instead of MediaQuery.of: this view sits above the chat composer,
+    // so depending on the full MediaQuery rebuilt it on every keyboard frame.
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final isWide = screenWidth > 600;
     final cardWidth = isWide ? 180.0 : (screenWidth - 52) / 2;
     final settings = context.watch<SettingsProvider>();
-    final chat = context.watch<ChatProvider>();
+    // Only the send-in-flight flag matters here; watching ChatProvider rebuilt
+    // the whole welcome screen on every streaming notification.
+    final isLoading = context.select<ChatProvider, bool>((c) => c.isLoading);
     final suggestions = const [
       _PromptSuggestion(
         icon: Icons.auto_awesome_rounded,
@@ -82,7 +86,7 @@ class WelcomeView extends StatelessWidget {
               alignment: WrapAlignment.center,
               children: [
                 FilledButton.icon(
-                  onPressed: chat.isLoading
+                  onPressed: isLoading
                       ? null
                       : settings.isConfigured
                           ? () async {
@@ -107,7 +111,7 @@ class WelcomeView extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 30),
-            _buildStatusPanel(context, cs, settings, chat.isLoading),
+            _buildStatusPanel(context, cs, settings, isLoading),
             const SizedBox(height: 18),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 820),
@@ -123,7 +127,7 @@ class WelcomeView extends StatelessWidget {
                         item,
                         cardWidth,
                         settings,
-                        chat.isLoading,
+                        isLoading,
                       ),
                     )
                     .toList(),

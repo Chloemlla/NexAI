@@ -32,7 +32,9 @@ class LumenIconChip extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      clipBehavior: Clip.antiAlias,
+      // No clip layer: the only child is a centred Icon whose size is clamped
+      // to the box, so it can never paint outside the chip. This widget is on
+      // nearly every Lumen screen, so a per-chip clip is pure overhead.
       decoration: BoxDecoration(
         color: bg,
         shape: shape == LumenIconChipShape.circle

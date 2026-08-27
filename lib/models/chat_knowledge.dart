@@ -65,7 +65,7 @@ class KnowledgeDoc {
   final List<String> tags;
   final Map<String, double> termWeights;
 
-  const KnowledgeDoc({
+  KnowledgeDoc({
     required this.id,
     this.baseId = 'default',
     required this.title,
@@ -78,6 +78,16 @@ class KnowledgeDoc {
     this.tags = const [],
     this.termWeights = const {},
   });
+
+  /// Lowercased projections used by keyword search. Computed once per instance
+  /// so a query no longer re-lowercases every document body on every keystroke.
+  String get titleLower => _titleLower ??= title.toLowerCase();
+  String get folderLower => _folderLower ??= folder.toLowerCase();
+  String get contentLower => _contentLower ??= content.toLowerCase();
+
+  String? _titleLower;
+  String? _folderLower;
+  String? _contentLower;
 
   KnowledgeDoc copyWith({
     String? baseId,

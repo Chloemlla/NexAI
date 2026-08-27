@@ -26,6 +26,81 @@ class FlowchartPainter extends CustomPainter {
     this.nodeHeight = 48,
   });
 
+  // Paints and label styles depend only on the constructor colors, so they are
+  // built once per painter instead of once per node/edge on every repaint
+  // (InteractiveViewer pan & zoom repaints the whole canvas each frame).
+  late final Paint _nodeFillPaint = Paint()..color = nodeColor;
+  late final Paint _nodeBorderPaint = Paint()
+    ..color = nodeBorderColor
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5;
+  late final Paint _edgePaint = Paint()
+    ..color = edgeColor
+    ..strokeWidth = 1.8
+    ..style = PaintingStyle.stroke;
+  late final Paint _arrowFillPaint = Paint()..color = edgeColor;
+  late final Paint _subgraphFillPaint = Paint()
+    ..color = nodeBorderColor.withAlpha((0.08 * 255).round());
+  late final Paint _subgraphBorderPaint = Paint()
+    ..color = nodeBorderColor.withAlpha((0.3 * 255).round())
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1;
+  late final Paint _labelBackgroundPaint = Paint()
+    ..color = nodeColor.withAlpha((0.95 * 255).round());
+
+  late final TextStyle _nodeLabelStyle = TextStyle(
+    fontSize: 12,
+    color: textColor,
+    fontWeight: FontWeight.w500,
+  );
+  late final TextStyle _edgeLabelStyle = TextStyle(
+    fontSize: 11,
+    color: labelColor,
+    backgroundColor: nodeColor.withAlpha((0.9 * 255).round()),
+  );
+  late final TextStyle _subgraphLabelStyle = TextStyle(
+    fontSize: 11,
+    color: labelColor,
+    fontWeight: FontWeight.w600,
+  );
+
+  /// Laid-out text keyed by `kind:label`; text layout is the dominant cost
+  /// of a repaint and none of it changes while the graph and colors are fixed.
+  final Map<String, TextPainter> _textPainters = {};
+
+  TextPainter _nodeLabelPainter(String label) {
+    return _textPainters.putIfAbsent(
+      'n:$label',
+      () => TextPainter(
+        text: TextSpan(text: label, style: _nodeLabelStyle),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        ellipsis: '…',
+      )..layout(maxWidth: nodeWidth - 12),
+    );
+  }
+
+  TextPainter _edgeLabelPainter(String label) {
+    return _textPainters.putIfAbsent(
+      'e:$label',
+      () => TextPainter(
+        text: TextSpan(text: label, style: _edgeLabelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout(),
+    );
+  }
+
+  TextPainter _subgraphLabelPainter(String label) {
+    return _textPainters.putIfAbsent(
+      's:$label',
+      () => TextPainter(
+        text: TextSpan(text: label, style: _subgraphLabelStyle),
+        textDirection: TextDirection.ltr,
+      )..layout(),
+    );
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     // Draw subgraph backgrounds
@@ -67,30 +142,11 @@ class FlowchartPainter extends CustomPainter {
       const Radius.circular(8),
     );
 
-    canvas.drawRRect(
-      rect,
-      Paint()..color = nodeBorderColor.withAlpha((0.08 * 255).round()),
-    );
-    canvas.drawRRect(
-      rect,
-      Paint()
-        ..color = nodeBorderColor.withAlpha((0.3 * 255).round())
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
-    );
+    canvas.drawRRect(rect, _subgraphFillPaint);
+    canvas.drawRRect(rect, _subgraphBorderPaint);
 
     // Subgraph label
-    final tp = TextPainter(
-      text: TextSpan(
-        text: sg.label,
-        style: TextStyle(
-          fontSize: 11,
-          color: labelColor,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    final tp = _subgraphLabelPainter(sg.label);
     tp.paint(canvas, Offset(minX - pad + 8, minY - pad - 16));
   }
 
@@ -115,34 +171,19 @@ class FlowchartPainter extends CustomPainter {
     final fromPt = _clipToNodeBoundary(fromCenter, toCenter);
     final toPt = _clipToNodeBoundary(toCenter, fromCenter);
 
-    final paint = Paint()
-      ..color = edgeColor
-      ..strokeWidth = 1.8
-      ..style = PaintingStyle.stroke;
-
     if (edge.isDashed) {
-      _drawDashedLine(canvas, fromPt, toPt, paint);
+      _drawDashedLine(canvas, fromPt, toPt, _edgePaint);
     } else {
-      canvas.drawLine(fromPt, toPt, paint);
+      canvas.drawLine(fromPt, toPt, _edgePaint);
     }
 
     // Arrowhead
-    _drawArrowhead(canvas, fromPt, toPt, edgeColor);
+    _drawArrowhead(canvas, fromPt, toPt);
 
     // Edge label
     if (edge.label != null && edge.label!.isNotEmpty) {
       final mid = Offset((fromPt.dx + toPt.dx) / 2, (fromPt.dy + toPt.dy) / 2);
-      final tp = TextPainter(
-        text: TextSpan(
-          text: edge.label,
-          style: TextStyle(
-            fontSize: 11,
-            color: labelColor,
-            backgroundColor: nodeColor.withAlpha((0.9 * 255).round()),
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = _edgeLabelPainter(edge.label!);
       final bgRect = Rect.fromCenter(
         center: mid,
         width: tp.width + 8,
@@ -150,7 +191,7 @@ class FlowchartPainter extends CustomPainter {
       );
       canvas.drawRRect(
         RRect.fromRectAndRadius(bgRect, const Radius.circular(4)),
-        Paint()..color = nodeColor.withAlpha((0.95 * 255).round()),
+        _labelBackgroundPaint,
       );
       tp.paint(canvas, Offset(mid.dx - tp.width / 2, mid.dy - tp.height / 2));
     }
@@ -172,7 +213,7 @@ class FlowchartPainter extends CustomPainter {
     return Offset(center.dx + dx * s, center.dy + dy * s);
   }
 
-  void _drawArrowhead(Canvas canvas, Offset from, Offset to, Color color) {
+  void _drawArrowhead(Canvas canvas, Offset from, Offset to) {
     final angle = math.atan2(to.dy - from.dy, to.dx - from.dx);
     const arrowLen = 10.0;
     const arrowAngle = 0.45;
@@ -192,7 +233,7 @@ class FlowchartPainter extends CustomPainter {
       ..lineTo(p2.dx, p2.dy)
       ..close();
 
-    canvas.drawPath(path, Paint()..color = color);
+    canvas.drawPath(path, _arrowFillPaint);
   }
 
   void _drawSelfLoop(Canvas canvas, Offset nodePos, MermaidEdge edge) {
@@ -200,11 +241,6 @@ class FlowchartPainter extends CustomPainter {
     final cy = nodePos.dy + nodeHeight / 2;
     final loopRadius = 20.0;
     final loopTop = cy - nodeHeight / 2 - loopRadius * 2;
-
-    final paint = Paint()
-      ..color = edgeColor
-      ..strokeWidth = 1.8
-      ..style = PaintingStyle.stroke;
 
     final path = Path()
       ..moveTo(cx + nodeWidth / 2, cy - nodeHeight / 2)
@@ -222,9 +258,9 @@ class FlowchartPainter extends CustomPainter {
       );
 
     if (edge.isDashed) {
-      _drawDashedPath(canvas, path, paint);
+      _drawDashedPath(canvas, path, _edgePaint);
     } else {
-      canvas.drawPath(path, paint);
+      canvas.drawPath(path, _edgePaint);
     }
 
     // Arrowhead at the end of the loop
@@ -232,22 +268,11 @@ class FlowchartPainter extends CustomPainter {
       canvas,
       Offset(cx - nodeWidth / 2, cy - nodeHeight / 2 + 2),
       Offset(cx - nodeWidth / 2, cy - nodeHeight / 2),
-      edgeColor,
     );
 
     // Edge label
     if (edge.label != null && edge.label!.isNotEmpty) {
-      final tp = TextPainter(
-        text: TextSpan(
-          text: edge.label,
-          style: TextStyle(
-            fontSize: 11,
-            color: labelColor,
-            backgroundColor: nodeColor.withAlpha((0.9 * 255).round()),
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = _edgeLabelPainter(edge.label!);
       final labelPos = Offset(cx - tp.width / 2, loopTop - tp.height - 4);
       final bgRect = Rect.fromCenter(
         center: Offset(cx, loopTop - tp.height / 2 - 2),
@@ -256,7 +281,7 @@ class FlowchartPainter extends CustomPainter {
       );
       canvas.drawRRect(
         RRect.fromRectAndRadius(bgRect, const Radius.circular(4)),
-        Paint()..color = nodeColor.withAlpha((0.95 * 255).round()),
+        _labelBackgroundPaint,
       );
       tp.paint(canvas, labelPos);
     }
@@ -301,11 +326,8 @@ class FlowchartPainter extends CustomPainter {
     if (pos == null) return;
 
     final rect = Rect.fromLTWH(pos.dx, pos.dy, nodeWidth, nodeHeight);
-    final paint = Paint()..color = nodeColor;
-    final borderPaint = Paint()
-      ..color = nodeBorderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+    final paint = _nodeFillPaint;
+    final borderPaint = _nodeBorderPaint;
 
     switch (node.shape) {
       case MermaidNodeShape.rectangle:
@@ -354,20 +376,7 @@ class FlowchartPainter extends CustomPainter {
     }
 
     // Node label
-    final tp = TextPainter(
-      text: TextSpan(
-        text: node.label,
-        style: TextStyle(
-          fontSize: 12,
-          color: textColor,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-      textAlign: TextAlign.center,
-      maxLines: 2,
-      ellipsis: '…',
-    )..layout(maxWidth: nodeWidth - 12);
+    final tp = _nodeLabelPainter(node.label);
 
     tp.paint(
       canvas,
@@ -382,5 +391,6 @@ class FlowchartPainter extends CustomPainter {
       nodeColor != oldDelegate.nodeColor ||
       nodeBorderColor != oldDelegate.nodeBorderColor ||
       textColor != oldDelegate.textColor ||
-      edgeColor != oldDelegate.edgeColor;
+      edgeColor != oldDelegate.edgeColor ||
+      labelColor != oldDelegate.labelColor;
 }

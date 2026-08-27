@@ -76,8 +76,30 @@ final _subgraphStart = RegExp(
   r'^subgraph\s+(\w+)\s*\[?(.*?)\]?\s*$',
   caseSensitive: false,
 );
+final _bareIdPattern = RegExp(r'^(\w+)\s*$');
+
+/// Parsed graphs keyed by source text. A chat can re-mount the same diagram
+/// many times (scrolling, theme changes), and the result is read-only, so a
+/// handful of recent sources are reused instead of re-parsed.
+const _parseCacheLimit = 8;
+final _parseCache = <String, MermaidGraph>{};
 
 MermaidGraph parseMermaid(String source) {
+  final cached = _parseCache.remove(source);
+  if (cached != null) {
+    _parseCache[source] = cached;
+    return cached;
+  }
+
+  final graph = _parseMermaid(source);
+  if (_parseCache.length >= _parseCacheLimit) {
+    _parseCache.remove(_parseCache.keys.first);
+  }
+  _parseCache[source] = graph;
+  return graph;
+}
+
+MermaidGraph _parseMermaid(String source) {
   final lines = source
       .split('\n')
       .map((l) => l.trim())
@@ -209,7 +231,7 @@ MermaidGraph parseMermaid(String source) {
     }
 
     // Bare node id
-    final bareId = RegExp(r'^(\w+)\s*$').firstMatch(line);
+    final bareId = _bareIdPattern.firstMatch(line);
     if (bareId != null && bareId.group(1) != 'end') {
       _ensureNode(nodes, bareId.group(1)!, currentSubgraph);
       if (currentSubgraphNodes != null &&

@@ -96,58 +96,35 @@ class FlowchartLayout {
         graph.direction == MermaidDirection.rightLeft;
 
     // Compute positions
-    double maxPrimary = 0;
-    double maxSecondary = 0;
+    final primaryStep = isHorizontal
+        ? (nodeWidth + horizontalGap)
+        : (nodeHeight + verticalGap);
+    final secondaryStep = isHorizontal
+        ? (nodeHeight + verticalGap)
+        : (nodeWidth + horizontalGap);
+    final secondaryGap = isHorizontal ? verticalGap : horizontalGap;
+    double minX = double.infinity, minY = double.infinity;
 
     for (int i = 0; i < layers.length; i++) {
       final layer = layers[i];
+      final primary = i * primaryStep;
+      // Centering depends on the layer, not the node.
+      final layerStart = -(layer.length * secondaryStep - secondaryGap) / 2;
+
       for (int j = 0; j < layer.length; j++) {
-        final id = layer[j];
-        double primary =
-            i *
-            (isHorizontal
-                ? (nodeWidth + horizontalGap)
-                : (nodeHeight + verticalGap));
+        final offset = layerStart + j * secondaryStep;
+        final pos = isHorizontal
+            ? Offset(primary, offset + 300) // 300 as center offset
+            : Offset(offset + 400, primary); // 400 as center offset
 
-        // Center layers
-        final layerSize = layer.length;
-        final totalSecondary =
-            layerSize *
-                (isHorizontal
-                    ? (nodeHeight + verticalGap)
-                    : (nodeWidth + horizontalGap)) -
-            (isHorizontal ? verticalGap : horizontalGap);
-        final offset =
-            -totalSecondary / 2 +
-            j *
-                (isHorizontal
-                    ? (nodeHeight + verticalGap)
-                    : (nodeWidth + horizontalGap));
-
-        if (isHorizontal) {
-          positions[id] = Offset(primary, offset + 300); // 300 as center offset
-        } else {
-          positions[id] = Offset(offset + 400, primary); // 400 as center offset
-        }
-
-        maxPrimary = math.max(
-          maxPrimary,
-          primary + (isHorizontal ? nodeWidth : nodeHeight),
-        );
-        maxSecondary = math.max(
-          maxSecondary,
-          (offset + 300).abs() + (isHorizontal ? nodeHeight : nodeWidth),
-        );
+        positions[layer[j]] = pos;
+        minX = math.min(minX, pos.dx);
+        minY = math.min(minY, pos.dy);
       }
     }
 
     // Normalize positions to start from padding
     const padding = 30.0;
-    double minX = double.infinity, minY = double.infinity;
-    for (final pos in positions.values) {
-      minX = math.min(minX, pos.dx);
-      minY = math.min(minY, pos.dy);
-    }
     final normalized = <String, Offset>{};
     double maxX = 0, maxY = 0;
     for (final entry in positions.entries) {

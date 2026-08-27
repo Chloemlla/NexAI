@@ -51,6 +51,12 @@ class ChatProvider extends ChangeNotifier {
   /// Guard against notifyListeners() after dispose() in async continuations.
   bool _disposed = false;
 
+  /// Streaming SSE chunks are coalesced into at most one rebuild per interval,
+  /// so a long answer costs O(frames) list rebuilds instead of O(tokens).
+  static const Duration _streamFrameInterval = Duration(milliseconds: 50);
+  Timer? _streamFrameTimer;
+  void Function()? _pendingStreamApply;
+
   final ChatToolExecutor _toolExecutor = ChatToolExecutor();
   final Dio _dio = Dio(
     BaseOptions(
@@ -92,6 +98,36 @@ class ChatProvider extends ChangeNotifier {
     if (token != null && !token.isCancelled) token.cancel('user_cancelled');
   }
 
+  /// Applies the latest buffered stream text and notifies at most ~20x/second.
+  void _publishStreamFrame(void Function() applyPendingDeltas) {
+    _pendingStreamApply = applyPendingDeltas;
+    if (_streamFrameTimer != null) return;
+    _emitStreamFrame();
+    _streamFrameTimer = Timer.periodic(_streamFrameInterval, (timer) {
+      if (_pendingStreamApply == null) {
+        timer.cancel();
+        _streamFrameTimer = null;
+        return;
+      }
+      _emitStreamFrame();
+    });
+  }
+
+  /// Forces the trailing chunk out so the final answer is never left buffered.
+  void _flushStreamFrames() {
+    _streamFrameTimer?.cancel();
+    _streamFrameTimer = null;
+    _emitStreamFrame();
+  }
+
+  void _emitStreamFrame() {
+    final apply = _pendingStreamApply;
+    if (apply == null) return;
+    _pendingStreamApply = null;
+    apply();
+    if (!_disposed) notifyListeners();
+  }
+
 
   List<Message> siblingsOf(int messageIndex) {
     final conversation = currentConversation;
@@ -105,6 +141,25 @@ class ChatProvider extends ChangeNotifier {
     return conversation.messages
         .where((m) => m.siblingGroupId == group)
         .toList(growable: false);
+  }
+
+  /// `(siblingCount, activeSiblingOrdinal)` for the branch switcher, computed
+  /// without allocating a list so it is cheap enough for `context.select`.
+  (int, int) siblingSummaryOf(int messageIndex) {
+    final conversation = currentConversation;
+    if (conversation == null) return (0, -1);
+    final messages = conversation.messages;
+    if (messageIndex < 0 || messageIndex >= messages.length) return (0, -1);
+    final group = messages[messageIndex].siblingGroupId;
+    if (group == null) return (1, -1);
+    var count = 0;
+    var active = -1;
+    for (final m in messages) {
+      if (m.siblingGroupId != group) continue;
+      if (active < 0 && m.isActiveBranch) active = count;
+      count++;
+    }
+    return (count, active);
   }
 
   Future<void> activateSibling({
@@ -770,6 +825,8 @@ class ChatProvider extends ChangeNotifier {
         isError: true,
       ));
     }
+    // Cancel/error can abort mid-stream; never leave buffered text unpublished.
+    _flushStreamFrames();
     if (runId == _runSerial) {
       _isLoading = false;
       _activeToolName = null;
@@ -918,6 +975,11 @@ class ChatProvider extends ChangeNotifier {
     // Gateway URL enables richer remote providers; local tools still work without it.
     final useTools = tools.isNotEmpty && toolRuntimeContext != null;
 
+    // Attachments are re-serialised for every round of the loop; encoding each
+    // image once per turn avoids O(rounds x images) reads + base64 on the UI
+    // isolate. Scoped to this call so nothing is retained after the turn.
+    final imageDataUrlCache = <String, String>{};
+
     for (var round = 0; round < maxToolRounds; round++) {
       final token = _cancelToken;
       if (token != null && token.isCancelled) {
@@ -940,6 +1002,7 @@ class ChatProvider extends ChangeNotifier {
         modelTag: modelTag,
         siblingGroupId: siblingGroupId,
         markActive: markActive,
+        imageDataUrlCache: imageDataUrlCache,
       );
       if (turn.toolCalls.isEmpty) return;
 
@@ -984,6 +1047,7 @@ class ChatProvider extends ChangeNotifier {
     String? modelTag,
     int? siblingGroupId,
     bool markActive = true,
+    Map<String, String>? imageDataUrlCache,
   }) async {
     final messagesPayload = <Map<String, dynamic>>[];
     if (systemPrompt.isNotEmpty) {
@@ -993,7 +1057,9 @@ class ChatProvider extends ChangeNotifier {
       // Include tool role messages even when isError is true so the API
       // receives the complete tool response sequence for every tool_call.
       if (msg.isError && msg.role != 'tool') continue;
-      messagesPayload.add(await _toOpenAiMessage(msg));
+      messagesPayload.add(
+        await _toOpenAiMessage(msg, imageDataUrlCache: imageDataUrlCache),
+      );
     }
 
     final body = <String, dynamic>{
@@ -1047,6 +1113,22 @@ class ChatProvider extends ChangeNotifier {
     if (!_disposed) notifyListeners();
 
     final buffer = StringBuffer();
+    final reasoningBuffer = StringBuffer();
+    var contentDirty = false;
+    var reasoningDirty = false;
+    // Materialising the buffers only when a frame is emitted keeps the growing
+    // answer out of the per-token path (O(text) copy per token otherwise).
+    void applyStreamDeltas() {
+      if (contentDirty) {
+        assistantMessage.updateContent(buffer.toString());
+        contentDirty = false;
+      }
+      if (reasoningDirty) {
+        assistantMessage.updateReasoning(reasoningBuffer.toString());
+        reasoningDirty = false;
+      }
+    }
+
     final toolBuffers = <int, _ToolCallBuffer>{};
     String lineBuf = '';
     var done = false;
@@ -1077,16 +1159,17 @@ class ChatProvider extends ChangeNotifier {
           if (content is String && content.isNotEmpty) {
             ttftMs ??= DateTime.now().difference(startedAt).inMilliseconds;
             buffer.write(content);
-            assistantMessage.updateContent(buffer.toString());
-            if (!_disposed) notifyListeners();
+            contentDirty = true;
+            _publishStreamFrame(applyStreamDeltas);
           }
 
           final reasoningDelta = deltaMap['reasoning_content'] ??
               deltaMap['reasoning'] ??
               (deltaMap['delta'] is Map ? (deltaMap['delta'] as Map)['reasoning'] : null);
           if (reasoningDelta is String && reasoningDelta.isNotEmpty) {
-            assistantMessage.appendReasoning(reasoningDelta);
-            if (!_disposed) notifyListeners();
+            reasoningBuffer.write(reasoningDelta);
+            reasoningDirty = true;
+            _publishStreamFrame(applyStreamDeltas);
           }
 
           final usage = json['usage'];
@@ -1116,6 +1199,8 @@ class ChatProvider extends ChangeNotifier {
         } catch (_) {}
       }
     }
+
+    _flushStreamFrames();
 
     final toolCalls = <ToolCallRecord>[];
     final sortedKeys = toolBuffers.keys.toList()..sort();
@@ -1271,7 +1356,10 @@ class ChatProvider extends ChangeNotifier {
     return true;
   }
 
-  Future<Map<String, dynamic>> _toOpenAiMessage(Message msg) async {
+  Future<Map<String, dynamic>> _toOpenAiMessage(
+    Message msg, {
+    Map<String, String>? imageDataUrlCache,
+  }) async {
     if (msg.role == 'tool') {
       return {
         'role': 'tool',
@@ -1289,13 +1377,19 @@ class ChatProvider extends ChangeNotifier {
     if (msg.role == 'user' && msg.hasAttachments) {
       return {
         'role': 'user',
-        'content': await _messageContentForApi(msg),
+        'content': await _messageContentForApi(
+          msg,
+          imageDataUrlCache: imageDataUrlCache,
+        ),
       };
     }
     return {'role': msg.role, 'content': msg.content};
   }
 
-  Future<dynamic> _messageContentForApi(Message msg) async {
+  Future<dynamic> _messageContentForApi(
+    Message msg, {
+    Map<String, String>? imageDataUrlCache,
+  }) async {
     if (!msg.hasAttachments) return msg.content;
     final parts = <Map<String, dynamic>>[];
     final text = msg.content.trim();
@@ -1317,14 +1411,20 @@ class ChatProvider extends ChangeNotifier {
           );
           continue;
         }
-        final bytes = await file.readAsBytes();
-        if (bytes.length > NetworkSafety.maxImageBytes) continue;
-        final b64 = base64Encode(bytes);
-        final mime = attachment.mimeType ?? _guessImageMime(attachment.name);
+        // Keyed on size too, so an edited file at the same path is re-encoded.
+        final cacheKey = '${attachment.path}|$size';
+        var dataUrl = imageDataUrlCache?[cacheKey];
+        if (dataUrl == null) {
+          final bytes = await file.readAsBytes();
+          if (bytes.length > NetworkSafety.maxImageBytes) continue;
+          final mime = attachment.mimeType ?? _guessImageMime(attachment.name);
+          dataUrl = 'data:$mime;base64,${base64Encode(bytes)}';
+          imageDataUrlCache?[cacheKey] = dataUrl;
+        }
         parts.add({
           'type': 'image_url',
           'image_url': {
-            'url': 'data:$mime;base64,$b64',
+            'url': dataUrl,
           },
         });
         imageCount += 1;
@@ -1424,6 +1524,8 @@ class ChatProvider extends ChangeNotifier {
       conversation.messages.add(assistantMessage);
       if (!_disposed) notifyListeners();
       final buffer = StringBuffer();
+      void applyStreamDeltas() =>
+          assistantMessage.updateContent(buffer.toString());
       String lineBuf = '';
       await for (final chunk in response.data!.stream.cast<List<int>>().transform(utf8.decoder)) {
         lineBuf += chunk;
@@ -1442,14 +1544,14 @@ class ChatProvider extends ChangeNotifier {
                 final text = parts[0]['text'] as String?;
                 if (text != null) {
                   buffer.write(text);
-                  assistantMessage.updateContent(buffer.toString());
-                  if (!_disposed) notifyListeners();
+                  _publishStreamFrame(applyStreamDeltas);
                 }
               }
             }
           } catch (_) {}
         }
       }
+      _flushStreamFrames();
       if (assistantMessage.content.isEmpty) {
         assistantMessage.updateContent('接口返回为空');
         assistantMessage.markAsError();
@@ -1502,6 +1604,9 @@ class ChatProvider extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _streamFrameTimer?.cancel();
+    _streamFrameTimer = null;
+    _pendingStreamApply = null;
     _cancelToken?.cancel('disposed');
     _dio.close();
     super.dispose();

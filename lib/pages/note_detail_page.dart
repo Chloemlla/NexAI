@@ -21,6 +21,52 @@ final _taskItemRegex = RegExp(
   multiLine: true,
 );
 
+/// Counts words without allocating the list `split` would build; this runs for
+/// the whole document on every editing pause.
+int _countWords(String text) {
+  var count = 0;
+  var inWord = false;
+  for (var i = 0; i < text.length; i++) {
+    final c = text.codeUnitAt(i);
+    final isSpace =
+        c == 0x20 || (c >= 0x09 && c <= 0x0D) || c == 0xA0 || c == 0x3000;
+    if (isSpace) {
+      inWord = false;
+    } else if (!inWord) {
+      inWord = true;
+      count++;
+    }
+  }
+  return count;
+}
+
+/// Derived editor counters, published through a [ValueNotifier] so a keystroke
+/// refreshes the status bars instead of the whole page.
+class _NoteStats {
+  final int words;
+  final int chars;
+  final int taskTotal;
+  final int taskDone;
+
+  const _NoteStats({
+    this.words = 0,
+    this.chars = 0,
+    this.taskTotal = 0,
+    this.taskDone = 0,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is _NoteStats &&
+      other.words == words &&
+      other.chars == chars &&
+      other.taskTotal == taskTotal &&
+      other.taskDone == taskDone;
+
+  @override
+  int get hashCode => Object.hash(words, chars, taskTotal, taskDone);
+}
+
 class NoteDetailPage extends StatefulWidget {
   final String noteId;
   const NoteDetailPage({super.key, required this.noteId});
@@ -48,11 +94,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   NotesProvider? _notesProvider;
   SettingsProvider? _settingsProvider;
 
-  // Stats
-  int _wordCount = 0;
-  int _charCount = 0;
-  int _taskTotal = 0;
-  int _taskDone = 0;
+  // Stats and preview content are pushed through notifiers so typing only
+  // rebuilds the status bars and the preview pane, not the whole page.
+  final ValueNotifier<_NoteStats> _stats = ValueNotifier(const _NoteStats());
+  final ValueNotifier<String> _previewText = ValueNotifier('');
 
   @override
   void initState() {
@@ -72,9 +117,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     _notesProvider = context.read<NotesProvider>();
     _settingsProvider = context.read<SettingsProvider>();
     if (!_initialized) {
-      final note = _notesProvider!.notes
-          .where((n) => n.id == widget.noteId)
-          .firstOrNull;
+      final note = _notesProvider!.noteById(widget.noteId);
       if (note != null) {
         _titleController.text = note.title;
         _contentController.text = note.content;
@@ -104,6 +147,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
     _editorFocus.dispose();
     _editorScroll.dispose();
     _previewScroll.dispose();
+    _stats.dispose();
+    _previewText.dispose();
     super.dispose();
   }
 
@@ -120,10 +165,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         _contentController.text != _savedContent;
     if (dirty != _dirty) {
       setState(() => _dirty = dirty);
-    } else if (dirty) {
-      // still dirty — no setState needed beyond stats
     }
-    // Debounce stats update to avoid excessive rebuilds during typing
+    // Debounce derived state (stats + preview) to avoid per-keystroke work.
     _debounceStatsUpdate();
   }
 
@@ -137,27 +180,23 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   }
 
   void _updateStats(String text) {
-    final words = text.trim().isEmpty
-        ? 0
-        : text.trim().split(RegExp(r'\s+')).length;
-    final chars = text.length;
-    final tasks = _taskItemRegex.allMatches(text);
-    final total = tasks.length;
-    final done = tasks
-        .where((m) => m.group(2)!.trim().toLowerCase() == 'x')
-        .length;
+    _previewText.value = text;
 
-    if (words != _wordCount ||
-        chars != _charCount ||
-        total != _taskTotal ||
-        done != _taskDone) {
-      setState(() {
-        _wordCount = words;
-        _charCount = chars;
-        _taskTotal = total;
-        _taskDone = done;
-      });
+    // Single regex pass over the document instead of two.
+    var total = 0;
+    var done = 0;
+    for (final m in _taskItemRegex.allMatches(text)) {
+      total++;
+      final mark = m.group(2)!;
+      if (mark == 'x' || mark == 'X') done++;
     }
+
+    _stats.value = _NoteStats(
+      words: _countWords(text),
+      chars: text.length,
+      taskTotal: total,
+      taskDone: done,
+    );
   }
 
   Future<void> _saveNote() async {
@@ -192,9 +231,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           )
           .then((_) {
             // Update title controller if title was generated
-            final note = provider.notes
-                .where((n) => n.id == widget.noteId)
-                .firstOrNull;
+            final note = provider.noteById(widget.noteId);
             if (note != null && note.title != 'Untitled Note' && mounted) {
               setState(() {
                 _titleController.text = note.title;
@@ -513,11 +550,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final note = context
-        .watch<NotesProvider>()
-        .notes
-        .where((n) => n.id == widget.noteId)
-        .firstOrNull;
+    final note = context.watch<NotesProvider>().noteById(widget.noteId);
     if (note == null) {
       return Scaffold(
         backgroundColor: lumenScaffoldBackground(Theme.of(context).colorScheme),
@@ -653,9 +686,27 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 // Save button (manual save)
                 IconButton(
                   icon: Icon(Icons.save_rounded, size: 22, color: cs.primary),
-                  onPressed: () {
-                    _saveNote();
-                    ScaffoldMessenger.of(context).showSnackBar(
+                  onPressed: () async {
+                    final messenger = ScaffoldMessenger.of(context);
+                    try {
+                      await _saveNote();
+                    } catch (e) {
+                      // Previously the success toast fired even if the write failed.
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('保存失败：$e'),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              LumenTokens.radiusSm,
+                            ),
+                          ),
+                          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        ),
+                      );
+                      return;
+                    }
+                    messenger.showSnackBar(
                       SnackBar(
                         content: const Row(
                           children: [
@@ -670,7 +721,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         ),
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(LumenTokens.radiusSm),
+                          borderRadius: BorderRadius.circular(
+                            LumenTokens.radiusSm,
+                          ),
                         ),
                         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         duration: const Duration(seconds: 1),
@@ -797,7 +850,12 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
             body: Column(
               children: [
                 // Task progress bar
-                if (_taskTotal > 0) _buildTaskProgress(cs),
+                ValueListenableBuilder<_NoteStats>(
+                  valueListenable: _stats,
+                  builder: (_, stats, __) => stats.taskTotal > 0
+                      ? _buildTaskProgress(cs, stats)
+                      : const SizedBox.shrink(),
+                ),
                 // Tags bar
                 if (note.tags.isNotEmpty) _buildTagsBar(cs, note.tags),
                 // Toolbar
@@ -814,7 +872,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                       : _buildPreview(cs, note.content),
                 ),
                 // Bottom stats bar
-                _buildBottomBar(cs),
+                ValueListenableBuilder<_NoteStats>(
+                  valueListenable: _stats,
+                  builder: (_, stats, __) => _buildBottomBar(cs, stats),
+                ),
               ],
             ),
             ),
@@ -1002,13 +1063,10 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   void _showStatsDialog() {
     final lines = _contentController.text.split('\n').length;
     final headings = _extractOutline(_contentController.text).length;
-    final note = context
-        .read<NotesProvider>()
-        .notes
-        .where((n) => n.id == widget.noteId)
-        .firstOrNull;
+    final note = context.read<NotesProvider>().noteById(widget.noteId);
     final tagCount = note?.tags.length ?? 0;
     final hasFm = _contentController.text.trimLeft().startsWith('---');
+    final stats = _stats.value;
 
     showDialog(
       context: context,
@@ -1017,16 +1075,16 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _statRow(Icons.text_fields_rounded, '单词', '$_wordCount'),
-            _statRow(Icons.abc_rounded, '字符', '$_charCount'),
+            _statRow(Icons.text_fields_rounded, '单词', '${stats.words}'),
+            _statRow(Icons.abc_rounded, '字符', '${stats.chars}'),
             _statRow(Icons.format_list_numbered_rounded, '行数', '$lines'),
             _statRow(Icons.segment_rounded, '标题', '$headings'),
             _statRow(Icons.tag_rounded, '标签', '$tagCount'),
-            if (_taskTotal > 0)
+            if (stats.taskTotal > 0)
               _statRow(
                 Icons.check_box_outlined,
                 '任务',
-                '$_taskDone / $_taskTotal',
+                '${stats.taskDone} / ${stats.taskTotal}',
               ),
             _statRow(Icons.data_object_rounded, '前置元数据', hasFm ? '是' : '否'),
           ],
@@ -1104,14 +1162,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   void _showTagsSheet() {
     final cs = Theme.of(context).colorScheme;
-    final note = context
-        .read<NotesProvider>()
-        .notes
-        .where((n) => n.id == widget.noteId)
-        .firstOrNull;
-    if (note == null) return;
+    final provider = context.read<NotesProvider>();
+    if (provider.noteById(widget.noteId) == null) return;
 
-    final tags = note.tags;
     final tagController = TextEditingController();
 
     showModalBottomSheet(
@@ -1121,6 +1174,8 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
+            // Re-read on every sheet rebuild so a freshly added tag shows up.
+            final tags = provider.noteById(widget.noteId)?.tags ?? const [];
             return SafeArea(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1179,13 +1234,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                         ),
                         const SizedBox(width: 8),
                         FilledButton.tonal(
-                          onPressed: () {
+                          onPressed: () async {
                             final tag = tagController.text.trim();
                             if (tag.isEmpty) return;
                             // Append tag to content
                             _insertAtCursor(' #$tag');
-                            _saveNote();
+                            await _saveNote();
                             tagController.clear();
+                            if (!ctx.mounted) return;
                             setSheetState(() {});
                           },
                           child: const Text('添加'),
@@ -1475,9 +1531,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
           await provider.addLinkToNote(widget.noteId, note.title);
           if (!mounted) return;
           // Refresh the content controller
-          final updatedNote = provider.notes
-              .where((n) => n.id == widget.noteId)
-              .firstOrNull;
+          final updatedNote = provider.noteById(widget.noteId);
           if (updatedNote != null) {
             _contentController.text = updatedNote.content;
           }
@@ -1550,8 +1604,9 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   // ─── Task progress ───
 
-  Widget _buildTaskProgress(ColorScheme cs) {
-    final progress = _taskTotal > 0 ? _taskDone / _taskTotal : 0.0;
+  Widget _buildTaskProgress(ColorScheme cs, _NoteStats stats) {
+    final progress =
+        stats.taskTotal > 0 ? stats.taskDone / stats.taskTotal : 0.0;
     final isComplete = progress >= 1.0;
 
     return Container(
@@ -1603,7 +1658,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     ),
                     const Spacer(),
                     Text(
-                      '$_taskDone/$_taskTotal',
+                      '${stats.taskDone}/${stats.taskTotal}',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -1827,12 +1882,20 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
 
   // ─── Split views ───
 
+  /// Preview pane fed by [_previewText]: an edit repaints only this subtree.
+  Widget _buildLivePreview(ColorScheme cs) {
+    return ValueListenableBuilder<String>(
+      valueListenable: _previewText,
+      builder: (_, text, __) => _buildPreview(cs, text),
+    );
+  }
+
   Widget _buildSplitHorizontal(ColorScheme cs) {
     return Row(
       children: [
         Expanded(child: _buildEditor(cs)),
         VerticalDivider(width: 1, color: cs.outlineVariant.withAlpha(80)),
-        Expanded(child: _buildPreview(cs, _contentController.text)),
+        Expanded(child: _buildLivePreview(cs)),
       ],
     );
   }
@@ -1842,14 +1905,14 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
       children: [
         Expanded(flex: 5, child: _buildEditor(cs)),
         Divider(height: 1, color: cs.outlineVariant.withAlpha(80)),
-        Expanded(flex: 4, child: _buildPreview(cs, _contentController.text)),
+        Expanded(flex: 4, child: _buildLivePreview(cs)),
       ],
     );
   }
 
   // ─── Bottom bar ───
 
-  Widget _buildBottomBar(ColorScheme cs) {
+  Widget _buildBottomBar(ColorScheme cs, _NoteStats stats) {
     return Container(
       key: const Key('noteBottomBar'),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -1863,22 +1926,26 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
         children: [
           Flexible(
             fit: FlexFit.loose,
-            child: _statChip(cs, Icons.text_fields_rounded, '$_wordCount 个单词'),
+            child: _statChip(
+              cs,
+              Icons.text_fields_rounded,
+              '${stats.words} 个单词',
+            ),
           ),
           const SizedBox(width: 12),
           Flexible(
             fit: FlexFit.loose,
-            child: _statChip(cs, Icons.abc_rounded, '$_charCount 个字符'),
+            child: _statChip(cs, Icons.abc_rounded, '${stats.chars} 个字符'),
           ),
-          if (_taskTotal > 0) ...[
+          if (stats.taskTotal > 0) ...[
             const SizedBox(width: 12),
             Flexible(
               fit: FlexFit.loose,
               child: _statChip(
                 cs,
                 Icons.check_box_outlined,
-                '$_taskDone/$_taskTotal 个任务',
-                color: _taskDone == _taskTotal ? cs.tertiary : null,
+                '${stats.taskDone}/${stats.taskTotal} 个任务',
+                color: stats.taskDone == stats.taskTotal ? cs.tertiary : null,
               ),
             ),
           ],
@@ -1981,9 +2048,12 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                     tooltip: '退出专注模式',
                   ),
                   const Spacer(),
-                  Text(
-                    '$_wordCount 个单词',
-                    style: TextStyle(fontSize: 12, color: cs.outline),
+                  ValueListenableBuilder<_NoteStats>(
+                    valueListenable: _stats,
+                    builder: (_, stats, __) => Text(
+                      '${stats.words} 个单词',
+                      style: TextStyle(fontSize: 12, color: cs.outline),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // Toggle between edit and preview in focus mode

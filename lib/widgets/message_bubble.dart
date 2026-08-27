@@ -48,6 +48,21 @@ class MessageBubble extends StatefulWidget {
 class _MessageBubbleState extends State<MessageBubble> {
   final GlobalKey _repaintKey = GlobalKey();
 
+  /// Footer and branch switcher depend only on the message identity, so they
+  /// are built once and reused across streaming rebuilds of the list.
+  Widget? _footer;
+  Widget? _siblingSwitcher;
+
+  @override
+  void didUpdateWidget(MessageBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.message, widget.message) ||
+        oldWidget.messageIndex != widget.messageIndex) {
+      _footer = null;
+      _siblingSwitcher = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return _buildBubble(context);
@@ -57,11 +72,29 @@ class _MessageBubbleState extends State<MessageBubble> {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
     final isUser = widget.message.role == 'user';
-    final chat = context.watch<ChatProvider>();
-    final focused = chat.focusMessageIndex == widget.messageIndex;
+    // Only this bubble's own focus flag matters; watching the whole provider
+    // would mark every bubble dirty on every streamed token.
+    final focused = context.select<ChatProvider, bool>(
+      (chat) => chat.focusMessageIndex == widget.messageIndex,
+    );
     final screenWidth = MediaQuery.of(context).size.width;
     final isWide = screenWidth > 600;
     final maxBubbleWidth = isWide ? 720.0 : screenWidth * 0.82;
+    final visibleCitations = isUser
+        ? const <Citation>[]
+        : widget.message.citations
+            .where((c) => c.source != 'pin')
+            .toList(growable: false);
+    final footer = _footer ??= _MessageFooter(
+      message: widget.message,
+      isUser: isUser,
+      messageIndex: widget.messageIndex,
+      repaintKey: _repaintKey,
+    );
+    final siblingSwitcher = isUser
+        ? null
+        : (_siblingSwitcher ??=
+            _SiblingSwitcher(messageIndex: widget.messageIndex));
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -181,16 +214,12 @@ class _MessageBubbleState extends State<MessageBubble> {
                             content: widget.message.content,
                           ),
                         ),
-                      if (!isUser &&
-                          widget.message.citations
-                              .where((c) => c.source != 'pin')
-                              .isNotEmpty) ...[
+                      if (visibleCitations.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
                           runSpacing: 8,
-                          children: widget.message.citations
-                              .where((c) => c.source != 'pin')
+                          children: visibleCitations
                               .map((c) => _CitationChip(citation: c))
                               .toList(),
                         ),
@@ -218,13 +247,8 @@ class _MessageBubbleState extends State<MessageBubble> {
                         ),
                       ],
                       const SizedBox(height: 6),
-                      _MessageFooter(
-                        message: widget.message,
-                        isUser: isUser,
-                        messageIndex: widget.messageIndex,
-                        repaintKey: _repaintKey,
-                      ),
-                      if (!isUser) _SiblingSwitcher(messageIndex: widget.messageIndex),
+                      footer,
+                      if (siblingSwitcher != null) siblingSwitcher,
                     ],
                   ),
                 ),
@@ -260,6 +284,9 @@ class _MessageFooter extends StatelessWidget {
   final bool isUser;
   final int messageIndex;
   final GlobalKey repaintKey;
+
+  /// Compiled once instead of per share action.
+  static final RegExp _codeBlockRegex = RegExp(r'```(\w+)?\n([\s\S]*?)```');
 
   const _MessageFooter({
     required this.message,
@@ -637,8 +664,7 @@ class _MessageFooter extends StatelessWidget {
     String content = message.content;
 
     // 1. Check for fenced code block  ```lang\n...\n```
-    final codeBlockRegex = RegExp(r'```(\w+)?\n([\s\S]*?)```');
-    final match = codeBlockRegex.firstMatch(message.content);
+    final match = _codeBlockRegex.firstMatch(message.content);
 
     if (match != null) {
       language = match.group(1)?.toLowerCase();
@@ -866,8 +892,7 @@ class _MessageFooter extends StatelessWidget {
     if (content.isEmpty) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final speech = ChatSpeechService();
-      await speech.speak(content);
+      await ChatSpeechService.shared.speak(content);
       if (!context.mounted) return;
       messenger.showSnackBar(
         const SnackBar(
@@ -1377,11 +1402,17 @@ class _SiblingSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chat = context.watch<ChatProvider>();
+    // Selecting a value-equal record keeps this row out of the streaming
+    // rebuild path: it only rebuilds when its own branch state changes.
+    final summary = context.select<ChatProvider, (int, int)>(
+      (chat) => chat.siblingSummaryOf(messageIndex),
+    );
+    if (summary.$1 <= 1) return const SizedBox.shrink();
+    final chat = context.read<ChatProvider>();
     final siblings = chat.siblingsOf(messageIndex);
     if (siblings.length <= 1) return const SizedBox.shrink();
     final cs = Theme.of(context).colorScheme;
-    final activeIdx = siblings.indexWhere((m) => m.isActiveBranch);
+    final activeIdx = summary.$2;
     return Padding(
       padding: const EdgeInsets.only(top: 6),
       child: Row(

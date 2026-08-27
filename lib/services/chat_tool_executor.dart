@@ -271,13 +271,14 @@ class ChatToolExecutor {
 
 
   List<Citation> _rankCitations(List<Citation> input, String query) {
-    final terms = query.toLowerCase().split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+    final terms = query.toLowerCase().split(_whitespaceRegex).where((t) => t.isNotEmpty).toList();
     final scored = input.map((c) {
       final hay = '${c.title} ${c.snippet} ${c.url}'.toLowerCase();
       var score = 0;
+      final lowerTitle = c.title.toLowerCase();
       for (final t in terms) {
         if (hay.contains(t)) score += 1;
-        if (c.title.toLowerCase().contains(t)) score += 2;
+        if (lowerTitle.contains(t)) score += 2;
       }
       // prefer https and non-empty snippets
       if (c.url.startsWith('https://')) score += 1;
@@ -431,7 +432,7 @@ class ChatToolExecutor {
             ? context.toolGatewayBaseUrl.trim()
             : provider.endpoint.trim();
         if (gateway.isEmpty) break;
-        final gatewayUrl = '${gateway.replaceAll(RegExp(r'/+$'), '')}/tools/web_search';
+        final gatewayUrl = '${gateway.replaceAll(_trailingSlashRegex, '')}/tools/web_search';
         _assertSafeEndpoint(gatewayUrl, requireHttps: true);
         final response = await _dio.post<Map<String, dynamic>>(
           gatewayUrl,
@@ -1047,33 +1048,44 @@ class ChatToolExecutor {
     return parsed;
   }
 
+  // Compiled once: the HTML pipeline below runs over payloads up to 2MB, and
+  // rebuilding these patterns per fetch dominated the extraction cost.
+  static final RegExp _whitespaceRegex = RegExp(r'\s+');
+  static final RegExp _trailingSlashRegex = RegExp(r'/+$');
+  static final RegExp _htmlTitleRegex = RegExp(
+    r'<title[^>]*>(.*?)</title>',
+    caseSensitive: false,
+    dotAll: true,
+  );
+  static final RegExp _scriptBlockRegex =
+      RegExp(r'<script[\s\S]*?</script>', caseSensitive: false);
+  static final RegExp _styleBlockRegex =
+      RegExp(r'<style[\s\S]*?</style>', caseSensitive: false);
+  static final RegExp _brRegex = RegExp(r'<br\s*/?>', caseSensitive: false);
+  static final RegExp _paragraphEndRegex =
+      RegExp(r'</p>', caseSensitive: false);
+  static final RegExp _anyTagRegex = RegExp(r'<[^>]+>');
+  static final RegExp _trailingSpaceBeforeNewlineRegex = RegExp(r'[ \t]+\n');
+  static final RegExp _blankLineRunRegex = RegExp(r'\n{3,}');
+  static final RegExp _repeatedSpaceRegex = RegExp(r'[ \t]{2,}');
+
   static String? _extractHtmlTitle(String html) {
-    final match = RegExp(
-      r'<title[^>]*>(.*?)</title>',
-      caseSensitive: false,
-      dotAll: true,
-    ).firstMatch(html);
+    final match = _htmlTitleRegex.firstMatch(html);
     if (match == null) return null;
     return _decodeHtml(match.group(1) ?? '').trim();
   }
 
   static String _htmlToText(String html) {
     var text = html;
-    text = text.replaceAll(
-      RegExp(r'<script[\s\S]*?</script>', caseSensitive: false),
-      ' ',
-    );
-    text = text.replaceAll(
-      RegExp(r'<style[\s\S]*?</style>', caseSensitive: false),
-      ' ',
-    );
-    text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
-    text = text.replaceAll(RegExp(r'</p>', caseSensitive: false), '\n\n');
-    text = text.replaceAll(RegExp(r'<[^>]+>'), ' ');
+    text = text.replaceAll(_scriptBlockRegex, ' ');
+    text = text.replaceAll(_styleBlockRegex, ' ');
+    text = text.replaceAll(_brRegex, '\n');
+    text = text.replaceAll(_paragraphEndRegex, '\n\n');
+    text = text.replaceAll(_anyTagRegex, ' ');
     text = _decodeHtml(text);
-    text = text.replaceAll(RegExp(r'[ \t]+\n'), '\n');
-    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-    text = text.replaceAll(RegExp(r'[ \t]{2,}'), ' ');
+    text = text.replaceAll(_trailingSpaceBeforeNewlineRegex, '\n');
+    text = text.replaceAll(_blankLineRunRegex, '\n\n');
+    text = text.replaceAll(_repeatedSpaceRegex, ' ');
     return text.trim();
   }
 

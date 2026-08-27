@@ -257,12 +257,13 @@ class ChatToolCatalog {
     ),
   ];
 
-  static ChatToolDefinition? byName(String name) {
-    for (final tool in all) {
-      if (tool.name == name) return tool;
-    }
-    return null;
-  }
+  /// Name index built once, so per-tool-call lookups are O(1) instead of a
+  /// linear scan of the whole catalog.
+  static final Map<String, ChatToolDefinition> _byName = {
+    for (final tool in all) tool.name: tool,
+  };
+
+  static ChatToolDefinition? byName(String name) => _byName[name];
 
   static List<ChatToolDefinition> enabledFromFlags({
     required bool webSearchEnabled,

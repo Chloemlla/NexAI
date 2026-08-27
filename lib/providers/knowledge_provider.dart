@@ -11,11 +11,34 @@ import 'package:path_provider/path_provider.dart';
 import '../models/chat_knowledge.dart';
 import '../utils/atomic_file_writer.dart';
 
+final _nonWordPattern = RegExp('[^a-z0-9\\u4e00-\\u9fff\\s]');
+final _whitespacePattern = RegExp(r'\s+');
+final _runsOfSpacesPattern = RegExp(r'[^\S\r\n]{2,}');
+final _blankLinesPattern = RegExp(r'\n{3,}');
+
 class KnowledgeProvider extends ChangeNotifier {
   final List<KnowledgeBase> _bases = [];
   final List<KnowledgeDoc> _docs = [];
   bool _loaded = false;
   String _activeBaseId = 'default';
+
+  // id -> position in `_docs`, rebuilt lazily after any mutation so lookups and
+  // updates don't scan the whole collection.
+  Map<String, int>? _docIndex;
+
+  Map<String, int> get _indexById {
+    var index = _docIndex;
+    if (index != null) return index;
+    index = {for (var i = 0; i < _docs.length; i++) _docs[i].id: i};
+    _docIndex = index;
+    return index;
+  }
+
+  @override
+  void notifyListeners() {
+    _docIndex = null;
+    super.notifyListeners();
+  }
 
   List<KnowledgeBase> get bases => List.unmodifiable(_bases);
   List<KnowledgeDoc> get docs => List.unmodifiable(_docs);
@@ -131,14 +154,12 @@ class KnowledgeProvider extends ChangeNotifier {
   }
 
   static Map<String, double> _buildWeights(String content) {
-    final tokens = content
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9\u4e00-\u9fff\s]'), ' ')
-        .split(RegExp(r'\s+'))
-        .where((t) => t.length >= 2)
-        .toList();
     final freq = <String, int>{};
-    for (final t in tokens) {
+    for (final t in content
+        .toLowerCase()
+        .replaceAll(_nonWordPattern, ' ')
+        .split(_whitespacePattern)) {
+      if (t.length < 2) continue;
       freq[t] = (freq[t] ?? 0) + 1;
     }
     if (freq.isEmpty) return const {};
@@ -275,8 +296,8 @@ class KnowledgeProvider extends ChangeNotifier {
     }
     return buffer
         .toString()
-        .replaceAll(RegExp(r'[^\S\r\n]{2,}'), ' ')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .replaceAll(_runsOfSpacesPattern, ' ')
+        .replaceAll(_blankLinesPattern, '\n\n')
         .trim();
   }
 
@@ -288,8 +309,8 @@ class KnowledgeProvider extends ChangeNotifier {
     List<String>? tags,
     String? baseId,
   }) async {
-    final idx = _docs.indexWhere((d) => d.id == id);
-    if (idx < 0) return;
+    final idx = _indexById[id];
+    if (idx == null) return;
     final old = _docs[idx];
     final nextContent = content ?? old.content;
     _docs[idx] = old.copyWith(
@@ -313,10 +334,8 @@ class KnowledgeProvider extends ChangeNotifier {
   }
 
   KnowledgeDoc? byId(String id) {
-    for (final doc in _docs) {
-      if (doc.id == id) return doc;
-    }
-    return null;
+    final idx = _indexById[id];
+    return idx == null ? null : _docs[idx];
   }
 
   List<KnowledgeSearchHit> search(
@@ -327,16 +346,23 @@ class KnowledgeProvider extends ChangeNotifier {
   }) {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return const [];
-    final terms = q.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+    final terms =
+        q.split(_whitespacePattern).where((t) => t.isNotEmpty).toList();
+    final scopeBase = (baseId != null && baseId.isNotEmpty) ? baseId : null;
     final hits = <KnowledgeSearchHit>[];
     for (final doc in _docs) {
-      if (baseId != null && baseId.isNotEmpty && doc.baseId != baseId) continue;
-      final hay = '${doc.title}\n${doc.folder}\n${doc.content}'.toLowerCase();
+      if (scopeBase != null && doc.baseId != scopeBase) continue;
+      // Per-instance lowercase projections: no whole-document copy per query.
+      final titleLower = doc.titleLower;
+      final folderLower = doc.folderLower;
+      final contentLower = doc.contentLower;
       var score = 0;
       for (final term in terms) {
-        if (hay.contains(term)) score += 1;
-        if (doc.title.toLowerCase().contains(term)) score += 2;
-        if (doc.folder.toLowerCase().contains(term)) score += 1;
+        final inTitle = titleLower.contains(term);
+        final inFolder = folderLower.contains(term);
+        if (inTitle || inFolder || contentLower.contains(term)) score += 1;
+        if (inTitle) score += 2;
+        if (inFolder) score += 1;
       }
       var semanticScore = 0.0;
       if (semantic && doc.termWeights.isNotEmpty) {
@@ -346,7 +372,7 @@ class KnowledgeProvider extends ChangeNotifier {
       }
       if (score <= 0 && semanticScore <= 0) continue;
       // Search in doc.content directly for correct snippet positioning.
-      final contentIdx = doc.content.toLowerCase().indexOf(terms.first);
+      final contentIdx = contentLower.indexOf(terms.first);
       final start = contentIdx < 0
           ? 0
           : (contentIdx - 40).clamp(0, doc.content.length);

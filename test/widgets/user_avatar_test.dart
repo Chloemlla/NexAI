@@ -40,4 +40,24 @@ void main() {
 
     expect(find.text('N'), findsOneWidget);
   });
+
+  testWidgets('UserAvatar shows a placeholder while the cache resolves', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: UserAvatar(
+            imageUrl: 'https://example.com/photo.png',
+            displayName: 'Chloe',
+            username: 'chloe',
+            radius: 20,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('C'), findsNothing);
+  });
 }

@@ -5,12 +5,27 @@ import 'dart:io';
 /// without paying for secure-random UUID generation on every save.
 int _tempSequence = 0;
 
-Future<void> writeTextAtomically(File file, String payload) async {
+Future<void> writeTextAtomically(File file, String payload) {
+  return _writeAtomically(file, (target) async {
+    await target.writeAsString(payload, flush: true);
+  });
+}
+
+Future<void> writeBytesAtomically(File file, List<int> payload) {
+  return _writeAtomically(file, (target) async {
+    await target.writeAsBytes(payload, flush: true);
+  });
+}
+
+Future<void> _writeAtomically(
+  File file,
+  Future<void> Function(File target) write,
+) async {
   await file.parent.create(recursive: true);
   final tempId =
       '$pid-${DateTime.now().microsecondsSinceEpoch}-${_tempSequence++}';
   final tempFile = File('${file.path}.$tempId.tmp');
-  await tempFile.writeAsString(payload, flush: true);
+  await write(tempFile);
 
   if (await file.exists()) {
     await file.delete();
@@ -24,6 +39,6 @@ Future<void> writeTextAtomically(File file, String payload) async {
     } catch (_) {
       // Cleanup is best effort; direct write below preserves user data intent.
     }
-    await file.writeAsString(payload, flush: true);
+    await write(file);
   }
 }

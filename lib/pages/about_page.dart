@@ -41,8 +41,9 @@ class _AboutPageState extends State<AboutPage> {
 
   // ─── Android: Material 3 ───
   Widget _buildM3About(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final tt = theme.textTheme;
 
     return Scaffold(
       backgroundColor: lumenScaffoldBackground(cs),
@@ -238,11 +239,12 @@ _m3Section(
     HapticFeedback.selectionClick();
     final nextCount = _developerTapCount + 1;
     if (nextCount < 7) {
-      setState(() => _developerTapCount = nextCount);
+      // Nothing renders the counter, so no rebuild of this long page is needed.
+      _developerTapCount = nextCount;
       return;
     }
 
-    setState(() => _developerTapCount = 0);
+    _developerTapCount = 0;
     await context.read<SettingsProvider>().unlockDeveloperDebugMode();
     HapticFeedback.mediumImpact();
     SmartDialog.showToast('您已进入极客开发者世界');

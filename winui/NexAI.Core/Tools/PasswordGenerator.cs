@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace NexAI.Core.Tools;
 
@@ -27,6 +26,8 @@ public sealed class PasswordGeneratorOptions
 
 public static class PasswordGenerator
 {
+    private const string SymbolAlphabet = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+
     private static readonly string[] WordList =
     [
         "apple", "banana", "cherry", "dragon", "eagle", "forest", "garden", "happy",
@@ -70,10 +71,25 @@ public static class PasswordGenerator
         if (password.Length >= 8) strength += 20;
         if (password.Length >= 12) strength += 20;
         if (password.Length >= 16) strength += 10;
-        if (Regex.IsMatch(password, "[a-z]")) strength += 15;
-        if (Regex.IsMatch(password, "[A-Z]")) strength += 15;
-        if (Regex.IsMatch(password, "[0-9]")) strength += 10;
-        if (Regex.IsMatch(password, @"[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]")) strength += 10;
+
+        // One pass over the candidate instead of four regex scans; this runs on every
+        // keystroke in the password tool.
+        var hasLower = false;
+        var hasUpper = false;
+        var hasDigit = false;
+        var hasSymbol = false;
+        foreach (var c in password)
+        {
+            if (c is >= 'a' and <= 'z') hasLower = true;
+            else if (c is >= 'A' and <= 'Z') hasUpper = true;
+            else if (c is >= '0' and <= '9') hasDigit = true;
+            else if (SymbolAlphabet.Contains(c)) hasSymbol = true;
+        }
+
+        if (hasLower) strength += 15;
+        if (hasUpper) strength += 15;
+        if (hasDigit) strength += 10;
+        if (hasSymbol) strength += 10;
         return Math.Clamp(strength, 0, 100);
     }
 
@@ -91,7 +107,7 @@ public static class PasswordGenerator
         if (options.IncludeLowercase) chars.Append("abcdefghijklmnopqrstuvwxyz");
         if (options.IncludeUppercase) chars.Append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
         if (options.IncludeNumbers) chars.Append("0123456789");
-        if (options.IncludeSymbols) chars.Append("!@#$%^&*()_+-=[]{}|;:,.<>?");
+        if (options.IncludeSymbols) chars.Append(SymbolAlphabet);
         if (chars.Length == 0)
         {
             chars.Append("abcdefghijklmnopqrstuvwxyz");

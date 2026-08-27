@@ -37,12 +37,29 @@ class _CrashReportPageState extends State<CrashReportPage> {
   bool _exporting = false;
   bool _uploadingLink = false;
 
+  // 崩溃报告是不可变输入：只在 report 实例变化时解析一次，
+  // 展开堆栈 / 导出 / 上传引起的重建不再重复 split+join 整份堆栈。
+  late List<MapEntry<String, String>> _systemInfo;
+  late List<String> _stackLines;
+  late String _collapsedStackPreview;
+
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
+  void initState() {
+    super.initState();
+    _parseReport();
+  }
+
+  @override
+  void didUpdateWidget(CrashReportPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.report, widget.report)) {
+      _parseReport();
+    }
+  }
+
+  void _parseReport() {
     final report = widget.report;
-    final systemInfo = report.systemInfo
+    _systemInfo = report.systemInfo
         .split('\n')
         .map((line) => line.split(':'))
         .where((parts) => parts.length >= 2)
@@ -50,10 +67,20 @@ class _CrashReportPageState extends State<CrashReportPage> {
           (parts) => MapEntry(parts.first.trim(), parts.skip(1).join(':').trim()),
         )
         .toList();
-    final stackLines = report.stackTrace.split('\n');
+    _stackLines = report.stackTrace.split('\n');
+    _collapsedStackPreview = _stackLines.take(_collapsedStackLines).join('\n');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final report = widget.report;
+    final systemInfo = _systemInfo;
+    final stackLines = _stackLines;
     final stackPreview = _stackExpanded
         ? report.stackTrace
-        : stackLines.take(_collapsedStackLines).join('\n');
+        : _collapsedStackPreview;
 
     return LumenSecondaryScaffold(
       title: '崩溃报告',
@@ -375,9 +402,9 @@ class _CrashCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final child in children) ...[
-            child,
-            if (child != children.last) const SizedBox(height: 12),
+          for (var i = 0; i < children.length; i++) ...[
+            children[i],
+            if (i != children.length - 1) const SizedBox(height: 12),
           ],
         ],
       ),

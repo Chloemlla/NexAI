@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +32,15 @@ class SettingsProvider extends ChangeNotifier {
   static const _kSecRefreshToken = 'nexai_refresh_token';
   static const _kSecUserJson = 'nexai_user_json';
   static const _kSecUserId = 'nexai_user_id';
+
+  // Last values actually committed to secure storage. Nothing outside this
+  // class writes or deletes these keys, so skipping a byte-identical rewrite
+  // cannot desynchronise the keystore.
+  String? _persistedApiKey;
+  String? _persistedWebdavPassword;
+  String? _persistedUpstashToken;
+  String? _persistedVertexApiKey;
+  String? _persistedToolSecretsJson;
 
   String _selectedModel = 'gpt-4o';
   ThemeMode _themeMode = ThemeMode.system;
@@ -275,21 +285,25 @@ class SettingsProvider extends ChangeNotifier {
       // ── Read sensitive fields from FlutterSecureStorage ────────────────────
       try {
         _openaiApiKey = await _secure.read(key: _kSecApiKey) ?? '';
+        _persistedApiKey = _openaiApiKey;
       } catch (_) {
         _openaiApiKey = '';
       }
       try {
         _webdavPassword = await _secure.read(key: _kSecWebdavPass) ?? '';
+        _persistedWebdavPassword = _webdavPassword;
       } catch (_) {
         _webdavPassword = '';
       }
       try {
         _upstashToken = await _secure.read(key: _kSecUpstashToken) ?? '';
+        _persistedUpstashToken = _upstashToken;
       } catch (_) {
         _upstashToken = '';
       }
       try {
         _vertexApiKey = await _secure.read(key: _kSecVertexApiKey) ?? '';
+        _persistedVertexApiKey = _vertexApiKey;
       } catch (_) {
         _vertexApiKey = '';
       }
@@ -587,8 +601,10 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> _persistToolSecrets() async {
-    final secrets = _collectToolSecrets();
-    await _secure.write(key: _kSecToolSecrets, value: jsonEncode(secrets));
+    final encoded = jsonEncode(_collectToolSecrets());
+    if (_persistedToolSecretsJson == encoded) return;
+    await _secure.write(key: _kSecToolSecrets, value: encoded);
+    _persistedToolSecretsJson = encoded;
   }
 
   Future<void> _restoreToolSecrets() async {
@@ -630,11 +646,23 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // ── Sensitive: write to secure storage ─────────────────────────────────
-    await _secure.write(key: _kSecApiKey, value: _openaiApiKey);
-    await _secure.write(key: _kSecWebdavPass, value: _webdavPassword);
-    await _secure.write(key: _kSecUpstashToken, value: _upstashToken);
-    await _secure.write(key: _kSecVertexApiKey, value: _vertexApiKey);
+    // ── Sensitive: write to secure storage (only when actually changed) ─────
+    if (_persistedApiKey != _openaiApiKey) {
+      await _secure.write(key: _kSecApiKey, value: _openaiApiKey);
+      _persistedApiKey = _openaiApiKey;
+    }
+    if (_persistedWebdavPassword != _webdavPassword) {
+      await _secure.write(key: _kSecWebdavPass, value: _webdavPassword);
+      _persistedWebdavPassword = _webdavPassword;
+    }
+    if (_persistedUpstashToken != _upstashToken) {
+      await _secure.write(key: _kSecUpstashToken, value: _upstashToken);
+      _persistedUpstashToken = _upstashToken;
+    }
+    if (_persistedVertexApiKey != _vertexApiKey) {
+      await _secure.write(key: _kSecVertexApiKey, value: _vertexApiKey);
+      _persistedVertexApiKey = _vertexApiKey;
+    }
 
     // ── Non-sensitive: write to SharedPreferences ──────────────────────────
     await prefs.setString('openaiBaseUrl', _openaiBaseUrl);
@@ -709,6 +737,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setFontSize(double size) async {
+    if (_fontSize == size) return;
     _fontSize = size;
     notifyListeners();
     await _save();
@@ -720,7 +749,9 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setFontFamily(String family) async {
-    _fontFamily = _normalizeFontFamily(family);
+    final normalized = _normalizeFontFamily(family);
+    if (_fontFamily == normalized) return;
+    _fontFamily = normalized;
     notifyListeners();
     await _save();
   }
@@ -759,9 +790,8 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setBaseUrl(String url) async {
     final normalized = _normalizeBaseUrl(url);
-    if (_apiMode == 'OpenAI') {
-      _openaiBaseUrl = normalized;
-    }
+    if (_apiMode != 'OpenAI' || _openaiBaseUrl == normalized) return;
+    _openaiBaseUrl = normalized;
     notifyListeners();
     await _save();
   }
@@ -769,8 +799,10 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> setApiKey(String key) async {
     final trimmed = key.trim();
     if (_apiMode == 'OpenAI') {
+      if (_openaiApiKey == trimmed) return;
       _openaiApiKey = trimmed;
     } else {
+      if (_vertexApiKey == trimmed) return;
       _vertexApiKey = trimmed;
     }
     notifyListeners();
@@ -784,6 +816,7 @@ class SettingsProvider extends ChangeNotifier {
         .where((e) => e.isNotEmpty)
         .toList();
     if (parsed.isEmpty) return; // Don't allow empty models list
+    if (listEquals(parsed, models)) return;
 
     if (_apiMode == 'OpenAI') {
       _openaiModels = parsed;
@@ -801,36 +834,42 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setSelectedModel(String model) async {
+    if (_selectedModel == model) return;
     _selectedModel = model;
     notifyListeners();
     await _save();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
+    if (_themeMode == mode) return;
     _themeMode = mode;
     notifyListeners();
     await _save();
   }
 
   Future<void> setTemperature(double temp) async {
+    if (_temperature == temp) return;
     _temperature = temp;
     notifyListeners();
     await _save();
   }
 
   Future<void> setMaxTokens(int tokens) async {
+    if (_maxTokens == tokens) return;
     _maxTokens = tokens;
     notifyListeners();
     await _save();
   }
 
   Future<void> setSystemPrompt(String prompt) async {
+    if (_systemPrompt == prompt) return;
     _systemPrompt = prompt;
     notifyListeners();
     await _save();
   }
 
   Future<void> setAccentColor(int? colorValue) async {
+    if (_accentColorValue == colorValue) return;
     _accentColorValue = colorValue;
     notifyListeners();
     await _save();
@@ -916,13 +955,16 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setActiveWebSearchProviderId(String id) async {
+    if (_activeWebSearchProviderId == id) return;
     _activeWebSearchProviderId = id;
     notifyListeners();
     await _save();
   }
 
   Future<void> setToolGatewayBaseUrl(String value) async {
-    _toolGatewayBaseUrl = value.trim();
+    final trimmed = value.trim();
+    if (_toolGatewayBaseUrl == trimmed) return;
+    _toolGatewayBaseUrl = trimmed;
     notifyListeners();
     await _save();
   }
@@ -940,7 +982,9 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setReasoningBudget(double value) async {
-    _reasoningBudget = value.clamp(0.0, 1.0);
+    final clamped = value.clamp(0.0, 1.0);
+    if (_reasoningBudget == clamped) return;
+    _reasoningBudget = clamped;
     notifyListeners();
     await _save();
   }
@@ -1009,13 +1053,17 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setMaxToolRounds(int value) async {
-    _maxToolRounds = value.clamp(1, 8);
+    final clamped = value.clamp(1, 8);
+    if (_maxToolRounds == clamped) return;
+    _maxToolRounds = clamped;
     notifyListeners();
     await _save();
   }
 
   Future<void> setImageToolModel(String value) async {
-    _imageToolModel = value.trim();
+    final trimmed = value.trim();
+    if (_imageToolModel == trimmed) return;
+    _imageToolModel = trimmed;
     notifyListeners();
     await _save();
   }
@@ -1070,12 +1118,14 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setVertexApiKey(String value) async {
+    if (_vertexApiKey == value) return;
     _vertexApiKey = value;
     notifyListeners();
     await _save();
   }
 
   Future<void> setApiMode(String mode) async {
+    if (_apiMode == mode) return;
     _apiMode = mode;
     // Switch selectedModel to match the new mode's models
     if (models.isNotEmpty && !models.contains(_selectedModel)) {
@@ -1086,12 +1136,14 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setVertexProjectId(String projectId) async {
+    if (_vertexProjectId == projectId) return;
     _vertexProjectId = projectId;
     notifyListeners();
     await _save();
   }
 
   Future<void> setVertexLocation(String location) async {
+    if (_vertexLocation == location) return;
     _vertexLocation = location;
     notifyListeners();
     await _save();

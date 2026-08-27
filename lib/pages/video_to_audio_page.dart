@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show File, Directory;
 import 'package:flutter/material.dart';
 import '../theme/lumen_tokens.dart';
@@ -69,7 +70,10 @@ class VideoToAudioTask {
   final String fileName;
   String outputPath;
   TaskStatus status;
-  double progress;
+
+  /// 进度用 ValueNotifier 承载：FFmpeg 每秒推送多次统计，
+  /// 只重建进度条而不是整页任务列表。
+  final ValueNotifier<double> progress = ValueNotifier<double>(0);
   String? errorMessage;
   int? sessionId;
   String? durationStr;
@@ -80,12 +84,13 @@ class VideoToAudioTask {
     required this.fileName,
     required this.outputPath,
     this.status = TaskStatus.pending,
-    this.progress = 0.0,
     this.errorMessage,
     this.sessionId,
     this.durationStr,
     this.durationMs = 0,
   });
+
+  void disposeProgress() => progress.dispose();
 }
 
 class VideoToAudioPage extends StatefulWidget {
@@ -97,8 +102,10 @@ class VideoToAudioPage extends StatefulWidget {
 
 class _VideoToAudioPageState extends State<VideoToAudioPage> {
   final List<VideoToAudioTask> _tasks = [];
+  final ValueNotifier<double> _overallProgress = ValueNotifier<double>(0);
   AudioFormat _selectedFormat = AudioFormat.mp3;
   bool _isProcessing = false;
+  bool _probingDurations = false;
   int _completedCount = 0;
   int _failedCount = 0;
 
@@ -109,7 +116,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       if (task.status == TaskStatus.running && task.sessionId != null) {
         FFmpegKit.cancel(task.sessionId!);
       }
+      task.disposeProgress();
     }
+    _overallProgress.dispose();
     super.dispose();
   }
 
@@ -137,31 +146,40 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
         );
       }
 
-      // Probe duration for each file
-      for (final task in newTasks) {
-        try {
-          final session = await FFprobeKit.getMediaInformation(task.inputPath);
-          final info = session.getMediaInformation();
-          if (info != null) {
-            final durationStr = info.getDuration();
-            if (durationStr != null) {
-              task.durationMs = (double.parse(durationStr) * 1000).toInt();
-              task.durationStr = _formatDuration(
-                Duration(milliseconds: task.durationMs),
-              );
-            }
-          }
-        } catch (_) {}
-      }
+      if (!mounted) return;
+      // 先让任务出现在列表里，再并行探测时长：选完文件不再长时间无反馈。
+      setState(() {
+        _tasks.addAll(newTasks);
+        _probingDurations = true;
+      });
+      _syncOverallProgress();
 
-      setState(() => _tasks.addAll(newTasks));
+      await Future.wait(newTasks.map(_probeDuration));
+
+      if (!mounted) return;
+      setState(() => _probingDurations = false);
     } catch (e) {
       if (mounted) {
+        setState(() => _probingDurations = false);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('选择文件失败: $e')));
       }
     }
+  }
+
+  Future<void> _probeDuration(VideoToAudioTask task) async {
+    try {
+      final session = await FFprobeKit.getMediaInformation(task.inputPath);
+      final durationStr = session.getMediaInformation()?.getDuration();
+      if (durationStr == null) return;
+      final parsed = double.tryParse(durationStr);
+      if (parsed == null || parsed <= 0) return;
+      task.durationMs = (parsed * 1000).toInt();
+      task.durationStr = _formatDuration(
+        Duration(milliseconds: task.durationMs),
+      );
+    } catch (_) {}
   }
 
   Future<String> _getOutputDirectory() async {
@@ -183,11 +201,12 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       for (final task in _tasks) {
         if (task.status != TaskStatus.success) {
           task.status = TaskStatus.pending;
-          task.progress = 0.0;
+          task.progress.value = 0.0;
           task.errorMessage = null;
         }
       }
     });
+    _syncOverallProgress();
 
     for (final task in List.of(_tasks)) {
       if (!mounted || !_isProcessing) break;
@@ -233,17 +252,21 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
     final command =
         '-i ${_quotePath(task.inputPath)} -vn ${_selectedFormat.codecArgs} -y ${_quotePath(task.outputPath)}';
 
+    // 完成信号必须在启动会话前创建：回调可能在 executeAsync 返回前就到达。
+    final completion = Completer<void>();
+
     try {
       final session = await FFmpegKit.executeAsync(
         command,
         (Session session) async {
           // Completion callback
           final returnCode = await session.getReturnCode();
+          if (!completion.isCompleted) completion.complete();
           if (!mounted) return;
           setState(() {
             if (ReturnCode.isSuccess(returnCode)) {
               task.status = TaskStatus.success;
-              task.progress = 1.0;
+              task.progress.value = 1.0;
               _completedCount++;
             } else if (ReturnCode.isCancel(returnCode)) {
               task.status = TaskStatus.cancelled;
@@ -253,27 +276,33 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
               _failedCount++;
             }
           });
+          _syncOverallProgress();
         },
         (Log log) {
           // Log callback - can be used for debugging
         },
         (Statistics statistics) {
           // Statistics callback for progress
-          if (task.durationMs > 0) {
-            final time = statistics.getTime();
-            final progress = (time / task.durationMs).clamp(0.0, 1.0);
-            if (mounted) {
-              setState(() => task.progress = progress);
-            }
+          if (!mounted || task.durationMs <= 0) return;
+          final progress = (statistics.getTime() / task.durationMs).clamp(
+            0.0,
+            1.0,
+          );
+          // 按整数百分比合流，避免每条统计都触发重绘。
+          if ((progress * 100).floor() == (task.progress.value * 100).floor()) {
+            return;
           }
+          task.progress.value = progress;
+          _syncOverallProgress();
         },
       );
 
       task.sessionId = session.getSessionId();
 
-      // Wait for session to complete
-      await _waitForSession(task);
+      // 等待完成信号，替代 300ms 轮询：批量任务之间不再有空转间隔。
+      await completion.future;
     } catch (e) {
+      if (!completion.isCompleted) completion.complete();
       if (mounted) {
         setState(() {
           task.status = TaskStatus.failed;
@@ -284,11 +313,17 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
     }
   }
 
-  Future<void> _waitForSession(VideoToAudioTask task) async {
-    // Poll until the task is no longer running
-    while (mounted && task.status == TaskStatus.running) {
-      await Future.delayed(const Duration(milliseconds: 300));
+  void _syncOverallProgress() {
+    if (!mounted) return;
+    if (_tasks.isEmpty) {
+      _overallProgress.value = 0;
+      return;
     }
+    var total = 0.0;
+    for (final task in _tasks) {
+      total += task.progress.value;
+    }
+    _overallProgress.value = total / _tasks.length;
   }
 
   void _cancelAll() {
@@ -309,17 +344,29 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
       FFmpegKit.cancel(task.sessionId!);
     }
     setState(() => _tasks.removeAt(index));
+    if (task.status != TaskStatus.running) task.disposeProgress();
+    _syncOverallProgress();
   }
 
   void _clearCompleted() {
+    final removed = _tasks
+        .where(
+          (t) =>
+              t.status == TaskStatus.success ||
+              t.status == TaskStatus.failed ||
+              t.status == TaskStatus.cancelled,
+        )
+        .toList();
+    if (removed.isEmpty) return;
     setState(() {
-      _tasks.removeWhere(
-        (t) =>
-            t.status == TaskStatus.success ||
-            t.status == TaskStatus.failed ||
-            t.status == TaskStatus.cancelled,
-      );
+      for (final task in removed) {
+        _tasks.remove(task);
+      }
     });
+    for (final task in removed) {
+      task.disposeProgress();
+    }
+    _syncOverallProgress();
   }
 
   Future<void> _saveToDownloads(VideoToAudioTask task) async {
@@ -377,12 +424,6 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
     return '"${path.replaceAll('"', r'\"')}"';
   }
 
-  double get _overallProgress {
-    if (_tasks.isEmpty) return 0;
-    final total = _tasks.fold<double>(0, (sum, t) => sum + t.progress);
-    return total / _tasks.length;
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -396,7 +437,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
           description: '批量选择视频、设置输出格式，查看转换进度并保存提取的音频。',
           chips: [
             '输出 ${_selectedFormat.label}',
-            _tasks.isEmpty ? '暂无任务' : '${_tasks.length} 个任务',
+            _probingDurations
+                ? '正在读取时长…'
+                : (_tasks.isEmpty ? '暂无任务' : '${_tasks.length} 个任务'),
             '完成 $_completedCount / 失败 $_failedCount',
           ],
         ),
@@ -407,7 +450,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
               label: '选择视频',
               backgroundColor: cs.primaryContainer,
               iconColor: cs.onPrimaryContainer,
-              onTap: _isProcessing ? null : _pickVideos,
+              onTap: _isProcessing || _probingDurations ? null : _pickVideos,
             ),
             ToolQuickActionData(
               icon: _isProcessing ? Icons.stop_rounded : Icons.play_arrow_rounded,
@@ -416,7 +459,9 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
               iconColor: cs.onSecondaryContainer,
               onTap: _isProcessing
                   ? _cancelAll
-                  : (_tasks.isEmpty ? null : _startBatchConversion),
+                  : (_tasks.isEmpty || _probingDurations
+                        ? null
+                        : _startBatchConversion),
             ),
             ToolQuickActionData(
               icon: Icons.cleaning_services_rounded,
@@ -555,10 +600,13 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
             ],
           ),
           const SizedBox(height: 16),
-          LinearProgressIndicator(
-            value: _overallProgress,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
+          ValueListenableBuilder<double>(
+            valueListenable: _overallProgress,
+            builder: (context, value, _) => LinearProgressIndicator(
+              value: value,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
+            ),
           ),
         ],
       ),
@@ -595,6 +643,7 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
     };
 
     return Padding(
+      key: ObjectKey(task),
       padding: const EdgeInsets.only(bottom: 8),
       child: LumenActionCard(
         padding: const EdgeInsets.all(14),
@@ -650,15 +699,23 @@ class _VideoToAudioPageState extends State<VideoToAudioPage> {
             ),
             if (task.status == TaskStatus.running) ...[
               const SizedBox(height: 10),
-              LinearProgressIndicator(
-                value: task.progress,
-                minHeight: 4,
-                borderRadius: BorderRadius.circular(2),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${(task.progress * 100).toInt()}%',
-                style: TextStyle(fontSize: 12, color: cs.primary),
+              ValueListenableBuilder<double>(
+                valueListenable: task.progress,
+                builder: (context, value, _) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LinearProgressIndicator(
+                      value: value,
+                      minHeight: 4,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${(value * 100).toInt()}%',
+                      style: TextStyle(fontSize: 12, color: cs.primary),
+                    ),
+                  ],
+                ),
               ),
             ],
             if (task.errorMessage != null)

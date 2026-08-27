@@ -20,6 +20,7 @@ class UpdateChecker {
       'https://github.com/Chloemlla/NexAI/releases/latest';
   static const String _autoUpdateKey = 'auto_update';
   static const Duration _requestTimeout = Duration(seconds: 10);
+  static const Duration _downloadTimeout = Duration(minutes: 3);
   static const Duration _buildTimeLeeway = Duration(minutes: 1);
   static const Map<String, String> _githubHeaders = {
     'Accept': 'application/vnd.github+json',
@@ -114,8 +115,12 @@ class UpdateChecker {
   static int compareSemanticVersions(String current, String latest) {
     if (latest.isEmpty) return 0;
 
-    final currentParts = _versionCore(current).split('.');
-    final latestParts = _versionCore(latest).split('.');
+    final currentCore = _versionCore(current);
+    final latestCore = _versionCore(latest);
+    if (currentCore == latestCore) return 0;
+
+    final currentParts = currentCore.split('.');
+    final latestParts = latestCore.split('.');
 
     final maxParts = currentParts.length > latestParts.length
         ? currentParts.length
@@ -417,8 +422,15 @@ class UpdateChecker {
     return version.startsWith('v') ? version.substring(1) : version;
   }
 
-  static String _versionCore(String version) =>
-      _normalizeVersion(version).split('-')[0].split('+')[0];
+  static String _versionCore(String version) {
+    final normalized = _normalizeVersion(version);
+    var end = normalized.length;
+    final dash = normalized.indexOf('-');
+    if (dash >= 0) end = dash;
+    final plus = normalized.indexOf('+');
+    if (plus >= 0 && plus < end) end = plus;
+    return end == normalized.length ? normalized : normalized.substring(0, end);
+  }
 
   static DateTime? _parsePublishedAt(String? publishedAt) {
     if (publishedAt == null || publishedAt.isEmpty) return null;
@@ -439,6 +451,10 @@ class UpdateChecker {
     List<dynamic> assets,
     List<String> supportedAbis,
   ) {
+    // Normalize the ABI list once instead of per asset.
+    final normalizedAbis = [
+      for (final abi in supportedAbis) abi.toLowerCase().replaceAll('_', '-'),
+    ];
     AndroidApkAsset? universal;
 
     for (final asset in assets) {
@@ -453,9 +469,8 @@ class UpdateChecker {
         universal = candidate;
       }
 
-      for (final abi in supportedAbis) {
-        final abiLower = abi.toLowerCase().replaceAll('_', '-');
-        if (name.contains(abiLower)) return candidate;
+      for (final abi in normalizedAbis) {
+        if (name.contains(abi)) return candidate;
       }
     }
 
@@ -477,17 +492,44 @@ class UpdateChecker {
   }
 
   static Future<File> _downloadAssetToTemp(AndroidApkAsset asset) async {
-    final uri = Uri.parse(asset.downloadUrl);
-    final response = await http
-        .get(uri, headers: _githubHeaders)
-        .timeout(const Duration(minutes: 3));
+    final client = http.Client();
+    try {
+      return await _streamAssetToTemp(client, asset).timeout(_downloadTimeout);
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Streams the release asset straight to disk so a multi-megabyte APK is
+  /// never buffered whole in memory.
+  static Future<File> _streamAssetToTemp(
+    http.Client client,
+    AndroidApkAsset asset,
+  ) async {
+    final request = http.Request('GET', Uri.parse(asset.downloadUrl))
+      ..headers.addAll(_githubHeaders);
+    final response = await client.send(request);
     if (response.statusCode != 200) {
       throw Exception('APK 下载失败（HTTP ${response.statusCode}）');
     }
 
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/${asset.name}');
-    await file.writeAsBytes(response.bodyBytes, flush: true);
+    final sink = file.openWrite();
+    try {
+      await sink.addStream(response.stream);
+      await sink.close();
+    } catch (_) {
+      try {
+        await sink.close();
+      } catch (_) {
+        // Closing after a failed transfer replays the transfer error.
+      }
+      if (await file.exists()) {
+        await file.delete();
+      }
+      rethrow;
+    }
     return file;
   }
 }

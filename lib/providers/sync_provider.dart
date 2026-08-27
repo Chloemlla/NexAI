@@ -32,6 +32,31 @@ class SyncRestoreException implements Exception {
 class SyncProvider extends ChangeNotifier {
   static const _syncCrypto = SyncCrypto();
 
+  static const _settingsStringKeys = <String>{
+    'baseUrl',
+    'models',
+    'selectedModel',
+    'themeMode',
+    'systemPrompt',
+    'fontFamily',
+    'syncMethod',
+    'webdavServer',
+    'webdavUser',
+    'upstashUrl',
+    'apiMode',
+    'vertexProjectId',
+    'vertexLocation',
+  };
+  static const _settingsBoolKeys = <String>{
+    'borderlessMode',
+    'fullScreenMode',
+    'smartAutoScroll',
+    'syncEnabled',
+    'notesAutoSave',
+    'aiTitleGeneration',
+  };
+  static const _settingsNumKeys = <String>{'temperature', 'fontSize'};
+
   SyncStatus _status = SyncStatus.idle;
   String? _errorMessage;
   DateTime? _lastSyncedAt;
@@ -49,7 +74,6 @@ class SyncProvider extends ChangeNotifier {
     if (text.contains('【环节】')) return text;
     return '$fallback: $text';
   }
-
 
   /// 上传所有本地数据到云端
   Future<bool> uploadAll({
@@ -250,6 +274,7 @@ class SyncProvider extends ChangeNotifier {
   }
 
   void resetStatus() {
+    if (_status == SyncStatus.idle && _errorMessage == null) return;
     _status = SyncStatus.idle;
     _errorMessage = null;
     notifyListeners();
@@ -452,7 +477,11 @@ class SyncProvider extends ChangeNotifier {
         throw SyncRestoreException('云端同步数据包含无效记录');
       }
 
-      final record = Map<String, dynamic>.from(item);
+      // jsonDecode already produces Map<String, dynamic>; copying every record
+      // just to re-type it doubles the allocations on a large snapshot.
+      final record = item is Map<String, dynamic>
+          ? item
+          : Map<String, dynamic>.from(item);
       if (record['deleted'] == true) continue;
 
       try {
@@ -650,44 +679,20 @@ class SyncProvider extends ChangeNotifier {
 
   void _validateSettingsPayload(Object settings) {
     final map = asStringMap(settings, 'settings');
-    final stringKeys = {
-      'baseUrl',
-      'models',
-      'selectedModel',
-      'themeMode',
-      'systemPrompt',
-      'fontFamily',
-      'syncMethod',
-      'webdavServer',
-      'webdavUser',
-      'upstashUrl',
-      'apiMode',
-      'vertexProjectId',
-      'vertexLocation',
-    };
-    final boolKeys = {
-      'borderlessMode',
-      'fullScreenMode',
-      'smartAutoScroll',
-      'syncEnabled',
-      'notesAutoSave',
-      'aiTitleGeneration',
-    };
-    final numKeys = {'temperature', 'fontSize'};
 
-    for (final key in stringKeys) {
+    for (final key in _settingsStringKeys) {
       final value = map[key];
       if (value != null && value is! String) {
         throw SyncRestoreException('云端设置字段类型无效: $key');
       }
     }
-    for (final key in boolKeys) {
+    for (final key in _settingsBoolKeys) {
       final value = map[key];
       if (value != null && value is! bool) {
         throw SyncRestoreException('云端设置字段类型无效: $key');
       }
     }
-    for (final key in numKeys) {
+    for (final key in _settingsNumKeys) {
       final value = map[key];
       if (value != null && value is! num) {
         throw SyncRestoreException('云端设置字段类型无效: $key');

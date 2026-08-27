@@ -2,6 +2,8 @@
 /// Manages artifacts sharing state and operations
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import '../services/nexai_artifacts_service.dart';
 import '../models/artifact.dart';
@@ -12,6 +14,7 @@ class ArtifactsProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   Artifact? _currentArtifact;
+  int _listRequestSeq = 0;
 
   // Getters
   List<ArtifactSummary> get artifacts => _artifacts;
@@ -72,6 +75,8 @@ class ArtifactsProvider extends ChangeNotifier {
     String sort = 'createdAt',
     String order = 'desc',
   }) async {
+    // 并发刷新时只认最后一次请求，避免过期响应覆盖新列表。
+    final requestId = ++_listRequestSeq;
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -85,13 +90,17 @@ class ArtifactsProvider extends ChangeNotifier {
         order: order,
       );
 
+      if (requestId != _listRequestSeq) return;
       _artifacts = response.artifacts;
       _pagination = response.pagination;
     } catch (e) {
+      if (requestId != _listRequestSeq) return;
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (requestId == _listRequestSeq) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -109,8 +118,8 @@ class ArtifactsProvider extends ChangeNotifier {
 
       _currentArtifact = artifact;
 
-      // Record view
-      await NexaiArtifactsApi.recordView(shortId);
+      // 浏览量上报不阻塞详情返回（服务端调用内部已吞掉错误）。
+      unawaited(NexaiArtifactsApi.recordView(shortId));
 
       return artifact;
     } on PasswordRequiredException {

@@ -75,6 +75,8 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
     final authProvider = context.read<AuthProvider>();
     final artifactsProvider = context.read<ArtifactsProvider>();
     final messenger = ScaffoldMessenger.of(context);
+    final accessToken = authProvider.accessToken;
+    if (accessToken == null) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -98,7 +100,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
     if (confirmed != true) return;
     final success = await artifactsProvider.deleteArtifact(
       shortId,
-      accessToken: authProvider.accessToken!,
+      accessToken: accessToken,
     );
 
     if (!mounted) return;
@@ -138,10 +140,12 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
+    // 只订阅登录态；令牌刷新等其它 auth 字段变化不再重建整页。
+    final isLoggedIn = context.select<AuthProvider, bool>(
+      (auth) => auth.isLoggedIn,
+    );
     final artifactsProvider = context.watch<ArtifactsProvider>();
     final artifacts = artifactsProvider.artifacts;
-    final isLoggedIn = authProvider.isLoggedIn;
     final cs = Theme.of(context).colorScheme;
 
     if (!isLoggedIn) {
@@ -286,6 +290,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
           children: [
             for (final artifact in artifacts)
               _ArtifactListItem(
+                key: ValueKey(artifact.shortId),
                 artifact: artifact,
                 onCopyLink: () => _copyLink(artifact.shortId),
                 onDelete: () => _deleteArtifact(artifact.shortId),
@@ -304,7 +309,11 @@ class _ArtifactListItem extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onCopyLink;
 
+  // 列表每项都会 build，DateFormat 只构造一次。
+  static final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
+
   const _ArtifactListItem({
+    super.key,
     required this.artifact,
     required this.onDelete,
     required this.onCopyLink,
@@ -313,7 +322,6 @@ class _ArtifactListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
 
     return ToolPanel(
       padding: const EdgeInsets.all(16),
@@ -402,7 +410,7 @@ class _ArtifactListItem extends StatelessWidget {
               const SizedBox(width: 8),
               Flexible(
                 child: Text(
-                  '创建于 ${dateFormat.format(artifact.createdAt)}',
+                  '创建于 ${_dateFormat.format(artifact.createdAt)}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),

@@ -7,6 +7,11 @@ namespace NexAI.WinUI3.Services;
 
 public sealed class ChatSessionService
 {
+    // Streaming deltas arrive far faster than the UI can usefully repaint; flushing
+    // them into the store at ~20 fps keeps the visible cadence while collapsing the
+    // per-token store update + full-string materialization.
+    private const int StreamFrameIntervalMs = 50;
+
     private readonly IConversationStore _conversationStore;
     private readonly ISettingsStore _settingsStore;
     private readonly IChatStreamingClient _chatClient;
@@ -108,9 +113,17 @@ public sealed class ChatSessionService
                     .ToList(),
             };
 
+            var lastFlushTicks = Environment.TickCount64;
             await foreach (var delta in _chatClient.StreamAsync(request, linkedCts.Token).ConfigureAwait(false))
             {
                 buffer.Append(delta);
+                var now = Environment.TickCount64;
+                if (now - lastFlushTicks < StreamFrameIntervalMs)
+                {
+                    continue;
+                }
+
+                lastFlushTicks = now;
                 _streamPersistCounter++;
                 var shouldPersist = _streamPersistCounter % 12 == 0;
                 await _conversationStore.UpdateMessageAsync(

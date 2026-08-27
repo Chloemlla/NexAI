@@ -36,6 +36,11 @@ public static partial class AdvancedMarkdown
     public static IReadOnlyList<AdvancedBlock> Extract(string? text)
     {
         var source = text ?? string.Empty;
+        if (!MightContainAdvanced(source))
+        {
+            return [];
+        }
+
         var blocks = new List<AdvancedBlock>();
 
         foreach (Match match in MermaidRegex().Matches(source))
@@ -71,9 +76,23 @@ public static partial class AdvancedMarkdown
     public static string StripAdvanced(string? text)
     {
         var source = text ?? string.Empty;
+        if (!MightContainAdvanced(source))
+        {
+            return source;
+        }
+
         source = MermaidRegex().Replace(source, string.Empty);
         source = BlockLatexRegex().Replace(source, string.Empty);
         source = InlineLatexRegex().Replace(source, string.Empty);
         return source;
     }
+
+    /// <summary>
+    /// Every advanced pattern needs either a '$' (LaTeX) or the literal "mermaid"
+    /// (fenced diagram), so this vectorized scan skips six full regex passes on the
+    /// overwhelmingly common plain-markdown message.
+    /// </summary>
+    private static bool MightContainAdvanced(string source)
+        => source.Contains('$') ||
+           source.Contains("mermaid", StringComparison.OrdinalIgnoreCase);
 }

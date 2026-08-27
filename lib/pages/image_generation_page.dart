@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io' show File;
 import 'dart:typed_data';
 
@@ -99,8 +98,9 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
     try {
       Uint8List bytes;
-      if (image.b64Json != null && image.b64Json!.isNotEmpty) {
-        bytes = base64Decode(image.b64Json!);
+      final decoded = image.decodedBytes;
+      if (decoded != null) {
+        bytes = decoded;
       } else {
         final response = await _downloadDio.get<List<int>>(
           image.url,
@@ -249,8 +249,9 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
-    final screenWidth = MediaQuery.of(context).size.width;
+    // 只订阅“能否生成”这一派生布尔值，设置里其它字段变化不再重建整个 Scaffold。
+    final canGenerate = context.select<SettingsProvider, bool>(_canGenerate);
+    final screenWidth = MediaQuery.sizeOf(context).width;
     final body = screenWidth > 800
         ? _buildDesktop(context)
         : _buildAndroid(context);
@@ -273,7 +274,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         ],
       ),
       body: body,
-      bottomNavigationBar: !_canGenerate(settings)
+      bottomNavigationBar: !canGenerate
           ? SafeArea(
               top: false,
               child: Padding(
@@ -353,6 +354,11 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
     final canGenerate = _canGenerate(settings);
+    // 缩略图按实际显示宽度解码，避免整张原图位图进内存。
+    final thumbCacheWidth = _thumbCacheWidth(
+      context,
+      (MediaQuery.sizeOf(context).width - 44) / 2,
+    );
 
     return Column(
       children: [
@@ -544,7 +550,17 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                   itemCount: provider.images.length,
                   itemBuilder: (context, index) {
                     final image = provider.images[index];
-                    return _buildImageCard(context, image, index);
+                    return KeyedSubtree(
+                      key: ValueKey(
+                        '${image.timestamp.microsecondsSinceEpoch}_${image.url}',
+                      ),
+                      child: _buildImageCard(
+                        context,
+                        image,
+                        index,
+                        cacheWidth: thumbCacheWidth,
+                      ),
+                    );
                   },
                 ),
         ),
@@ -552,7 +568,16 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     );
   }
 
-  Widget _buildImagePreview(GeneratedImage image, ColorScheme cs) {
+  int _thumbCacheWidth(BuildContext context, double logicalWidth) {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    return (logicalWidth * dpr).round().clamp(64, 2048);
+  }
+
+  Widget _buildImagePreview(
+    GeneratedImage image,
+    ColorScheme cs, {
+    required int cacheWidth,
+  }) {
     Widget placeholder({String? message}) => Container(
       color: cs.surfaceContainerHighest,
       alignment: Alignment.center,
@@ -575,24 +600,25 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
       ),
     );
 
-    if (image.b64Json != null && image.b64Json!.isNotEmpty) {
-      try {
-        final bytes = base64Decode(image.b64Json!);
-        return Image.memory(
-          bytes,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              placeholder(message: 'Base64 预览失败'),
-        );
-      } catch (_) {
-        return placeholder(message: 'Base64 数据无效');
-      }
+    final b64 = image.b64Json;
+    if (b64 != null && b64.isNotEmpty) {
+      // 解码结果缓存在模型上，避免每帧重复 base64 解码。
+      final bytes = image.decodedBytes;
+      if (bytes == null) return placeholder(message: 'Base64 数据无效');
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        cacheWidth: cacheWidth,
+        errorBuilder: (context, error, stackTrace) =>
+            placeholder(message: 'Base64 预览失败'),
+      );
     }
 
     if (image.url.trim().isNotEmpty) {
       return Image.network(
         image.url,
         fit: BoxFit.cover,
+        cacheWidth: cacheWidth,
         errorBuilder: (context, error, stackTrace) =>
             placeholder(message: '图片加载失败'),
       );
@@ -604,8 +630,9 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
   Widget _buildImageCard(
     BuildContext context,
     GeneratedImage image,
-    int index,
-  ) {
+    int index, {
+    required int cacheWidth,
+  }) {
     final cs = Theme.of(context).colorScheme;
 
     return LumenActionCard(
@@ -614,7 +641,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: _buildImagePreview(image, cs),
+            child: _buildImagePreview(image, cs, cacheWidth: cacheWidth),
           ),
           Container(
             padding: const EdgeInsets.all(8),
@@ -662,6 +689,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                     const SizedBox(width: 8),
                     IconButton(
                       icon: const Icon(Icons.delete_outline, size: 16),
+                      tooltip: '删除记录',
                       onPressed: () {
                         context.read<ImageGenerationProvider>().deleteImage(
                           index,
@@ -685,6 +713,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     final settings = context.watch<SettingsProvider>();
     final cs = Theme.of(context).colorScheme;
     final canGenerate = _canGenerate(settings);
+    final thumbCacheWidth = _thumbCacheWidth(context, 300);
 
     return Row(
       children: [
@@ -906,7 +935,17 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
                   itemCount: provider.images.length,
                   itemBuilder: (context, index) {
                     final image = provider.images[index];
-                    return _buildImageCard(context, image, index);
+                    return KeyedSubtree(
+                      key: ValueKey(
+                        '${image.timestamp.microsecondsSinceEpoch}_${image.url}',
+                      ),
+                      child: _buildImageCard(
+                        context,
+                        image,
+                        index,
+                        cacheWidth: thumbCacheWidth,
+                      ),
+                    );
                   },
                 ),
         ),

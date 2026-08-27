@@ -29,7 +29,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   VVideoInfo? _videoInfo;
   VVideoCompressionResult? _compressionResult;
   VVideoCompressQuality _selectedQuality = VVideoCompressQuality.medium;
-  double _progress = 0.0;
+
+  /// 压缩进度：编码回调很密集，用 notifier 只重建进度条与页头徽标。
+  final ValueNotifier<double> _progress = ValueNotifier<double>(0);
   bool _isCompressing = false;
   bool _isLoadingInfo = false;
   bool _showAdvancedSettings = false;
@@ -74,7 +76,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   Timer? _previewTimer;
   String? _previewVideoPath;
   String? _previewFramePath;
-  Duration _previewPosition = Duration.zero;
+
+  /// 播放时每秒推进一次，用 notifier 只重建进度条与时间文本。
+  final ValueNotifier<Duration> _previewPosition = ValueNotifier<Duration>(
+    Duration.zero,
+  );
   Duration _previewDuration = Duration.zero;
   bool _isPreviewFrameLoading = false;
   bool _isPlaying = false;
@@ -95,6 +101,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _controlsHideTimer?.cancel();
     _previewRequestId++;
     _deletePreviewFrame();
+    _progress.dispose();
+    _previewPosition.dispose();
     super.dispose();
   }
 
@@ -104,10 +112,10 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _deletePreviewFrame();
 
     if (!mounted) return;
+    _previewPosition.value = Duration.zero;
     setState(() {
       _previewVideoPath = videoPath;
       _previewFramePath = null;
-      _previewPosition = Duration.zero;
       _previewDuration = Duration.zero;
       _isPreviewFrameLoading = true;
       _isPlaying = false;
@@ -131,7 +139,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     if (_previewDuration == Duration.zero) {
       // Probe failed: still allow single-frame refresh feedback.
       _revealPreviewControls(autoHide: false);
-      _renderPreviewFrame(_previewPosition);
+      _renderPreviewFrame(_previewPosition.value);
       return;
     }
     _startPreviewPlayback();
@@ -142,8 +150,8 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _previewTimer?.cancel();
 
     if (_previewDuration > Duration.zero &&
-        _previewPosition >= _previewDuration) {
-      _previewPosition = Duration.zero;
+        _previewPosition.value >= _previewDuration) {
+      _previewPosition.value = Duration.zero;
     }
 
     setState(() {
@@ -155,12 +163,12 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     _previewTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (!mounted || _previewVideoPath == null) return;
 
-      final nextPosition = _previewPosition + const Duration(seconds: 1);
+      final nextPosition = _previewPosition.value + const Duration(seconds: 1);
       final endReached =
           _previewDuration > Duration.zero && nextPosition >= _previewDuration;
       final target = endReached ? _previewDuration : nextPosition;
 
-      setState(() => _previewPosition = target);
+      _previewPosition.value = target;
       // Fire-and-forget frame render so slow FFmpeg cannot stall the clock.
       unawaited(_renderPreviewFrame(target));
 
@@ -189,7 +197,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
   Future<void> _replayPreview() async {
     if (_previewVideoPath == null) return;
     _stopPreviewPlayback();
-    setState(() => _previewPosition = Duration.zero);
+    _previewPosition.value = Duration.zero;
     await _renderPreviewFrame(Duration.zero);
     if (!mounted) return;
     if (_previewDuration > Duration.zero) {
@@ -233,7 +241,7 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
             ),
           )
         : Duration.zero;
-    setState(() => _previewPosition = clamped);
+    _previewPosition.value = clamped;
     _revealPreviewControls(autoHide: wasPlaying);
     unawaited(_renderPreviewFrame(clamped).then((_) {
       if (!mounted) return;
@@ -354,11 +362,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
         _compressionResult = null;
         _previewVideoPath = null;
         _previewFramePath = null;
-        _previewPosition = Duration.zero;
         _previewDuration = Duration.zero;
         _isPlaying = false;
         _isLoadingInfo = true;
       });
+      _previewPosition.value = Duration.zero;
 
       final info = await _compressor.getVideoInfo(videoPath);
 
@@ -392,9 +400,9 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
 
     setState(() {
       _isCompressing = true;
-      _progress = 0.0;
       _compressionResult = null;
     });
+    _progress.value = 0.0;
 
     try {
       final compressionId =
@@ -409,9 +417,11 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
           advanced: advancedConfig,
         ),
         onProgress: (progress) {
-          if (mounted) {
-            setState(() => _progress = progress);
-          }
+          if (!mounted) return;
+          final value = progress.clamp(0.0, 1.0);
+          // 按整数百分比合流，避免每个回调都触发一次重绘。
+          if ((value * 100).floor() == (_progress.value * 100).floor()) return;
+          _progress.value = value;
         },
         id: compressionId,
       );
@@ -610,17 +620,20 @@ class _VideoCompressorPageState extends State<VideoCompressorPage> {
     return LumenSecondaryScaffold(
       title: '视频压缩',
       children: [
-        LumenPageIntro(
-          icon: Icons.video_file_rounded,
-          title: '视频压缩',
-          description: '先选择视频并查看素材信息，再设置压缩质量与高级参数，完成后保存结果。',
-          chips: [
-            '质量 ${_selectedQuality.name}',
-            _isCompressing
-                ? '${(_progress * 100).toInt()}%'
-                : (_compressionResult != null ? '压缩完成' : '等待素材'),
-            _showAdvancedSettings ? '高级设置展开' : '支持高级设置',
-          ],
+        ValueListenableBuilder<double>(
+          valueListenable: _progress,
+          builder: (context, progress, _) => LumenPageIntro(
+            icon: Icons.video_file_rounded,
+            title: '视频压缩',
+            description: '先选择视频并查看素材信息，再设置压缩质量与高级参数，完成后保存结果。',
+            chips: [
+              '质量 ${_selectedQuality.name}',
+              _isCompressing
+                  ? '${(progress * 100).toInt()}%'
+                  : (_compressionResult != null ? '压缩完成' : '等待素材'),
+              _showAdvancedSettings ? '高级设置展开' : '支持高级设置',
+            ],
+          ),
         ),
         ToolQuickActionsBar(
           actions: [
@@ -901,36 +914,39 @@ if (_isLoadingInfo) ...[
   Widget _buildProgressCard(ColorScheme cs) {
     return LumenActionCard(
       padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '压缩中...',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
+      child: ValueListenableBuilder<double>(
+        valueListenable: _progress,
+        builder: (context, progress, _) => Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '压缩中...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
                 ),
-              ),
-              Text(
-                '${(_progress * 100).toInt()}%',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
+                Text(
+                  '${(progress * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: cs.primary,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          LinearProgressIndicator(
-            value: _progress,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(LumenTokens.radiusXs),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1397,10 +1413,12 @@ if (_isLoadingInfo) ...[
     final durationText = _previewDuration == Duration.zero
         ? '--:--'
         : _formatDuration(_previewDuration);
-    final progress = _previewDuration.inMilliseconds <= 0
-        ? 0.0
-        : (_previewPosition.inMilliseconds / _previewDuration.inMilliseconds)
-              .clamp(0.0, 1.0);
+    // 预览帧按显示宽度解码，避免 4K 关键帧整张进图片缓存。
+    final frameCacheWidth =
+        (MediaQuery.sizeOf(context).width *
+                MediaQuery.devicePixelRatioOf(context))
+            .round()
+            .clamp(64, 2560);
 
     return LumenActionCard(
       padding: EdgeInsets.zero,
@@ -1462,8 +1480,8 @@ if (_isLoadingInfo) ...[
                         ? const Center(child: CircularProgressIndicator())
                         : Image.file(
                             File(_previewFramePath!),
-                            key: ValueKey(_previewFramePath),
                             fit: BoxFit.contain,
+                            cacheWidth: frameCacheWidth,
                             gaplessPlayback: true,
                           ),
                   ),
@@ -1523,72 +1541,82 @@ if (_isLoadingInfo) ...[
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              children: [
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: 3,
-                    thumbShape: const RoundSliderThumbShape(
-                      enabledThumbRadius: 7,
-                    ),
-                    overlayShape: const RoundSliderOverlayShape(
-                      overlayRadius: 14,
-                    ),
-                  ),
-                  child: Slider(
-                    value: progress,
-                    onChanged: _previewDuration == Duration.zero
-                        ? null
-                        : (value) {
-                            final target = Duration(
-                              milliseconds:
-                                  (_previewDuration.inMilliseconds * value)
-                                      .round(),
-                            );
-                            setState(() => _previewPosition = target);
-                            _revealPreviewControls(autoHide: _isPlaying);
-                          },
-                    onChangeEnd: _previewDuration == Duration.zero
-                        ? null
-                        : (value) {
-                            final target = Duration(
-                              milliseconds:
-                                  (_previewDuration.inMilliseconds * value)
-                                      .round(),
-                            );
-                            _seekPreview(target);
-                          },
-                  ),
-                ),
-                Row(
+            child: ValueListenableBuilder<Duration>(
+              valueListenable: _previewPosition,
+              builder: (context, position, _) {
+                final progress = _previewDuration.inMilliseconds <= 0
+                    ? 0.0
+                    : (position.inMilliseconds /
+                              _previewDuration.inMilliseconds)
+                          .clamp(0.0, 1.0);
+                return Column(
                   children: [
-                    IconButton.filledTonal(
-                      onPressed: _replayPreview,
-                      icon: const Icon(Icons.replay_rounded),
-                      tooltip: '重新播放',
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
-                      onPressed: _togglePlayPause,
-                      icon: Icon(
-                        _isPlaying
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 3,
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 7,
+                        ),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 14,
+                        ),
                       ),
-                      tooltip: _isPlaying ? '暂停' : '播放',
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${_formatDuration(_previewPosition)} / $durationText',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurfaceVariant,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+                      child: Slider(
+                        value: progress,
+                        onChanged: _previewDuration == Duration.zero
+                            ? null
+                            : (value) {
+                                final target = Duration(
+                                  milliseconds:
+                                      (_previewDuration.inMilliseconds * value)
+                                          .round(),
+                                );
+                                _previewPosition.value = target;
+                                _revealPreviewControls(autoHide: _isPlaying);
+                              },
+                        onChangeEnd: _previewDuration == Duration.zero
+                            ? null
+                            : (value) {
+                                final target = Duration(
+                                  milliseconds:
+                                      (_previewDuration.inMilliseconds * value)
+                                          .round(),
+                                );
+                                _seekPreview(target);
+                              },
                       ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton.filledTonal(
+                          onPressed: _replayPreview,
+                          icon: const Icon(Icons.replay_rounded),
+                          tooltip: '重新播放',
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton.filled(
+                          onPressed: _togglePlayPause,
+                          icon: Icon(
+                            _isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                          ),
+                          tooltip: _isPlaying ? '暂停' : '播放',
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${_formatDuration(position)} / $durationText',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: cs.onSurfaceVariant,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
         ],

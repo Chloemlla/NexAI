@@ -5,6 +5,11 @@ namespace NexAI.Core.Notes;
 
 public sealed class Note
 {
+    private string? _derivedSource;
+    private string? _bodyContent;
+    private string? _preview;
+    private IReadOnlyList<string>? _tags;
+
     public string Id { get; set; } = Guid.NewGuid().ToString("D");
     public string Title { get; set; } = "Untitled Note";
     public string Content { get; set; } = string.Empty;
@@ -18,16 +23,52 @@ public sealed class Note
     {
         get
         {
-            var text = BodyContent.ReplaceLineEndings(" ").Trim();
-            return text.Length <= 120 ? text : text[..120] + "…";
+            ResetDerivedIfStale();
+            if (_preview is null)
+            {
+                var text = BodyContent.ReplaceLineEndings(" ").Trim();
+                _preview = text.Length <= 120 ? text : text[..120] + "…";
+            }
+
+            return _preview;
         }
     }
 
     [JsonIgnore]
-    public IReadOnlyList<string> Tags => NoteMarkup.ExtractTags(Content);
+    public IReadOnlyList<string> Tags
+    {
+        get
+        {
+            ResetDerivedIfStale();
+            return _tags ??= NoteMarkup.ExtractTags(Content);
+        }
+    }
 
     [JsonIgnore]
-    public string BodyContent => NoteMarkup.StripFrontmatter(Content);
+    public string BodyContent
+    {
+        get
+        {
+            ResetDerivedIfStale();
+            return _bodyContent ??= NoteMarkup.StripFrontmatter(Content);
+        }
+    }
+
+    // Preview/Tags/BodyContent each run regexes over the whole note and are re-read
+    // every time a list container is realized. Memoize them against the exact Content
+    // instance they were derived from, so a reassigned Content always recomputes.
+    private void ResetDerivedIfStale()
+    {
+        if (ReferenceEquals(_derivedSource, Content))
+        {
+            return;
+        }
+
+        _derivedSource = Content;
+        _bodyContent = null;
+        _preview = null;
+        _tags = null;
+    }
 
     public Note Clone() => new()
     {
@@ -81,6 +122,9 @@ public static partial class NoteMarkup
     [GeneratedRegex(@"^---\s*\n([\s\S]*?)\n---", RegexOptions.Multiline)]
     private static partial Regex FrontmatterRegex();
 
+    [GeneratedRegex(@"```[\s\S]*?```")]
+    private static partial Regex FencedCodeRegex();
+
     public static string StripFrontmatter(string content)
     {
         var match = FrontmatterRegex().Match(content ?? string.Empty);
@@ -90,7 +134,7 @@ public static partial class NoteMarkup
     public static IReadOnlyList<string> ExtractTags(string content)
     {
         var body = StripFrontmatter(content ?? string.Empty);
-        var noCode = Regex.Replace(body, "```[\\s\\S]*?```", string.Empty);
+        var noCode = FencedCodeRegex().Replace(body, string.Empty);
         return TagRegex().Matches(noCode)
             .Select(m => m.Groups[1].Value)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -101,7 +145,7 @@ public static partial class NoteMarkup
     public static IReadOnlyList<string> ExtractWikiTargets(string content)
     {
         var body = StripFrontmatter(content ?? string.Empty);
-        var noCode = Regex.Replace(body, "```[\\s\\S]*?```", string.Empty);
+        var noCode = FencedCodeRegex().Replace(body, string.Empty);
         return WikiRegex().Matches(noCode)
             .Select(m =>
             {

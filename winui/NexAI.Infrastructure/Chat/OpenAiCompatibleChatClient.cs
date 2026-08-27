@@ -67,9 +67,11 @@ public sealed class OpenAiCompatibleChatClient : IChatStreamingClient
             .ConfigureAwait(false);
         using var reader = new StreamReader(stream);
 
-        while (!reader.EndOfStream)
+        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            // Reading until null avoids StreamReader.EndOfStream, which blocks the
+            // calling thread on a synchronous fill of the network buffer.
             var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
             if (line is null)
             {

@@ -93,7 +93,9 @@ class TranslationProvider extends ChangeNotifier {
   }
 
   Future<void> deleteRecord(String id) async {
+    final before = _history.length;
     _history.removeWhere((r) => r.id == id);
+    if (_history.length == before) return;
     notifyListeners();
     await _save();
   }
@@ -123,20 +125,40 @@ class TranslationProvider extends ChangeNotifier {
 
   /// 增量合并：按 id upsert
   Future<void> mergeItems(List<dynamic> list) async {
+    // 一次性建立 id -> 下标索引，避免每条增量都全表扫描（O(n*m) -> O(n+m)）
+    final indexById = <String, int>{};
+    for (var i = 0; i < _history.length; i++) {
+      indexById[_history[i].id] = i;
+    }
+
+    final additions = <TranslationRecord>[];
+    final additionIndexById = <String, int>{};
+
     for (final item in list) {
       if (item is! Map<String, dynamic>) continue;
 
       try {
         final incoming = TranslationRecord.fromJson(item);
-        final idx = _history.indexWhere((r) => r.id == incoming.id);
-        if (idx == -1) {
-          _history.insert(0, incoming);
-        } else {
-          _history[idx] = incoming;
+        final existingIndex = indexById[incoming.id];
+        if (existingIndex != null) {
+          _history[existingIndex] = incoming;
+          continue;
         }
+        final pendingIndex = additionIndexById[incoming.id];
+        if (pendingIndex != null) {
+          additions[pendingIndex] = incoming;
+          continue;
+        }
+        additionIndexById[incoming.id] = additions.length;
+        additions.add(incoming);
       } catch (e) {
         debugPrint('NexAI: skipping malformed translation record in merge: $e');
       }
+    }
+
+    // 与逐条 insert(0, ...) 等价的顺序：后出现的新记录排在更前面。
+    if (additions.isNotEmpty) {
+      _history.insertAll(0, additions.reversed);
     }
     if (_history.length > 200) _history.removeRange(200, _history.length);
     notifyListeners();

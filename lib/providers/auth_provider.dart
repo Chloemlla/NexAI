@@ -15,6 +15,7 @@ import '../services/android_native/android_native_result.dart';
 import '../services/android_native/android_passkey_service.dart';
 import 'settings_provider.dart';
 import '../services/nexai_auth_service.dart';
+import '../utils/avatar_cache.dart';
 import '../utils/nexai_api_error.dart';
 import '../utils/build_config.dart';
 
@@ -2015,6 +2016,8 @@ class AuthProvider extends ChangeNotifier {
     await _storage.delete(key: _keyRefreshToken);
     await _storage.delete(key: _keyUserId);
     await _storage.delete(key: _keyUserJson);
+    // The cached profile photo outlives secure storage otherwise.
+    await clearCachedAvatars();
   }
 
   Future<void> _saveCachedUser(NexaiUser user) async {

@@ -20,6 +20,7 @@ OpenAI-compatible AI chat client. Android/Web use Flutter + Material Design 3; W
 | Tools | Media, converters, password generator, short URL, artifacts share, AI translate & image gen |
 | Account | Login/register, Google Sign-In (Android/Web), Passkeys (Android) |
 | Sync | NexAI `/sync/v2` end-to-end encrypted sync (+ WebDAV / Upstash options in settings) |
+| Backup | Encrypted local backup & restore for settings, chats, notes, and tool data |
 | Security | Secure storage, request signing, certificate pinning (TOFU), device checks (Android) |
 | Performance | Narrow rebuild scope, coalesced streaming, linear sync merges, display-size image decode |
 
@@ -94,7 +95,10 @@ Optimization pass merged 2026-08-27 (`c20cc47`, 72 files across Flutter and WinU
 - **Passkeys** — Android Credential Manager / WebAuthn-aligned flow
 - **Cloud sync** — NexAI `/sync/v2` encrypted containers for settings, chats, notes, translation history, and short-URL history
 - **Sync recovery key** — Export / import local sync key from Settings → Sync
+- **Encrypted local backup** — AES-encrypted backup & restore for settings, conversations, notes, and tool data
+- **Avatar caching** — Account avatars are cached to disk and available offline
 - **WebDAV / Upstash** — Alternate sync backends available in Settings
+- **Clash Meta VPN** — Auto-detect partner access tier and surface denial reasons
 - **Auto-update checker** — GitHub Releases on startup
 - **Persistent settings** — Non-sensitive prefs in `SharedPreferences`; API keys, tokens, sync keys, and saved passwords in secure storage
 
@@ -231,6 +235,8 @@ scripts/                      # Build metadata, font subsetting, icons helpers
 | [`docs/katex-chemical-rendering-spec.md`](docs/katex-chemical-rendering-spec.md) | Chemistry rendering |
 | [`docs/GPTMARKDOWN_CSS_INTEGRATION.md`](docs/GPTMARKDOWN_CSS_INTEGRATION.md) | Markdown CSS integration |
 | [`docs/android-kotlin-native-capability-migration.md`](docs/android-kotlin-native-capability-migration.md) | Android native migration |
+| [`docs/ANDROID_VIVO_ADAPTATION.md`](docs/ANDROID_VIVO_ADAPTATION.md) | Vivo Android 13–17 adaptation |
+| [`docs/uiux-review-2026-08-01.md`](docs/uiux-review-2026-08-01.md) | Responsive layout UX review |
 
 ## Security Notes
 
@@ -1156,6 +1162,18 @@ scripts/                      # Build metadata, font subsetting, icons helpers
 - `2a47674` 降低鉴权 / 设置 / 工具 / WinUI 的重建与 IO 成本
 
 同批顺手修掉的缺陷：忘记密码弹窗的 `TextEditingController` 泄漏、流式合帧定时器未在 dispose 取消、自动更新开关点击后不回显、原子写临时文件名仅进程内唯一、WinUI 密码符号表被复制成两份可能与评分口径漂移、批量生成密码去重后数量不足时静默。
+
+#### 08-27 ~ 08-28 引擎生命周期与启动看门狗
+
+- `7ef32f4` 将 Flutter 引擎生命周期重新绑回 Activity
+- `e0024d3` 阻止 crash gate 误触发启动挂起看门狗
+- `e79e01d` 账号头像缓存到磁盘，离线可用
+
+#### 08-29 加密备份与 Clash 伙伴层级
+
+- `d734f38` Clash Meta VPN 伙伴访问层级与拒绝原因透传
+- `6b44bf2` 新增 AES 加密本地备份与恢复（设置、对话、笔记、工具数据）
+- `4ef7c49` 修复加密包输入类型为 `Uint8List`
 
 
 ## License

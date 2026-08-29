@@ -159,6 +159,13 @@ class _LocalBackupCardState extends State<LocalBackupCard> {
     if (path == null || !mounted) return;
     final passphrase = await _promptPassphrase(confirm: false);
     if (passphrase == null || !mounted) return;
+    final settingsProvider = context.read<SettingsProvider>();
+    final chatProvider = context.read<ChatProvider>();
+    final notesProvider = context.read<NotesProvider>();
+    final knowledgeProvider = context.read<KnowledgeProvider>();
+    final passwordProvider = context.read<PasswordProvider>();
+    final translationProvider = context.read<TranslationProvider>();
+    final shortUrlProvider = context.read<ShortUrlProvider>();
 
     setState(() => _isBusy = true);
     try {
@@ -166,13 +173,13 @@ class _LocalBackupCardState extends State<LocalBackupCard> {
       await _service.restoreBackup(
         raw: raw,
         passphrase: passphrase,
-        settingsProvider: context.read<SettingsProvider>(),
-        chatProvider: context.read<ChatProvider>(),
-        notesProvider: context.read<NotesProvider>(),
-        knowledgeProvider: context.read<KnowledgeProvider>(),
-        passwordProvider: context.read<PasswordProvider>(),
-        translationProvider: context.read<TranslationProvider>(),
-        shortUrlProvider: context.read<ShortUrlProvider>(),
+        settingsProvider: settingsProvider,
+        chatProvider: chatProvider,
+        notesProvider: notesProvider,
+        knowledgeProvider: knowledgeProvider,
+        passwordProvider: passwordProvider,
+        translationProvider: translationProvider,
+        shortUrlProvider: shortUrlProvider,
       );
       if (mounted) _showMessage('重装后恢复完成，API 密钥和登录状态需要重新设置');
     } catch (error) {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
@@ -189,7 +190,7 @@ class LocalBackupService {
   static String _encode(List<int> bytes) =>
       base64Url.encode(bytes).replaceAll('=', '');
 
-  static List<int> _decode(Object? value, {int? expectedLength}) {
+  static Uint8List _decode(Object? value, {int? expectedLength}) {
     if (value is! String || value.isEmpty) {
       throw const LocalBackupException('备份加密数据缺失');
     }
@@ -206,12 +207,14 @@ class LocalBackupService {
     }
   }
 
-  static List<int> _randomBytes(int length) {
+  static Uint8List _randomBytes(int length) {
     final random = Random.secure();
-    return List<int>.generate(length, (_) => random.nextInt(256));
+    return Uint8List.fromList(
+      List<int>.generate(length, (_) => random.nextInt(256)),
+    );
   }
 
-  static List<int> _deriveKey(
+  static Uint8List _deriveKey(
     String passphrase,
     List<int> salt,
     int iterations,
@@ -225,6 +228,6 @@ class LocalBackupService {
         result[j] ^= block[j];
       }
     }
-    return result;
+    return Uint8List.fromList(result);
   }
 }

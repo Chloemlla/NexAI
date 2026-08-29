@@ -26,6 +26,7 @@ import '../widgets/passkey_debug_dialog.dart';
 import '../widgets/sync_recovery_key_dialogs.dart';
 import '../widgets/user_avatar.dart';
 import 'about_page.dart';
+import '../widgets/local_backup_card.dart';
 import 'developer_debug_page.dart';
 import 'login_page.dart';
 import '../theme/lumen_tokens.dart';
@@ -1562,6 +1563,20 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 20),
+
+                // ── Data migration ──
+                _SectionHeader(
+                  icon: Icons.import_export_rounded,
+                  label: '数据迁移',
+                  cs: cs,
+                  tt: tt,
+                ),
+                const SizedBox(height: 10),
+                _SettingsCard(
+                  cs: cs,
+                  children: const [LocalBackupCard()],
                 ),
                 const SizedBox(height: 20),
 

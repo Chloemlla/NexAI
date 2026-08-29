@@ -111,6 +111,27 @@ class KnowledgeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> restoreFromLocalBackup({
+    required List<KnowledgeBase> bases,
+    required List<KnowledgeDoc> docs,
+    String? activeBaseId,
+  }) async {
+    _bases
+      ..clear()
+      ..addAll(bases);
+    _docs
+      ..clear()
+      ..addAll(docs);
+    _ensureDefaultBase();
+    _activeBaseId = activeBaseId != null &&
+            _bases.any((base) => base.id == activeBaseId)
+        ? activeBaseId
+        : _bases.first.id;
+    notifyListeners();
+    await _saveBases();
+    await _saveDocs();
+  }
+
   void _ensureDefaultBase() {
     if (_bases.any((b) => b.id == 'default')) return;
     final now = DateTime.now();

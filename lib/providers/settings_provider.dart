@@ -1142,6 +1142,187 @@ class SettingsProvider extends ChangeNotifier {
     await _save();
   }
 
+  Map<String, dynamic> exportForLocalBackup() {
+    return {
+      'openaiBaseUrl': _openaiBaseUrl,
+      'openaiModels': List<String>.from(_openaiModels),
+      'vertexModels': List<String>.from(_vertexModels),
+      'selectedModel': _selectedModel,
+      'themeMode': _themeMode.name,
+      'temperature': _temperature,
+      'maxTokens': _maxTokens,
+      'systemPrompt': _systemPrompt,
+      'accentColorValue': _accentColorValue,
+      'fontSize': _fontSize,
+      'fontFamily': _fontFamily,
+      'borderlessMode': _borderlessMode,
+      'fullScreenMode': _fullScreenMode,
+      'smartAutoScroll': _smartAutoScroll,
+      'clashAutoAdapt': _clashAutoAdapt,
+      'notesAutoSave': _notesAutoSave,
+      'aiTitleGeneration': _aiTitleGeneration,
+      'chatToolsEnabled': _chatToolsEnabled,
+      'toolWebSearchEnabled': _toolWebSearchEnabled,
+      'toolNotesEnabled': _toolNotesEnabled,
+      'toolImageEnabled': _toolImageEnabled,
+      'toolArtifactsEnabled': _toolArtifactsEnabled,
+      'toolFetchUrlEnabled': _toolFetchUrlEnabled,
+      'toolCreateNoteEnabled': _toolCreateNoteEnabled,
+      'toolKnowledgeEnabled': _toolKnowledgeEnabled,
+      'remoteMcpEnabled': _remoteMcpEnabled,
+      'maxToolRounds': _maxToolRounds,
+      'imageToolModel': _imageToolModel,
+      'mcpServers': _mcpWithoutSecrets(_mcpServers)
+          .map((server) => server.toJson())
+          .toList(),
+      'webSearchProviders': _providersWithoutSecrets(_webSearchProviders)
+          .map((provider) => provider.toJson())
+          .toList(),
+      'activeWebSearchProviderId': _activeWebSearchProviderId,
+      'toolGatewayBaseUrl': _toolGatewayBaseUrl,
+      'composerShowToolChips': _composerShowToolChips,
+      'semanticKnowledgeSearch': _semanticKnowledgeSearch,
+      'reasoningBudget': _reasoningBudget,
+      'syncEnabled': _syncEnabled,
+      'syncMethod': _syncMethod,
+      'webdavServer': _webdavServer,
+      'webdavUser': _webdavUser,
+      'upstashUrl': _upstashUrl,
+      'apiMode': _apiMode,
+      'vertexProjectId': _vertexProjectId,
+      'vertexLocation': _vertexLocation,
+    };
+  }
+
+  Future<void> restoreFromLocalBackup(Map<String, dynamic> data) async {
+    final openaiBaseUrl = data['openaiBaseUrl'];
+    if (openaiBaseUrl is String) {
+      _openaiBaseUrl = _normalizeBaseUrl(openaiBaseUrl);
+    }
+    final openaiModels = data['openaiModels'];
+    if (openaiModels is List) {
+      _openaiModels = openaiModels
+          .whereType<Object>()
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    final vertexModels = data['vertexModels'];
+    if (vertexModels is List) {
+      _vertexModels = vertexModels
+          .whereType<Object>()
+          .map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    final selectedModel = data['selectedModel'];
+    if (selectedModel is String && selectedModel.isNotEmpty) {
+      _selectedModel = selectedModel;
+    }
+    final themeMode = data['themeMode'];
+    if (themeMode is String) {
+      _themeMode = ThemeMode.values.firstWhere(
+        (mode) => mode.name == themeMode,
+        orElse: () => ThemeMode.system,
+      );
+    }
+    final temperature = data['temperature'];
+    if (temperature is num) {
+      _temperature = temperature.toDouble().clamp(0, 2).toDouble();
+    }
+    final maxTokens = data['maxTokens'];
+    if (maxTokens is int) {
+      _maxTokens = maxTokens.clamp(256, 32768).toInt();
+    }
+    final systemPrompt = data['systemPrompt'];
+    if (systemPrompt is String) _systemPrompt = systemPrompt;
+    final accentColorValue = data['accentColorValue'];
+    _accentColorValue = accentColorValue is int ? accentColorValue : null;
+    final fontSize = data['fontSize'];
+    if (fontSize is num) _fontSize = fontSize.toDouble().clamp(10, 24).toDouble();
+    final fontFamily = data['fontFamily'];
+    if (fontFamily is String) _fontFamily = _normalizeFontFamily(fontFamily);
+
+    void setBool(String key, void Function(bool value) apply) {
+      final value = data[key];
+      if (value is bool) apply(value);
+    }
+
+    setBool('borderlessMode', (value) => _borderlessMode = value);
+    setBool('fullScreenMode', (value) => _fullScreenMode = value);
+    setBool('smartAutoScroll', (value) => _smartAutoScroll = value);
+    setBool('clashAutoAdapt', (value) => _clashAutoAdapt = value);
+    setBool('notesAutoSave', (value) => _notesAutoSave = value);
+    setBool('aiTitleGeneration', (value) => _aiTitleGeneration = value);
+    setBool('chatToolsEnabled', (value) => _chatToolsEnabled = value);
+    setBool('toolWebSearchEnabled', (value) => _toolWebSearchEnabled = value);
+    setBool('toolNotesEnabled', (value) => _toolNotesEnabled = value);
+    setBool('toolImageEnabled', (value) => _toolImageEnabled = value);
+    setBool('toolArtifactsEnabled', (value) => _toolArtifactsEnabled = value);
+    setBool('toolFetchUrlEnabled', (value) => _toolFetchUrlEnabled = value);
+    setBool('toolCreateNoteEnabled', (value) => _toolCreateNoteEnabled = value);
+    setBool('toolKnowledgeEnabled', (value) => _toolKnowledgeEnabled = value);
+    setBool('remoteMcpEnabled', (value) => _remoteMcpEnabled = value);
+    setBool('composerShowToolChips', (value) => _composerShowToolChips = value);
+    setBool('semanticKnowledgeSearch', (value) => _semanticKnowledgeSearch = value);
+    setBool('syncEnabled', (value) => _syncEnabled = value);
+
+    final maxToolRounds = data['maxToolRounds'];
+    if (maxToolRounds is int) _maxToolRounds = maxToolRounds.clamp(1, 8).toInt();
+    final imageToolModel = data['imageToolModel'];
+    if (imageToolModel is String) _imageToolModel = imageToolModel;
+    final activeSearchProvider = data['activeWebSearchProviderId'];
+    if (activeSearchProvider is String) {
+      _activeWebSearchProviderId = activeSearchProvider;
+    }
+    final gateway = data['toolGatewayBaseUrl'];
+    if (gateway is String) _toolGatewayBaseUrl = gateway.trim();
+    final reasoningBudget = data['reasoningBudget'];
+    if (reasoningBudget is num) {
+      _reasoningBudget = reasoningBudget.toDouble().clamp(0, 1).toDouble();
+    }
+    final syncMethod = data['syncMethod'];
+    if (syncMethod is String) _syncMethod = syncMethod;
+    final webdavServer = data['webdavServer'];
+    if (webdavServer is String) _webdavServer = webdavServer;
+    final webdavUser = data['webdavUser'];
+    if (webdavUser is String) _webdavUser = webdavUser;
+    final upstashUrl = data['upstashUrl'];
+    if (upstashUrl is String) _upstashUrl = upstashUrl;
+    final apiMode = data['apiMode'];
+    if (apiMode == 'OpenAI' || apiMode == 'Vertex') _apiMode = apiMode;
+    final vertexProjectId = data['vertexProjectId'];
+    if (vertexProjectId is String) _vertexProjectId = vertexProjectId;
+    final vertexLocation = data['vertexLocation'];
+    if (vertexLocation is String) _vertexLocation = vertexLocation;
+
+    final mcpServers = data['mcpServers'];
+    if (mcpServers is List) {
+      _mcpServers = mcpServers
+          .whereType<Map>()
+          .map((item) => McpServerConfig.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList();
+    }
+    final searchProviders = data['webSearchProviders'];
+    if (searchProviders is List) {
+      _webSearchProviders = searchProviders
+          .whereType<Map>()
+          .map((item) => WebSearchProviderConfig.fromJson(
+                Map<String, dynamic>.from(item),
+              ))
+          .toList();
+    }
+    final restoredModels = _apiMode == 'Vertex' ? _vertexModels : _openaiModels;
+    if (restoredModels.isNotEmpty && !restoredModels.contains(_selectedModel)) {
+      _selectedModel = restoredModels.first;
+    }
+    notifyListeners();
+    await _save();
+    await ClashCompat.setAutoAdaptEnabled(_clashAutoAdapt);
+  }
+
   Future<void> setVertexLocation(String location) async {
     if (_vertexLocation == location) return;
     _vertexLocation = location;

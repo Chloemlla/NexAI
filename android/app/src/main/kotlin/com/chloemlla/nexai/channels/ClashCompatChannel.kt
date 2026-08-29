@@ -19,6 +19,34 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.util.concurrent.Executors
 
+/** CMFA 授予的 `partnerStatus` 读取层级，对应 provider 的 `accessTier` 字段。 */
+internal enum class ClashAccess { Unavailable, Denied, Basic, Full }
+
+/**
+ * 读出 CMFA 授予的层级。apiVersion 3 起 `accessTier` 明确回传 `denied`/`basic`/`full`；
+ * 更早的 CMFA 不带该字段，但那时能读到内容就等于拿到了全部字段，所以按 [ClashAccess.Full] 处理。
+ */
+internal fun parseClashAccess(values: Map<String, Any?>): ClashAccess =
+    when (values["accessTier"] as? String) {
+        "denied" -> ClashAccess.Denied
+        "basic" -> ClashAccess.Basic
+        "full" -> ClashAccess.Full
+        else -> if (values.isEmpty()) ClashAccess.Unavailable else ClashAccess.Full
+    }
+
+/**
+ * 一次 `partnerStatus` 查询的结果：层级、拒绝原因，以及真正读到的字段。
+ * [values] 只在层级可读（Basic/Full）时非空——被拒时返回的 bundle 也非空，但只带
+ * apiVersion/accessTier/deniedReason，绝不能把它当成一份全 false 的状态。
+ */
+private data class PartnerRead(
+    val access: ClashAccess,
+    val deniedReason: String?,
+    val values: Map<String, Any?>?,
+)
+
+private val UNAVAILABLE_PARTNER = PartnerRead(ClashAccess.Unavailable, null, null)
+
 /**
  * Detect ClashMeta install/VPN state for zero-config traffic adaptation.
  *
@@ -100,20 +128,22 @@ internal class ClashCompatChannel(
     private fun buildStatus(): Map<String, Any?> {
         val clashInstalled = isClashInstalled()
         val vpnActive = isVpnActive()
-        val partner = queryPartnerStatus()
-        val partnerStatusAvailable = partner != null
-        val clashVpnRunning =
-            if (partnerStatusAvailable) {
-                partner?.get("vpnRunning") as? Boolean ?: false
-            } else {
-                clashInstalled && vpnActive
-            }
-        val partnerAppAutoAdapt = partner?.get("partnerAppAutoAdapt") as? Boolean
-            ?: partner?.get("piliPlusAutoAdapt") as? Boolean
+        val read = queryPartnerStatus()
+        val status = read.values
+        // Provider 状态可信（Basic/Full）时以它为准。被拒时返回的 bundle 也非空但没有任何
+        // 状态字段，必须退回「Clash 已装且 VPN 活跃」的启发式——否则会把一次拒绝误判成
+        // 「Clash 没在路由」，在一条活着的隧道上再叠一层手动代理。
+        val clashVpnRunning = if (status != null) {
+            status["vpnRunning"] as? Boolean ?: false
+        } else {
+            clashInstalled && vpnActive
+        }
+        val partnerAppAutoAdapt = status?.get("partnerAppAutoAdapt") as? Boolean
+            ?: status?.get("piliPlusAutoAdapt") as? Boolean
             ?: true
         val autoAdaptEnabled = isAutoAdaptEnabled()
         val isClashVpnRouting =
-            if (partnerStatusAvailable) {
+            if (status != null) {
                 clashVpnRunning
             } else {
                 clashInstalled && vpnActive
@@ -126,9 +156,11 @@ internal class ClashCompatChannel(
             "vpnActive" to vpnActive,
             "clashVpnRunning" to clashVpnRunning,
             "partnerAppAutoAdapt" to partnerAppAutoAdapt,
-            "partnerStatusAvailable" to partnerStatusAvailable,
-            "profileName" to partner?.get("name"),
-            "clashPackage" to partner?.get("package"),
+            "partnerStatusAvailable" to (status != null),
+            "partnerAccess" to read.access.name.lowercase(),
+            "partnerDeniedReason" to read.deniedReason,
+            "profileName" to status?.get("name"),
+            "clashPackage" to status?.get("package"),
             "processBound" to (boundVpnNetwork != null),
             "autoAdaptEnabled" to autoAdaptEnabled,
         )
@@ -210,14 +242,16 @@ internal class ClashCompatChannel(
         }
     }
 
-    private fun queryPartnerStatus(): Map<String, Any?>? {
+    private fun queryPartnerStatus(): PartnerRead {
         val resolver = context.contentResolver
         for (pkg in CLASH_PACKAGES) {
             val uri = Uri.Builder().scheme("content").authority("$pkg.status").build()
             val bundle = runCatching {
                 resolver.call(uri, METHOD_PARTNER_STATUS, null, null)
             }.getOrNull() ?: continue
-            return mapOf(
+            val values = mapOf(
+                "accessTier" to bundle.getString("accessTier"),
+                "deniedReason" to bundle.getString("deniedReason"),
                 "running" to bundle.getBoolean("running", false),
                 "vpnRunning" to bundle.getBoolean("vpnRunning", false),
                 "partnerAppAutoAdapt" to bundle.getBoolean(
@@ -228,8 +262,14 @@ internal class ClashCompatChannel(
                 "name" to bundle.getString("name"),
                 "package" to (bundle.getString("package") ?: pkg),
             )
+            val access = parseClashAccess(values)
+            return PartnerRead(
+                access = access,
+                deniedReason = values["deniedReason"] as? String,
+                values = values.takeIf { access != ClashAccess.Denied },
+            )
         }
-        return null
+        return UNAVAILABLE_PARTNER
     }
 
     private fun prefs(): SharedPreferences =

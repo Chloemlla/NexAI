@@ -4,6 +4,9 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/services.dart';
 
+/// CMFA 授予的 `partnerStatus` 读取层级，对应 provider 的 `accessTier`。
+enum ClashAccess { unavailable, denied, basic, full }
+
 /// Android ClashMeta VPN auto-adapt bridge for NexAI.
 abstract final class ClashCompat {
   static const MethodChannel _method =
@@ -21,6 +24,10 @@ abstract final class ClashCompat {
   static bool autoAdaptEnabled = true;
   static String? profileName;
   static String? clashPackage;
+
+  /// CMFA 授予的 `partnerStatus` 读取层级（Android 才有意义）。
+  static ClashAccess partnerAccess = ClashAccess.unavailable;
+  static String? partnerDeniedReason;
 
   /// True when Clash VPN path should own traffic (skip manual HTTP proxy).
   ///
@@ -110,6 +117,8 @@ abstract final class ClashCompat {
     final newAutoAdaptEnabled = map['autoAdaptEnabled'] != false;
     final newProfileName = map['profileName'] as String?;
     final newClashPackage = map['clashPackage'] as String?;
+    final newPartnerAccess = _parseAccess(map['partnerAccess'] as String?);
+    final newPartnerDeniedReason = map['partnerDeniedReason'] as String?;
 
     clashInstalled = newClashInstalled;
     vpnActive = newVpnActive;
@@ -120,12 +129,35 @@ abstract final class ClashCompat {
     autoAdaptEnabled = newAutoAdaptEnabled;
     profileName = newProfileName;
     clashPackage = newClashPackage;
+    partnerAccess = newPartnerAccess;
+    partnerDeniedReason = newPartnerDeniedReason;
   }
+
+  static ClashAccess _parseAccess(String? raw) => switch (raw) {
+    'denied' => ClashAccess.denied,
+    'basic' => ClashAccess.basic,
+    'full' => ClashAccess.full,
+    _ => ClashAccess.unavailable,
+  };
+
+  /// 把 CMFA 的机器可读 `deniedReason` 翻成用户能照着做的一句中文。
+  static String describeDeniedReason(String? reason) => switch (reason) {
+    'pending_user_approval' => '等待在 Clash 中确认配对：打开 Clash 主页或点击配对通知即可授权',
+    'denied_by_user' => '已在 Clash 中拒绝授权，可在 Clash 主页「伙伴应用」里撤销',
+    'signer_unverified' => 'Clash 未登记 NexAI 的签名证书，只开放基础状态；在「伙伴应用」里允许即可读取完整状态',
+    'not_partner' => 'Clash 没把 NexAI 认成伙伴应用，请更新 Clash 到支持伙伴配对的版本',
+    'no_signature' => 'Clash 读不到 NexAI 的签名信息，无法完成配对',
+    null => 'Clash 未说明原因',
+    _ => 'Clash 返回原因：$reason',
+  };
 
   static String statusLabel({required bool autoAdaptEnabled}) {
     if (!Platform.isAndroid) return '仅 Android 支持';
     if (!autoAdaptEnabled) return '已关闭自动适配';
     if (!clashInstalled) return '未检测到 Clash Meta';
+    if (partnerAccess == ClashAccess.denied) {
+      return '读不到 Clash 状态 · ${describeDeniedReason(partnerDeniedReason)}';
+    }
     if (isClashVpnRouting) {
       final profile = profileName;
       if (profile != null && profile.isNotEmpty) {

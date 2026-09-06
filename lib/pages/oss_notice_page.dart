@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/oss_dependency_credits.dart';
 import '../models/oss_dependency_credit.dart';
 import '../providers/settings_provider.dart';
+import '../services/nex_notify.dart';
+import '../services/notification_models.dart';
 import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
 
@@ -28,10 +29,10 @@ class _OssNoticePageState extends State<OssNoticePage> {
         mode: LaunchMode.externalApplication,
       );
       if (!launched) {
-        SmartDialog.showToast('无法打开链接');
+        NexNotify.show('无法打开链接', type: NexNotifyType.error);
       }
     } catch (_) {
-      SmartDialog.showToast('无法打开链接');
+      NexNotify.show('无法打开链接', type: NexNotifyType.error);
     }
   }
 
@@ -42,7 +43,7 @@ class _OssNoticePageState extends State<OssNoticePage> {
       await context.read<SettingsProvider>().acknowledgeOssNotice();
     } catch (_) {
       // The button is the only way forward, so a failure must be visible.
-      SmartDialog.showToast('保存失败，请重试');
+      NexNotify.show('保存失败，请重试', type: NexNotifyType.error);
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

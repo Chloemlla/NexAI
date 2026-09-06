@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/short_url_provider.dart';
+import '../services/nex_notify.dart';
+import '../services/notification_models.dart';
 import '../widgets/tool_page_style.dart';
 import '../widgets/lumen/lumen.dart';
 
@@ -49,7 +51,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
   Future<void> _createShortUrl() async {
     final target = _targetController.text.trim();
     if (target.isEmpty) {
-      SmartDialog.showToast('请输入目标地址');
+      NexNotify.show('请输入目标地址', type: NexNotifyType.warning);
       return;
     }
 
@@ -57,7 +59,10 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
     if (uri == null ||
         !uri.hasAuthority ||
         (uri.scheme != 'http' && uri.scheme != 'https')) {
-      SmartDialog.showToast('请输入有效的 http:// 或 https:// 链接');
+      NexNotify.show(
+        '请输入有效的 http:// 或 https:// 链接',
+        type: NexNotifyType.warning,
+      );
       return;
     }
 
@@ -76,7 +81,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
           response.data['status'] == 200) {
         final shortUrl = response.data['shorturl']?.toString();
         if (shortUrl == null || shortUrl.isEmpty) {
-          SmartDialog.showToast('接口返回为空，请重试');
+          NexNotify.show('接口返回为空，请重试', type: NexNotifyType.error);
           return;
         }
 
@@ -89,20 +94,20 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
             createdAt: DateTime.now(),
           ),
         );
-        SmartDialog.showToast('短链接生成成功');
+        NexNotify.show('短链接生成成功', type: NexNotifyType.success);
       } else {
         final message = response.data is Map<String, dynamic>
             ? response.data['msg']?.toString()
             : null;
-        SmartDialog.showToast(message ?? '生成失败，请稍后重试');
+        NexNotify.show(message ?? '生成失败，请稍后重试', type: NexNotifyType.error);
       }
     } on DioException catch (error) {
       final message = error.response?.data is Map<String, dynamic>
           ? error.response?.data['msg']?.toString()
           : error.message;
-      SmartDialog.showToast(message ?? '网络连接异常，请检查网络');
+      NexNotify.show(message ?? '网络连接异常，请检查网络', type: NexNotifyType.error);
     } catch (error) {
-      SmartDialog.showToast('程序发生未知错误：$error');
+      NexNotify.show('程序发生未知错误：$error', type: NexNotifyType.error);
     } finally {
       SmartDialog.dismiss();
       if (mounted) {
@@ -116,7 +121,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
     if (!mounted) return;
     final text = data?.text?.trim();
     if (text == null || text.isEmpty) {
-      SmartDialog.showToast('剪贴板为空');
+      NexNotify.show('剪贴板为空', type: NexNotifyType.warning);
       return;
     }
     _targetController.text = text;
@@ -149,10 +154,10 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        SmartDialog.showToast('无法唤起浏览器打开链接');
+        NexNotify.show('无法唤起浏览器打开链接', type: NexNotifyType.error);
       }
     } catch (_) {
-      SmartDialog.showToast('链接格式不正确');
+      NexNotify.show('链接格式不正确', type: NexNotifyType.warning);
     }
   }
 
@@ -373,7 +378,7 @@ class _ShortUrlPageState extends State<ShortUrlPage> {
                         onPressed: () async {
                           await context.read<ShortUrlProvider>().clearHistory();
                           if (!mounted) return;
-                          SmartDialog.showToast('已清空历史');
+                          NexNotify.show('已清空历史');
                         },
                         icon: const Icon(Icons.delete_sweep_rounded, size: 18),
                         label: const Text('清空历史'),

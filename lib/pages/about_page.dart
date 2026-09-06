@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/oss_dependency_credits.dart';
 import '../providers/settings_provider.dart';
+import '../services/nex_notify.dart';
+import '../services/notification_models.dart';
 import '../utils/build_config.dart';
 import '../theme/lumen_tokens.dart';
 import '../widgets/lumen/lumen.dart';
@@ -247,7 +248,7 @@ _m3Section(
     _developerTapCount = 0;
     await context.read<SettingsProvider>().unlockDeveloperDebugMode();
     HapticFeedback.mediumImpact();
-    SmartDialog.showToast('您已进入极客开发者世界');
+    NexNotify.show('您已进入极客开发者世界', type: NexNotifyType.success);
   }
 
   Widget _m3Section(
@@ -343,10 +344,10 @@ _m3Section(
         mode: LaunchMode.externalApplication,
       );
       if (!launched) {
-        SmartDialog.showToast('无法打开链接');
+        NexNotify.show('无法打开链接', type: NexNotifyType.error);
       }
     } catch (_) {
-      SmartDialog.showToast('无法打开链接');
+      NexNotify.show('无法打开链接', type: NexNotifyType.error);
     }
   }
 }

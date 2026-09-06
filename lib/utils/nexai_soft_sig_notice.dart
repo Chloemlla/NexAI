@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 
-import 'navigation_helper.dart';
+import '../services/nex_notify.dart';
+import '../services/notification_models.dart';
 
 /// Soft-mode (`NEXAI_REQUEST_SIGNING=soft`) may accept requests while reporting
 /// signature failure via response headers:
@@ -71,28 +71,13 @@ class NexaiSoftSigNotice {
     final pathPart = (path == null || path.isEmpty) ? '' : ' · $path';
     final text = '签名校验提示：$hint${code == null ? '' : '（$code）'}$pathPart';
 
-    // Prefer SmartDialog toast (global, no BuildContext needed).
-    try {
-      SmartDialog.showToast(text, displayTime: const Duration(seconds: 4));
-      return;
-    } catch (_) {
-      // Fall through if SmartDialog not ready during early bootstrap.
-    }
-
-    final ctx = NavigationHelper.navigatorKey.currentContext;
-    if (ctx == null) return;
-    // Soft dependency: only if a ScaffoldMessenger ancestor exists.
-    try {
-      // ignore: use_build_context_synchronously
-      final messenger = ScaffoldMessenger.maybeOf(ctx);
-      messenger?.showSnackBar(
-        SnackBar(
-          content: Text(text),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    } catch (_) {}
+    // NexNotify needs no BuildContext and queues until the overlay is mounted,
+    // so early-bootstrap calls are preserved instead of needing a fallback.
+    NexNotify.show(
+      text,
+      type: NexNotifyType.warning,
+      duration: const Duration(seconds: 4),
+    );
   }
 
   static String? _header(Map<String, String> headers, String name) {

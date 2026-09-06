@@ -41,6 +41,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // fastdev-jsruntimes-quickjs (QuickJS runtime for the notification engine)
+        maven {
+            name = "JitPack"
+            url = uri("https://jitpack.io")
+        }
         // Prefer release assets staged by scripts/resolve-lumen-crash.* so CI does
         // not need cross-repo GitHub Packages auth for lumen-crash-core.
         maven {

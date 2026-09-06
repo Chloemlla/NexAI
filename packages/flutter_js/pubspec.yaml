@@ -1,0 +1,18 @@
+name: flutter_js
+description: >-
+  Vendored QuickJS binding for the NexAI notification engine (fork of pub.dev
+  flutter_js 0.8.7). Native libs ship via the fastdev-jsruntimes-quickjs AAR
+  declared in android/app/build.gradle; this package carries no platform plugin.
+version: 0.8.7
+homepage: https://github.com/abner/flutter_js
+publish_to: none
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  ffi: ^2.0.0
+  http: ^1.0.0
+  sync_http: ^0.3.0

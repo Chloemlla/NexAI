@@ -193,6 +193,11 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0"
     implementation "com.tencent:mmkv:2.4.0"
 
+    // QuickJS native runtime (libfastdev_quickjs_runtime.so) consumed by the
+    // vendored flutter_js Dart FFI binding. The AAR's ELF LOAD segments are
+    // vaddr/offset congruent at 16KB, so it loads on 16KB-page devices too.
+    implementation "com.github.fast-development.android-js-runtimes:fastdev-jsruntimes-quickjs:0.3.6"
+
     // Auto-resolved latest Project Lumen main release (see CI/local resolver).
     // Do not hard-pin com.chloemlla.lumen:lumen-crash:X.Y.Z in source control.
     def lumenCrashVersion = findProperty("lumenCrashVersion") ?: System.getenv("LUMEN_CRASH_VERSION")

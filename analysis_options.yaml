@@ -1,5 +1,11 @@
 include: package:flutter_lints/flutter.yaml
 
+# The vendored QuickJS binding (packages/flutter_js) is a verbatim upstream
+# copy; it is type-checked via the dependency graph but not linted here.
+analyzer:
+  exclude:
+    - packages/flutter_js/**
+
 linter:
   rules:
     prefer_const_constructors: false

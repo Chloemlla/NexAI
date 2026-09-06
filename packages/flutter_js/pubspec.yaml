@@ -15,4 +15,3 @@ dependencies:
     sdk: flutter
   ffi: ^2.0.0
   http: ^1.0.0
-  sync_http: ^0.3.0

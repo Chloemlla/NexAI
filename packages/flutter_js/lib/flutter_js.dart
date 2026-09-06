@@ -17,7 +17,6 @@ export './quickjs/quickjs_runtime.dart';
 export './quickjs/quickjs_runtime2.dart';
 export 'javascript_runtime.dart';
 export 'js_eval_result.dart';
-export 'quickjs-sync-server/quickjs_oasis_jsbridge.dart';
 
 // import condicional to not import ffi libraries when using web as target
 // import "something.dart" if (dart.library.io) "other.dart";

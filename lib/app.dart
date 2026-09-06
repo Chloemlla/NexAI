@@ -13,6 +13,7 @@ import 'pages/oss_notice_page.dart';
 import 'theme/lumen_theme.dart';
 import 'theme/lumen_tokens.dart';
 import 'widgets/lumen/lumen.dart';
+import 'widgets/notification/notification_overlay.dart';
 import 'utils/navigation_helper.dart';
 
 bool get _isAndroid =>
@@ -113,7 +114,11 @@ class NexAIApp extends StatelessWidget {
         fontFamily: fontFamily,
       ),
       home: const _CrashReportGate(),
-      builder: FlutterSmartDialog.init(),
+      builder: (context, child) {
+        return NotificationOverlay(
+          child: FlutterSmartDialog.init()(context, child),
+        );
+      },
       navigatorObservers: [FlutterSmartDialog.observer],
     );
   }

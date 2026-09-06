@@ -75,6 +75,7 @@ flutter:
     - assets/app_icon_runtime.png
     - assets/github-markdown.css
     - assets/github-markdown-dark.css
+    - assets/js/
 
   fonts:
     # JetBrains Mono NexAI - ASCII 子集，仅用于计时器、看板与开发者日志

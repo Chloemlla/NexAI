@@ -218,7 +218,9 @@ class _NotificationCardState extends State<NotificationCard>
                         minWidth: 28,
                         minHeight: 28,
                       ),
-                      tooltip: '关闭通知',
+                      // No tooltip: the overlay host sits above the Navigator
+                      // (MaterialApp.builder), so there is no Overlay ancestor
+                      // and a Tooltip would throw when built.
                       onPressed: widget.onClose,
                     ),
                   ],

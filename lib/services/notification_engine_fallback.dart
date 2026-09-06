@@ -55,7 +55,7 @@ class FallbackNexNotificationEngine implements NexNotificationEngine {
     final now = DateTime.now().millisecondsSinceEpoch;
     for (var i = 0; i < _items.length; i++) {
       final it = _items[i];
-      if (it.id == id || it.paused) continue;
+      if (it.id != id || it.paused) continue;
       final elapsed = now - it.start;
       final remainingMs = it.duration.inMilliseconds - elapsed;
       _items[i] = _copy(

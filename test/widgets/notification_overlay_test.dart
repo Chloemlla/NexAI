@@ -73,6 +73,10 @@ void main() {
 
     NexNotify.show('bye');
     await tester.pump();
+    // Settle the entry animation before tapping: the card slides in from
+    // above, and while animating its top (the close button) sits above the
+    // overlay's hit-testable layout bounds.
+    await tester.pump(const Duration(milliseconds: 350));
     expect(find.text('bye'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close));
@@ -90,6 +94,9 @@ void main() {
 
     NexNotify.show('pausable');
     await tester.pump();
+    // Settle the entry animation before pressing, mirroring real usage where
+    // the card is interacted with only after it has slid into place.
+    await tester.pump(const Duration(milliseconds: 350));
 
     final gesture = await tester.startGesture(
       tester.getCenter(find.text('pausable')),

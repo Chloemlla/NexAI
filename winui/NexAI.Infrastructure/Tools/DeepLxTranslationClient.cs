@@ -10,7 +10,7 @@ namespace NexAI.Infrastructure.Tools;
 /// </summary>
 public sealed class DeepLxTranslationClient : ITranslationClient
 {
-    public const string DefaultBaseUrl = "https://tts.chloemlla.com";
+    public const string DefaultBaseUrl = "https://chloemlla.com";
     private const string FallbackSigningSecret = "project-lumen-local-request-signing-key";
     private readonly HttpClient _httpClient;
     private readonly string _baseUrl;

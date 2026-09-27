@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart';
 
 import 'nexai_backend_client.dart';
 
-const String _nexaiBaseUrl = 'https://tts.chloemlla.com/api/nexai';
+const String _nexaiBaseUrl = 'https://chloemlla.com/api/nexai';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ class NexaiArtifactsApi {
 
   static void setBaseUrl(String url) {
     // NOTE: The underlying HTTP client is certificate-pinned exclusively to
-    // tts.chloemlla.com. setBaseUrl MUST only point to the pinned host;
+    // chloemlla.com. setBaseUrl MUST only point to the pinned host;
     // pointing to staging/dev hosts will cause TLS pinning failures.
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }

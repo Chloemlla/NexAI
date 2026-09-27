@@ -32,7 +32,7 @@ public sealed class AppSettings
     public AppThemeMode ThemeMode { get; set; } = AppThemeMode.System;
     public AppLanguage Language { get; set; } = AppLanguage.System;
 
-    public string BackendBaseUrl { get; set; } = "https://tts.chloemlla.com/api/nexai";
+    public string BackendBaseUrl { get; set; } = "https://chloemlla.com/api/nexai";
     public string VertexApiKey { get; set; } = string.Empty;
     public bool SyncEnabled { get; set; }
     public SyncBackendKind SyncMethod { get; set; } = SyncBackendKind.NexAI;

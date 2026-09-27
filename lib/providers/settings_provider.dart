@@ -10,7 +10,7 @@ import '../utils/local_data_presence.dart';
 
 class SettingsProvider extends ChangeNotifier {
   static const String defaultOpenaiBaseUrl =
-      'https://tts.chloemlla.com/api/nexai';
+      'https://chloemlla.com/api/nexai';
   static const String _legacyOpenaiBaseUrl = 'https://api.openai.com/v1';
   static const String monospaceFontFamily = 'JetBrainsMonoNexAI';
 

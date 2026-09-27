@@ -127,7 +127,7 @@ class _ArtifactsPageState extends State<ArtifactsPage> {
   }
 
   void _copyLink(String shortId) {
-    final url = 'https://tts.chloemlla.com/share/$shortId';
+    final url = 'https://chloemlla.com/share/$shortId';
     Clipboard.setData(ClipboardData(text: url));
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(

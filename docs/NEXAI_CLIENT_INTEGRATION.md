@@ -11,8 +11,8 @@
 ### 基础 URL
 
 ```
-生产环境: https://tts.chloemlla.com/api/nexai
-开发环境: https://tts.chloemlla.com/api/nexai
+生产环境: https://chloemlla.com/api/nexai
+开发环境: https://chloemlla.com/api/nexai
 ```
 
 ## 安全请求头规范
@@ -354,7 +354,7 @@ val okHttpClient = OkHttpClient.Builder()
     .build()
 
 val retrofit = Retrofit.Builder()
-    .baseUrl("https://tts.chloemlla.com/api/nexai/")
+    .baseUrl("https://chloemlla.com/api/nexai/")
     .client(okHttpClient)
     .addConverterFactory(GsonConverterFactory.create())
     .build()

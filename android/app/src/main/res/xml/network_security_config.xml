@@ -9,7 +9,7 @@
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">tts.chloemlla.com</domain>
+        <domain includeSubdomains="true">chloemlla.com</domain>
     </domain-config>
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">api.github.com</domain>

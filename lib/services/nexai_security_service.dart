@@ -9,7 +9,7 @@ import 'dart:convert';
 import 'nexai_backend_client.dart';
 
 class NexAISecurityService {
-  static const String defaultBaseUrl = 'https://tts.chloemlla.com/api/nexai';
+  static const String defaultBaseUrl = 'https://chloemlla.com/api/nexai';
   static String _baseUrl = defaultBaseUrl;
 
   /// Optional constructor arg retained for call-site compatibility.

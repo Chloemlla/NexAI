@@ -57,7 +57,7 @@ class _ImageGenerationPageState extends State<ImageGenerationPage> {
     final host = uri?.host.toLowerCase() ?? '';
     final path = uri?.path.toLowerCase() ?? '';
     final isNexaiApi =
-        host == 'tts.chloemlla.com' &&
+        host == 'chloemlla.com' &&
         (path == '/api/nexai' || path.startsWith('/api/nexai/'));
     final isHappyApi = host == 'happyapi.org' || host.endsWith('.happyapi.org');
     return isNexaiApi || isHappyApi;

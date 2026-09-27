@@ -1,6 +1,6 @@
 /// DeepLX-style public translation client aligned with Project-Lumen.
 ///
-/// Endpoints (host defaults to tts.chloemlla.com):
+/// Endpoints (host defaults to chloemlla.com):
 ///   GET  /api/public/deeplx/config
 ///   POST /api/public/deeplx/translate
 ///
@@ -91,7 +91,7 @@ class LumenTranslationClient {
     http.Client? client,
   }) : _client = client;
 
-  static const defaultBaseUrl = 'https://tts.chloemlla.com';
+  static const defaultBaseUrl = 'https://chloemlla.com';
   static const maxInputChars = 5000;
   static const requestTimeout = Duration(seconds: 15);
 

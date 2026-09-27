@@ -6,7 +6,7 @@
 
 ## API 基础信息
 
-- **Base URL**: `https://tts.chloemlla.com/api/nexai`
+- **Base URL**: `https://chloemlla.com/api/nexai`
 - **认证方式**: Bearer Token (JWT)
 - **Content-Type**: `application/json`
 
@@ -395,7 +395,7 @@ class Pagination {
 
 ```dart
 final service = ArtifactsService(
-  baseUrl: 'https://tts.chloemlla.com/api/nexai',
+  baseUrl: 'https://chloemlla.com/api/nexai',
   accessToken: 'your_jwt_token',
 );
 
@@ -671,7 +671,7 @@ class _ShareArtifactDialogState extends State<ShareArtifactDialog> {
 
     try {
       final service = ArtifactsService(
-        baseUrl: 'https://tts.chloemlla.com/api/nexai',
+        baseUrl: 'https://chloemlla.com/api/nexai',
         accessToken: 'your_jwt_token', // 从存储中获取
       );
 

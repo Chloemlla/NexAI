@@ -7,14 +7,14 @@ import 'package:http/http.dart' as http;
 
 import 'nexai_backend_client.dart';
 
-const String _nexaiBaseUrl = 'https://tts.chloemlla.com/api/nexai';
+const String _nexaiBaseUrl = 'https://chloemlla.com/api/nexai';
 
 class NexaiAuthApi {
   static String _baseUrl = _nexaiBaseUrl;
 
   static void setBaseUrl(String url) {
     // NOTE: The underlying HTTP client is certificate-pinned exclusively to
-    // tts.chloemlla.com. setBaseUrl MUST only point to the pinned host;
+    // chloemlla.com. setBaseUrl MUST only point to the pinned host;
     // pointing to staging/dev hosts will cause TLS pinning failures.
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
@@ -232,7 +232,7 @@ class NexaiAuthApi {
   }
 
   // ========== WebAuthn (Passkeys) API ==========
-  // Happy-TTS NexAI paths under https://tts.chloemlla.com/api/nexai
+  // Happy-TTS NexAI paths under https://chloemlla.com/api/nexai
   // POST /auth/passkey/register/options  (auth required)
   // POST /auth/passkey/register/verify   (auth required, body = PublicKeyCredential)
   // POST /auth/passkey/login/options                (body: { identifier })
@@ -241,7 +241,7 @@ class NexaiAuthApi {
   // POST /auth/passkey/login/discoverable/verify    (body: { response, challenge })
   // GET  /auth/passkey/signal/options               (auth required, Credential Manager Signal)
   // Android: Credential Manager createCredential / getCredential / signalCredentialState
-  // Digital Asset Links: https://tts.chloemlla.com/.well-known/assetlinks.json
+  // Digital Asset Links: https://chloemlla.com/.well-known/assetlinks.json
 
   // / POST /auth/passkey/register/options
   static Future<Map<String, dynamic>> generatePasskeyRegistrationOptions({

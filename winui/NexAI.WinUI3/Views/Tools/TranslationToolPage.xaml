@@ -10,7 +10,7 @@
                 <Button Content="Back" Click="BackButton_Click" />
                 <StackPanel Spacing="2">
                     <TextBlock Style="{StaticResource TitleLargeTextBlockStyle}" Text="AI Translation" />
-                    <TextBlock Opacity="0.72" Text="DeepLX public translation (Project-Lumen method) via tts.chloemlla.com." TextWrapping="Wrap" />
+                    <TextBlock Opacity="0.72" Text="DeepLX public translation (Project-Lumen method) via chloemlla.com." TextWrapping="Wrap" />
                 </StackPanel>
             </StackPanel>
 

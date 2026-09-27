@@ -34,7 +34,7 @@ void main() {
       const message =
           'Exception: 注册验证失败: Unexpected registration response origin '
           '"android:apk-key-hash:/9HzfCcFGsx/oYdF4QfmF5ooVyYZtj/G902sPaRO184", '
-          'expected one of: https://tts.chloemlla.com, '
+          'expected one of: https://chloemlla.com, '
           'android:apk-key-hash:_9HzfCcFGsx_oYdF4QfmF5ooVyYZtj_G902sPaRO184';
 
       final parsed = parseAndroidApkKeyHashOriginMismatch(message);

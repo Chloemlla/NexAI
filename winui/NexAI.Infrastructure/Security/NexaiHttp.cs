@@ -29,7 +29,7 @@ public interface INexaiHttp
 
 public sealed class NexaiHttp : INexaiHttp, IDisposable
 {
-    public const string PinnedHost = "tts.chloemlla.com";
+    public const string PinnedHost = "chloemlla.com";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

@@ -6,14 +6,14 @@ import 'dart:convert';
 
 import 'nexai_backend_client.dart';
 
-const String _defaultBaseUrl = 'https://tts.chloemlla.com/api/nexai';
+const String _defaultBaseUrl = 'https://chloemlla.com/api/nexai';
 
 class NexaiSyncApi {
   static String _baseUrl = _defaultBaseUrl;
 
   static void setBaseUrl(String url) {
     // NOTE: The underlying HTTP client is certificate-pinned exclusively to
-    // tts.chloemlla.com. setBaseUrl MUST only point to the pinned host;
+    // chloemlla.com. setBaseUrl MUST only point to the pinned host;
     // pointing to staging/dev hosts will cause TLS pinning failures.
     _baseUrl = url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }

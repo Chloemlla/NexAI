@@ -33,7 +33,7 @@ class NexaiBackendClient {
   static String? overrideKeyId;
 
   /// NOTE: The underlying HTTP client is certificate-pinned exclusively to
-  /// tts.chloemlla.com.  Any NexAI service that uses NexaiBackendClient must
+  /// chloemlla.com.  Any NexAI service that uses NexaiBackendClient must
   /// point to the pinned host; pointing to staging/dev hosts will cause TLS
   /// pinning failures.
   static Future<http.Client> _get({bool forceRebuild = false}) async {

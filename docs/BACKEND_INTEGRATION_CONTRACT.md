@@ -20,12 +20,12 @@
 当前客户端默认请求：
 
 ```text
-https://tts.chloemlla.com/api/nexai
+https://chloemlla.com/api/nexai
 ```
 
 生产环境必须统一使用一个后端域名。客户端证书固定逻辑也必须固定这个域名对应的证书链。
 
-客户端证书固定 host 必须是 `tts.chloemlla.com`，并与后端 API 真实域名保持一致。
+客户端证书固定 host 必须是 `chloemlla.com`，并与后端 API 真实域名保持一致。
 
 ### 2.2 请求格式
 
@@ -464,7 +464,7 @@ Authorization: Bearer <accessToken>
     "challenge": "base64url",
     "rp": {
       "name": "NexAI",
-      "id": "tts.chloemlla.com"
+      "id": "chloemlla.com"
     },
     "user": {
       "id": "base64url-user-id",
@@ -547,7 +547,7 @@ POST /auth/passkey/login/options
   "data": {
     "challenge": "base64url",
     "timeout": 60000,
-    "rpId": "tts.chloemlla.com",
+    "rpId": "chloemlla.com",
     "allowCredentials": [
       {
         "type": "public-key",
@@ -601,7 +601,7 @@ POST /auth/passkey/login/discoverable/options
   "data": {
     "challenge": "base64url",
     "timeout": 60000,
-    "rpId": "tts.chloemlla.com",
+    "rpId": "chloemlla.com",
     "allowCredentials": [],
     "userVerification": "preferred"
   }
@@ -645,7 +645,7 @@ Authorization: Bearer <accessToken>
   "success": true,
   "data": {
     "allAcceptedCredentials": {
-      "rpId": "tts.chloemlla.com",
+      "rpId": "chloemlla.com",
       "userId": "base64url-user-id",
       "allAcceptedCredentialIds": [
         "base64url-credential-id-1",
@@ -653,7 +653,7 @@ Authorization: Bearer <accessToken>
       ]
     },
     "currentUserDetails": {
-      "rpId": "tts.chloemlla.com",
+      "rpId": "chloemlla.com",
       "userId": "base64url-user-id",
       "name": "alice@example.com",
       "displayName": "Alice"
@@ -917,8 +917,8 @@ Content-Type: application/json
   "data": {
     "id": "art_...",
     "shortId": "abc123",
-    "shareUrl": "https://tts.chloemlla.com/artifacts/abc123",
-    "embedUrl": "https://tts.chloemlla.com/artifacts/abc123/embed",
+    "shareUrl": "https://chloemlla.com/artifacts/abc123",
+    "embedUrl": "https://chloemlla.com/artifacts/abc123/embed",
     "createdAt": "2026-05-29T14:30:00.000Z",
     "expiresAt": null
   }

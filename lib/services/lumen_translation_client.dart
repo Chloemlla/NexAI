@@ -16,6 +16,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'nexai_client_identity.dart';
+import 'nexai_ip_verification.dart';
 import 'pinned_http_client.dart';
 
 class LumenTranslationException implements Exception {

@@ -13,6 +13,14 @@ import 'package:nexai/services/nexai_ip_verification.dart';
 ///  1. 403 且带错误码/`requiresVerification` 才认定为闸门拦截（别的 403 不许乱重放）；
 ///  2. 干净 IP 能拿到令牌并被后续请求复用；
 ///  3. 要人机验证/IP 被封时不硬撞（冷却窗口内不再发请求），并把原因留给界面。
+/// `package:http` 的 Response(String) 默认按 **latin-1** 编码 body，写中文会直接抛
+/// 「Contains invalid characters」；统一走 UTF-8 字节 + 明确的 charset。
+http.Response jsonResponse(Object payload, int status) => http.Response.bytes(
+      utf8.encode(jsonEncode(payload)),
+      status,
+      headers: {'content-type': 'application/json; charset=utf-8'},
+    );
+
 void main() {
   const fingerprint = 'abc12345def';
 
@@ -27,29 +35,26 @@ void main() {
   });
 
   test('只在 403 + 闸门错误码时认定为闸门拦截', () {
-    final gated = http.Response(
-      jsonEncode({
-        'success': false,
-        'error': 'IP verification required',
-        'errorCode': 'IP_VERIFICATION_REQUIRED',
-        'requiresVerification': true,
-      }),
-      403,
-    );
+    final gated = jsonResponse({
+      'success': false,
+      'error': 'IP verification required',
+      'errorCode': 'IP_VERIFICATION_REQUIRED',
+      'requiresVerification': true,
+    }, 403);
     expect(NexaiIpVerification.isVerificationRequired(gated), isTrue);
 
-    final requiresFlagOnly = http.Response('{"requiresVerification":true}', 403);
+    final requiresFlagOnly = jsonResponse({'requiresVerification': true}, 403);
     expect(NexaiIpVerification.isVerificationRequired(requiresFlagOnly), isTrue);
 
     expect(
       NexaiIpVerification.isVerificationRequired(
-        http.Response('{"error":"未授权","code":"NEXAI_AUTH_REQUIRED"}', 403),
+        jsonResponse({'error': '未授权', 'code': 'NEXAI_AUTH_REQUIRED'}, 403),
       ),
       isFalse,
       reason: '普通 403（令牌失效等）重放没有意义',
     );
     expect(
-      NexaiIpVerification.isVerificationRequired(http.Response('{}', 500)),
+      NexaiIpVerification.isVerificationRequired(jsonResponse({}, 500)),
       isFalse,
     );
   });
@@ -69,18 +74,14 @@ void main() {
           .toUtc()
           .add(const Duration(minutes: 30))
           .toIso8601String();
-      return http.Response(
-        jsonEncode({
-          'success': true,
-          'verified': true,
-          'requiresVerification': false,
-          'token': 'token-1',
-          'expiresAt': expiresAt,
-          'issuedBy': 'auto',
-        }),
-        200,
-        headers: {'content-type': 'application/json; charset=utf-8'},
-      );
+      return jsonResponse({
+        'success': true,
+        'verified': true,
+        'requiresVerification': false,
+        'token': 'token-1',
+        'expiresAt': expiresAt,
+        'issuedBy': 'auto',
+      }, 200);
     });
 
     final url = Uri.parse('https://chloemlla.com/api/nexai/auth/me');
@@ -101,15 +102,12 @@ void main() {
     var sessionCalls = 0;
     final client = MockClient((request) async {
       sessionCalls += 1;
-      return http.Response(
-        jsonEncode({
-          'success': true,
-          'verified': false,
-          'requiresVerification': true,
-          'reason': 'risk_score',
-        }),
-        200,
-      );
+      return jsonResponse({
+        'success': true,
+        'verified': false,
+        'requiresVerification': true,
+        'reason': 'risk_score',
+      }, 200);
     });
 
     final url = Uri.parse('https://chloemlla.com/api/nexai/auth/login');
@@ -124,15 +122,12 @@ void main() {
 
   test('IP 被封禁时不把令牌当成功，并给出 banned 状态', () async {
     final client = MockClient((request) async {
-      return http.Response(
-        jsonEncode({
-          'success': false,
-          'error': 'IP已被封禁',
-          'banned': true,
-          'expiresAt': DateTime.now().toUtc().add(const Duration(hours: 1)).toIso8601String(),
-        }),
-        403,
-      );
+      return jsonResponse({
+        'success': false,
+        'error': 'IP已被封禁',
+        'banned': true,
+        'expiresAt': DateTime.now().toUtc().add(const Duration(hours: 1)).toIso8601String(),
+      }, 403);
     });
 
     final token = await NexaiIpVerification.refresh(
@@ -164,7 +159,7 @@ void main() {
     var sessionCalls = 0;
     final client = MockClient((request) async {
       sessionCalls += 1;
-      return http.Response('{}', 200);
+      return jsonResponse({}, 200);
     });
 
     expect(await NexaiIpVerification.headersFor(), isEmpty);

@@ -140,7 +140,7 @@ class _ToolsPageState extends State<ToolsPage> {
     };
     return [
       for (final title in _featuredToolTitles)
-        if (byTitle[title] case final tool?) tool,
+        ?byTitle[title],
     ];
   }
 

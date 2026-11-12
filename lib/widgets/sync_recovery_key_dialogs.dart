@@ -13,6 +13,7 @@ Future<void> showSyncRecoveryKeyDialog(BuildContext context) async {
     await AppSecurity.instance.setSecureScreen(enable: true);
     var copied = false;
     try {
+      if (!context.mounted) return;
       copied =
           await showDialog<bool>(
             context: context,

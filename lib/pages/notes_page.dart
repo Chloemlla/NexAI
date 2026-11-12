@@ -206,7 +206,7 @@ class _NotesPageState extends State<NotesPage>
           // even though the query itself is debounced.
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: _searchController,
-            builder: (_, value, __) => value.text.isEmpty
+            builder: (_, value, _) => value.text.isEmpty
                 ? const SizedBox.shrink()
                 : IconButton(
                     icon: Icon(

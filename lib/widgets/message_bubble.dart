@@ -248,7 +248,7 @@ class _MessageBubbleState extends State<MessageBubble> {
                       ],
                       const SizedBox(height: 6),
                       footer,
-                      if (siblingSwitcher != null) siblingSwitcher,
+                      ?siblingSwitcher,
                     ],
                   ),
                 ),

@@ -852,7 +852,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 // Task progress bar
                 ValueListenableBuilder<_NoteStats>(
                   valueListenable: _stats,
-                  builder: (_, stats, __) => stats.taskTotal > 0
+                  builder: (_, stats, _) => stats.taskTotal > 0
                       ? _buildTaskProgress(cs, stats)
                       : const SizedBox.shrink(),
                 ),
@@ -874,7 +874,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                 // Bottom stats bar
                 ValueListenableBuilder<_NoteStats>(
                   valueListenable: _stats,
-                  builder: (_, stats, __) => _buildBottomBar(cs, stats),
+                  builder: (_, stats, _) => _buildBottomBar(cs, stats),
                 ),
               ],
             ),
@@ -1886,7 +1886,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
   Widget _buildLivePreview(ColorScheme cs) {
     return ValueListenableBuilder<String>(
       valueListenable: _previewText,
-      builder: (_, text, __) => _buildPreview(cs, text),
+      builder: (_, text, _) => _buildPreview(cs, text),
     );
   }
 
@@ -2050,7 +2050,7 @@ class _NoteDetailPageState extends State<NoteDetailPage> {
                   const Spacer(),
                   ValueListenableBuilder<_NoteStats>(
                     valueListenable: _stats,
-                    builder: (_, stats, __) => Text(
+                    builder: (_, stats, _) => Text(
                       '${stats.words} 个单词',
                       style: TextStyle(fontSize: 12, color: cs.outline),
                     ),

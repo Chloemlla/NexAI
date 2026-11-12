@@ -181,8 +181,14 @@ const _storage = FlutterSecureStorage(
 );
 const _fallbackInstallIdKey = 'nexai.request_signer.install_id.v1';
 
-/// Legacy device id helper (not used for v2 server trust).
-Future<String> debugDeviceIdFingerprint() async {
+/// 设备指纹（sha256 hex，64 位小写，稳定跨重启）。
+///
+/// v2 服务端信任不依赖它（v2 用 Bearer/app secret 签名），但 Synapse 的**首访闸门**与
+/// 「设备与会话」需要同一个稳定标识：指纹格式必须满足 `^[A-Za-z0-9_-]{8,200}$`，
+/// 且重启后不能变，否则每次启动都会换一个「新设备」。
+///
+/// 取值顺序：设备硬件信息 → 失败则退回本地持久化的随机 install id。
+Future<String> deviceFingerprintHex() async {
   if (_cachedDeviceId != null) return _cachedDeviceId!;
   final info = DeviceInfoPlugin();
   String raw;

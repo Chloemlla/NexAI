@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using NexAI.Core.Tools;
+using NexAI.Infrastructure.Security;
 
 namespace NexAI.Infrastructure.Tools;
 
@@ -103,6 +104,11 @@ public sealed class DeepLxTranslationClient : ITranslationClient
         };
     }
 
+    /// <summary>
+    /// `/api/public/**` 同样在 Synapse 首访闸门的覆盖范围内：缺 X-Fingerprint /
+    /// X-IP-Verification-Token 时服务端在业务之前就 403，翻译工具会一直报「网络错误」。
+    /// 闸门 403 说明请求没进业务逻辑，握手后重放一次是安全的。
+    /// </summary>
     private async Task<HttpResponseMessage> SendAsync(
         HttpMethod method,
         string path,
@@ -110,10 +116,54 @@ public sealed class DeepLxTranslationClient : ITranslationClient
         CancellationToken cancellationToken)
     {
         var uri = new Uri(_baseUrl + path);
+        var gateHeaders = await NexaiIpVerification.HeadersAsync(cancellationToken).ConfigureAwait(false);
+
+        var first = await SendOnceAsync(method, uri, body, gateHeaders, cancellationToken).ConfigureAwait(false);
+        if (first.StatusCode != System.Net.HttpStatusCode.Forbidden)
+        {
+            return first;
+        }
+
+        var gateBody = await first.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!NexaiIpVerification.LooksGated(gateBody))
+        {
+            return NexaiIpVerification.RebuildResponse(first, gateBody);
+        }
+
+        var token = await NexaiIpVerification
+            .RefreshAsync(uri, _httpClient, cancellationToken, force: true)
+            .ConfigureAwait(false);
+        if (string.IsNullOrEmpty(token))
+        {
+            return NexaiIpVerification.RebuildResponse(first, gateBody);
+        }
+
+        first.Dispose();
+        return await SendOnceAsync(
+                method,
+                uri,
+                body,
+                NexaiIpVerification.WithToken(gateHeaders, token),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<HttpResponseMessage> SendOnceAsync(
+        HttpMethod method,
+        Uri uri,
+        string? body,
+        IReadOnlyDictionary<string, string> gateHeaders,
+        CancellationToken cancellationToken)
+    {
         using var request = new HttpRequestMessage(method, uri);
         request.Headers.TryAddWithoutValidation("Accept", "application/json");
         request.Headers.TryAddWithoutValidation("User-Agent", "NexAI-WinUI");
         foreach (var header in BuildLumenHeaders(method.Method, uri, body ?? string.Empty))
+        {
+            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        foreach (var header in gateHeaders)
         {
             request.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }

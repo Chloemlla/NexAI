@@ -8,6 +8,8 @@ import '../utils/app_security.dart';
 import '../utils/nexai_api_error.dart';
 import '../utils/request_signer.dart';
 import '../utils/nexai_soft_sig_notice.dart';
+import 'nexai_client_identity.dart';
+import 'nexai_ip_verification.dart';
 import 'pinned_http_client.dart';
 
 class NexaiBackendTimeoutException extends NexaiApiError {
@@ -166,26 +168,64 @@ class NexaiBackendClient {
     String body,
     Map<String, String>? headers,
   ) async {
-    final signed = await _signedHeaders(
-      method: method,
-      url: url,
-      headers: headers,
-      body: body,
-    );
-    Future<http.Response> runOnce() => send(signed).timeout(
-          requestTimeout,
-          onTimeout: () {
-            throw NexaiBackendTimeoutException(method, url, requestTimeout);
-          },
-        );
+    // 官方客户端身份 + 首访闸门头。签名 canonical 只含 ts/nonce/method/path/body，
+    // 所以这些头可以在签名之后追加，不会影响验签。
+    Future<Map<String, String>> buildHeaders([Map<String, String>? extra]) async {
+      final signed = await _signedHeaders(
+        method: method,
+        url: url,
+        headers: headers,
+        body: body,
+      );
+      final identityHeaders = await NexaiClientIdentity.headers();
+      final gateHeaders = await NexaiIpVerification.headersFor();
+      return <String, String>{
+        ...signed,
+        ...identityHeaders,
+        ...gateHeaders,
+        ...?extra,
+      };
+    }
+
+    // 每次尝试都重新签：nonce 一次性，重放旧签名在启用验签的部署上会被当 nonce_replay 拒掉。
+    Future<http.Response> runOnce([Map<String, String>? extra]) async {
+      final pending = buildHeaders(extra);
+      return send(await pending).timeout(
+        requestTimeout,
+        onTimeout: () {
+          throw NexaiBackendTimeoutException(method, url, requestTimeout);
+        },
+      );
+    }
 
     // We deliberately sent this request unsigned (no key available while
     // unauthenticated); a resulting soft-fail header is expected, not a
     // surprise, so don't alarm the user for it — see NexaiSoftSigNotice.
-    final selfSkippedSigning = signed.containsKey('X-NexAI-Sig-Skipped');
+    final selfSkippedSigning = (await buildHeaders()).containsKey('X-NexAI-Sig-Skipped');
+
+    // 闸门拦截（403 + IP_VERIFICATION_REQUIRED）说明请求根本没进业务逻辑，握手后重放是安全的。
+    Future<http.Response> runWithGate([Map<String, String>? extra]) async {
+      final response = await runOnce(extra);
+      if (!NexaiIpVerification.isVerificationRequired(response)) return response;
+      String? token;
+      try {
+        token = await NexaiIpVerification.refresh(
+          url,
+          client: await _get(),
+          force: true,
+        );
+      } catch (_) {
+        token = null;
+      }
+      if (token == null || token.isEmpty) return response;
+      return runOnce({
+        ...?extra,
+        NexaiIpVerification.tokenHeader: token,
+      });
+    }
 
     try {
-      final response = await runOnce();
+      final response = await runWithGate();
       // Soft mode (NEXAI_REQUEST_SIGNING=soft) may still return 2xx with fail headers.
       NexaiSoftSigNotice.maybeNotifyFromHeaders(
         headers: response.headers,
@@ -210,7 +250,7 @@ class NexaiBackendClient {
       await _recoverTlsClient();
       try {
         await _get(forceRebuild: true);
-        final response = await runOnce();
+        final response = await runWithGate();
         NexaiSoftSigNotice.maybeNotifyFromHeaders(
           headers: response.headers,
           path: url.path,
@@ -233,7 +273,7 @@ class NexaiBackendClient {
       await _recoverTlsClient();
       try {
         await _get(forceRebuild: true);
-        final response = await runOnce();
+        final response = await runWithGate();
         NexaiSoftSigNotice.maybeNotifyFromHeaders(
           headers: response.headers,
           path: url.path,

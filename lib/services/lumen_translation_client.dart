@@ -181,40 +181,62 @@ class LumenTranslationClient {
   }) async {
     final client = await _http();
     final uri = _uri(path);
-    final headers = <String, String>{
-      'Accept': 'application/json',
-      'User-Agent': 'NexAI-Flutter',
-      ..._lumenSignHeaders(
+
+    // 官方客户端身份 + Synapse 首访闸门头：`/api/public/**` 同样在闸门覆盖范围内，
+    // 缺 X-Fingerprint / X-IP-Verification-Token 时服务端在业务之前就 403，翻译工具会
+    // 一直显示「网络错误」。Lumen 签名 canonical 只含 ts/nonce/method/path/query/body，
+    // 所以这些头可以后加，不影响验签。
+    Future<Map<String, String>> buildHeaders({String? gateToken}) async {
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'User-Agent': 'NexAI-Flutter',
+        ...await NexaiClientIdentity.headers(),
+        ...await NexaiIpVerification.headersFor(),
+        ..._lumenSignHeaders(
+          method: method,
+          uri: uri,
+          body: body ?? '',
+        ),
+      };
+      if (body != null) {
+        headers['Content-Type'] = 'application/json; charset=utf-8';
+      }
+      if (gateToken != null && gateToken.isNotEmpty) {
+        headers[NexaiIpVerification.tokenHeader] = gateToken;
+      }
+      return headers;
+    }
+
+    // 闸门 403 说明请求根本没进业务逻辑：握手拿令牌后重放一次是安全的。
+    Future<http.Response> sendWithGate(http.Client target) async {
+      final response = await _rawSend(
+        client: target,
         method: method,
         uri: uri,
-        body: body ?? '',
-      ),
-    };
-    if (body != null) {
-      headers['Content-Type'] = 'application/json; charset=utf-8';
+        headers: await buildHeaders(),
+        body: body,
+      );
+      if (!NexaiIpVerification.isVerificationRequired(response)) return response;
+      final token = await NexaiIpVerification.refresh(uri, client: target, force: true);
+      if (token == null || token.isEmpty) return response;
+      return _rawSend(
+        client: target,
+        method: method,
+        uri: uri,
+        headers: await buildHeaders(gateToken: token),
+        body: body,
+      );
     }
 
     late http.Response response;
     try {
-      response = await _rawSend(
-        client: client,
-        method: method,
-        uri: uri,
-        headers: headers,
-        body: body,
-      );
+      response = await sendWithGate(client);
     } on HandshakeException {
       // Stale certificate pin or rotated leaf cert: clear pin and retry once.
       await _recoverFromTlsFailure();
       try {
         final retryClient = await _http(forceRebuild: true);
-        response = await _rawSend(
-          client: retryClient,
-          method: method,
-          uri: uri,
-          headers: headers,
-          body: body,
-        );
+        response = await sendWithGate(retryClient);
       } catch (retryError) {
         throw LumenTranslationException(
           '证书握手失败，已尝试自动恢复仍未成功。请到设置 > 安全 > 证书固定清除缓存后重试。\n详情：$retryError',
@@ -224,13 +246,7 @@ class LumenTranslationClient {
       await _recoverFromTlsFailure();
       try {
         final retryClient = await _http(forceRebuild: true);
-        response = await _rawSend(
-          client: retryClient,
-          method: method,
-          uri: uri,
-          headers: headers,
-          body: body,
-        );
+        response = await sendWithGate(retryClient);
       } catch (retryError) {
         throw LumenTranslationException(
           'TLS 连接失败，已尝试自动恢复仍未成功。请检查网络/证书或清除证书缓存后重试。\n详情：$retryError',
@@ -243,13 +259,7 @@ class LumenTranslationClient {
         await _recoverFromTlsFailure();
         try {
           final retryClient = await _http(forceRebuild: true);
-          response = await _rawSend(
-            client: retryClient,
-            method: method,
-            uri: uri,
-            headers: headers,
-            body: body,
-          );
+          response = await sendWithGate(retryClient);
         } catch (retryError) {
           throw LumenTranslationException(
             '证书校验失败，已尝试自动恢复仍未成功。请到设置清除证书缓存后重试。\n详情：$retryError',

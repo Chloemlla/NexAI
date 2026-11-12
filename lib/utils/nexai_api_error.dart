@@ -118,10 +118,17 @@ NexaiApiError nexaiErrorFromResponse({
                   ? '$errorText（$messageText）'
                   : messageText)
             : (errorText ?? '请求失败');
+        // 首访闸门的 403 不是「账号/密码错了」，服务端文案（IP verification required）
+        // 对用户没有可操作性：换成能执行的说法，代码仍保留原样供排障。
+        final localizedMessage = code == 'IP_VERIFICATION_REQUIRED'
+            ? (map['banned'] == true
+                ? '当前 IP 已被限制访问，请更换网络后重试'
+                : '当前网络需要先完成一次安全验证，请更换网络或稍后重试')
+            : message;
         return NexaiApiError(
           stage: stage,
           code: code,
-          message: message,
+          message: localizedMessage,
           statusCode: statusCode,
           path: path,
           method: method,
@@ -142,6 +149,7 @@ NexaiApiError nexaiErrorFromResponse({
 
 String _stageFromStatus(int statusCode, String? code) {
   if (code != null) {
+    if (code == 'IP_VERIFICATION_REQUIRED') return 'risk_policy';
     if (code.startsWith('NEXAI_SIG_')) return 'server_signature';
     if (code == 'NEXAI_RATE_LIMIT') return 'rate_limit';
     if (code.startsWith('NEXAI_AUTH_') ||

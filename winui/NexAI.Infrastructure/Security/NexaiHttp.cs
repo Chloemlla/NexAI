@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -79,23 +80,98 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
                 ? s
                 : JsonSerializer.Serialize(jsonBody, JsonOptions);
 
-        using var request = new HttpRequestMessage(method, absoluteUrl);
-        if (!string.IsNullOrEmpty(rawBody) || method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch)
+        // Keep rawBody consistent with what we sign: 写方法即使没有 body 也发并签 "{}"。
+        if (string.IsNullOrEmpty(rawBody)
+            && (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch))
         {
-            request.Content = new StringContent(
-                string.IsNullOrEmpty(rawBody) ? "{}" : rawBody,
-                Encoding.UTF8,
-                "application/json");
-            // Keep rawBody consistent with what we sign. For empty object default above, sign "{}" when content set.
-            if (string.IsNullOrEmpty(rawBody) && request.Content is not null)
-            {
-                rawBody = "{}";
-            }
+            rawBody = "{}";
+        }
+
+        // Synapse 首访闸门：主机根下每个 /api/** 请求都要带 X-Fingerprint / X-IP-Verification-Token。
+        // 缺令牌时服务端在业务之前就 403 IP_VERIFICATION_REQUIRED，所以必须先带上再发。
+        var gateHeaders = await NexaiIpVerification.HeadersAsync(cancellationToken).ConfigureAwait(false);
+
+        var response = await SendOnceAsync(
+                method,
+                absoluteUrl,
+                bearerToken,
+                refreshTokenForBodySign,
+                rawBody,
+                requireSignature,
+                gateHeaders,
+                cancellationToken)
+            .ConfigureAwait(false);
+        NotifySoftSignatureHeaders(response, absoluteUrl);
+
+        if (response.StatusCode != HttpStatusCode.Forbidden)
+        {
+            return response;
+        }
+
+        // 403 的 body 一读就没了：非闸门的 403（例如令牌过期）要原样交回调用方，读之前先判状态。
+        var gateBody = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        if (!NexaiIpVerification.LooksGated(gateBody))
+        {
+            return NexaiIpVerification.RebuildResponse(response, gateBody);
+        }
+
+        // 闸门 403 说明请求根本没进业务逻辑，重放安全；换不到令牌就把原 403 交回调用方。
+        var refreshed = await NexaiIpVerification
+            .RefreshAsync(new Uri(absoluteUrl), _client, cancellationToken, force: true)
+            .ConfigureAwait(false);
+        if (string.IsNullOrEmpty(refreshed))
+        {
+            return NexaiIpVerification.RebuildResponse(response, gateBody);
+        }
+
+        response.Dispose();
+        var retried = await SendOnceAsync(
+                method,
+                absoluteUrl,
+                bearerToken,
+                refreshTokenForBodySign,
+                rawBody,
+                requireSignature,
+                NexaiIpVerification.WithToken(gateHeaders, refreshed),
+                cancellationToken)
+            .ConfigureAwait(false);
+        NotifySoftSignatureHeaders(retried, absoluteUrl);
+
+        // TOFU bootstrap: if no pin yet and host is pinned host, capture peer cert when available.
+        // Validation callback already stores pin on first successful system-CA validated handshake.
+        return retried;
+    }
+
+    /// <summary>
+    /// 发一次请求（每次新建 <see cref="HttpRequestMessage"/>）。
+    ///
+    /// 必须每次重新签名：签名 canonical 含一次性 nonce，重放旧签名在启用验签的部署上
+    /// 会被当成 nonce_replay 拒掉；退回闸门重试时走的正是这条路径。
+    /// </summary>
+    private async Task<HttpResponseMessage> SendOnceAsync(
+        HttpMethod method,
+        string absoluteUrl,
+        string? bearerToken,
+        string? refreshTokenForBodySign,
+        string rawBody,
+        bool requireSignature,
+        IReadOnlyDictionary<string, string> gateHeaders,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(method, absoluteUrl);
+        if (!string.IsNullOrEmpty(rawBody))
+        {
+            request.Content = new StringContent(rawBody, Encoding.UTF8, "application/json");
         }
 
         if (!string.IsNullOrWhiteSpace(bearerToken))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        }
+
+        foreach (var pair in gateHeaders)
+        {
+            request.Headers.TryAddWithoutValidation(pair.Key, pair.Value);
         }
 
         if (requireSignature && !IsSignatureExempt(method, absoluteUrl))
@@ -129,12 +205,7 @@ public sealed class NexaiHttp : INexaiHttp, IDisposable
             }
         }
 
-        var response = await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        NotifySoftSignatureHeaders(response, absoluteUrl);
-
-        // TOFU bootstrap: if no pin yet and host is pinned host, capture peer cert when available.
-        // Validation callback already stores pin on first successful system-CA validated handshake.
-        return response;
+        return await _client.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<JsonDocument> SendJsonAsync(
